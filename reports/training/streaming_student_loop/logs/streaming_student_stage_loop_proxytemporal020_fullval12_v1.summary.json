@@ -1,0 +1,772 @@
+{
+  "experiment_id": "streaming_student_stage_loop_proxytemporal020_fullval12_v1",
+  "generated_at": "2026-03-17T19:00:27",
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "timing": {
+    "started_at": "2026-03-17T19:00:24",
+    "ended_at": "2026-03-17T19:00:27",
+    "duration_sec": 3.248811
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "option_name": "hybrid_stratified_blocked",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 592,
+      "target_validation": 66,
+      "target_special_eval": 8,
+      "source_train": 483,
+      "source_validation": 54
+    }
+  },
+  "conditioning": {
+    "asset_version": "stage3_calibration_asset_v1",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha_value": 1.15,
+    "source": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
+  },
+  "training": {
+    "batch_size": 3,
+    "validation_batch_size": 6,
+    "num_steps": 12,
+    "validation_interval": 4,
+    "checkpoint_interval": 4,
+    "validation_batches": 4,
+    "validation_mode": "full",
+    "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
+    "use_teacher_confidence": true,
+    "loss_weights": {
+      "teacher_z_art": 1.0,
+      "teacher_event": 1.0,
+      "teacher_event_prior": 0.5,
+      "teacher_energy_proxy": 0.25,
+      "teacher_vuv_proxy": 0.15,
+      "teacher_aper_proxy": 0.1,
+      "teacher_proxy_acoustic": 0.0,
+      "teacher_proxy_temporal": 0.2,
+      "log_f0_correction_l1": 0.01,
+      "aper_correction_l1": 0.01
+    },
+    "loss_weight_overrides_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_loss_weights_proxytemporal020_v1.json"
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-17T19:00:25",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.216925,
+      "record_ids": [
+        "target::archive_firefly_1",
+        "target::archive_firefly_10",
+        "target::archive_firefly_11"
+      ],
+      "loss_metrics": {
+        "loss_total": 20.613577,
+        "loss_total_default_reference": 20.612329,
+        "loss_teacher_z_art": 8.814978,
+        "loss_teacher_event": 5.720385,
+        "loss_teacher_event_prior": 5.447319,
+        "loss_teacher_energy_proxy": 12.97434,
+        "loss_teacher_vuv_proxy": 0.703443,
+        "loss_teacher_aper_proxy": 0.034406,
+        "loss_teacher_proxy_acoustic": 13.1714,
+        "loss_teacher_proxy_temporal": 0.006238,
+        "loss_log_f0_correction_l1": 0.046038,
+        "loss_aper_correction_l1": 0.030448,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5661.639648
+      },
+      "grad_norm": 64.26725,
+      "status": "step_completed"
+    },
+    {
+      "step": 2,
+      "started_at": "2026-03-17T19:00:26",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.07049,
+      "record_ids": [
+        "target::archive_firefly_12",
+        "target::archive_firefly_13",
+        "target::archive_firefly_14"
+      ],
+      "loss_metrics": {
+        "loss_total": 14.974416,
+        "loss_total_default_reference": 14.973146,
+        "loss_teacher_z_art": 3.855657,
+        "loss_teacher_event": 5.545765,
+        "loss_teacher_event_prior": 5.429502,
+        "loss_teacher_energy_proxy": 10.972413,
+        "loss_teacher_vuv_proxy": 0.704445,
+        "loss_teacher_aper_proxy": 0.061334,
+        "loss_teacher_proxy_acoustic": 11.033725,
+        "loss_teacher_proxy_temporal": 0.006345,
+        "loss_log_f0_correction_l1": 0.015438,
+        "loss_aper_correction_l1": 0.191457,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 7175.620117
+      },
+      "grad_norm": 35.934227,
+      "status": "step_completed"
+    },
+    {
+      "step": 3,
+      "started_at": "2026-03-17T19:00:26",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.055325,
+      "record_ids": [
+        "target::archive_firefly_15",
+        "target::archive_firefly_16",
+        "target::archive_firefly_17"
+      ],
+      "loss_metrics": {
+        "loss_total": 12.069892,
+        "loss_total_default_reference": 12.068726,
+        "loss_teacher_z_art": 1.737823,
+        "loss_teacher_event": 5.449871,
+        "loss_teacher_event_prior": 5.397074,
+        "loss_teacher_energy_proxy": 8.248679,
+        "loss_teacher_vuv_proxy": 0.708284,
+        "loss_teacher_aper_proxy": 0.114347,
+        "loss_teacher_proxy_acoustic": 8.277474,
+        "loss_teacher_proxy_temporal": 0.00583,
+        "loss_log_f0_correction_l1": 0.052424,
+        "loss_aper_correction_l1": 0.212429,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5409.497559
+      },
+      "grad_norm": 21.220497,
+      "status": "step_completed"
+    },
+    {
+      "step": 4,
+      "started_at": "2026-03-17T19:00:26",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.061602,
+      "record_ids": [
+        "target::archive_firefly_18",
+        "target::archive_firefly_19",
+        "target::archive_firefly_20"
+      ],
+      "loss_metrics": {
+        "loss_total": 10.775999,
+        "loss_total_default_reference": 10.774646,
+        "loss_teacher_z_art": 0.891108,
+        "loss_teacher_event": 5.340618,
+        "loss_teacher_event_prior": 5.318073,
+        "loss_teacher_energy_proxy": 7.027445,
+        "loss_teacher_vuv_proxy": 0.711613,
+        "loss_teacher_aper_proxy": 0.170995,
+        "loss_teacher_proxy_acoustic": 7.046216,
+        "loss_teacher_proxy_temporal": 0.006767,
+        "loss_log_f0_correction_l1": 0.148827,
+        "loss_aper_correction_l1": 0.169319,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 6412.637207
+      },
+      "grad_norm": 13.03456,
+      "status": "step_completed"
+    },
+    {
+      "step": 5,
+      "started_at": "2026-03-17T19:00:26",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.066933,
+      "record_ids": [
+        "target::archive_firefly_3",
+        "target::archive_firefly_4",
+        "target::archive_firefly_5"
+      ],
+      "loss_metrics": {
+        "loss_total": 10.452077,
+        "loss_total_default_reference": 10.451053,
+        "loss_teacher_z_art": 0.565969,
+        "loss_teacher_event": 5.269725,
+        "loss_teacher_event_prior": 5.244923,
+        "loss_teacher_energy_proxy": 7.45454,
+        "loss_teacher_vuv_proxy": 0.707679,
+        "loss_teacher_aper_proxy": 0.196709,
+        "loss_teacher_proxy_acoustic": 7.471775,
+        "loss_teacher_proxy_temporal": 0.005122,
+        "loss_log_f0_correction_l1": 0.241754,
+        "loss_aper_correction_l1": 0.102268,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5913.905273
+      },
+      "grad_norm": 8.689205,
+      "status": "step_completed"
+    },
+    {
+      "step": 6,
+      "started_at": "2026-03-17T19:00:26",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.055998,
+      "record_ids": [
+        "target::archive_firefly_6",
+        "target::archive_firefly_7",
+        "target::archive_firefly_8"
+      ],
+      "loss_metrics": {
+        "loss_total": 9.770008,
+        "loss_total_default_reference": 9.768865,
+        "loss_teacher_z_art": 0.532081,
+        "loss_teacher_event": 5.151254,
+        "loss_teacher_event_prior": 5.141744,
+        "loss_teacher_energy_proxy": 5.547617,
+        "loss_teacher_vuv_proxy": 0.704142,
+        "loss_teacher_aper_proxy": 0.189341,
+        "loss_teacher_proxy_acoustic": 5.563428,
+        "loss_teacher_proxy_temporal": 0.00572,
+        "loss_log_f0_correction_l1": 0.308882,
+        "loss_aper_correction_l1": 0.01081,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5880.014648
+      },
+      "grad_norm": 7.765035,
+      "status": "step_completed"
+    },
+    {
+      "step": 7,
+      "started_at": "2026-03-17T19:00:26",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.05887,
+      "record_ids": [
+        "target::archive_firefly_9",
+        "target::chapter3_17_firefly_101",
+        "target::chapter3_17_firefly_102"
+      ],
+      "loss_metrics": {
+        "loss_total": 9.279649,
+        "loss_total_default_reference": 9.27829,
+        "loss_teacher_z_art": 0.448324,
+        "loss_teacher_event": 5.045569,
+        "loss_teacher_event_prior": 5.033021,
+        "loss_teacher_energy_proxy": 4.578405,
+        "loss_teacher_vuv_proxy": 0.699416,
+        "loss_teacher_aper_proxy": 0.143552,
+        "loss_teacher_proxy_acoustic": 4.594354,
+        "loss_teacher_proxy_temporal": 0.006797,
+        "loss_log_f0_correction_l1": 0.323754,
+        "loss_aper_correction_l1": 0.07791,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3427.585938
+      },
+      "grad_norm": 6.69932,
+      "status": "step_completed"
+    },
+    {
+      "step": 8,
+      "started_at": "2026-03-17T19:00:26",
+      "ended_at": "2026-03-17T19:00:26",
+      "duration_sec": 0.062088,
+      "record_ids": [
+        "target::chapter3_17_firefly_103",
+        "target::chapter3_17_firefly_104",
+        "target::chapter3_17_firefly_105"
+      ],
+      "loss_metrics": {
+        "loss_total": 8.775037,
+        "loss_total_default_reference": 8.773763,
+        "loss_teacher_z_art": 0.297413,
+        "loss_teacher_event": 4.950837,
+        "loss_teacher_event_prior": 4.928729,
+        "loss_teacher_energy_proxy": 3.784612,
+        "loss_teacher_vuv_proxy": 0.692381,
+        "loss_teacher_aper_proxy": 0.071599,
+        "loss_teacher_proxy_acoustic": 3.801079,
+        "loss_teacher_proxy_temporal": 0.006371,
+        "loss_log_f0_correction_l1": 0.290206,
+        "loss_aper_correction_l1": 0.107674,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1257.067871
+      },
+      "grad_norm": 7.220301,
+      "status": "step_completed"
+    },
+    {
+      "step": 9,
+      "started_at": "2026-03-17T19:00:27",
+      "ended_at": "2026-03-17T19:00:27",
+      "duration_sec": 0.079732,
+      "record_ids": [
+        "target::chapter3_17_firefly_107",
+        "target::chapter3_17_firefly_108",
+        "target::chapter3_17_firefly_109"
+      ],
+      "loss_metrics": {
+        "loss_total": 8.570584,
+        "loss_total_default_reference": 8.569318,
+        "loss_teacher_z_art": 0.232204,
+        "loss_teacher_event": 4.929276,
+        "loss_teacher_event_prior": 4.894,
+        "loss_teacher_energy_proxy": 3.405631,
+        "loss_teacher_vuv_proxy": 0.695481,
+        "loss_teacher_aper_proxy": 0.016377,
+        "loss_teacher_proxy_acoustic": 3.424933,
+        "loss_teacher_proxy_temporal": 0.006334,
+        "loss_log_f0_correction_l1": 0.226035,
+        "loss_aper_correction_l1": 0.121026,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1788.973633
+      },
+      "grad_norm": 6.305366,
+      "status": "step_completed"
+    },
+    {
+      "step": 10,
+      "started_at": "2026-03-17T19:00:27",
+      "ended_at": "2026-03-17T19:00:27",
+      "duration_sec": 0.051892,
+      "record_ids": [
+        "target::chapter3_17_firefly_110",
+        "target::chapter3_17_firefly_111",
+        "target::chapter3_17_firefly_113"
+      ],
+      "loss_metrics": {
+        "loss_total": 8.440965,
+        "loss_total_default_reference": 8.439728,
+        "loss_teacher_z_art": 0.201702,
+        "loss_teacher_event": 4.91733,
+        "loss_teacher_event_prior": 4.879523,
+        "loss_teacher_energy_proxy": 3.088368,
+        "loss_teacher_vuv_proxy": 0.702979,
+        "loss_teacher_aper_proxy": 0.004876,
+        "loss_teacher_proxy_acoustic": 3.108569,
+        "loss_teacher_proxy_temporal": 0.006186,
+        "loss_log_f0_correction_l1": 0.15693,
+        "loss_aper_correction_l1": 0.13385,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1100.526855
+      },
+      "grad_norm": 5.790153,
+      "status": "step_completed"
+    },
+    {
+      "step": 11,
+      "started_at": "2026-03-17T19:00:27",
+      "ended_at": "2026-03-17T19:00:27",
+      "duration_sec": 0.046672,
+      "record_ids": [
+        "target::chapter3_17_firefly_114",
+        "target::chapter3_17_firefly_115",
+        "target::chapter3_17_firefly_116"
+      ],
+      "loss_metrics": {
+        "loss_total": 8.200338,
+        "loss_total_default_reference": 8.199373,
+        "loss_teacher_z_art": 0.142218,
+        "loss_teacher_event": 4.90001,
+        "loss_teacher_event_prior": 4.881417,
+        "loss_teacher_energy_proxy": 2.423579,
+        "loss_teacher_vuv_proxy": 0.704009,
+        "loss_teacher_aper_proxy": 0.025086,
+        "loss_teacher_proxy_acoustic": 2.444263,
+        "loss_teacher_proxy_temporal": 0.004824,
+        "loss_log_f0_correction_l1": 0.107182,
+        "loss_aper_correction_l1": 0.13606,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2506.463623
+      },
+      "grad_norm": 6.019918,
+      "status": "step_completed"
+    },
+    {
+      "step": 12,
+      "started_at": "2026-03-17T19:00:27",
+      "ended_at": "2026-03-17T19:00:27",
+      "duration_sec": 0.049794,
+      "record_ids": [
+        "target::chapter3_17_firefly_117",
+        "target::chapter3_17_firefly_118",
+        "target::chapter3_17_firefly_120"
+      ],
+      "loss_metrics": {
+        "loss_total": 8.203783,
+        "loss_total_default_reference": 8.202802,
+        "loss_teacher_z_art": 0.068998,
+        "loss_teacher_event": 4.878888,
+        "loss_teacher_event_prior": 4.877911,
+        "loss_teacher_energy_proxy": 2.805921,
+        "loss_teacher_vuv_proxy": 0.711026,
+        "loss_teacher_aper_proxy": 0.05646,
+        "loss_teacher_proxy_acoustic": 2.829902,
+        "loss_teacher_proxy_temporal": 0.004905,
+        "loss_log_f0_correction_l1": 0.095341,
+        "loss_aper_correction_l1": 0.122619,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3474.905518
+      },
+      "grad_norm": 4.994617,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 4,
+      "validation_mode": "full",
+      "validation_batches": 11,
+      "record_count": 66,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131"
+        ],
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ],
+        [
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145"
+        ],
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ],
+        [
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102"
+        ],
+        [
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106"
+        ],
+        [
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155"
+        ],
+        [
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245"
+        ],
+        [
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107"
+        ],
+        [
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133"
+        ],
+        [
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 9.941822,
+        "loss_total_default_reference": 9.940771,
+        "loss_teacher_z_art": 0.508946,
+        "loss_teacher_event": 5.226386,
+        "loss_teacher_event_prior": 5.225506,
+        "loss_teacher_energy_proxy": 5.852466,
+        "loss_teacher_vuv_proxy": 0.70807,
+        "loss_teacher_aper_proxy": 0.199017,
+        "loss_teacher_proxy_acoustic": 5.868357,
+        "loss_teacher_proxy_temporal": 0.005253,
+        "loss_log_f0_correction_l1": 0.243641,
+        "loss_aper_correction_l1": 0.102088,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4941.934959
+      }
+    },
+    {
+      "step": 8,
+      "validation_mode": "full",
+      "validation_batches": 11,
+      "record_count": 66,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131"
+        ],
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ],
+        [
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145"
+        ],
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ],
+        [
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102"
+        ],
+        [
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106"
+        ],
+        [
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155"
+        ],
+        [
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245"
+        ],
+        [
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107"
+        ],
+        [
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133"
+        ],
+        [
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 8.879762,
+        "loss_total_default_reference": 8.878828,
+        "loss_teacher_z_art": 0.27021,
+        "loss_teacher_event": 4.946593,
+        "loss_teacher_event_prior": 4.905152,
+        "loss_teacher_energy_proxy": 4.398287,
+        "loss_teacher_vuv_proxy": 0.697808,
+        "loss_teacher_aper_proxy": 0.017316,
+        "loss_teacher_proxy_acoustic": 4.416352,
+        "loss_teacher_proxy_temporal": 0.004668,
+        "loss_log_f0_correction_l1": 0.229892,
+        "loss_aper_correction_l1": 0.117571,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4941.934959
+      }
+    },
+    {
+      "step": 12,
+      "validation_mode": "full",
+      "validation_batches": 11,
+      "record_count": 66,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131"
+        ],
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ],
+        [
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145"
+        ],
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ],
+        [
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102"
+        ],
+        [
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106"
+        ],
+        [
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155"
+        ],
+        [
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245"
+        ],
+        [
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107"
+        ],
+        [
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133"
+        ],
+        [
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 8.135502,
+        "loss_total_default_reference": 8.134487,
+        "loss_teacher_z_art": 0.060763,
+        "loss_teacher_event": 4.851647,
+        "loss_teacher_event_prior": 4.86976,
+        "loss_teacher_energy_proxy": 2.689219,
+        "loss_teacher_vuv_proxy": 0.710893,
+        "loss_teacher_aper_proxy": 0.060854,
+        "loss_teacher_proxy_acoustic": 2.717951,
+        "loss_teacher_proxy_temporal": 0.005073,
+        "loss_log_f0_correction_l1": 0.134871,
+        "loss_aper_correction_l1": 0.0825,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4941.934959
+      }
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal020_fullval12_v1.step4.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal020_fullval12_v1.step8.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal020_fullval12_v1.step12.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal020_fullval12_v1.step12.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 12,
+      "validation_mode": "full",
+      "loss_total": 8.135502,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal020_fullval12_v1.step12.pt"
+    }
+  },
+  "notes": [
+    "This is a minimal multi-step Stage3 training loop scaffold built on top of the new teacher-supervised contract.",
+    "Validation now walks the full target_validation slice sequentially inside the training loop.",
+    "The purpose is to expose step-wise loss, grad_norm, validation, and checkpoint behavior before adding richer supervision or r_res."
+  ],
+  "next_steps": [
+    "Use this fuller validation mode to compare future short-horizon runs without relying on a separate checkpoint-eval pass for every checkpoint.",
+    "Tune learning rate, loss weights, and teacher confidence usage based on short-horizon trajectories instead of a single step.",
+    "Keep hidden distillation and r_res disabled until the base multi-step route is stable."
+  ],
+  "status": "training_loop_scaffold_completed"
+}

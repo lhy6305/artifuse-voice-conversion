@@ -1,0 +1,164 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d2_round1_1_special_proxy_core_question_exclaim_smallscale_100_seeded_shuffle.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d2_special_proxy_core_question_exclaim_exp018/checkpoints/EXP-20260315-018-offline-mvp-d2-round1-1-special-proxy-core-question-exclaim-100step-calibration.step100.pt",
+  "ablation_modes": {
+    "none": {
+      "ablation_mode": "none",
+      "batch_count": 14,
+      "target": {
+        "loss_total": 2.867648,
+        "loss_acoustic": 0.485405,
+        "loss_event": 4.658835,
+        "loss_z_smooth": 0.094703,
+        "loss_text_aux": 0.103727,
+        "loss_text_aux_effective": 0.103727,
+        "loss_text_aux_structural": 0.0,
+        "loss_text_aux_lexical": 0.0,
+        "loss_weak_event": 0.199889,
+        "loss_clause_transition_aux": 0.064601,
+        "loss_boundary_contrast_aux": 0.0,
+        "loss_punctuation_profile_aux": 0.0
+      },
+      "source": {
+        "loss_total": 3.135994,
+        "loss_acoustic": 0.784447,
+        "loss_event": 4.691841,
+        "loss_z_smooth": 0.056262,
+        "loss_text_aux": 0.0,
+        "loss_text_aux_effective": 0.0,
+        "loss_text_aux_structural": 0.0,
+        "loss_text_aux_lexical": 0.0,
+        "loss_weak_event": 0.0,
+        "loss_clause_transition_aux": 0.0,
+        "loss_boundary_contrast_aux": 0.0,
+        "loss_punctuation_profile_aux": 0.0
+      },
+      "shift": {
+        "target_acoustic_mae": 0.0,
+        "target_text_aux_mae": 0.0,
+        "source_acoustic_mae": 0.0,
+        "source_text_aux_mae": 0.0
+      }
+    },
+    "zero_z_art": {
+      "ablation_mode": "zero_z_art",
+      "batch_count": 14,
+      "target": {
+        "loss_total": 3.136498,
+        "loss_acoustic": 0.753808,
+        "loss_event": 4.658835,
+        "loss_z_smooth": 0.094703,
+        "loss_text_aux": 0.105958,
+        "loss_text_aux_effective": 0.105958,
+        "loss_text_aux_structural": 0.0,
+        "loss_text_aux_lexical": 0.0,
+        "loss_weak_event": 0.199889,
+        "loss_clause_transition_aux": 0.064601,
+        "loss_boundary_contrast_aux": 0.0,
+        "loss_punctuation_profile_aux": 0.0
+      },
+      "source": {
+        "loss_total": 3.90755,
+        "loss_acoustic": 1.556003,
+        "loss_event": 4.691841,
+        "loss_z_smooth": 0.056262,
+        "loss_text_aux": 0.0,
+        "loss_text_aux_effective": 0.0,
+        "loss_text_aux_structural": 0.0,
+        "loss_text_aux_lexical": 0.0,
+        "loss_weak_event": 0.0,
+        "loss_clause_transition_aux": 0.0,
+        "loss_boundary_contrast_aux": 0.0,
+        "loss_punctuation_profile_aux": 0.0
+      },
+      "shift": {
+        "target_acoustic_mae": 0.715306,
+        "target_text_aux_mae": 0.043865,
+        "source_acoustic_mae": 0.498974,
+        "source_text_aux_mae": 0.025501
+      }
+    },
+    "zero_e_evt": {
+      "ablation_mode": "zero_e_evt",
+      "batch_count": 14,
+      "target": {
+        "loss_total": 3.722695,
+        "loss_acoustic": 1.340937,
+        "loss_event": 4.658835,
+        "loss_z_smooth": 0.094703,
+        "loss_text_aux": 0.1013,
+        "loss_text_aux_effective": 0.1013,
+        "loss_text_aux_structural": 0.0,
+        "loss_text_aux_lexical": 0.0,
+        "loss_weak_event": 0.199889,
+        "loss_clause_transition_aux": 0.064601,
+        "loss_boundary_contrast_aux": 0.0,
+        "loss_punctuation_profile_aux": 0.0
+      },
+      "source": {
+        "loss_total": 3.067825,
+        "loss_acoustic": 0.716278,
+        "loss_event": 4.691841,
+        "loss_z_smooth": 0.056262,
+        "loss_text_aux": 0.0,
+        "loss_text_aux_effective": 0.0,
+        "loss_text_aux_structural": 0.0,
+        "loss_text_aux_lexical": 0.0,
+        "loss_weak_event": 0.0,
+        "loss_clause_transition_aux": 0.0,
+        "loss_boundary_contrast_aux": 0.0,
+        "loss_punctuation_profile_aux": 0.0
+      },
+      "shift": {
+        "target_acoustic_mae": 0.975291,
+        "target_text_aux_mae": 0.069812,
+        "source_acoustic_mae": 1.132318,
+        "source_text_aux_mae": 0.07831
+      }
+    }
+  },
+  "comparisons": {
+    "zero_z_art": {
+      "delta_target_loss_total": 0.26885,
+      "delta_source_loss_total": 0.771556,
+      "delta_target_loss_clause_transition_aux": 0.0,
+      "delta_source_loss_clause_transition_aux": 0.0,
+      "delta_target_loss_boundary_contrast_aux": 0.0,
+      "delta_source_loss_boundary_contrast_aux": 0.0,
+      "delta_target_loss_punctuation_profile_aux": 0.0,
+      "delta_source_loss_punctuation_profile_aux": 0.0,
+      "delta_target_loss_text_aux_effective": 0.002231,
+      "delta_source_loss_text_aux_effective": 0.0,
+      "delta_target_loss_text_aux_structural": 0.0,
+      "delta_target_loss_text_aux_lexical": 0.0,
+      "delta_target_acoustic_mae": 0.715306,
+      "delta_source_acoustic_mae": 0.498974,
+      "delta_target_text_aux_mae": 0.043865,
+      "delta_source_text_aux_mae": 0.025501
+    },
+    "zero_e_evt": {
+      "delta_target_loss_total": 0.855047,
+      "delta_source_loss_total": -0.068169,
+      "delta_target_loss_clause_transition_aux": 0.0,
+      "delta_source_loss_clause_transition_aux": 0.0,
+      "delta_target_loss_boundary_contrast_aux": 0.0,
+      "delta_source_loss_boundary_contrast_aux": 0.0,
+      "delta_target_loss_punctuation_profile_aux": 0.0,
+      "delta_source_loss_punctuation_profile_aux": 0.0,
+      "delta_target_loss_text_aux_effective": -0.002427,
+      "delta_source_loss_text_aux_effective": 0.0,
+      "delta_target_loss_text_aux_structural": 0.0,
+      "delta_target_loss_text_aux_lexical": 0.0,
+      "delta_target_acoustic_mae": 0.975291,
+      "delta_source_acoustic_mae": 1.132318,
+      "delta_target_text_aux_mae": 0.069812,
+      "delta_source_text_aux_mae": 0.07831
+    }
+  },
+  "notes": [
+    "Ablation results are computed on the formal hybrid validation split only.",
+    "zero_z_art zeroes the articulatory control before control fusion.",
+    "zero_e_evt zeroes the event control path before control fusion."
+  ]
+}

@@ -1,0 +1,105 @@
+# offline MVP target_special_eval 模型级评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d86_round1_1_d26_init_post_d59_singleton_sparse_micropause_sampler_d22late_teacherweight_outer_punctuation_zartretarget_200step_smallscale_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt
+- split_option_name: hybrid_stratified_blocked
+
+## target_validation
+- record_count: 66
+- batch_count: 17
+- loss_total: 2.156964
+- loss_acoustic: 0.069142
+- loss_event: 4.043025
+- loss_text_aux: 0.15884
+- loss_text_aux_effective: 0.15884
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.0685
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- loss_formal_special_clause_shape_aux: 0.0
+- z_art_abs_mean: 0.526225
+- z_art_delta_abs_mean: 0.013208
+- event_prob_mean: 0.432321
+- event_presence_prob_mean: 0.619109
+- event_delta_prob_mean: 0.2802
+- event_rise_prob_mean: 0.50076
+- event_fall_prob_mean: 0.457572
+- event_energy_prob_mean: 0.621098
+- event_presence_peak_ratio: 0.654786
+- acoustic_abs_mean: 0.935917
+- acoustic_energy_mean: -3.592329
+- acoustic_delta_abs_mean: 0.007601
+- text_aux_abs_mean: 0.211917
+
+## target_special_eval
+- record_count: 8
+- batch_count: 2
+- loss_total: 2.382414
+- loss_acoustic: 0.034218
+- loss_event: 4.614619
+- loss_text_aux: 0.153988
+- loss_text_aux_effective: 0.153988
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.0
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- loss_formal_special_clause_shape_aux: 0.0
+- z_art_abs_mean: 0.434287
+- z_art_delta_abs_mean: 0.012612
+- event_prob_mean: 0.406281
+- event_presence_prob_mean: 0.55346
+- event_delta_prob_mean: 0.294347
+- event_rise_prob_mean: 0.478607
+- event_fall_prob_mean: 0.472854
+- event_energy_prob_mean: 0.564824
+- event_presence_peak_ratio: 0.643584
+- acoustic_abs_mean: 0.950686
+- acoustic_energy_mean: -3.677508
+- acoustic_delta_abs_mean: 0.009853
+- text_aux_abs_mean: 0.219567
+
+## 对比
+- delta_loss_total: 0.22545
+- delta_loss_acoustic: -0.034924
+- delta_loss_event: 0.571594
+- delta_loss_text_aux: -0.004852
+- delta_loss_text_aux_effective: -0.004852
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_clause_transition_aux: -0.0685
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- delta_z_art_abs_mean: -0.091938
+- delta_z_art_delta_abs_mean: -0.000596
+- delta_event_prob_mean: -0.02604
+- delta_event_presence_prob_mean: -0.065649
+- delta_event_delta_prob_mean: 0.014147
+- delta_event_rise_prob_mean: -0.022153
+- delta_event_fall_prob_mean: 0.015282
+- delta_event_energy_prob_mean: -0.056274
+- delta_event_presence_peak_ratio: -0.011202
+- delta_acoustic_abs_mean: 0.014769
+- delta_acoustic_energy_mean: -0.085179
+- delta_acoustic_delta_abs_mean: 0.002252
+- delta_text_aux_abs_mean: 0.00765
+
+## 备注
+- Model-level special_eval is reported separately from regular validation.
+- Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.
+- Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality.

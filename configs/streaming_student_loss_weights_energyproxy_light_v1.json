@@ -1,0 +1,10 @@
+{
+  "name": "streaming_student_loss_weights_energyproxy_light_v1",
+  "notes": [
+    "Keep teacher_z_art, teacher_event, and teacher_event_prior unchanged so the comparison isolates the energy proxy term.",
+    "Reduce teacher_energy_proxy from 0.25 to 0.15 because it is a bootstrap proxy term and still carries relatively large raw loss mass in short-horizon runs."
+  ],
+  "loss_weights": {
+    "teacher_energy_proxy": 0.15
+  }
+}

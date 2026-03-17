@@ -1,0 +1,153 @@
+{
+  "experiment_id": "EXP-20260314-012-offline-mvp-evt-a1-dryrun",
+  "status": "dry_run_ready",
+  "created_at": "2026-03-14T18:49:40",
+  "metrics": {
+    "training_run": {
+      "dry_run": true,
+      "timing": {
+        "started_at": "2026-03-14T18:49:57",
+        "ended_at": "2026-03-14T18:49:57",
+        "duration_sec": 0.690497
+      },
+      "execution_guard": {
+        "run_stage": "large_scale",
+        "requires_small_scale_prerequisite": true,
+        "prerequisite_experiment_id": "EXP-20260314-010-offline-mvp-default-seeded-template"
+      },
+      "split": {
+        "strategy": "materialized_split",
+        "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+        "option_name": "hybrid_stratified_blocked",
+        "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+        "counts": {
+          "target_train": 554,
+          "target_validation": 62,
+          "target_special_eval": 8,
+          "source_train": 483,
+          "source_validation": 54
+        }
+      },
+      "training_run": {
+        "num_steps": 500,
+        "completed_steps": 0,
+        "validation_interval": 25,
+        "checkpoint_interval": 25,
+        "sampler_mode": "seeded_shuffle",
+        "history": [
+          {
+            "step": 0,
+            "started_at": "2026-03-14T18:49:57",
+            "ended_at": "2026-03-14T18:49:57",
+            "duration_sec": 0.690469,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_214",
+              "target::chapter3_2_firefly_219",
+              "target::chapter3_2_firefly_224",
+              "target::chapter3_2_firefly_150"
+            ],
+            "source_record_ids": [
+              "source::segment_0374_0002383870_0002387380",
+              "source::segment_0343_0002231650_0002234380",
+              "source::segment_0220_0001268050_0001268620",
+              "source::segment_0117_0000697030_0000698170"
+            ],
+            "target": {
+              "loss_total": 24.225854873657227,
+              "loss_acoustic": 21.44407081604004,
+              "loss_event": 5.54103422164917,
+              "loss_z_smooth": 0.0026433849707245827,
+              "loss_text_aux": 0.055008575320243835
+            },
+            "source": {
+              "loss_total": 25.62618064880371,
+              "loss_acoustic": 22.854515075683594,
+              "loss_event": 5.542972087860107,
+              "loss_z_smooth": 0.0017920323880389333,
+              "loss_text_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "event_dimension_weights": [
+                0.75,
+                1.25,
+                1.25,
+                0.75,
+                0.75,
+                1.25,
+                1.25,
+                0.75
+              ]
+            },
+            "loss_total": 49.85203552246094,
+            "grad_norm": 0.0
+          }
+        ]
+      },
+      "step_metrics": {
+        "step": 0,
+        "started_at": "2026-03-14T18:49:57",
+        "ended_at": "2026-03-14T18:49:57",
+        "duration_sec": 0.690469,
+        "target_record_ids": [
+          "target::chapter3_3_firefly_214",
+          "target::chapter3_2_firefly_219",
+          "target::chapter3_2_firefly_224",
+          "target::chapter3_2_firefly_150"
+        ],
+        "source_record_ids": [
+          "source::segment_0374_0002383870_0002387380",
+          "source::segment_0343_0002231650_0002234380",
+          "source::segment_0220_0001268050_0001268620",
+          "source::segment_0117_0000697030_0000698170"
+        ],
+        "target": {
+          "loss_total": 24.225854873657227,
+          "loss_acoustic": 21.44407081604004,
+          "loss_event": 5.54103422164917,
+          "loss_z_smooth": 0.0026433849707245827,
+          "loss_text_aux": 0.055008575320243835
+        },
+        "source": {
+          "loss_total": 25.62618064880371,
+          "loss_acoustic": 22.854515075683594,
+          "loss_event": 5.542972087860107,
+          "loss_z_smooth": 0.0017920323880389333,
+          "loss_text_aux": 0.0
+        },
+        "effective_loss_weights": {
+          "acoustic": 1.0,
+          "event": 0.5,
+          "z_smooth": 0.1,
+          "text_aux": 0.2,
+          "event_dimension_weights": [
+            0.75,
+            1.25,
+            1.25,
+            0.75,
+            0.75,
+            1.25,
+            1.25,
+            0.75
+          ]
+        },
+        "loss_total": 49.85203552246094,
+        "grad_norm": 0.0
+      },
+      "validation": {
+        "enabled": true,
+        "history": []
+      },
+      "status": "dry_run_ready",
+      "artifacts": {
+        "checkpoint_path": null,
+        "checkpoint_paths": [],
+        "logs_dir": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/logs"
+      }
+    }
+  },
+  "notes": []
+}

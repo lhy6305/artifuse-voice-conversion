@@ -1,0 +1,76 @@
+{
+  "route_summary_ref": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_anchor_route_selection_round1_1_longwindow_d22_d33_d59_d76_d77_d78_d79_default_minimax",
+  "inputs": {
+    "max_validation_budget_over_best": 0.05,
+    "special_priority": false,
+    "z_art_priority": false,
+    "require_best_e_evt_floor": false,
+    "require_best_z_art_floor": false
+  },
+  "derived_thresholds": {
+    "budget_to_minimax_anchor": 0.014763,
+    "budget_to_special_anchor": 0.03047,
+    "best_e_evt_floor": 2.170294,
+    "minimax_z_art_floor": 0.710849,
+    "best_z_art_floor": 0.710849
+  },
+  "selected_policy": {
+    "policy_name": "default_minimax",
+    "description": "Use the least-worst final anchor without extra route constraints.",
+    "objective": "minimax",
+    "constraints": {
+      "max_validation_budget_over_best": null,
+      "min_zero_e_evt_delta_target_loss_total": null,
+      "min_zero_z_art_delta_target_loss_total": null
+    },
+    "eligible_anchor_ids": [
+      "EXP-20260316-013-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-200step-calibration",
+      "EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration",
+      "EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration",
+      "EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration",
+      "EXP-20260316-033-offline-mvp-d77-round1-1-d29-init-post-d59-singleton-sparse-micropause-sampler-teacher-gate-late-200step-calibration",
+      "EXP-20260316-034-offline-mvp-d78-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d33late-late-fusedhidden-boost-200step-calibration",
+      "EXP-20260316-035-offline-mvp-d79-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-teacherweight-boost-200step-calibration"
+    ],
+    "selected_anchor": {
+      "experiment_id": "EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration",
+      "target_validation_loss_total": 2.122699,
+      "delta_loss_total": 0.239846,
+      "zero_e_evt_delta_target_loss_total": 1.9703,
+      "zero_z_art_delta_target_loss_total": 0.710849,
+      "normalized_regret": {
+        "validation": 0.442258,
+        "special": 0.291592,
+        "zero_e_evt": 0.574261,
+        "zero_z_art": 0.0,
+        "max_regret": 0.574261,
+        "mean_regret": 0.327028
+      }
+    },
+    "is_feasible": true,
+    "infeasible_reason": null
+  },
+  "selected_anchor": {
+    "experiment_id": "EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration",
+    "target_validation_loss_total": 2.122699,
+    "delta_loss_total": 0.239846,
+    "zero_e_evt_delta_target_loss_total": 1.9703,
+    "zero_z_art_delta_target_loss_total": 0.710849,
+    "normalized_regret": {
+      "validation": 0.442258,
+      "special": 0.291592,
+      "zero_e_evt": 0.574261,
+      "zero_z_art": 0.0,
+      "max_regret": 0.574261,
+      "mean_regret": 0.327028
+    }
+  },
+  "reasons": [
+    "budget allows the minimax route and no stronger special route is both requested and feasible."
+  ],
+  "unmet_intents": [],
+  "notes": [
+    "This selector resolves one concrete route decision from the current three-anchor policy set.",
+    "If unmet_intents is non-empty, the requested intent could not be honored under the provided validation budget."
+  ]
+}

@@ -1,0 +1,350 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d83_round1_1_d26_init_post_d59_singleton_sparse_micropause_sampler_d33to22late_teacher_handoff_200step_smallscale_seeded_shuffle.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-039-offline-mvp-d83-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d33to22late-teacher-handoff-200step-calibration.metrics.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "checkpoint_count": 4,
+  "checkpoints": [
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-039-offline-mvp-d83-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d33to22late-teacher-handoff-200step-calibration.step50.pt",
+      "step": 50,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.369034,
+          "delta_source_loss_total": 0.436663,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.001165,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.570261,
+          "delta_source_acoustic_mae": 0.569757,
+          "delta_target_text_aux_mae": 0.047982,
+          "delta_source_text_aux_mae": 0.049994
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 2.673272,
+          "delta_source_loss_total": 3.752703,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": 0.010498,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 1.55788,
+          "delta_source_acoustic_mae": 1.956968,
+          "delta_target_text_aux_mae": 0.084259,
+          "delta_source_text_aux_mae": 0.110719
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.332573,
+        "source_loss_total": 2.254943
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-039-offline-mvp-d83-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d33to22late-teacher-handoff-200step-calibration.step100.pt",
+      "step": 100,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.530758,
+          "delta_source_loss_total": 0.597417,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.004129,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.733954,
+          "delta_source_acoustic_mae": 0.735395,
+          "delta_target_text_aux_mae": 0.060885,
+          "delta_source_text_aux_mae": 0.06438
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 2.428461,
+          "delta_source_loss_total": 3.284679,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.001126,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 1.48515,
+          "delta_source_acoustic_mae": 1.816022,
+          "delta_target_text_aux_mae": 0.082268,
+          "delta_source_text_aux_mae": 0.103914
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.257266,
+        "source_loss_total": 2.161593
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-039-offline-mvp-d83-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d33to22late-teacher-handoff-200step-calibration.step150.pt",
+      "step": 150,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.463976,
+          "delta_source_loss_total": 0.502202,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.007854,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.766421,
+          "delta_source_acoustic_mae": 0.752933,
+          "delta_target_text_aux_mae": 0.06207,
+          "delta_source_text_aux_mae": 0.065718
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 2.197493,
+          "delta_source_loss_total": 2.865599,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.007989,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 1.47884,
+          "delta_source_acoustic_mae": 1.728766,
+          "delta_target_text_aux_mae": 0.07962,
+          "delta_source_text_aux_mae": 0.096724
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.172644,
+        "source_loss_total": 2.060362
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-039-offline-mvp-d83-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d33to22late-teacher-handoff-200step-calibration.step200.pt",
+      "step": 200,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.42172,
+          "delta_source_loss_total": 0.432081,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.010657,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.801787,
+          "delta_source_acoustic_mae": 0.782583,
+          "delta_target_text_aux_mae": 0.063142,
+          "delta_source_text_aux_mae": 0.06588
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 2.011104,
+          "delta_source_loss_total": 2.539052,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_source_loss_formal_special_clause_shape_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.014112,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 1.479228,
+          "delta_source_acoustic_mae": 1.685328,
+          "delta_target_text_aux_mae": 0.078594,
+          "delta_source_text_aux_mae": 0.093662
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.136478,
+        "source_loss_total": 2.007288
+      }
+    }
+  ],
+  "trends": {
+    "zero_z_art_target_loss_deltas": [
+      {
+        "step": 50,
+        "value": 0.369034
+      },
+      {
+        "step": 100,
+        "value": 0.530758
+      },
+      {
+        "step": 150,
+        "value": 0.463976
+      },
+      {
+        "step": 200,
+        "value": 0.42172
+      }
+    ],
+    "zero_e_evt_target_loss_deltas": [
+      {
+        "step": 50,
+        "value": 2.673272
+      },
+      {
+        "step": 100,
+        "value": 2.428461
+      },
+      {
+        "step": 150,
+        "value": 2.197493
+      },
+      {
+        "step": 200,
+        "value": 2.011104
+      }
+    ],
+    "zero_z_art_source_loss_deltas": [
+      {
+        "step": 50,
+        "value": 0.436663
+      },
+      {
+        "step": 100,
+        "value": 0.597417
+      },
+      {
+        "step": 150,
+        "value": 0.502202
+      },
+      {
+        "step": 200,
+        "value": 0.432081
+      }
+    ],
+    "zero_e_evt_source_loss_deltas": [
+      {
+        "step": 50,
+        "value": 3.752703
+      },
+      {
+        "step": 100,
+        "value": 3.284679
+      },
+      {
+        "step": 150,
+        "value": 2.865599
+      },
+      {
+        "step": 200,
+        "value": 2.539052
+      }
+    ]
+  },
+  "notes": [
+    "Checkpoint-series evaluation summarizes z_art / e_evt ablation deltas across saved checkpoints.",
+    "Only checkpoints referenced by experiment metrics.training_run.artifacts.checkpoint_paths are included."
+  ]
+}

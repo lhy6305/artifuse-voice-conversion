@@ -1,0 +1,18 @@
+Repository notice
+=================
+
+1. This repository intentionally excludes raw/source audio and any extracted
+   game media or other source assets that may have been used privately during
+   development.
+
+2. Audio file patterns are ignored at the repository level to reduce the risk
+   of accidental publication of copyrighted source material or derived audio
+   clips.
+
+3. Intermediate models, checkpoints, configs, reports, and evaluation outputs
+   may be included when the maintainer considers them safe to publish. Their
+   presence does not grant any right to third-party materials that may have
+   influenced private training inputs outside this repository.
+
+4. Third-party components, if any, remain under their own licenses or terms.
+   Users are responsible for checking downstream compliance before any reuse.

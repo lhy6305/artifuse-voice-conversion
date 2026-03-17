@@ -1,0 +1,86 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_c1_7_round1_1_clause_transition_aux_priority_two_phase_all_multiterm_cap1_smallscale_100_seeded_shuffle.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-034-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-all-multiterm-cap1-100step-calibration.metrics.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "selected_steps": [
+    10,
+    20,
+    50,
+    100
+  ],
+  "checkpoint_count": 4,
+  "checkpoints": [
+    {
+      "step": 10,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-034-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-all-multiterm-cap1-100step-calibration.step10.pt",
+      "target_validation_loss_total": 19.576112,
+      "target_special_eval_loss_total": 15.836152,
+      "delta_loss_total": -3.73996,
+      "delta_loss_text_aux": -0.03839,
+      "target_validation_event_prob_mean": 0.500806,
+      "target_special_eval_event_prob_mean": 0.50043,
+      "delta_event_presence_prob_mean": -0.001025,
+      "delta_event_fall_prob_mean": -0.001017,
+      "delta_event_energy_prob_mean": -0.000541,
+      "delta_event_presence_peak_ratio": 0.0,
+      "delta_z_art_delta_abs_mean": -0.000208,
+      "delta_acoustic_energy_mean": -0.003319,
+      "delta_acoustic_delta_abs_mean": 0.001536
+    },
+    {
+      "step": 20,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-034-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-all-multiterm-cap1-100step-calibration.step20.pt",
+      "target_validation_loss_total": 15.690022,
+      "target_special_eval_loss_total": 11.841368,
+      "delta_loss_total": -3.848654,
+      "delta_loss_text_aux": 0.029441,
+      "target_validation_event_prob_mean": 0.492752,
+      "target_special_eval_event_prob_mean": 0.491974,
+      "delta_event_presence_prob_mean": -0.001024,
+      "delta_event_fall_prob_mean": -0.001153,
+      "delta_event_energy_prob_mean": -0.000934,
+      "delta_event_presence_peak_ratio": 0.0,
+      "delta_z_art_delta_abs_mean": -0.000348,
+      "delta_acoustic_energy_mean": -0.005478,
+      "delta_acoustic_delta_abs_mean": 0.002052
+    },
+    {
+      "step": 50,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-034-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-all-multiterm-cap1-100step-calibration.step50.pt",
+      "target_validation_loss_total": 9.675093,
+      "target_special_eval_loss_total": 5.618261,
+      "delta_loss_total": -4.056832,
+      "delta_loss_text_aux": 0.240041,
+      "target_validation_event_prob_mean": 0.461681,
+      "target_special_eval_event_prob_mean": 0.458848,
+      "delta_event_presence_prob_mean": -0.001803,
+      "delta_event_fall_prob_mean": -0.002563,
+      "delta_event_energy_prob_mean": -0.001407,
+      "delta_event_presence_peak_ratio": 0.0,
+      "delta_z_art_delta_abs_mean": -0.000651,
+      "delta_acoustic_energy_mean": -0.039438,
+      "delta_acoustic_delta_abs_mean": 0.002142
+    },
+    {
+      "step": 100,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-034-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-all-multiterm-cap1-100step-calibration.step100.pt",
+      "target_validation_loss_total": 2.669992,
+      "target_special_eval_loss_total": 2.775367,
+      "delta_loss_total": 0.105375,
+      "delta_loss_text_aux": 0.13092,
+      "target_validation_event_prob_mean": 0.441612,
+      "target_special_eval_event_prob_mean": 0.433267,
+      "delta_event_presence_prob_mean": -0.018533,
+      "delta_event_fall_prob_mean": -0.011415,
+      "delta_event_energy_prob_mean": -0.017793,
+      "delta_event_presence_peak_ratio": 0.0,
+      "delta_z_art_delta_abs_mean": -0.001296,
+      "delta_acoustic_energy_mean": -0.583849,
+      "delta_acoustic_delta_abs_mean": -0.003491
+    }
+  ],
+  "notes": [
+    "Special-eval series summarizes challenge-slice behavior across selected checkpoints.",
+    "Each checkpoint also has its own detailed special_eval_model.json and .md under reports/eval."
+  ]
+}

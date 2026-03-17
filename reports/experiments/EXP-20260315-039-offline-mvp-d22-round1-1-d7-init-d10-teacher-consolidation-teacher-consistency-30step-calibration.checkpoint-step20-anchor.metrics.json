@@ -1,0 +1,48 @@
+{
+  "experiment_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration-checkpoint-step20-anchor",
+  "status": "checkpoint_anchor_materialized",
+  "created_at": "2026-03-16T14:42:27",
+  "metrics": {
+    "training_run": {
+      "training_run": {
+        "completed_steps": 20
+      },
+      "artifacts": {
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step20.pt"
+      }
+    },
+    "target_special_eval_model": {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step20.pt",
+      "target_validation": {
+        "metrics": {
+          "loss_total": 2.470626
+        }
+      },
+      "target_special_eval": {
+        "metrics": {
+          "loss_total": 2.648727
+        }
+      },
+      "comparisons": {
+        "delta_loss_total": 0.178101
+      }
+    },
+    "ablation_eval": {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step20.pt",
+      "comparisons": {
+        "zero_e_evt": {
+          "delta_target_loss_total": 3.021211
+        },
+        "zero_z_art": {
+          "delta_target_loss_total": 0.398439
+        }
+      }
+    }
+  },
+  "notes": [
+    "This is a synthetic anchor metrics payload materialized from a checkpoint series entry.",
+    "source_experiment_id=EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+    "source_experiment_metrics_path=F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.metrics.json",
+    "selected_step=20"
+  ]
+}

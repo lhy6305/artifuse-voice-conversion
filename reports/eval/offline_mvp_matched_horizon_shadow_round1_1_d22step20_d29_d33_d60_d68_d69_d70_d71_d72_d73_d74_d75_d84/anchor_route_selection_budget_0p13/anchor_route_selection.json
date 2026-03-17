@@ -1,0 +1,82 @@
+{
+  "route_summary_ref": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_matched_horizon_shadow_round1_1_d22step20_d29_d33_d60_d68_d69_d70_d71_d72_d73_d74_d75_d84/anchor_route_selection_budget_0p13",
+  "inputs": {
+    "max_validation_budget_over_best": 0.13,
+    "special_priority": false,
+    "z_art_priority": false,
+    "require_best_e_evt_floor": false,
+    "require_best_z_art_floor": false
+  },
+  "derived_thresholds": {
+    "budget_to_minimax_anchor": 0.066985,
+    "budget_to_special_anchor": 0.183751,
+    "best_e_evt_floor": 3.312339,
+    "minimax_z_art_floor": 0.381618,
+    "best_z_art_floor": 0.465828
+  },
+  "selected_policy": {
+    "policy_name": "default_minimax",
+    "description": "Use the least-worst final anchor without extra route constraints.",
+    "objective": "minimax",
+    "constraints": {
+      "max_validation_budget_over_best": null,
+      "min_zero_e_evt_delta_target_loss_total": null,
+      "min_zero_z_art_delta_target_loss_total": null
+    },
+    "eligible_anchor_ids": [
+      "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration",
+      "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration-checkpoint-step20-anchor",
+      "EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration",
+      "EXP-20260316-016-offline-mvp-d60-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-teacher-gate-late-20step-calibration",
+      "EXP-20260316-024-offline-mvp-d68-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-teacher-source-d22late-20step-calibration",
+      "EXP-20260316-023-offline-mvp-d69-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-d22like-latehandoff-20step-calibration",
+      "EXP-20260316-025-offline-mvp-d70-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-teacher-gate-late-20step-calibration",
+      "EXP-20260316-026-offline-mvp-d71-round1-1-d29-init-post-d59-singleton-sparse-micropause-sampler-teacher-gate-late-20step-calibration",
+      "EXP-20260316-027-offline-mvp-d72-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-teacher-source-d22late-20step-calibration",
+      "EXP-20260316-029-offline-mvp-d73-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22like-latehandoff-20step-calibration",
+      "EXP-20260316-031-offline-mvp-d74-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-late-d33step10-teacher-restore-20step-calibration",
+      "EXP-20260316-030-offline-mvp-d75-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-20step-calibration",
+      "EXP-20260316-040-offline-mvp-d84-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-20step-calibration"
+    ],
+    "selected_anchor": {
+      "experiment_id": "EXP-20260316-040-offline-mvp-d84-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-20step-calibration",
+      "target_validation_loss_total": 2.407182,
+      "delta_loss_total": 0.156619,
+      "zero_e_evt_delta_target_loss_total": 3.089381,
+      "zero_z_art_delta_target_loss_total": 0.381618,
+      "normalized_regret": {
+        "validation": 0.356335,
+        "special": 0.569691,
+        "zero_e_evt": 0.328794,
+        "zero_z_art": 0.579109,
+        "max_regret": 0.579109,
+        "mean_regret": 0.458482
+      }
+    },
+    "is_feasible": true,
+    "infeasible_reason": null
+  },
+  "selected_anchor": {
+    "experiment_id": "EXP-20260316-040-offline-mvp-d84-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-20step-calibration",
+    "target_validation_loss_total": 2.407182,
+    "delta_loss_total": 0.156619,
+    "zero_e_evt_delta_target_loss_total": 3.089381,
+    "zero_z_art_delta_target_loss_total": 0.381618,
+    "normalized_regret": {
+      "validation": 0.356335,
+      "special": 0.569691,
+      "zero_e_evt": 0.328794,
+      "zero_z_art": 0.579109,
+      "max_regret": 0.579109,
+      "mean_regret": 0.458482
+    }
+  },
+  "reasons": [
+    "budget allows the minimax route and no stronger special route is both requested and feasible."
+  ],
+  "unmet_intents": [],
+  "notes": [
+    "This selector resolves one concrete route decision from the current three-anchor policy set.",
+    "If unmet_intents is non-empty, the requested intent could not be honored under the provided validation budget."
+  ]
+}

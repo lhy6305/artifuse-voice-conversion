@@ -1,0 +1,48 @@
+{
+  "experiment_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor",
+  "status": "checkpoint_anchor_materialized",
+  "created_at": "2026-03-16T23:54:43",
+  "metrics": {
+    "training_run": {
+      "training_run": {
+        "completed_steps": 150
+      },
+      "artifacts": {
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step150.pt"
+      }
+    },
+    "target_special_eval_model": {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step150.pt",
+      "target_validation": {
+        "metrics": {
+          "loss_total": 2.167991
+        }
+      },
+      "target_special_eval": {
+        "metrics": {
+          "loss_total": 2.389851
+        }
+      },
+      "comparisons": {
+        "delta_loss_total": 0.22186
+      }
+    },
+    "ablation_eval": {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step150.pt",
+      "comparisons": {
+        "zero_e_evt": {
+          "delta_target_loss_total": 2.330918
+        },
+        "zero_z_art": {
+          "delta_target_loss_total": 0.498314
+        }
+      }
+    }
+  },
+  "notes": [
+    "This is a synthetic anchor metrics payload materialized from a checkpoint series entry.",
+    "source_experiment_id=EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "source_experiment_metrics_path=F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration.metrics.json",
+    "selected_step=150"
+  ]
+}

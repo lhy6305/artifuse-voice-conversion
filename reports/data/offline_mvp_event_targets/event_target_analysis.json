@@ -1,0 +1,223 @@
+{
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+  "frame_length": 400,
+  "hop_length": 160,
+  "max_duration_sec": 2.0,
+  "event_dimensions": [
+    "energy_gate",
+    "abs_delta_gate",
+    "high_zero_cross",
+    "low_zero_cross_voiced_like",
+    "high_zero_cross_voiced_like",
+    "delta_energy_rise",
+    "delta_energy_fall",
+    "energy_norm"
+  ],
+  "acoustic_dimensions": [
+    "energy",
+    "abs_mean",
+    "zero_cross",
+    "delta_energy"
+  ],
+  "groups": {
+    "target_train": {
+      "manifest_path": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked/target_train.jsonl",
+      "record_count": 554,
+      "frame_count": 294606,
+      "event_mean": [
+        0.632818,
+        0.246791,
+        0.153225,
+        0.458412,
+        0.193547,
+        0.494936,
+        0.505064,
+        0.650162
+      ],
+      "acoustic_mean": [
+        -3.61353,
+        0.07717,
+        0.089423,
+        0.00639
+      ],
+      "event_vs_acoustic_corr": [
+        [
+          0.914112,
+          0.735308,
+          0.181996,
+          0.02294
+        ],
+        [
+          -0.067952,
+          -0.263124,
+          0.074145,
+          0.08156
+        ],
+        [
+          0.137954,
+          -0.089013,
+          0.881998,
+          0.095409
+        ],
+        [
+          0.690287,
+          0.740485,
+          -0.433907,
+          -0.038062
+        ],
+        [
+          0.244084,
+          -0.077208,
+          0.782969,
+          0.077699
+        ],
+        [
+          0.052608,
+          0.065096,
+          0.124215,
+          0.844666
+        ],
+        [
+          -0.052608,
+          -0.065096,
+          -0.124215,
+          -0.844666
+        ],
+        [
+          0.972414,
+          0.749802,
+          0.190854,
+          0.02649
+        ]
+      ]
+    },
+    "source_train": {
+      "manifest_path": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked/source_train.jsonl",
+      "record_count": 483,
+      "frame_count": 166764,
+      "event_mean": [
+        0.40429,
+        0.265327,
+        0.006914,
+        0.480325,
+        0.000216,
+        0.494735,
+        0.505266,
+        0.465009
+      ],
+      "acoustic_mean": [
+        -4.788274,
+        0.01448,
+        0.02532,
+        0.002079
+      ],
+      "event_vs_acoustic_corr": [
+        [
+          0.743154,
+          0.787737,
+          -0.219796,
+          0.028401
+        ],
+        [
+          0.095947,
+          -0.058392,
+          0.241683,
+          0.055375
+        ],
+        [
+          -0.06585,
+          -0.06793,
+          0.390989,
+          0.006869
+        ],
+        [
+          0.81505,
+          0.758181,
+          -0.27006,
+          0.030054
+        ],
+        [
+          0.009071,
+          -0.000335,
+          0.045261,
+          -0.001527
+        ],
+        [
+          0.040448,
+          0.065304,
+          -0.01258,
+          0.930422
+        ],
+        [
+          -0.040448,
+          -0.065304,
+          0.01258,
+          -0.930422
+        ],
+        [
+          0.935493,
+          0.829947,
+          -0.283568,
+          0.037089
+        ]
+      ]
+    }
+  },
+  "notes": [
+    "Event targets are derived from the current heuristic build_frame_targets implementation.",
+    "Correlations are computed across masked frame-level targets only.",
+    "This analysis is intended to detect imbalance, redundancy, and target/source mismatch."
+  ],
+  "comparison": {
+    "event_mean_gap_ranked": [
+      {
+        "event_dimension": "energy_gate",
+        "target_mean": 0.632818,
+        "source_mean": 0.40429,
+        "gap": 0.228528
+      },
+      {
+        "event_dimension": "high_zero_cross_voiced_like",
+        "target_mean": 0.193547,
+        "source_mean": 0.000216,
+        "gap": 0.193331
+      },
+      {
+        "event_dimension": "energy_norm",
+        "target_mean": 0.650162,
+        "source_mean": 0.465009,
+        "gap": 0.185153
+      },
+      {
+        "event_dimension": "high_zero_cross",
+        "target_mean": 0.153225,
+        "source_mean": 0.006914,
+        "gap": 0.146311
+      },
+      {
+        "event_dimension": "low_zero_cross_voiced_like",
+        "target_mean": 0.458412,
+        "source_mean": 0.480325,
+        "gap": -0.021913
+      },
+      {
+        "event_dimension": "abs_delta_gate",
+        "target_mean": 0.246791,
+        "source_mean": 0.265327,
+        "gap": -0.018536
+      },
+      {
+        "event_dimension": "delta_energy_fall",
+        "target_mean": 0.505064,
+        "source_mean": 0.505266,
+        "gap": -0.000202
+      },
+      {
+        "event_dimension": "delta_energy_rise",
+        "target_mean": 0.494936,
+        "source_mean": 0.494735,
+        "gap": 0.000201
+      }
+    ]
+  }
+}

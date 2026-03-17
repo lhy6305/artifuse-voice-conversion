@@ -1,0 +1,76 @@
+# offline MVP special_eval checkpoint 系列汇总
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_c1_7_round1_1_clause_transition_aux_priority_two_phase_pool_handoff_smallscale_100_seeded_shuffle.json
+- experiment_metrics_path: F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.metrics.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- selected_steps: [10, 20, 50, 100]
+- checkpoint_count: 4
+
+## checkpoints
+### step 10
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step10.pt
+- target_validation.loss_total: 19.575983
+- target_special_eval.loss_total: 15.836424
+- delta_loss_total: -3.739559
+- delta_loss_text_aux: -0.038598
+- target_validation.event_prob_mean: 0.500962
+- target_special_eval.event_prob_mean: 0.500587
+- delta_event_presence_prob_mean: -0.001019
+- delta_event_fall_prob_mean: -0.001017
+- delta_event_energy_prob_mean: -0.000556
+- delta_event_presence_peak_ratio: 0.0
+- delta_z_art_delta_abs_mean: -0.000208
+- delta_acoustic_energy_mean: -0.003315
+- delta_acoustic_delta_abs_mean: 0.00154
+
+### step 20
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step20.pt
+- target_validation.loss_total: 15.688137
+- target_special_eval.loss_total: 11.839758
+- delta_loss_total: -3.848379
+- delta_loss_text_aux: 0.029595
+- target_validation.event_prob_mean: 0.492763
+- target_special_eval.event_prob_mean: 0.491976
+- delta_event_presence_prob_mean: -0.001044
+- delta_event_fall_prob_mean: -0.001154
+- delta_event_energy_prob_mean: -0.000952
+- delta_event_presence_peak_ratio: 0.0
+- delta_z_art_delta_abs_mean: -0.000347
+- delta_acoustic_energy_mean: -0.005476
+- delta_acoustic_delta_abs_mean: 0.002059
+
+### step 50
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step50.pt
+- target_validation.loss_total: 9.677146
+- target_special_eval.loss_total: 5.619911
+- delta_loss_total: -4.057235
+- delta_loss_text_aux: 0.24201
+- target_validation.event_prob_mean: 0.461137
+- target_special_eval.event_prob_mean: 0.45826
+- delta_event_presence_prob_mean: -0.00189
+- delta_event_fall_prob_mean: -0.002565
+- delta_event_energy_prob_mean: -0.001394
+- delta_event_presence_peak_ratio: 0.0
+- delta_z_art_delta_abs_mean: -0.000652
+- delta_acoustic_energy_mean: -0.039427
+- delta_acoustic_delta_abs_mean: 0.002216
+
+### step 100
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step100.pt
+- target_validation.loss_total: 2.672052
+- target_special_eval.loss_total: 2.77516
+- delta_loss_total: 0.103108
+- delta_loss_text_aux: 0.128804
+- target_validation.event_prob_mean: 0.441794
+- target_special_eval.event_prob_mean: 0.433333
+- delta_event_presence_prob_mean: -0.018585
+- delta_event_fall_prob_mean: -0.011471
+- delta_event_energy_prob_mean: -0.017789
+- delta_event_presence_peak_ratio: 0.0
+- delta_z_art_delta_abs_mean: -0.001284
+- delta_acoustic_energy_mean: -0.585727
+- delta_acoustic_delta_abs_mean: -0.002758
+
+## notes
+- Special-eval series summarizes challenge-slice behavior across selected checkpoints.
+- Each checkpoint also has its own detailed special_eval_model.json and .md under reports/eval.

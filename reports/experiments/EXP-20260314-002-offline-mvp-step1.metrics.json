@@ -1,0 +1,34 @@
+{
+  "experiment_id": "EXP-20260314-002-offline-mvp-step1",
+  "status": "single_step_completed",
+  "created_at": "2026-03-14T14:48:14",
+  "metrics": {
+    "training_step": {
+      "dry_run": false,
+      "step_metrics": {
+        "target": {
+          "loss_total": 15.529247283935547,
+          "loss_acoustic": 12.75229549407959,
+          "loss_event": 5.51282262802124,
+          "loss_z_smooth": 0.008189329877495766,
+          "loss_text_aux": 0.09860590845346451
+        },
+        "source": {
+          "loss_total": 36.20685577392578,
+          "loss_acoustic": 33.42219161987305,
+          "loss_event": 5.568924427032471,
+          "loss_z_smooth": 0.0020235844422131777,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 51.73610305786133,
+        "grad_norm": 28.910484313964844
+      },
+      "status": "single_step_completed",
+      "artifacts": {
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-002-offline-mvp-step1.step1.pt",
+        "logs_dir": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/logs"
+      }
+    }
+  },
+  "notes": []
+}

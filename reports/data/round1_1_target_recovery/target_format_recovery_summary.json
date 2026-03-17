@@ -1,0 +1,32 @@
+{
+  "base_round1_train_count": 624,
+  "recovered_count": 42,
+  "remaining_excluded_count": 5,
+  "failed_recovery_count": 0,
+  "target_sample_rate": 44100,
+  "target_channels": 1,
+  "base_duration_sec": 3826.049737,
+  "recovered_duration_sec": 235.470887,
+  "remaining_excluded_duration_sec": 7.854,
+  "recovered_duration_stats_sec": {
+    "count": 42,
+    "min": 0.229002,
+    "max": 15.424989,
+    "mean": 5.60645,
+    "median": 5.187494,
+    "stdev": 3.683676
+  },
+  "remaining_excluded_ids": [
+    "no_text_voice/chapter3_17_firefly_112",
+    "no_text_voice/chapter3_3_firefly_101",
+    "no_text_voice/chapter3_3_firefly_205",
+    "no_text_voice/chapter4_7_firefly_108",
+    "no_text_voice/chapter4_7_firefly_110"
+  ],
+  "failed_recovery_ids": [],
+  "notes": [
+    "round1.1 target recovery keeps current no_text_voice exclusions isolated by default.",
+    "recovered records are normalized to 44100 Hz mono and written under output_dir/audio.",
+    "combined manifest_round1_train.jsonl now contains original round1 target records plus recovered lexical records."
+  ]
+}

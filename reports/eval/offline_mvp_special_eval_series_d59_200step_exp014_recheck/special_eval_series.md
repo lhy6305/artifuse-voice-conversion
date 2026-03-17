@@ -1,0 +1,116 @@
+# offline MVP special_eval checkpoint 系列汇总
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d59_round1_1_d7_init_d57_formal_special_clause2_shortpause_ceiling_sampler_teacher_gate_late_200step_smallscale_seeded_shuffle.json
+- experiment_metrics_path: F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration.metrics.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- selected_steps: [50, 100, 150, 200]
+- checkpoint_count: 4
+
+## checkpoints
+### step 50
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d59_200step_exp014/checkpoints/EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration.step50.pt
+- target_validation.loss_total: 2.329353
+- target_special_eval.loss_total: 2.527781
+- delta_loss_total: 0.198428
+- delta_loss_text_aux: 0.03634
+- delta_loss_text_aux_effective: 0.03634
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.437754
+- target_special_eval.event_prob_mean: 0.421855
+- delta_event_presence_prob_mean: -0.045352
+- delta_event_fall_prob_mean: 0.014739
+- delta_event_energy_prob_mean: -0.037709
+- delta_event_presence_peak_ratio: 0.157228
+- delta_z_art_delta_abs_mean: -0.002591
+- delta_acoustic_energy_mean: -0.091004
+- delta_acoustic_delta_abs_mean: 0.007623
+
+### step 100
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d59_200step_exp014/checkpoints/EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration.step100.pt
+- target_validation.loss_total: 2.208258
+- target_special_eval.loss_total: 2.437178
+- delta_loss_total: 0.22892
+- delta_loss_text_aux: 0.041605
+- delta_loss_text_aux_effective: 0.041605
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.433319
+- target_special_eval.event_prob_mean: 0.408128
+- delta_event_presence_prob_mean: -0.06414
+- delta_event_fall_prob_mean: 0.014661
+- delta_event_energy_prob_mean: -0.056498
+- delta_event_presence_peak_ratio: 0.007475
+- delta_z_art_delta_abs_mean: -0.001984
+- delta_acoustic_energy_mean: -0.084136
+- delta_acoustic_delta_abs_mean: 0.005129
+
+### step 150
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d59_200step_exp014/checkpoints/EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration.step150.pt
+- target_validation.loss_total: 2.146063
+- target_special_eval.loss_total: 2.398638
+- delta_loss_total: 0.252575
+- delta_loss_text_aux: 0.049232
+- delta_loss_text_aux_effective: 0.049232
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.432406
+- target_special_eval.event_prob_mean: 0.404641
+- delta_event_presence_prob_mean: -0.070583
+- delta_event_fall_prob_mean: 0.013442
+- delta_event_energy_prob_mean: -0.06174
+- delta_event_presence_peak_ratio: -0.008922
+- delta_z_art_delta_abs_mean: -0.00103
+- delta_acoustic_energy_mean: -0.07789
+- delta_acoustic_delta_abs_mean: 0.007065
+
+### step 200
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d59_200step_exp014/checkpoints/EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration.step200.pt
+- target_validation.loss_total: 2.126544
+- target_special_eval.loss_total: 2.385466
+- delta_loss_total: 0.258922
+- delta_loss_text_aux: 0.052109
+- delta_loss_text_aux_effective: 0.052109
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.43034
+- target_special_eval.event_prob_mean: 0.403411
+- delta_event_presence_prob_mean: -0.0706
+- delta_event_fall_prob_mean: 0.013748
+- delta_event_energy_prob_mean: -0.059742
+- delta_event_presence_peak_ratio: -0.01441
+- delta_z_art_delta_abs_mean: -0.000498
+- delta_acoustic_energy_mean: -0.076466
+- delta_acoustic_delta_abs_mean: 0.00255
+
+## notes
+- Special-eval series summarizes challenge-slice behavior across selected checkpoints.
+- Each checkpoint also has its own detailed special_eval_model.json and .md under reports/eval.

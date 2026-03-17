@@ -1,0 +1,87 @@
+{
+  "experiment_id": "EXP-20260314-001-offline-mvp-baseline",
+  "created_at": "2026-03-14T14:43:50",
+  "dry_run": true,
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_template.json",
+  "data": {
+    "manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/manifests",
+    "target_manifest_count": 624,
+    "source_manifest_count": 537,
+    "dry_run_target_count": 4,
+    "dry_run_source_count": 4,
+    "target_batch_audio_shape": [
+      4,
+      88200
+    ],
+    "target_batch_token_shape": [
+      4,
+      67
+    ],
+    "source_batch_audio_shape": [
+      4,
+      73440
+    ],
+    "vocab_size": 1384
+  },
+  "model": {
+    "name": "offline_mvp_scaffold",
+    "r_res_enabled": false,
+    "uses_text_in_training": true,
+    "uses_text_in_runtime": false,
+    "z_art_dim": 8,
+    "event_head_enabled": true,
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "acoustic_dim": 4,
+    "frame_length": 400,
+    "hop_length": 160
+  },
+  "training": {
+    "mode": "offline_mvp",
+    "teacher_required": false,
+    "student_required": false,
+    "vocoder_required": false,
+    "dry_run_only": true
+  },
+  "gates": {
+    "requires_r_res_disabled": true,
+    "requires_text_for_training": true,
+    "requires_text_for_runtime": false
+  },
+  "dry_run_validation": {
+    "source_record_ids": [
+      "source::segment_0001_0000020110_0000021640",
+      "source::segment_0002_0000023770_0000024280",
+      "source::segment_0003_0000036160_0000036880",
+      "source::segment_0004_0000039130_0000039910"
+    ],
+    "target_record_ids": [
+      "target::archive_firefly_1",
+      "target::archive_firefly_10",
+      "target::archive_firefly_11",
+      "target::archive_firefly_12"
+    ],
+    "forward_shapes": {
+      "z_art": [
+        4,
+        457,
+        8
+      ],
+      "event_logits": [
+        4,
+        457,
+        8
+      ],
+      "acoustic": [
+        4,
+        457,
+        4
+      ],
+      "frame_mask": [
+        4,
+        457
+      ]
+    }
+  },
+  "status": "dry_run_ready"
+}

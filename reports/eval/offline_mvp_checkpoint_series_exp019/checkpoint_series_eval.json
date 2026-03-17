@@ -1,0 +1,642 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d3_round1_1_special_proxy_core_clause_ge4_smallscale_100_seeded_shuffle.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.metrics.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "checkpoint_count": 10,
+  "checkpoints": [
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step10.pt",
+      "step": 10,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.157256,
+          "delta_source_loss_total": 0.217656,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.001361,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.061849,
+          "delta_source_acoustic_mae": 0.061199,
+          "delta_target_text_aux_mae": 0.008923,
+          "delta_source_text_aux_mae": 0.008702
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.541824,
+          "delta_source_loss_total": 0.749938,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.004214,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.214476,
+          "delta_source_acoustic_mae": 0.218149,
+          "delta_target_text_aux_mae": 0.039444,
+          "delta_source_text_aux_mae": 0.040057
+        }
+      },
+      "baseline": {
+        "target_loss_total": 20.381561,
+        "source_loss_total": 26.807252
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step20.pt",
+      "step": 20,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.287967,
+          "delta_source_loss_total": 0.426382,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.005338,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.128375,
+          "delta_source_acoustic_mae": 0.128504,
+          "delta_target_text_aux_mae": 0.016932,
+          "delta_source_text_aux_mae": 0.01703
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.877667,
+          "delta_source_loss_total": 1.266674,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.002838,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.239572,
+          "delta_source_acoustic_mae": 0.24463,
+          "delta_target_text_aux_mae": 0.053439,
+          "delta_source_text_aux_mae": 0.052976
+        }
+      },
+      "baseline": {
+        "target_loss_total": 16.454734,
+        "source_loss_total": 21.325732
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step30.pt",
+      "step": 30,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.353532,
+          "delta_source_loss_total": 0.611864,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.015781,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.207354,
+          "delta_source_acoustic_mae": 0.208025,
+          "delta_target_text_aux_mae": 0.027527,
+          "delta_source_text_aux_mae": 0.027879
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.861573,
+          "delta_source_loss_total": 1.422343,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.015257,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.326508,
+          "delta_source_acoustic_mae": 0.324798,
+          "delta_target_text_aux_mae": 0.067241,
+          "delta_source_text_aux_mae": 0.066677
+        }
+      },
+      "baseline": {
+        "target_loss_total": 12.206408,
+        "source_loss_total": 14.785308
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step40.pt",
+      "step": 40,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.160012,
+          "delta_source_loss_total": 0.575232,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.02396,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.272803,
+          "delta_source_acoustic_mae": 0.273059,
+          "delta_target_text_aux_mae": 0.033436,
+          "delta_source_text_aux_mae": 0.033927
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.36494,
+          "delta_source_loss_total": 1.081452,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.033437,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.44204,
+          "delta_source_acoustic_mae": 0.444341,
+          "delta_target_text_aux_mae": 0.06482,
+          "delta_source_text_aux_mae": 0.064258
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.589391,
+        "source_loss_total": 9.259101
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step50.pt",
+      "step": 50,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": -0.242913,
+          "delta_source_loss_total": 0.291411,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.021175,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.329973,
+          "delta_source_acoustic_mae": 0.330962,
+          "delta_target_text_aux_mae": 0.032805,
+          "delta_source_text_aux_mae": 0.033571
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": -0.373721,
+          "delta_source_loss_total": 0.498561,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.035549,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.487021,
+          "delta_source_acoustic_mae": 0.476507,
+          "delta_target_text_aux_mae": 0.063886,
+          "delta_source_text_aux_mae": 0.062007
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.485065,
+        "source_loss_total": 6.998707
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step60.pt",
+      "step": 60,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": -0.066634,
+          "delta_source_loss_total": 0.321038,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.007393,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.301091,
+          "delta_source_acoustic_mae": 0.306283,
+          "delta_target_text_aux_mae": 0.021316,
+          "delta_source_text_aux_mae": 0.02174
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": -0.474107,
+          "delta_source_loss_total": 0.65884,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.019339,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.653564,
+          "delta_source_acoustic_mae": 0.584751,
+          "delta_target_text_aux_mae": 0.071032,
+          "delta_source_text_aux_mae": 0.065684
+        }
+      },
+      "baseline": {
+        "target_loss_total": 8.323014,
+        "source_loss_total": 6.749818
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step70.pt",
+      "step": 70,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.32832,
+          "delta_source_loss_total": 0.379195,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.001754,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.190589,
+          "delta_source_acoustic_mae": 0.225189,
+          "delta_target_text_aux_mae": 0.01696,
+          "delta_source_text_aux_mae": 0.016349
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.290706,
+          "delta_source_loss_total": 1.15621,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": 0.000294,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.850214,
+          "delta_source_acoustic_mae": 0.714757,
+          "delta_target_text_aux_mae": 0.072131,
+          "delta_source_text_aux_mae": 0.064116
+        }
+      },
+      "baseline": {
+        "target_loss_total": 6.401501,
+        "source_loss_total": 6.360431
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step80.pt",
+      "step": 80,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.513753,
+          "delta_source_loss_total": 0.470887,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.003795,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.424375,
+          "delta_source_acoustic_mae": 0.227694,
+          "delta_target_text_aux_mae": 0.025587,
+          "delta_source_text_aux_mae": 0.016756
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.107988,
+          "delta_source_loss_total": 0.705998,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": 0.007137,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 1.023558,
+          "delta_source_acoustic_mae": 0.855261,
+          "delta_target_text_aux_mae": 0.067004,
+          "delta_source_text_aux_mae": 0.06371
+        }
+      },
+      "baseline": {
+        "target_loss_total": 4.245294,
+        "source_loss_total": 4.653982
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step90.pt",
+      "step": 90,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.050342,
+          "delta_source_loss_total": 0.562182,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.006599,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.739563,
+          "delta_source_acoustic_mae": 0.383384,
+          "delta_target_text_aux_mae": 0.038929,
+          "delta_source_text_aux_mae": 0.019587
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.376727,
+          "delta_source_loss_total": 0.066697,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": 0.006859,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.987735,
+          "delta_source_acoustic_mae": 0.982,
+          "delta_target_text_aux_mae": 0.058787,
+          "delta_source_text_aux_mae": 0.065024
+        }
+      },
+      "baseline": {
+        "target_loss_total": 3.479252,
+        "source_loss_total": 3.529081
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d3_special_proxy_core_clause_ge4_exp019/checkpoints/EXP-20260315-019-offline-mvp-d3-round1-1-special-proxy-core-clause-ge4-100step-calibration.step100.pt",
+      "step": 100,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.179408,
+          "delta_source_loss_total": 0.716556,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": 0.000224,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.7097,
+          "delta_source_acoustic_mae": 0.499686,
+          "delta_target_text_aux_mae": 0.045422,
+          "delta_source_text_aux_mae": 0.027603
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.135895,
+          "delta_source_loss_total": 0.396466,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_text_aux_effective": 0.001284,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.966065,
+          "delta_source_acoustic_mae": 1.138009,
+          "delta_target_text_aux_mae": 0.064797,
+          "delta_source_text_aux_mae": 0.074552
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.919729,
+        "source_loss_total": 2.99398
+      }
+    }
+  ],
+  "trends": {
+    "zero_z_art_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.157256
+      },
+      {
+        "step": 20,
+        "value": 0.287967
+      },
+      {
+        "step": 30,
+        "value": 0.353532
+      },
+      {
+        "step": 40,
+        "value": 0.160012
+      },
+      {
+        "step": 50,
+        "value": -0.242913
+      },
+      {
+        "step": 60,
+        "value": -0.066634
+      },
+      {
+        "step": 70,
+        "value": 0.32832
+      },
+      {
+        "step": 80,
+        "value": 0.513753
+      },
+      {
+        "step": 90,
+        "value": 0.050342
+      },
+      {
+        "step": 100,
+        "value": 0.179408
+      }
+    ],
+    "zero_e_evt_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.541824
+      },
+      {
+        "step": 20,
+        "value": 0.877667
+      },
+      {
+        "step": 30,
+        "value": 0.861573
+      },
+      {
+        "step": 40,
+        "value": 0.36494
+      },
+      {
+        "step": 50,
+        "value": -0.373721
+      },
+      {
+        "step": 60,
+        "value": -0.474107
+      },
+      {
+        "step": 70,
+        "value": 0.290706
+      },
+      {
+        "step": 80,
+        "value": 1.107988
+      },
+      {
+        "step": 90,
+        "value": 1.376727
+      },
+      {
+        "step": 100,
+        "value": 1.135895
+      }
+    ],
+    "zero_z_art_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.217656
+      },
+      {
+        "step": 20,
+        "value": 0.426382
+      },
+      {
+        "step": 30,
+        "value": 0.611864
+      },
+      {
+        "step": 40,
+        "value": 0.575232
+      },
+      {
+        "step": 50,
+        "value": 0.291411
+      },
+      {
+        "step": 60,
+        "value": 0.321038
+      },
+      {
+        "step": 70,
+        "value": 0.379195
+      },
+      {
+        "step": 80,
+        "value": 0.470887
+      },
+      {
+        "step": 90,
+        "value": 0.562182
+      },
+      {
+        "step": 100,
+        "value": 0.716556
+      }
+    ],
+    "zero_e_evt_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.749938
+      },
+      {
+        "step": 20,
+        "value": 1.266674
+      },
+      {
+        "step": 30,
+        "value": 1.422343
+      },
+      {
+        "step": 40,
+        "value": 1.081452
+      },
+      {
+        "step": 50,
+        "value": 0.498561
+      },
+      {
+        "step": 60,
+        "value": 0.65884
+      },
+      {
+        "step": 70,
+        "value": 1.15621
+      },
+      {
+        "step": 80,
+        "value": 0.705998
+      },
+      {
+        "step": 90,
+        "value": 0.066697
+      },
+      {
+        "step": 100,
+        "value": 0.396466
+      }
+    ]
+  },
+  "notes": [
+    "Checkpoint-series evaluation summarizes z_art / e_evt ablation deltas across saved checkpoints.",
+    "Only checkpoints referenced by experiment metrics.training_run.artifacts.checkpoint_paths are included."
+  ]
+}

@@ -1,0 +1,238 @@
+{
+  "experiment_id": "streaming_student_stage_loop_no_conf_v2",
+  "generated_at": "2026-03-17T12:46:42",
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "timing": {
+    "started_at": "2026-03-17T12:46:40",
+    "ended_at": "2026-03-17T12:46:42",
+    "duration_sec": 1.991081
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "option_name": "hybrid_stratified_blocked",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 592,
+      "target_validation": 66,
+      "target_special_eval": 8,
+      "source_train": 483,
+      "source_validation": 54
+    }
+  },
+  "conditioning": {
+    "asset_version": "stage3_calibration_asset_v1",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha_value": 1.15,
+    "source": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
+  },
+  "training": {
+    "batch_size": 3,
+    "validation_batch_size": 3,
+    "num_steps": 4,
+    "validation_interval": 2,
+    "checkpoint_interval": 2,
+    "validation_batches": 2,
+    "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
+    "use_teacher_confidence": false,
+    "loss_weights": {
+      "teacher_z_art": 1.0,
+      "teacher_event": 1.0,
+      "teacher_event_prior": 0.5,
+      "teacher_energy_proxy": 0.25,
+      "teacher_vuv_proxy": 0.15,
+      "teacher_aper_proxy": 0.1,
+      "log_f0_correction_l1": 0.01,
+      "aper_correction_l1": 0.01
+    }
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-17T12:46:41",
+      "ended_at": "2026-03-17T12:46:41",
+      "duration_sec": 0.123401,
+      "record_ids": [
+        "target::archive_firefly_1",
+        "target::archive_firefly_10",
+        "target::archive_firefly_11"
+      ],
+      "loss_metrics": {
+        "loss_total": 20.899107,
+        "loss_teacher_z_art": 7.801432,
+        "loss_teacher_event": 5.7318,
+        "loss_teacher_event_prior": 5.510725,
+        "loss_teacher_energy_proxy": 18.005802,
+        "loss_teacher_vuv_proxy": 0.702461,
+        "loss_teacher_aper_proxy": 0.028781,
+        "loss_log_f0_correction_l1": 0.048019,
+        "loss_aper_correction_l1": 0.033583,
+        "teacher_confidence_weighted": false,
+        "effective_weight_sum": 12153.0
+      },
+      "grad_norm": 62.064243,
+      "status": "step_completed"
+    },
+    {
+      "step": 2,
+      "started_at": "2026-03-17T12:46:41",
+      "ended_at": "2026-03-17T12:46:42",
+      "duration_sec": 0.083497,
+      "record_ids": [
+        "target::archive_firefly_12",
+        "target::archive_firefly_13",
+        "target::archive_firefly_14"
+      ],
+      "loss_metrics": {
+        "loss_total": 15.594548,
+        "loss_teacher_z_art": 3.321939,
+        "loss_teacher_event": 5.543252,
+        "loss_teacher_event_prior": 5.467848,
+        "loss_teacher_energy_proxy": 15.521727,
+        "loss_teacher_vuv_proxy": 0.705126,
+        "loss_teacher_aper_proxy": 0.069341,
+        "loss_log_f0_correction_l1": 0.02244,
+        "loss_aper_correction_l1": 0.20729,
+        "teacher_confidence_weighted": false,
+        "effective_weight_sum": 15310.0
+      },
+      "grad_norm": 34.331001,
+      "status": "step_completed"
+    },
+    {
+      "step": 3,
+      "started_at": "2026-03-17T12:46:42",
+      "ended_at": "2026-03-17T12:46:42",
+      "duration_sec": 0.064521,
+      "record_ids": [
+        "target::archive_firefly_15",
+        "target::archive_firefly_16",
+        "target::archive_firefly_17"
+      ],
+      "loss_metrics": {
+        "loss_total": 12.634779,
+        "loss_teacher_z_art": 1.511097,
+        "loss_teacher_event": 5.449445,
+        "loss_teacher_event_prior": 5.424989,
+        "loss_teacher_energy_proxy": 11.354263,
+        "loss_teacher_vuv_proxy": 0.708802,
+        "loss_teacher_aper_proxy": 0.140438,
+        "loss_log_f0_correction_l1": 0.049383,
+        "loss_aper_correction_l1": 0.231954,
+        "teacher_confidence_weighted": false,
+        "effective_weight_sum": 11693.0
+      },
+      "grad_norm": 20.784277,
+      "status": "step_completed"
+    },
+    {
+      "step": 4,
+      "started_at": "2026-03-17T12:46:42",
+      "ended_at": "2026-03-17T12:46:42",
+      "duration_sec": 0.07385,
+      "record_ids": [
+        "target::archive_firefly_18",
+        "target::archive_firefly_19",
+        "target::archive_firefly_20"
+      ],
+      "loss_metrics": {
+        "loss_total": 11.420456,
+        "loss_teacher_z_art": 0.844586,
+        "loss_teacher_event": 5.355719,
+        "loss_teacher_event_prior": 5.353091,
+        "loss_teacher_energy_proxy": 9.648021,
+        "loss_teacher_vuv_proxy": 0.713147,
+        "loss_teacher_aper_proxy": 0.213288,
+        "loss_log_f0_correction_l1": 0.14268,
+        "loss_aper_correction_l1": 0.187327,
+        "teacher_confidence_weighted": false,
+        "effective_weight_sum": 13605.0
+      },
+      "grad_norm": 13.505103,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 2,
+      "validation_batches": 2,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145"
+        ],
+        [
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 13.876435,
+        "loss_teacher_z_art": 1.396863,
+        "loss_teacher_event": 5.461132,
+        "loss_teacher_event_prior": 5.437653,
+        "loss_teacher_energy_proxy": 16.710361,
+        "loss_teacher_vuv_proxy": 0.704176,
+        "loss_teacher_aper_proxy": 0.135845,
+        "loss_log_f0_correction_l1": 0.050658,
+        "loss_aper_correction_l1": 0.230643,
+        "teacher_confidence_weighted": false,
+        "effective_weight_sum": 1893.0
+      }
+    },
+    {
+      "step": 4,
+      "validation_batches": 2,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147"
+        ],
+        [
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 10.25421,
+        "loss_teacher_z_art": 0.554042,
+        "loss_teacher_event": 5.235131,
+        "loss_teacher_event_prior": 5.268804,
+        "loss_teacher_energy_proxy": 6.774844,
+        "loss_teacher_vuv_proxy": 0.713205,
+        "loss_teacher_aper_proxy": 0.26359,
+        "loss_log_f0_correction_l1": 0.242849,
+        "loss_aper_correction_l1": 0.115609,
+        "teacher_confidence_weighted": false,
+        "effective_weight_sum": 2926.0
+      }
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_no_conf_v2.step2.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_no_conf_v2.step4.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_no_conf_v2.step4.pt"
+  },
+  "notes": [
+    "This is a minimal multi-step Stage3 training loop scaffold built on top of the new teacher-supervised contract.",
+    "Validation currently averages a small sampled subset of target_validation batches for speed; it is not a full-slice evaluation.",
+    "The purpose is to expose step-wise loss, grad_norm, validation, and checkpoint behavior before adding richer supervision or r_res."
+  ],
+  "next_steps": [
+    "Decide whether validation should stay as sampled batches or be expanded into a fuller pass before larger runs.",
+    "Tune learning rate, loss weights, and teacher confidence usage based on short-horizon trajectories instead of a single step.",
+    "Keep hidden distillation and r_res disabled until the base multi-step route is stable."
+  ],
+  "status": "training_loop_scaffold_completed"
+}

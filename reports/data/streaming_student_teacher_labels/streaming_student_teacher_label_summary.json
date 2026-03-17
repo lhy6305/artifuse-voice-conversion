@@ -1,0 +1,205 @@
+{
+  "generated_at": "2026-03-17T12:09:37",
+  "route_handoff_path": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_route_handoff_round1_1_longwindow_final/route_handoff.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration.metrics.json",
+  "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "data_output_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels",
+  "report_output_dir": "F:/proj_dev/tmp/workdir4/reports/data/streaming_student_teacher_labels",
+  "teacher_anchor": {
+    "experiment_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+    "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration.metrics.json",
+    "route_policy": "default_minimax",
+    "route_selected_anchor_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "source": "route_handoff_anchor"
+  },
+  "index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl",
+  "record_count": 666,
+  "frame_count": 1118127,
+  "batch_size": 4,
+  "max_records_per_slice": null,
+  "feature_dims": {
+    "hidden": 64,
+    "fused_hidden": 64,
+    "z_art": 8,
+    "event_logits": 8,
+    "acoustic": 4,
+    "confidence": 1
+  },
+  "slices": {
+    "target_train": {
+      "record_count": 592,
+      "duration_stats_sec": {
+        "count": 592,
+        "min": 0.229002,
+        "max": 25.493991,
+        "mean": 6.158126,
+        "median": 5.089989,
+        "stdev": 4.188116
+      },
+      "frame_count_stats": {
+        "count": 592,
+        "min": 61,
+        "max": 7025,
+        "mean": 1695.342905,
+        "median": 1401.0,
+        "stdev": 1154.373875,
+        "sum": 1003643
+      },
+      "confidence_mean_stats": {
+        "count": 592,
+        "min": 0.378786,
+        "max": 0.575643,
+        "mean": 0.489846,
+        "median": 0.490358,
+        "stdev": 0.028903
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 592,
+        "min": 0.055468,
+        "max": 0.69403,
+        "mean": 0.319015,
+        "median": 0.325288,
+        "stdev": 0.108383
+      },
+      "utterance_structure_type_counts": {
+        "multi_clause_single_terminal": 276,
+        "multi_terminal": 156,
+        "other": 102,
+        "single_clause_terminal": 58
+      },
+      "final_terminal_type_counts": {
+        "none": 153,
+        "terminal_exclamation": 37,
+        "terminal_period": 308,
+        "terminal_question": 94
+      },
+      "sample_record_ids": [
+        "target::archive_firefly_1",
+        "target::archive_firefly_10",
+        "target::archive_firefly_11",
+        "target::archive_firefly_12",
+        "target::archive_firefly_13",
+        "target::archive_firefly_14",
+        "target::archive_firefly_15",
+        "target::archive_firefly_16"
+      ]
+    },
+    "target_validation": {
+      "record_count": 66,
+      "duration_stats_sec": {
+        "count": 66,
+        "min": 0.612993,
+        "max": 21.104989,
+        "mean": 6.173509,
+        "median": 5.072993,
+        "stdev": 4.226809
+      },
+      "frame_count_stats": {
+        "count": 66,
+        "min": 167,
+        "max": 5815,
+        "mean": 1699.530303,
+        "median": 1396.0,
+        "stdev": 1165.044273,
+        "sum": 112169
+      },
+      "confidence_mean_stats": {
+        "count": 66,
+        "min": 0.39561,
+        "max": 0.568725,
+        "mean": 0.486753,
+        "median": 0.484696,
+        "stdev": 0.029942
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 66,
+        "min": 0.075067,
+        "max": 0.620592,
+        "mean": 0.338887,
+        "median": 0.351837,
+        "stdev": 0.107932
+      },
+      "utterance_structure_type_counts": {
+        "multi_clause_single_terminal": 31,
+        "multi_terminal": 18,
+        "other": 9,
+        "single_clause_terminal": 8
+      },
+      "final_terminal_type_counts": {
+        "none": 21,
+        "terminal_exclamation": 5,
+        "terminal_period": 32,
+        "terminal_question": 8
+      },
+      "sample_record_ids": [
+        "target::chapter3_3_firefly_162",
+        "target::chapter3_20_firefly_184",
+        "target::chapter3_21_firefly_116",
+        "target::chapter3_3_firefly_207",
+        "target::chapter3_30_firefly_101",
+        "target::chapter3_2_firefly_131",
+        "target::chapter3_2_firefly_212",
+        "target::chapter3_3_firefly_246"
+      ]
+    },
+    "target_special_eval": {
+      "record_count": 8,
+      "duration_stats_sec": {
+        "count": 8,
+        "min": 0.470998,
+        "max": 2.114989,
+        "mean": 1.057291,
+        "median": 0.956985,
+        "stdev": 0.464816
+      },
+      "frame_count_stats": {
+        "count": 8,
+        "min": 128,
+        "max": 581,
+        "mean": 289.375,
+        "median": 261.5,
+        "stdev": 128.117073,
+        "sum": 2315
+      },
+      "confidence_mean_stats": {
+        "count": 8,
+        "min": 0.463993,
+        "max": 0.556913,
+        "mean": 0.489138,
+        "median": 0.473384,
+        "stdev": 0.030839
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 8,
+        "min": 0.039062,
+        "max": 0.303191,
+        "mean": 0.177271,
+        "median": 0.167522,
+        "stdev": 0.099075
+      },
+      "utterance_structure_type_counts": {
+        "nonverbal": 8
+      },
+      "final_terminal_type_counts": {
+        "none": 8
+      },
+      "sample_record_ids": [
+        "target::no_text_voice/chapter3_17_firefly_106",
+        "target::no_text_voice/chapter3_18_firefly_101",
+        "target::no_text_voice/chapter3_21_firefly_108",
+        "target::no_text_voice/chapter3_22_firefly_115",
+        "target::no_text_voice/chapter3_29_firefly_139",
+        "target::no_text_voice/chapter3_2_firefly_102",
+        "target::no_text_voice/chapter3_30_firefly_144",
+        "target::no_text_voice/chapter3_3_firefly_110"
+      ]
+    }
+  },
+  "notes": [
+    "Teacher labels are pseudo labels exported from the formal offline_mvp route anchor, not physical ground truth.",
+    "frame_confidence uses heuristic bootstrap_v1 and is meant for later weighting/filtering, not as a final confidence design.",
+    "Stage3 may reuse these labels as assets, but should still keep its own training entry and loss contract separate from offline_mvp."
+  ]
+}

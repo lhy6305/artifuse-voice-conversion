@@ -1,0 +1,161 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_large_scale_seeded_500_evt_a1_candidate.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+  "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-013-offline-mvp-evt-a1-large-scale.step500.pt",
+  "split_option_name": "hybrid_stratified_blocked",
+  "target_validation": {
+    "record_count": 62,
+    "batch_count": 16,
+    "duration_stats_sec": {
+      "count": 62,
+      "min": 0.757982,
+      "max": 21.104989,
+      "mean": 6.207777,
+      "median": 5.06449,
+      "stdev": 4.25047
+    },
+    "clean_char_count": {
+      "count": 62,
+      "min": 2,
+      "max": 70,
+      "mean": 24.225806,
+      "median": 19.0,
+      "stdev": 15.97924
+    },
+    "metrics": {
+      "loss_total": 1.903484,
+      "loss_acoustic": 0.0648,
+      "loss_event": 3.659414,
+      "loss_z_smooth": 0.063751,
+      "loss_text_aux": 0.013008
+    },
+    "output_stats": {
+      "z_art_abs_mean": 0.582312,
+      "event_prob_mean": 0.403894,
+      "acoustic_abs_mean": 0.967009,
+      "text_aux_abs_mean": 0.150285
+    },
+    "record_ids": [
+      "target::chapter3_3_firefly_249",
+      "target::chapter3_2_firefly_141",
+      "target::chapter3_22_firefly_101",
+      "target::chapter3_20_firefly_108",
+      "target::chapter3_3_firefly_164",
+      "target::chapter3_3_firefly_147",
+      "target::chapter3_3_firefly_230",
+      "target::chapter3_4_firefly_125",
+      "target::chapter3_2_firefly_119",
+      "target::chapter3_17_firefly_146",
+      "target::chapter3_20_firefly_154",
+      "target::chapter3_2_firefly_143",
+      "target::chapter3_2_firefly_132",
+      "target::chapter3_2_firefly_137",
+      "target::chapter3_3_firefly_234",
+      "target::chapter3_3_firefly_171",
+      "target::chapter3_30_firefly_119",
+      "target::chapter3_30_firefly_131",
+      "target::chapter3_17_firefly_103",
+      "target::chapter3_3_firefly_192",
+      "target::chapter3_3_firefly_239",
+      "target::chapter3_2_firefly_168",
+      "target::chapter3_20_firefly_181",
+      "target::chapter3_3_firefly_237",
+      "target::chapter3_20_firefly_153",
+      "target::chapter3_3_firefly_166",
+      "target::chapter3_5_firefly_103",
+      "target::chapter3_2_firefly_111",
+      "target::chapter3_20_firefly_167",
+      "target::chapter3_3_firefly_169",
+      "target::chapter3_18_firefly_104",
+      "target::chapter3_17_firefly_134",
+      "target::chapter3_18_firefly_103",
+      "target::chapter3_3_firefly_224",
+      "target::chapter3_4_firefly_133",
+      "target::chapter3_4_firefly_117",
+      "target::chapter3_30_firefly_123",
+      "target::chapter3_17_firefly_156",
+      "target::chapter3_26_firefly_104",
+      "target::chapter3_30_firefly_113",
+      "target::chapter3_22_firefly_125",
+      "target::chapter3_4_firefly_112",
+      "target::chapter3_30_firefly_136",
+      "target::chapter3_3_firefly_204",
+      "target::chapter3_17_firefly_157",
+      "target::chapter3_3_firefly_146",
+      "target::chapter3_2_firefly_114",
+      "target::chapter3_2_firefly_205",
+      "target::chapter3_22_firefly_118",
+      "target::chapter3_17_firefly_145",
+      "target::chapter3_30_firefly_153",
+      "target::chapter3_30_firefly_133",
+      "target::chapter3_30_firefly_126",
+      "target::chapter3_17_firefly_127",
+      "target::chapter3_3_firefly_111",
+      "target::chapter3_17_firefly_116",
+      "target::chapter3_3_firefly_209",
+      "target::archive_firefly_17",
+      "target::chapter3_2_firefly_218",
+      "target::chapter3_17_firefly_129",
+      "target::chapter3_2_firefly_206",
+      "target::chapter3_4_firefly_106"
+    ]
+  },
+  "target_special_eval": {
+    "record_count": 8,
+    "batch_count": 2,
+    "duration_stats_sec": {
+      "count": 8,
+      "min": 0.470998,
+      "max": 2.114989,
+      "mean": 1.057291,
+      "median": 0.956985,
+      "stdev": 0.464816
+    },
+    "clean_char_count": {
+      "count": 8,
+      "min": 1,
+      "max": 1,
+      "mean": 1.0,
+      "median": 1.0,
+      "stdev": 0.0
+    },
+    "metrics": {
+      "loss_total": 2.192053,
+      "loss_acoustic": 0.032446,
+      "loss_event": 4.098673,
+      "loss_z_smooth": 0.062655,
+      "loss_text_aux": 0.520022
+    },
+    "output_stats": {
+      "z_art_abs_mean": 0.648342,
+      "event_prob_mean": 0.405813,
+      "acoustic_abs_mean": 0.967947,
+      "text_aux_abs_mean": 0.170773
+    },
+    "record_ids": [
+      "target::no_text_voice/chapter3_17_firefly_106",
+      "target::no_text_voice/chapter3_18_firefly_101",
+      "target::no_text_voice/chapter3_21_firefly_108",
+      "target::no_text_voice/chapter3_22_firefly_115",
+      "target::no_text_voice/chapter3_29_firefly_139",
+      "target::no_text_voice/chapter3_2_firefly_102",
+      "target::no_text_voice/chapter3_30_firefly_144",
+      "target::no_text_voice/chapter3_3_firefly_110"
+    ]
+  },
+  "comparisons": {
+    "delta_loss_total": 0.288569,
+    "delta_loss_acoustic": -0.032354,
+    "delta_loss_event": 0.439259,
+    "delta_loss_text_aux": 0.507014,
+    "delta_z_art_abs_mean": 0.06603,
+    "delta_event_prob_mean": 0.001919,
+    "delta_acoustic_abs_mean": 0.000938,
+    "delta_text_aux_abs_mean": 0.020488
+  },
+  "notes": [
+    "Model-level special_eval is reported separately from regular validation.",
+    "Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.",
+    "Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality."
+  ]
+}

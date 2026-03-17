@@ -1,0 +1,130 @@
+{
+  "experiment_id": "EXP-20260314-002-offline-mvp-step1",
+  "created_at": "2026-03-14T14:51:35",
+  "dry_run": false,
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_template.json",
+  "data": {
+    "manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/manifests",
+    "target_manifest_count": 624,
+    "source_manifest_count": 537,
+    "dry_run_target_count": 4,
+    "dry_run_source_count": 4,
+    "target_batch_audio_shape": [
+      4,
+      88200
+    ],
+    "target_batch_token_shape": [
+      4,
+      67
+    ],
+    "source_batch_audio_shape": [
+      4,
+      73440
+    ],
+    "vocab_size": 1384
+  },
+  "model": {
+    "name": "offline_mvp_scaffold",
+    "r_res_enabled": false,
+    "uses_text_in_training": true,
+    "uses_text_in_runtime": false,
+    "z_art_dim": 8,
+    "event_head_enabled": true,
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "acoustic_dim": 4,
+    "frame_length": 400,
+    "hop_length": 160
+  },
+  "training": {
+    "mode": "offline_mvp",
+    "teacher_required": false,
+    "student_required": false,
+    "vocoder_required": false,
+    "single_step_validation_enabled": true,
+    "learning_rate": 0.0003,
+    "max_grad_norm": 1.0
+  },
+  "gates": {
+    "requires_r_res_disabled": true,
+    "requires_text_for_training": true,
+    "requires_text_for_runtime": false
+  },
+  "dry_run_validation": {
+    "source_record_ids": [
+      "source::segment_0001_0000020110_0000021640",
+      "source::segment_0002_0000023770_0000024280",
+      "source::segment_0003_0000036160_0000036880",
+      "source::segment_0004_0000039130_0000039910"
+    ],
+    "target_record_ids": [
+      "target::archive_firefly_1",
+      "target::archive_firefly_10",
+      "target::archive_firefly_11",
+      "target::archive_firefly_12"
+    ],
+    "forward_shapes": {
+      "source_z_art": [
+        4,
+        457,
+        8
+      ],
+      "source_event_logits": [
+        4,
+        457,
+        8
+      ],
+      "source_acoustic": [
+        4,
+        457,
+        4
+      ],
+      "source_frame_mask": [
+        4,
+        457
+      ],
+      "target_z_art": [
+        4,
+        549,
+        8
+      ],
+      "target_event_logits": [
+        4,
+        549,
+        8
+      ],
+      "target_acoustic": [
+        4,
+        549,
+        4
+      ],
+      "target_frame_mask": [
+        4,
+        549
+      ]
+    }
+  },
+  "step_metrics": {
+    "target": {
+      "loss_total": 15.529247283935547,
+      "loss_acoustic": 12.75229549407959,
+      "loss_event": 5.51282262802124,
+      "loss_z_smooth": 0.008189329877495766,
+      "loss_text_aux": 0.09860590845346451
+    },
+    "source": {
+      "loss_total": 36.20685577392578,
+      "loss_acoustic": 33.42219161987305,
+      "loss_event": 5.568924427032471,
+      "loss_z_smooth": 0.0020235844422131777,
+      "loss_text_aux": 0.0
+    },
+    "loss_total": 51.73610305786133,
+    "grad_norm": 28.910484313964844
+  },
+  "artifacts": {
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-002-offline-mvp-step1.step1.pt",
+    "logs_dir": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/logs"
+  },
+  "status": "single_step_completed"
+}

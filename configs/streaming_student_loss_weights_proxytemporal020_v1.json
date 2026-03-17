@@ -1,0 +1,5 @@
+{
+  "loss_weights": {
+    "teacher_proxy_temporal": 0.2
+  }
+}

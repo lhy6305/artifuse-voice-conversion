@@ -1,0 +1,4512 @@
+{
+  "experiment_id": "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration",
+  "status": "training_run_completed",
+  "created_at": "2026-03-15T18:33:28",
+  "metrics": {
+    "training_run": {
+      "dry_run": false,
+      "timing": {
+        "started_at": "2026-03-15T18:34:29",
+        "ended_at": "2026-03-15T18:34:33",
+        "duration_sec": 3.382464
+      },
+      "execution_guard": {
+        "run_stage": "small_scale_validation",
+        "requires_small_scale_prerequisite": false,
+        "prerequisite_experiment_id": null,
+        "init_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d26_d7_init_d10_teacher_consolidation_teacher_consistency_shortpausegate_priority_exp043/checkpoints/EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration.step20.pt"
+      },
+      "split": {
+        "strategy": "materialized_split",
+        "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+        "option_name": "hybrid_stratified_blocked",
+        "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+        "counts": {
+          "target_train": 592,
+          "target_validation": 66,
+          "target_special_eval": 8,
+          "source_train": 483,
+          "source_validation": 54
+        }
+      },
+      "training_run": {
+        "num_steps": 20,
+        "completed_steps": 20,
+        "validation_interval": 10,
+        "checkpoint_interval": 10,
+        "initial_learning_rate": 0.00015,
+        "learning_rate_schedule": {
+          "enabled": false
+        },
+        "teacher_consistency": {
+          "enabled": true,
+          "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+          "weight": 0.15,
+          "event_weight": 1.0,
+          "z_art_weight": 1.0,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "short_pause_no_terminal"
+          ]
+        },
+        "sampler_mode": "priority_interleave",
+        "history": [
+          {
+            "step": 1,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.098643,
+            "target_record_ids": [
+              "target::chapter3_29_firefly_107",
+              "target::chapter3_3_firefly_134",
+              "target::chapter3_29_firefly_104",
+              "target::chapter3_2_firefly_105"
+            ],
+            "source_record_ids": [
+              "source::segment_0400_0002604460_0002605660",
+              "source::segment_0281_0001739320_0001740100",
+              "source::segment_0506_0003402820_0003403450",
+              "source::segment_0024_0000101020_0000103510"
+            ],
+            "target": {
+              "loss_total": 2.6019811630249023,
+              "loss_acoustic": 0.20634686946868896,
+              "loss_event": 4.723507404327393,
+              "loss_z_smooth": 0.10942892730236053,
+              "loss_text_aux": 0.11468832194805145,
+              "loss_text_aux_effective": 0.11468832194805145,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.22359918057918549,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.011129729449748993,
+              "loss_teacher_consistency": 0.029883872717618942,
+              "loss_teacher_event_consistency": 0.02053583599627018,
+              "loss_teacher_z_art_consistency": 0.009348035790026188
+            },
+            "source": {
+              "loss_total": 2.4392337799072266,
+              "loss_acoustic": 0.18242456018924713,
+              "loss_event": 4.499843120574951,
+              "loss_z_smooth": 0.06887709349393845,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.0,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 5.0456976890563965,
+            "grad_norm": 7.180974960327148
+          },
+          {
+            "step": 2,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.09067,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_113",
+              "target::chapter3_2_firefly_169",
+              "target::chapter3_4_firefly_139",
+              "target::archive_firefly_19"
+            ],
+            "source_record_ids": [
+              "source::segment_0027_0000119050_0000120490",
+              "source::segment_0474_0003144970_0003146260",
+              "source::segment_0020_0000091060_0000092890",
+              "source::segment_0117_0000697030_0000698170"
+            ],
+            "target": {
+              "loss_total": 2.5662684440612793,
+              "loss_acoustic": 0.16317957639694214,
+              "loss_event": 4.65443754196167,
+              "loss_z_smooth": 0.10008276998996735,
+              "loss_text_aux": 0.08588284999132156,
+              "loss_text_aux_effective": 0.08588284999132156,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.18124398589134216,
+              "loss_clause_transition_aux": 0.1382325440645218,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03542943298816681,
+              "loss_teacher_consistency": 0.04717864841222763,
+              "loss_teacher_event_consistency": 0.02458031289279461,
+              "loss_teacher_z_art_consistency": 0.02259833738207817
+            },
+            "source": {
+              "loss_total": 2.6400482654571533,
+              "loss_acoustic": 0.3262200653553009,
+              "loss_event": 4.612934112548828,
+              "loss_z_smooth": 0.07361237704753876,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.00857142857142857,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 5.213393688201904,
+            "grad_norm": 24.893047332763672
+          },
+          {
+            "step": 3,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.075458,
+            "target_record_ids": [
+              "target::chapter3_17_firefly_138",
+              "target::chapter3_22_firefly_110",
+              "target::chapter3_4_firefly_136",
+              "target::chapter3_3_firefly_191"
+            ],
+            "source_record_ids": [
+              "source::segment_0537_0003666910_0003667510",
+              "source::segment_0415_0002707540_0002708260",
+              "source::segment_0531_0003624730_0003625390",
+              "source::segment_0450_0002964880_0002966590"
+            ],
+            "target": {
+              "loss_total": 2.5140538215637207,
+              "loss_acoustic": 0.17045240104198456,
+              "loss_event": 4.618013858795166,
+              "loss_z_smooth": 0.10354407876729965,
+              "loss_text_aux": 0.1178743839263916,
+              "loss_text_aux_effective": 0.1178743839263916,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.16400812566280365,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03880549967288971,
+              "loss_teacher_consistency": 0.03632102906703949,
+              "loss_teacher_event_consistency": 0.020724235102534294,
+              "loss_teacher_z_art_consistency": 0.01559679489582777
+            },
+            "source": {
+              "loss_total": 2.5271596908569336,
+              "loss_acoustic": 0.24365317821502686,
+              "loss_event": 4.551774024963379,
+              "loss_z_smooth": 0.0761938989162445,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.01714285714285714,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 5.046661853790283,
+            "grad_norm": 10.509098052978516
+          },
+          {
+            "step": 4,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.074294,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_249",
+              "target::chapter3_30_firefly_138",
+              "target::chapter3_20_firefly_156",
+              "target::chapter3_21_firefly_107"
+            ],
+            "source_record_ids": [
+              "source::segment_0512_0003458620_0003459130",
+              "source::segment_0298_0001862950_0001863820",
+              "source::segment_0267_0001630870_0001632160",
+              "source::segment_0283_0001746220_0001746820"
+            ],
+            "target": {
+              "loss_total": 2.315037488937378,
+              "loss_acoustic": 0.15318457782268524,
+              "loss_event": 4.25830602645874,
+              "loss_z_smooth": 0.11400379985570908,
+              "loss_text_aux": 0.10187764465808868,
+              "loss_text_aux_effective": 0.10187764465808868,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.18519610166549683,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03592768311500549,
+              "loss_teacher_consistency": 0.027861718088388443,
+              "loss_teacher_event_consistency": 0.016031982377171516,
+              "loss_teacher_z_art_consistency": 0.011829735711216927
+            },
+            "source": {
+              "loss_total": 2.5248777866363525,
+              "loss_acoustic": 0.2326330840587616,
+              "loss_event": 4.573879718780518,
+              "loss_z_smooth": 0.05304781720042229,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.02571428571428571,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.844094753265381,
+            "grad_norm": 9.996155738830566
+          },
+          {
+            "step": 5,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.075071,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_164",
+              "target::chapter3_2_firefly_246",
+              "target::chapter3_17_firefly_143",
+              "target::chapter4_7_firefly_112"
+            ],
+            "source_record_ids": [
+              "source::segment_0440_0002906050_0002907190",
+              "source::segment_0457_0003026290_0003026950",
+              "source::segment_0525_0003597400_0003598480",
+              "source::segment_0106_0000577000_0000578290"
+            ],
+            "target": {
+              "loss_total": 2.5741302967071533,
+              "loss_acoustic": 0.18574295938014984,
+              "loss_event": 4.647682189941406,
+              "loss_z_smooth": 0.09933049976825714,
+              "loss_text_aux": 0.10077745467424393,
+              "loss_text_aux_effective": 0.10077745467424393,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.2395107001066208,
+              "loss_clause_transition_aux": 0.09471453726291656,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03813960403203964,
+              "loss_teacher_consistency": 0.02008044347167015,
+              "loss_teacher_event_consistency": 0.011125324293971062,
+              "loss_teacher_z_art_consistency": 0.008955119177699089
+            },
+            "source": {
+              "loss_total": 2.4590277671813965,
+              "loss_acoustic": 0.18537406623363495,
+              "loss_event": 4.534068584442139,
+              "loss_z_smooth": 0.06619546562433243,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.03428571428571428,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 5.036170482635498,
+            "grad_norm": 4.436026573181152
+          },
+          {
+            "step": 6,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.103456,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_250",
+              "target::chapter3_20_firefly_123",
+              "target::chapter3_2_firefly_109",
+              "target::chapter3_20_firefly_112"
+            ],
+            "source_record_ids": [
+              "source::segment_0469_0003106780_0003107530",
+              "source::segment_0371_0002367490_0002368090",
+              "source::segment_0064_0000306070_0000307720",
+              "source::segment_0354_0002288050_0002290000"
+            ],
+            "target": {
+              "loss_total": 2.386883497238159,
+              "loss_acoustic": 0.1421208679676056,
+              "loss_event": 4.337464332580566,
+              "loss_z_smooth": 0.09696498513221741,
+              "loss_text_aux": 0.1122056394815445,
+              "loss_text_aux_effective": 0.1122056394815445,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.1596308797597885,
+              "loss_clause_transition_aux": 0.12097816914319992,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03617691248655319,
+              "loss_teacher_consistency": 0.013483087532222271,
+              "loss_teacher_event_consistency": 0.007802011910825968,
+              "loss_teacher_z_art_consistency": 0.005681075621396303
+            },
+            "source": {
+              "loss_total": 2.4070515632629395,
+              "loss_acoustic": 0.17099200189113617,
+              "loss_event": 4.455502033233643,
+              "loss_z_smooth": 0.08308649063110352,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.04285714285714286,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.795957088470459,
+            "grad_norm": 6.2185211181640625
+          },
+          {
+            "step": 7,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.094689,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_116",
+              "target::chapter3_17_firefly_101",
+              "target::chapter3_2_firefly_194",
+              "target::chapter3_3_firefly_183"
+            ],
+            "source_record_ids": [
+              "source::segment_0439_0002902900_0002903920",
+              "source::segment_0327_0002144080_0002145700",
+              "source::segment_0432_0002854060_0002855020",
+              "source::segment_0213_0001227250_0001228000"
+            ],
+            "target": {
+              "loss_total": 2.4317541122436523,
+              "loss_acoustic": 0.19658592343330383,
+              "loss_event": 4.409339904785156,
+              "loss_z_smooth": 0.13308772444725037,
+              "loss_text_aux": 0.07590986043214798,
+              "loss_text_aux_effective": 0.07590986043214798,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.2065732777118683,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03903255611658096,
+              "loss_teacher_consistency": 0.009319223463535309,
+              "loss_teacher_event_consistency": 0.005240137688815594,
+              "loss_teacher_z_art_consistency": 0.004079086240381002
+            },
+            "source": {
+              "loss_total": 2.4280107021331787,
+              "loss_acoustic": 0.16894564032554626,
+              "loss_event": 4.504153728485107,
+              "loss_z_smooth": 0.06988285481929779,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.05142857142857142,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.861163139343262,
+            "grad_norm": 11.112809181213379
+          },
+          {
+            "step": 8,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:31",
+            "duration_sec": 0.078439,
+            "target_record_ids": [
+              "target::chapter3_4_firefly_125",
+              "target::chapter3_2_firefly_129",
+              "target::chapter3_17_firefly_148",
+              "target::chapter3_6_firefly_111"
+            ],
+            "source_record_ids": [
+              "source::segment_0416_0002715190_0002717140",
+              "source::segment_0171_0000974560_0000977110",
+              "source::segment_0195_0001129240_0001130290",
+              "source::segment_0270_0001653280_0001654240"
+            ],
+            "target": {
+              "loss_total": 2.5443930625915527,
+              "loss_acoustic": 0.1547079086303711,
+              "loss_event": 4.7124857902526855,
+              "loss_z_smooth": 0.1089811846613884,
+              "loss_text_aux": 0.10604647547006607,
+              "loss_text_aux_effective": 0.10604647547006607,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.12828375399112701,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.022248797118663788,
+              "loss_teacher_consistency": 0.006346574984490871,
+              "loss_teacher_event_consistency": 0.002129440428689122,
+              "loss_teacher_z_art_consistency": 0.004217134788632393
+            },
+            "source": {
+              "loss_total": 2.435497522354126,
+              "loss_acoustic": 0.17632335424423218,
+              "loss_event": 4.501239776611328,
+              "loss_z_smooth": 0.08554136753082275,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.06,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.980842590332031,
+            "grad_norm": 8.357769966125488
+          },
+          {
+            "step": 9,
+            "started_at": "2026-03-15T18:34:31",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.07228,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_125",
+              "target::chapter3_21_firefly_109",
+              "target::chapter3_3_firefly_248",
+              "target::chapter3_20_firefly_168"
+            ],
+            "source_record_ids": [
+              "source::segment_0377_0002394850_0002397880",
+              "source::segment_0184_0001079260_0001079800",
+              "source::segment_0467_0003101140_0003102430",
+              "source::segment_0100_0000536020_0000536980"
+            ],
+            "target": {
+              "loss_total": 2.610463857650757,
+              "loss_acoustic": 0.1715417206287384,
+              "loss_event": 4.637052536010742,
+              "loss_z_smooth": 0.10161563754081726,
+              "loss_text_aux": 0.13829782605171204,
+              "loss_text_aux_effective": 0.13829782605171204,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.18582768738269806,
+              "loss_clause_transition_aux": 0.23592747747898102,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0,
+              "loss_teacher_consistency": 0.005433821585029364,
+              "loss_teacher_event_consistency": 0.0024032879155129194,
+              "loss_teacher_z_art_consistency": 0.003030533669516444
+            },
+            "source": {
+              "loss_total": 2.3303616046905518,
+              "loss_acoustic": 0.14070537686347961,
+              "loss_event": 4.3622846603393555,
+              "loss_z_smooth": 0.08513987064361572,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.06857142857142856,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.941640377044678,
+            "grad_norm": 9.74588680267334
+          },
+          {
+            "step": 10,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.076276,
+            "target_record_ids": [
+              "target::chapter3_2_firefly_248",
+              "target::chapter3_2_firefly_159",
+              "target::chapter3_20_firefly_146",
+              "target::chapter3_2_firefly_125"
+            ],
+            "source_record_ids": [
+              "source::segment_0350_0002265700_0002266420",
+              "source::segment_0038_0000166120_0000167410",
+              "source::segment_0368_0002359870_0002361520",
+              "source::segment_0362_0002323090_0002323870"
+            ],
+            "target": {
+              "loss_total": 2.4257428646087646,
+              "loss_acoustic": 0.14573673903942108,
+              "loss_event": 4.489019870758057,
+              "loss_z_smooth": 0.10300680994987488,
+              "loss_text_aux": 0.12553367018699646,
+              "loss_text_aux_effective": 0.12553367018699646,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.253697007894516,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0011525005102157593,
+              "loss_teacher_consistency": 0.004662165883928537,
+              "loss_teacher_event_consistency": 0.0010065807728096843,
+              "loss_teacher_z_art_consistency": 0.003655585227534175
+            },
+            "source": {
+              "loss_total": 2.3742854595184326,
+              "loss_acoustic": 0.15800423920154572,
+              "loss_event": 4.41560173034668,
+              "loss_z_smooth": 0.08480245620012283,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.07714285714285715,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.800727844238281,
+            "grad_norm": 2.655223846435547
+          },
+          {
+            "step": 11,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.080036,
+            "target_record_ids": [
+              "target::chapter3_4_firefly_124",
+              "target::chapter4_7_firefly_111",
+              "target::chapter3_17_firefly_132",
+              "target::chapter3_30_firefly_103"
+            ],
+            "source_record_ids": [
+              "source::segment_0172_0000983560_0000984430",
+              "source::segment_0343_0002231650_0002234380",
+              "source::segment_0285_0001760320_0001761370",
+              "source::segment_0218_0001244290_0001246420"
+            ],
+            "target": {
+              "loss_total": 2.593243360519409,
+              "loss_acoustic": 0.14770087599754333,
+              "loss_event": 4.837350845336914,
+              "loss_z_smooth": 0.1152392327785492,
+              "loss_text_aux": 0.061277229338884354,
+              "loss_text_aux_effective": 0.061277229338884354,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.22431758046150208,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.036023445427417755,
+              "loss_teacher_consistency": 0.005309895612299442,
+              "loss_teacher_event_consistency": 0.0026286409702152014,
+              "loss_teacher_z_art_consistency": 0.0026812544092535973
+            },
+            "source": {
+              "loss_total": 2.369734525680542,
+              "loss_acoustic": 0.16852526366710663,
+              "loss_event": 4.383575439453125,
+              "loss_z_smooth": 0.09421495348215103,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.08571428571428572,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.96377420425415,
+            "grad_norm": 13.58169174194336
+          },
+          {
+            "step": 12,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.075211,
+            "target_record_ids": [
+              "target::chapter3_17_firefly_136",
+              "target::chapter3_17_firefly_125",
+              "target::chapter3_3_firefly_105",
+              "target::chapter3_17_firefly_127"
+            ],
+            "source_record_ids": [
+              "source::segment_0078_0000411280_0000413920",
+              "source::segment_0161_0000920530_0000921100",
+              "source::segment_0197_0001133230_0001134250",
+              "source::segment_0481_0003208900_0003209470"
+            ],
+            "target": {
+              "loss_total": 2.5516574382781982,
+              "loss_acoustic": 0.15375271439552307,
+              "loss_event": 4.714596271514893,
+              "loss_z_smooth": 0.09289897978305817,
+              "loss_text_aux": 0.1379435956478119,
+              "loss_text_aux_effective": 0.1379435956478119,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.24336908757686615,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03953799605369568,
+              "loss_teacher_consistency": 0.00618850439786911,
+              "loss_teacher_event_consistency": 0.0032375967130064964,
+              "loss_teacher_z_art_consistency": 0.0029509079176932573
+            },
+            "source": {
+              "loss_total": 2.4308931827545166,
+              "loss_acoustic": 0.1654316484928131,
+              "loss_event": 4.518793106079102,
+              "loss_z_smooth": 0.06064924970269203,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.09428571428571428,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.983479022979736,
+            "grad_norm": 6.923102855682373
+          },
+          {
+            "step": 13,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.078121,
+            "target_record_ids": [
+              "target::chapter3_2_firefly_235",
+              "target::chapter3_22_firefly_113",
+              "target::chapter3_3_firefly_239",
+              "target::chapter3_2_firefly_113"
+            ],
+            "source_record_ids": [
+              "source::segment_0023_0000099310_0000100030",
+              "source::segment_0282_0001740520_0001742440",
+              "source::segment_0399_0002599240_0002600230",
+              "source::segment_0186_0001084330_0001085380"
+            ],
+            "target": {
+              "loss_total": 2.5291075706481934,
+              "loss_acoustic": 0.16468511521816254,
+              "loss_event": 4.607705116271973,
+              "loss_z_smooth": 0.09438495337963104,
+              "loss_text_aux": 0.08116739243268967,
+              "loss_text_aux_effective": 0.08116739243268967,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.2124422788619995,
+              "loss_clause_transition_aux": 0.09456605464220047,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.017499424517154694,
+              "loss_teacher_consistency": 0.006953508127480745,
+              "loss_teacher_event_consistency": 0.003944329917430878,
+              "loss_teacher_z_art_consistency": 0.0030091782100498676
+            },
+            "source": {
+              "loss_total": 2.4072511196136475,
+              "loss_acoustic": 0.15845279395580292,
+              "loss_event": 4.481001377105713,
+              "loss_z_smooth": 0.08297578990459442,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.10285714285714284,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.937401294708252,
+            "grad_norm": 8.099658966064453
+          },
+          {
+            "step": 14,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.075265,
+            "target_record_ids": [
+              "target::chapter3_2_firefly_191",
+              "target::chapter3_3_firefly_226",
+              "target::chapter3_17_firefly_123",
+              "target::chapter3_4_firefly_135"
+            ],
+            "source_record_ids": [
+              "source::segment_0353_0002280160_0002281360",
+              "source::segment_0430_0002832340_0002833210",
+              "source::segment_0355_0002300950_0002302810",
+              "source::segment_0107_0000582910_0000583570"
+            ],
+            "target": {
+              "loss_total": 2.3006584644317627,
+              "loss_acoustic": 0.11885485053062439,
+              "loss_event": 4.141199111938477,
+              "loss_z_smooth": 0.1171659454703331,
+              "loss_text_aux": 0.10151990503072739,
+              "loss_text_aux_effective": 0.10151990503072739,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.25119197368621826,
+              "loss_clause_transition_aux": 0.22623886168003082,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0,
+              "loss_teacher_consistency": 0.009994344785809517,
+              "loss_teacher_event_consistency": 0.006073708180338144,
+              "loss_teacher_z_art_consistency": 0.003920636139810085
+            },
+            "source": {
+              "loss_total": 2.3477602005004883,
+              "loss_acoustic": 0.14023548364639282,
+              "loss_event": 4.3981404304504395,
+              "loss_z_smooth": 0.08454588800668716,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.11142857142857143,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.6499176025390625,
+            "grad_norm": 8.656230926513672
+          },
+          {
+            "step": 15,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.082317,
+            "target_record_ids": [
+              "target::chapter3_17_firefly_137",
+              "target::chapter3_4_firefly_127",
+              "target::chapter3_3_firefly_243",
+              "target::chapter3_21_firefly_102"
+            ],
+            "source_record_ids": [
+              "source::segment_0449_0002959300_0002960110",
+              "source::segment_0451_0002979580_0002980090",
+              "source::segment_0473_0003139780_0003141310",
+              "source::segment_0221_0001270720_0001271320"
+            ],
+            "target": {
+              "loss_total": 2.350092887878418,
+              "loss_acoustic": 0.13530203700065613,
+              "loss_event": 4.354232311248779,
+              "loss_z_smooth": 0.1274222880601883,
+              "loss_text_aux": 0.10235542804002762,
+              "loss_text_aux_effective": 0.10235542804002762,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.241795152425766,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03717644512653351,
+              "loss_teacher_consistency": 0.016254045069217682,
+              "loss_teacher_event_consistency": 0.009903814643621445,
+              "loss_teacher_z_art_consistency": 0.00635022995993495
+            },
+            "source": {
+              "loss_total": 2.393728017807007,
+              "loss_acoustic": 0.16159914433956146,
+              "loss_event": 4.448923110961914,
+              "loss_z_smooth": 0.07667380571365356,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.12,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.7462592124938965,
+            "grad_norm": 6.197449207305908
+          },
+          {
+            "step": 16,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.154896,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_148",
+              "target::chapter3_2_firefly_118",
+              "target::chapter3_30_firefly_146",
+              "target::chapter3_29_firefly_129"
+            ],
+            "source_record_ids": [
+              "source::segment_0280_0001724200_0001726150",
+              "source::segment_0286_0001777990_0001778740",
+              "source::segment_0021_0000093430_0000094840",
+              "source::segment_0030_0000141640_0000143020"
+            ],
+            "target": {
+              "loss_total": 2.4086663722991943,
+              "loss_acoustic": 0.15128934383392334,
+              "loss_event": 4.454277515411377,
+              "loss_z_smooth": 0.11287720501422882,
+              "loss_text_aux": 0.09475383162498474,
+              "loss_text_aux_effective": 0.09475383162498474,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.2436288744211197,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0,
+              "loss_teacher_consistency": 0.013904052786529064,
+              "loss_teacher_event_consistency": 0.009557795710861683,
+              "loss_teacher_z_art_consistency": 0.004346257075667381
+            },
+            "source": {
+              "loss_total": 2.2978460788726807,
+              "loss_acoustic": 0.12611980736255646,
+              "loss_event": 4.327615737915039,
+              "loss_z_smooth": 0.07918280363082886,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.12,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.7085981369018555,
+            "grad_norm": 3.860438823699951
+          },
+          {
+            "step": 17,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.076479,
+            "target_record_ids": [
+              "target::chapter3_2_firefly_141",
+              "target::chapter3_2_firefly_202",
+              "target::chapter3_2_firefly_107",
+              "target::chapter3_3_firefly_176"
+            ],
+            "source_record_ids": [
+              "source::segment_0119_0000713740_0000714880",
+              "source::segment_0055_0000259209_0000259750",
+              "source::segment_0129_0000769150_0000770260",
+              "source::segment_0311_0001979200_0001980490"
+            ],
+            "target": {
+              "loss_total": 2.496999979019165,
+              "loss_acoustic": 0.11811348795890808,
+              "loss_event": 4.691413879394531,
+              "loss_z_smooth": 0.09747489541769028,
+              "loss_text_aux": 0.09712668508291245,
+              "loss_text_aux_effective": 0.09712668508291245,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.21744154393672943,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03338862210512161,
+              "loss_teacher_consistency": 0.020900893956422806,
+              "loss_teacher_event_consistency": 0.01462095882743597,
+              "loss_teacher_z_art_consistency": 0.006279934197664261
+            },
+            "source": {
+              "loss_total": 2.363262176513672,
+              "loss_acoustic": 0.1282583326101303,
+              "loss_event": 4.4557342529296875,
+              "loss_z_smooth": 0.07136745750904083,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.12,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.863397121429443,
+            "grad_norm": 3.574049472808838
+          },
+          {
+            "step": 18,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.077874,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_124",
+              "target::chapter3_6_firefly_101",
+              "target::chapter3_3_firefly_188",
+              "target::chapter3_29_firefly_127"
+            ],
+            "source_record_ids": [
+              "source::segment_0356_0002303230_0002304550",
+              "source::segment_0520_0003540400_0003542050",
+              "source::segment_0202_0001169260_0001170190",
+              "source::segment_0293_0001826500_0001828300"
+            ],
+            "target": {
+              "loss_total": 2.453024387359619,
+              "loss_acoustic": 0.17381401360034943,
+              "loss_event": 4.4862060546875,
+              "loss_z_smooth": 0.14345771074295044,
+              "loss_text_aux": 0.09080291539430618,
+              "loss_text_aux_effective": 0.09080291539430618,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.21812160313129425,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.030006960034370422,
+              "loss_teacher_consistency": 0.025832388550043106,
+              "loss_teacher_event_consistency": 0.018360693007707596,
+              "loss_teacher_z_art_consistency": 0.007471696473658085
+            },
+            "source": {
+              "loss_total": 2.3205811977386475,
+              "loss_acoustic": 0.12482209503650665,
+              "loss_event": 4.373969078063965,
+              "loss_z_smooth": 0.0877455472946167,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.12,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.777480125427246,
+            "grad_norm": 15.379081726074219
+          },
+          {
+            "step": 19,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:32",
+            "duration_sec": 0.105455,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_154",
+              "target::chapter4_7_firefly_118",
+              "target::chapter3_17_firefly_105",
+              "target::chapter3_17_firefly_156"
+            ],
+            "source_record_ids": [
+              "source::segment_0243_0001433050_0001433890",
+              "source::segment_0079_0000424540_0000425050",
+              "source::segment_0212_0001211680_0001212940",
+              "source::segment_0401_0002606380_0002608210"
+            ],
+            "target": {
+              "loss_total": 2.251317024230957,
+              "loss_acoustic": 0.1077561303973198,
+              "loss_event": 4.213821887969971,
+              "loss_z_smooth": 0.15316826105117798,
+              "loss_text_aux": 0.08467894047498703,
+              "loss_text_aux_effective": 0.08467894047498703,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.22577035427093506,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.03664395958185196,
+              "loss_teacher_consistency": 0.039397452026605606,
+              "loss_teacher_event_consistency": 0.02633468620479107,
+              "loss_teacher_z_art_consistency": 0.013062764890491962
+            },
+            "source": {
+              "loss_total": 2.3363301753997803,
+              "loss_acoustic": 0.12626951932907104,
+              "loss_event": 4.405201435089111,
+              "loss_z_smooth": 0.07459797710180283,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.12,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.593556880950928,
+            "grad_norm": 3.083409547805786
+          },
+          {
+            "step": 20,
+            "started_at": "2026-03-15T18:34:32",
+            "ended_at": "2026-03-15T18:34:33",
+            "duration_sec": 0.088896,
+            "target_record_ids": [
+              "target::chapter3_4_firefly_124",
+              "target::chapter3_2_firefly_250",
+              "target::chapter3_2_firefly_249",
+              "target::chapter3_18_firefly_104"
+            ],
+            "source_record_ids": [
+              "source::segment_0118_0000699430_0000700000",
+              "source::segment_0053_0000254740_0000255640",
+              "source::segment_0108_0000590830_0000591490",
+              "source::segment_0272_0001675270_0001676050"
+            ],
+            "target": {
+              "loss_total": 2.659381628036499,
+              "loss_acoustic": 0.10428192466497421,
+              "loss_event": 5.050553798675537,
+              "loss_z_smooth": 0.11088787764310837,
+              "loss_text_aux": 0.07260548323392868,
+              "loss_text_aux_effective": 0.07260548323392868,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.24608196318149567,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.035107143223285675,
+              "loss_teacher_consistency": 0.0502210408449173,
+              "loss_teacher_event_consistency": 0.03307957202196121,
+              "loss_teacher_z_art_consistency": 0.017141470685601234
+            },
+            "source": {
+              "loss_total": 2.3768444061279297,
+              "loss_acoustic": 0.15229615569114685,
+              "loss_event": 4.436230659484863,
+              "loss_z_smooth": 0.06432986259460449,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.12,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_teacher_consistency": {
+              "enabled": true,
+              "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+              "weight": 0.15,
+              "event_weight": 1.0,
+              "z_art_weight": 1.0,
+              "pool_memberships": [
+                "challenge_proxy_core",
+                "short_pause_no_terminal"
+              ]
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 5.043759346008301,
+            "grad_norm": 12.538534164428711
+          }
+        ]
+      },
+      "step_metrics": {
+        "step": 20,
+        "started_at": "2026-03-15T18:34:32",
+        "ended_at": "2026-03-15T18:34:33",
+        "duration_sec": 0.088896,
+        "target_record_ids": [
+          "target::chapter3_4_firefly_124",
+          "target::chapter3_2_firefly_250",
+          "target::chapter3_2_firefly_249",
+          "target::chapter3_18_firefly_104"
+        ],
+        "source_record_ids": [
+          "source::segment_0118_0000699430_0000700000",
+          "source::segment_0053_0000254740_0000255640",
+          "source::segment_0108_0000590830_0000591490",
+          "source::segment_0272_0001675270_0001676050"
+        ],
+        "target": {
+          "loss_total": 2.659381628036499,
+          "loss_acoustic": 0.10428192466497421,
+          "loss_event": 5.050553798675537,
+          "loss_z_smooth": 0.11088787764310837,
+          "loss_text_aux": 0.07260548323392868,
+          "loss_text_aux_effective": 0.07260548323392868,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.24608196318149567,
+          "loss_clause_transition_aux": 0.0,
+          "loss_structural_clause_transition_aux": 0.0,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0,
+          "loss_structural_clause_profile_aux": 0.0,
+          "loss_challenge_proxy_profile_aux": 0.0,
+          "loss_z_art_influence_aux": 0.035107143223285675,
+          "loss_teacher_consistency": 0.0502210408449173,
+          "loss_teacher_event_consistency": 0.03307957202196121,
+          "loss_teacher_z_art_consistency": 0.017141470685601234
+        },
+        "source": {
+          "loss_total": 2.3768444061279297,
+          "loss_acoustic": 0.15229615569114685,
+          "loss_event": 4.436230659484863,
+          "loss_z_smooth": 0.06432986259460449,
+          "loss_text_aux": 0.0,
+          "loss_text_aux_effective": 0.0,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.0,
+          "loss_clause_transition_aux": 0.0,
+          "loss_structural_clause_transition_aux": 0.0,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0,
+          "loss_structural_clause_profile_aux": 0.0,
+          "loss_challenge_proxy_profile_aux": 0.0,
+          "loss_z_art_influence_aux": 0.0
+        },
+        "effective_loss_weights": {
+          "acoustic": 1.0,
+          "event": 0.5,
+          "z_smooth": 0.1,
+          "text_aux": 0.2,
+          "weak_event": 0.0,
+          "event_boundary_bias": {
+            "enabled": true,
+            "pause_boost": 0.75,
+            "terminal_boost": 1.25,
+            "apply_override": true,
+            "presence_dimension": 0,
+            "delta_dimension": 1,
+            "fall_dimension": 6,
+            "energy_dimension": 7,
+            "pause_fall_target": 0.75,
+            "terminal_fall_target": 1.0,
+            "pause_pre_presence_target": 0.9,
+            "terminal_pre_presence_target": 0.95,
+            "pause_post_presence_target": 0.45,
+            "terminal_post_presence_target": 0.15,
+            "pause_pre_energy_target": 0.85,
+            "terminal_pre_energy_target": 0.9,
+            "pause_post_energy_target": 0.3,
+            "terminal_post_energy_target": 0.08
+          },
+          "clause_transition_aux": {
+            "enabled": true,
+            "weight": 0.35,
+            "presence_dimension": 0,
+            "delta_dimension": 1,
+            "fall_dimension": 6,
+            "energy_dimension": 7,
+            "role_overrides": {
+              "single": {
+                "structure_types": [
+                  "single_clause_terminal"
+                ],
+                "boundary_delta_target": 1.0,
+                "boundary_fall_target": 1.0,
+                "pre_presence_target": 0.92,
+                "pre_energy_target": 0.88,
+                "post_presence_target": 0.18,
+                "post_energy_target": 0.1
+              },
+              "middle": {
+                "structure_types": [
+                  "multi_clause_single_terminal",
+                  "multi_terminal"
+                ],
+                "boundary_delta_target": 0.85,
+                "boundary_fall_target": 0.72,
+                "pre_presence_target": 0.82,
+                "pre_energy_target": 0.78,
+                "post_presence_target": 0.38,
+                "post_energy_target": 0.24,
+                "boundary_weight": 1.15,
+                "pre_weight": 1.0,
+                "post_weight": 1.0
+              },
+              "final": {
+                "structure_types": [
+                  "multi_clause_single_terminal",
+                  "multi_terminal"
+                ],
+                "boundary_delta_target": 1.0,
+                "boundary_fall_target": 1.0,
+                "pre_presence_target": 0.92,
+                "pre_energy_target": 0.88,
+                "post_presence_target": 0.14,
+                "post_energy_target": 0.08,
+                "boundary_weight": 1.2,
+                "pre_weight": 1.0,
+                "post_weight": 1.0
+              }
+            }
+          },
+          "z_art_influence_aux": {
+            "enabled": true,
+            "weight": 0.12,
+            "pool_memberships": [
+              "challenge_proxy_core"
+            ],
+            "min_influence": 0.12,
+            "weight_schedule": {
+              "enabled": true,
+              "mode": "linear_ramp",
+              "start_step": 1,
+              "end_step": 15,
+              "start_weight": 0.0,
+              "end_weight": 0.12
+            }
+          }
+        },
+        "effective_teacher_consistency": {
+          "enabled": true,
+          "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+          "weight": 0.15,
+          "event_weight": 1.0,
+          "z_art_weight": 1.0,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "short_pause_no_terminal"
+          ]
+        },
+        "effective_learning_rate": 0.00015,
+        "loss_total": 5.043759346008301,
+        "grad_norm": 12.538534164428711
+      },
+      "validation": {
+        "enabled": true,
+        "history": [
+          {
+            "step": 10,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_162",
+              "target::chapter3_20_firefly_184",
+              "target::chapter3_21_firefly_116",
+              "target::chapter3_3_firefly_207"
+            ],
+            "source_record_ids": [
+              "source::segment_0042_0000188800_0000190270",
+              "source::segment_0043_0000195700_0000196360",
+              "source::segment_0044_0000202570_0000203410",
+              "source::segment_0045_0000206080_0000207820"
+            ],
+            "target": {
+              "loss_total": 2.3901851177215576,
+              "loss_acoustic": 0.17093060910701752,
+              "loss_event": 4.194943428039551,
+              "loss_z_smooth": 0.1646052598953247,
+              "loss_text_aux": 0.132076233625412,
+              "loss_text_aux_effective": 0.132076233625412,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.2517569065093994,
+              "loss_clause_transition_aux": 0.2254488170146942,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0,
+              "loss_teacher_consistency": 0.0,
+              "loss_teacher_event_consistency": 0.0,
+              "loss_teacher_z_art_consistency": 0.0
+            },
+            "source": {
+              "loss_total": 2.473295211791992,
+              "loss_acoustic": 0.17886078357696533,
+              "loss_event": 4.575435161590576,
+              "loss_z_smooth": 0.06716708093881607,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.07714285714285715,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.863480567932129
+          },
+          {
+            "step": 20,
+            "target_record_ids": [
+              "target::chapter3_3_firefly_162",
+              "target::chapter3_20_firefly_184",
+              "target::chapter3_21_firefly_116",
+              "target::chapter3_3_firefly_207"
+            ],
+            "source_record_ids": [
+              "source::segment_0042_0000188800_0000190270",
+              "source::segment_0043_0000195700_0000196360",
+              "source::segment_0044_0000202570_0000203410",
+              "source::segment_0045_0000206080_0000207820"
+            ],
+            "target": {
+              "loss_total": 2.3387398719787598,
+              "loss_acoustic": 0.14691954851150513,
+              "loss_event": 4.13740348815918,
+              "loss_z_smooth": 0.1718386709690094,
+              "loss_text_aux": 0.13129030168056488,
+              "loss_text_aux_effective": 0.13129030168056488,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.2467980831861496,
+              "loss_clause_transition_aux": 0.2276483029127121,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0,
+              "loss_teacher_consistency": 0.0,
+              "loss_teacher_event_consistency": 0.0,
+              "loss_teacher_z_art_consistency": 0.0
+            },
+            "source": {
+              "loss_total": 2.3977010250091553,
+              "loss_acoustic": 0.13058196008205414,
+              "loss_event": 4.519896984100342,
+              "loss_z_smooth": 0.07170772552490234,
+              "loss_text_aux": 0.0,
+              "loss_text_aux_effective": 0.0,
+              "loss_text_aux_structural": 0.0,
+              "loss_text_aux_lexical": 0.0,
+              "loss_weak_event": 0.0,
+              "loss_clause_transition_aux": 0.0,
+              "loss_structural_clause_transition_aux": 0.0,
+              "loss_boundary_contrast_aux": 0.0,
+              "loss_punctuation_profile_aux": 0.0,
+              "loss_structural_clause_profile_aux": 0.0,
+              "loss_challenge_proxy_profile_aux": 0.0,
+              "loss_z_art_influence_aux": 0.0
+            },
+            "effective_loss_weights": {
+              "acoustic": 1.0,
+              "event": 0.5,
+              "z_smooth": 0.1,
+              "text_aux": 0.2,
+              "weak_event": 0.0,
+              "event_boundary_bias": {
+                "enabled": true,
+                "pause_boost": 0.75,
+                "terminal_boost": 1.25,
+                "apply_override": true,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "pause_fall_target": 0.75,
+                "terminal_fall_target": 1.0,
+                "pause_pre_presence_target": 0.9,
+                "terminal_pre_presence_target": 0.95,
+                "pause_post_presence_target": 0.45,
+                "terminal_post_presence_target": 0.15,
+                "pause_pre_energy_target": 0.85,
+                "terminal_pre_energy_target": 0.9,
+                "pause_post_energy_target": 0.3,
+                "terminal_post_energy_target": 0.08
+              },
+              "clause_transition_aux": {
+                "enabled": true,
+                "weight": 0.35,
+                "presence_dimension": 0,
+                "delta_dimension": 1,
+                "fall_dimension": 6,
+                "energy_dimension": 7,
+                "role_overrides": {
+                  "single": {
+                    "structure_types": [
+                      "single_clause_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.18,
+                    "post_energy_target": 0.1
+                  },
+                  "middle": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 0.85,
+                    "boundary_fall_target": 0.72,
+                    "pre_presence_target": 0.82,
+                    "pre_energy_target": 0.78,
+                    "post_presence_target": 0.38,
+                    "post_energy_target": 0.24,
+                    "boundary_weight": 1.15,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  },
+                  "final": {
+                    "structure_types": [
+                      "multi_clause_single_terminal",
+                      "multi_terminal"
+                    ],
+                    "boundary_delta_target": 1.0,
+                    "boundary_fall_target": 1.0,
+                    "pre_presence_target": 0.92,
+                    "pre_energy_target": 0.88,
+                    "post_presence_target": 0.14,
+                    "post_energy_target": 0.08,
+                    "boundary_weight": 1.2,
+                    "pre_weight": 1.0,
+                    "post_weight": 1.0
+                  }
+                }
+              },
+              "z_art_influence_aux": {
+                "enabled": true,
+                "weight": 0.12,
+                "pool_memberships": [
+                  "challenge_proxy_core"
+                ],
+                "min_influence": 0.12,
+                "weight_schedule": {
+                  "enabled": true,
+                  "mode": "linear_ramp",
+                  "start_step": 1,
+                  "end_step": 15,
+                  "start_weight": 0.0,
+                  "end_weight": 0.12
+                }
+              }
+            },
+            "effective_learning_rate": 0.00015,
+            "loss_total": 4.736440658569336
+          }
+        ]
+      },
+      "status": "training_run_completed",
+      "artifacts": {
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt",
+        "checkpoint_paths": [
+          "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+          "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt"
+        ],
+        "logs_dir": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/logs"
+      }
+    },
+    "target_special_eval_model": {
+      "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d29_round1_1_d26_init_d22_teacher_cross_anchor_consolidation_20step_smallscale_seeded_shuffle.json",
+      "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt",
+      "split_option_name": "hybrid_stratified_blocked",
+      "target_validation": {
+        "record_count": 66,
+        "batch_count": 17,
+        "duration_stats_sec": {
+          "count": 66,
+          "min": 0.612993,
+          "max": 21.104989,
+          "mean": 6.173509,
+          "median": 5.072993,
+          "stdev": 4.226809
+        },
+        "clean_char_count": {
+          "count": 66,
+          "min": 3,
+          "max": 70,
+          "mean": 24.80303,
+          "median": 21.0,
+          "stdev": 17.078446
+        },
+        "metrics": {
+          "loss_total": 2.397175,
+          "loss_acoustic": 0.133482,
+          "loss_event": 4.416725,
+          "loss_z_smooth": 0.121532,
+          "loss_text_aux": 0.110092,
+          "loss_text_aux_effective": 0.110092,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.179287,
+          "loss_clause_transition_aux": 0.060457,
+          "loss_structural_clause_transition_aux": 0.0,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0,
+          "loss_structural_clause_profile_aux": 0.0,
+          "loss_challenge_proxy_profile_aux": 0.0,
+          "loss_z_art_influence_aux": 0.0
+        },
+        "output_stats": {
+          "z_art_abs_mean": 0.547598,
+          "z_art_delta_abs_mean": 0.015191,
+          "event_prob_mean": 0.444938,
+          "event_presence_prob_mean": 0.651092,
+          "event_delta_prob_mean": 0.269074,
+          "event_rise_prob_mean": 0.493062,
+          "event_fall_prob_mean": 0.436094,
+          "event_energy_prob_mean": 0.64202,
+          "event_presence_peak_ratio": 0.788679,
+          "acoustic_abs_mean": 0.905172,
+          "acoustic_energy_mean": -3.498483,
+          "acoustic_delta_abs_mean": 0.013487,
+          "text_aux_abs_mean": 0.227073
+        },
+        "record_ids": [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131",
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115",
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145",
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199",
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102",
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106",
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155",
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245",
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107",
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133",
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      },
+      "target_special_eval": {
+        "record_count": 8,
+        "batch_count": 2,
+        "duration_stats_sec": {
+          "count": 8,
+          "min": 0.470998,
+          "max": 2.114989,
+          "mean": 1.057291,
+          "median": 0.956985,
+          "stdev": 0.464816
+        },
+        "clean_char_count": {
+          "count": 8,
+          "min": 1,
+          "max": 1,
+          "mean": 1.0,
+          "median": 1.0,
+          "stdev": 0.0
+        },
+        "metrics": {
+          "loss_total": 2.568944,
+          "loss_acoustic": 0.08643,
+          "loss_event": 4.878494,
+          "loss_z_smooth": 0.101017,
+          "loss_text_aux": 0.165829,
+          "loss_text_aux_effective": 0.165829,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.0,
+          "loss_clause_transition_aux": 0.0,
+          "loss_structural_clause_transition_aux": 0.0,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0,
+          "loss_structural_clause_profile_aux": 0.0,
+          "loss_challenge_proxy_profile_aux": 0.0,
+          "loss_z_art_influence_aux": 0.0
+        },
+        "output_stats": {
+          "z_art_abs_mean": 0.435679,
+          "z_art_delta_abs_mean": 0.012627,
+          "event_prob_mean": 0.431001,
+          "event_presence_prob_mean": 0.610886,
+          "event_delta_prob_mean": 0.283088,
+          "event_rise_prob_mean": 0.465019,
+          "event_fall_prob_mean": 0.450738,
+          "event_energy_prob_mean": 0.60884,
+          "event_presence_peak_ratio": 0.931566,
+          "acoustic_abs_mean": 0.95849,
+          "acoustic_energy_mean": -3.686134,
+          "acoustic_delta_abs_mean": 0.014813,
+          "text_aux_abs_mean": 0.232508
+        },
+        "record_ids": [
+          "target::no_text_voice/chapter3_17_firefly_106",
+          "target::no_text_voice/chapter3_18_firefly_101",
+          "target::no_text_voice/chapter3_21_firefly_108",
+          "target::no_text_voice/chapter3_22_firefly_115",
+          "target::no_text_voice/chapter3_29_firefly_139",
+          "target::no_text_voice/chapter3_2_firefly_102",
+          "target::no_text_voice/chapter3_30_firefly_144",
+          "target::no_text_voice/chapter3_3_firefly_110"
+        ]
+      },
+      "comparisons": {
+        "delta_loss_total": 0.171769,
+        "delta_loss_acoustic": -0.047052,
+        "delta_loss_event": 0.461769,
+        "delta_loss_text_aux": 0.055737,
+        "delta_loss_text_aux_effective": 0.055737,
+        "delta_loss_text_aux_structural": 0.0,
+        "delta_loss_text_aux_lexical": 0.0,
+        "delta_loss_clause_transition_aux": -0.060457,
+        "delta_loss_structural_clause_transition_aux": 0.0,
+        "delta_loss_boundary_contrast_aux": 0.0,
+        "delta_loss_punctuation_profile_aux": 0.0,
+        "delta_loss_structural_clause_profile_aux": 0.0,
+        "delta_loss_challenge_proxy_profile_aux": 0.0,
+        "delta_loss_z_art_influence_aux": 0.0,
+        "delta_z_art_abs_mean": -0.111919,
+        "delta_z_art_delta_abs_mean": -0.002564,
+        "delta_event_prob_mean": -0.013937,
+        "delta_event_presence_prob_mean": -0.040206,
+        "delta_event_delta_prob_mean": 0.014014,
+        "delta_event_rise_prob_mean": -0.028043,
+        "delta_event_fall_prob_mean": 0.014644,
+        "delta_event_energy_prob_mean": -0.03318,
+        "delta_event_presence_peak_ratio": 0.142887,
+        "delta_acoustic_abs_mean": 0.053318,
+        "delta_acoustic_energy_mean": -0.187651,
+        "delta_acoustic_delta_abs_mean": 0.001326,
+        "delta_text_aux_abs_mean": 0.005435
+      },
+      "notes": [
+        "Model-level special_eval is reported separately from regular validation.",
+        "Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.",
+        "Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality."
+      ]
+    },
+    "special_eval_series": {
+      "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d29_round1_1_d26_init_d22_teacher_cross_anchor_consolidation_20step_smallscale_seeded_shuffle.json",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.metrics.json",
+      "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+      "selected_steps": [
+        10,
+        20
+      ],
+      "checkpoint_count": 2,
+      "checkpoints": [
+        {
+          "step": 10,
+          "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+          "target_validation_loss_total": 2.432519,
+          "target_special_eval_loss_total": 2.639976,
+          "delta_loss_total": 0.207457,
+          "delta_loss_text_aux": 0.068589,
+          "delta_loss_text_aux_effective": 0.068589,
+          "delta_loss_text_aux_structural": 0.0,
+          "delta_loss_text_aux_lexical": 0.0,
+          "delta_loss_structural_clause_transition_aux": 0.0,
+          "delta_loss_boundary_contrast_aux": 0.0,
+          "delta_loss_punctuation_profile_aux": 0.0,
+          "delta_loss_structural_clause_profile_aux": 0.0,
+          "delta_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_loss_z_art_influence_aux": 0.0,
+          "target_validation_event_prob_mean": 0.447605,
+          "target_special_eval_event_prob_mean": 0.434185,
+          "delta_event_presence_prob_mean": -0.038664,
+          "delta_event_fall_prob_mean": 0.015082,
+          "delta_event_energy_prob_mean": -0.031724,
+          "delta_event_presence_peak_ratio": 0.137897,
+          "delta_z_art_delta_abs_mean": -0.002611,
+          "delta_acoustic_energy_mean": -0.29587,
+          "delta_acoustic_delta_abs_mean": 0.003437
+        },
+        {
+          "step": 20,
+          "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt",
+          "target_validation_loss_total": 2.397175,
+          "target_special_eval_loss_total": 2.568944,
+          "delta_loss_total": 0.171769,
+          "delta_loss_text_aux": 0.055737,
+          "delta_loss_text_aux_effective": 0.055737,
+          "delta_loss_text_aux_structural": 0.0,
+          "delta_loss_text_aux_lexical": 0.0,
+          "delta_loss_structural_clause_transition_aux": 0.0,
+          "delta_loss_boundary_contrast_aux": 0.0,
+          "delta_loss_punctuation_profile_aux": 0.0,
+          "delta_loss_structural_clause_profile_aux": 0.0,
+          "delta_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_loss_z_art_influence_aux": 0.0,
+          "target_validation_event_prob_mean": 0.444938,
+          "target_special_eval_event_prob_mean": 0.431001,
+          "delta_event_presence_prob_mean": -0.040206,
+          "delta_event_fall_prob_mean": 0.014644,
+          "delta_event_energy_prob_mean": -0.03318,
+          "delta_event_presence_peak_ratio": 0.142887,
+          "delta_z_art_delta_abs_mean": -0.002564,
+          "delta_acoustic_energy_mean": -0.187651,
+          "delta_acoustic_delta_abs_mean": 0.001326
+        }
+      ],
+      "notes": [
+        "Special-eval series summarizes challenge-slice behavior across selected checkpoints.",
+        "Each checkpoint also has its own detailed special_eval_model.json and .md under reports/eval."
+      ]
+    },
+    "ablation_eval": {
+      "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d29_round1_1_d26_init_d22_teacher_cross_anchor_consolidation_20step_smallscale_seeded_shuffle.json",
+      "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt",
+      "ablation_modes": {
+        "none": {
+          "ablation_mode": "none",
+          "batch_count": 14,
+          "target": {
+            "loss_total": 2.406727,
+            "loss_acoustic": 0.135082,
+            "loss_event": 4.430516,
+            "loss_z_smooth": 0.117398,
+            "loss_text_aux": 0.094764,
+            "loss_text_aux_effective": 0.094764,
+            "loss_text_aux_structural": 0.0,
+            "loss_text_aux_lexical": 0.0,
+            "loss_weak_event": 0.192491,
+            "loss_clause_transition_aux": 0.073412,
+            "loss_structural_clause_transition_aux": 0.0,
+            "loss_boundary_contrast_aux": 0.0,
+            "loss_punctuation_profile_aux": 0.0,
+            "loss_structural_clause_profile_aux": 0.0,
+            "loss_challenge_proxy_profile_aux": 0.0,
+            "loss_z_art_influence_aux": 0.0
+          },
+          "source": {
+            "loss_total": 2.347389,
+            "loss_acoustic": 0.128408,
+            "loss_event": 4.421835,
+            "loss_z_smooth": 0.080631,
+            "loss_text_aux": 0.0,
+            "loss_text_aux_effective": 0.0,
+            "loss_text_aux_structural": 0.0,
+            "loss_text_aux_lexical": 0.0,
+            "loss_weak_event": 0.0,
+            "loss_clause_transition_aux": 0.0,
+            "loss_structural_clause_transition_aux": 0.0,
+            "loss_boundary_contrast_aux": 0.0,
+            "loss_punctuation_profile_aux": 0.0,
+            "loss_structural_clause_profile_aux": 0.0,
+            "loss_challenge_proxy_profile_aux": 0.0,
+            "loss_z_art_influence_aux": 0.0
+          },
+          "shift": {
+            "target_acoustic_mae": 0.0,
+            "target_text_aux_mae": 0.0,
+            "source_acoustic_mae": 0.0,
+            "source_text_aux_mae": 0.0
+          }
+        },
+        "zero_z_art": {
+          "ablation_mode": "zero_z_art",
+          "batch_count": 14,
+          "target": {
+            "loss_total": 2.771654,
+            "loss_acoustic": 0.500519,
+            "loss_event": 4.430516,
+            "loss_z_smooth": 0.117398,
+            "loss_text_aux": 0.092218,
+            "loss_text_aux_effective": 0.092218,
+            "loss_text_aux_structural": 0.0,
+            "loss_text_aux_lexical": 0.0,
+            "loss_weak_event": 0.192491,
+            "loss_clause_transition_aux": 0.073412,
+            "loss_structural_clause_transition_aux": 0.0,
+            "loss_boundary_contrast_aux": 0.0,
+            "loss_punctuation_profile_aux": 0.0,
+            "loss_structural_clause_profile_aux": 0.0,
+            "loss_challenge_proxy_profile_aux": 0.0,
+            "loss_z_art_influence_aux": 0.0
+          },
+          "source": {
+            "loss_total": 2.785525,
+            "loss_acoustic": 0.566544,
+            "loss_event": 4.421835,
+            "loss_z_smooth": 0.080631,
+            "loss_text_aux": 0.0,
+            "loss_text_aux_effective": 0.0,
+            "loss_text_aux_structural": 0.0,
+            "loss_text_aux_lexical": 0.0,
+            "loss_weak_event": 0.0,
+            "loss_clause_transition_aux": 0.0,
+            "loss_structural_clause_transition_aux": 0.0,
+            "loss_boundary_contrast_aux": 0.0,
+            "loss_punctuation_profile_aux": 0.0,
+            "loss_structural_clause_profile_aux": 0.0,
+            "loss_challenge_proxy_profile_aux": 0.0,
+            "loss_z_art_influence_aux": 0.0
+          },
+          "shift": {
+            "target_acoustic_mae": 0.490549,
+            "target_text_aux_mae": 0.046458,
+            "source_acoustic_mae": 0.527438,
+            "source_text_aux_mae": 0.048736
+          }
+        },
+        "zero_e_evt": {
+          "ablation_mode": "zero_e_evt",
+          "batch_count": 14,
+          "target": {
+            "loss_total": 5.385208,
+            "loss_acoustic": 3.111084,
+            "loss_event": 4.430516,
+            "loss_z_smooth": 0.117398,
+            "loss_text_aux": 0.107161,
+            "loss_text_aux_effective": 0.107161,
+            "loss_text_aux_structural": 0.0,
+            "loss_text_aux_lexical": 0.0,
+            "loss_weak_event": 0.192491,
+            "loss_clause_transition_aux": 0.073412,
+            "loss_structural_clause_transition_aux": 0.0,
+            "loss_boundary_contrast_aux": 0.0,
+            "loss_punctuation_profile_aux": 0.0,
+            "loss_structural_clause_profile_aux": 0.0,
+            "loss_challenge_proxy_profile_aux": 0.0,
+            "loss_z_art_influence_aux": 0.0
+          },
+          "source": {
+            "loss_total": 6.471045,
+            "loss_acoustic": 4.252064,
+            "loss_event": 4.421835,
+            "loss_z_smooth": 0.080631,
+            "loss_text_aux": 0.0,
+            "loss_text_aux_effective": 0.0,
+            "loss_text_aux_structural": 0.0,
+            "loss_text_aux_lexical": 0.0,
+            "loss_weak_event": 0.0,
+            "loss_clause_transition_aux": 0.0,
+            "loss_structural_clause_transition_aux": 0.0,
+            "loss_boundary_contrast_aux": 0.0,
+            "loss_punctuation_profile_aux": 0.0,
+            "loss_structural_clause_profile_aux": 0.0,
+            "loss_challenge_proxy_profile_aux": 0.0,
+            "loss_z_art_influence_aux": 0.0
+          },
+          "shift": {
+            "target_acoustic_mae": 1.594384,
+            "target_text_aux_mae": 0.096434,
+            "source_acoustic_mae": 2.045803,
+            "source_text_aux_mae": 0.128295
+          }
+        }
+      },
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.364927,
+          "delta_source_loss_total": 0.438136,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_text_aux_effective": -0.002546,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 0.490549,
+          "delta_source_acoustic_mae": 0.527438,
+          "delta_target_text_aux_mae": 0.046458,
+          "delta_source_text_aux_mae": 0.048736
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 2.978481,
+          "delta_source_loss_total": 4.123656,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_loss_structural_clause_transition_aux": 0.0,
+          "delta_source_loss_structural_clause_transition_aux": 0.0,
+          "delta_target_loss_boundary_contrast_aux": 0.0,
+          "delta_source_loss_boundary_contrast_aux": 0.0,
+          "delta_target_loss_punctuation_profile_aux": 0.0,
+          "delta_source_loss_punctuation_profile_aux": 0.0,
+          "delta_target_loss_structural_clause_profile_aux": 0.0,
+          "delta_source_loss_structural_clause_profile_aux": 0.0,
+          "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+          "delta_target_loss_z_art_influence_aux": 0.0,
+          "delta_source_loss_z_art_influence_aux": 0.0,
+          "delta_target_loss_text_aux_effective": 0.012397,
+          "delta_source_loss_text_aux_effective": 0.0,
+          "delta_target_loss_text_aux_structural": 0.0,
+          "delta_target_loss_text_aux_lexical": 0.0,
+          "delta_target_acoustic_mae": 1.594384,
+          "delta_source_acoustic_mae": 2.045803,
+          "delta_target_text_aux_mae": 0.096434,
+          "delta_source_text_aux_mae": 0.128295
+        }
+      },
+      "notes": [
+        "Ablation results are computed on the formal hybrid validation split only.",
+        "zero_z_art zeroes the articulatory control before control fusion.",
+        "zero_e_evt zeroes the event control path before control fusion."
+      ]
+    },
+    "checkpoint_series_eval": {
+      "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d29_round1_1_d26_init_d22_teacher_cross_anchor_consolidation_20step_smallscale_seeded_shuffle.json",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.metrics.json",
+      "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+      "checkpoint_count": 2,
+      "checkpoints": [
+        {
+          "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+          "step": 10,
+          "comparisons": {
+            "zero_z_art": {
+              "delta_target_loss_total": 0.333095,
+              "delta_source_loss_total": 0.381401,
+              "delta_target_loss_clause_transition_aux": 0.0,
+              "delta_source_loss_clause_transition_aux": 0.0,
+              "delta_target_loss_structural_clause_transition_aux": 0.0,
+              "delta_source_loss_structural_clause_transition_aux": 0.0,
+              "delta_target_loss_boundary_contrast_aux": 0.0,
+              "delta_source_loss_boundary_contrast_aux": 0.0,
+              "delta_target_loss_punctuation_profile_aux": 0.0,
+              "delta_source_loss_punctuation_profile_aux": 0.0,
+              "delta_target_loss_structural_clause_profile_aux": 0.0,
+              "delta_source_loss_structural_clause_profile_aux": 0.0,
+              "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_target_loss_z_art_influence_aux": 0.0,
+              "delta_source_loss_z_art_influence_aux": 0.0,
+              "delta_target_loss_text_aux_effective": -0.003245,
+              "delta_source_loss_text_aux_effective": 0.0,
+              "delta_target_loss_text_aux_structural": 0.0,
+              "delta_target_loss_text_aux_lexical": 0.0,
+              "delta_target_acoustic_mae": 0.506001,
+              "delta_source_acoustic_mae": 0.573762,
+              "delta_target_text_aux_mae": 0.045697,
+              "delta_source_text_aux_mae": 0.050704
+            },
+            "zero_e_evt": {
+              "delta_target_loss_total": 2.74441,
+              "delta_source_loss_total": 3.631829,
+              "delta_target_loss_clause_transition_aux": 0.0,
+              "delta_source_loss_clause_transition_aux": 0.0,
+              "delta_target_loss_structural_clause_transition_aux": 0.0,
+              "delta_source_loss_structural_clause_transition_aux": 0.0,
+              "delta_target_loss_boundary_contrast_aux": 0.0,
+              "delta_source_loss_boundary_contrast_aux": 0.0,
+              "delta_target_loss_punctuation_profile_aux": 0.0,
+              "delta_source_loss_punctuation_profile_aux": 0.0,
+              "delta_target_loss_structural_clause_profile_aux": 0.0,
+              "delta_source_loss_structural_clause_profile_aux": 0.0,
+              "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_target_loss_z_art_influence_aux": 0.0,
+              "delta_source_loss_z_art_influence_aux": 0.0,
+              "delta_target_loss_text_aux_effective": 0.010934,
+              "delta_source_loss_text_aux_effective": 0.0,
+              "delta_target_loss_text_aux_structural": 0.0,
+              "delta_target_loss_text_aux_lexical": 0.0,
+              "delta_target_acoustic_mae": 1.632349,
+              "delta_source_acoustic_mae": 2.121561,
+              "delta_target_text_aux_mae": 0.102302,
+              "delta_source_text_aux_mae": 0.139727
+            }
+          },
+          "baseline": {
+            "target_loss_total": 2.441699,
+            "source_loss_total": 2.414754
+          }
+        },
+        {
+          "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt",
+          "step": 20,
+          "comparisons": {
+            "zero_z_art": {
+              "delta_target_loss_total": 0.364927,
+              "delta_source_loss_total": 0.438136,
+              "delta_target_loss_clause_transition_aux": 0.0,
+              "delta_source_loss_clause_transition_aux": 0.0,
+              "delta_target_loss_structural_clause_transition_aux": 0.0,
+              "delta_source_loss_structural_clause_transition_aux": 0.0,
+              "delta_target_loss_boundary_contrast_aux": 0.0,
+              "delta_source_loss_boundary_contrast_aux": 0.0,
+              "delta_target_loss_punctuation_profile_aux": 0.0,
+              "delta_source_loss_punctuation_profile_aux": 0.0,
+              "delta_target_loss_structural_clause_profile_aux": 0.0,
+              "delta_source_loss_structural_clause_profile_aux": 0.0,
+              "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_target_loss_z_art_influence_aux": 0.0,
+              "delta_source_loss_z_art_influence_aux": 0.0,
+              "delta_target_loss_text_aux_effective": -0.002546,
+              "delta_source_loss_text_aux_effective": 0.0,
+              "delta_target_loss_text_aux_structural": 0.0,
+              "delta_target_loss_text_aux_lexical": 0.0,
+              "delta_target_acoustic_mae": 0.490549,
+              "delta_source_acoustic_mae": 0.527438,
+              "delta_target_text_aux_mae": 0.046458,
+              "delta_source_text_aux_mae": 0.048736
+            },
+            "zero_e_evt": {
+              "delta_target_loss_total": 2.978481,
+              "delta_source_loss_total": 4.123656,
+              "delta_target_loss_clause_transition_aux": 0.0,
+              "delta_source_loss_clause_transition_aux": 0.0,
+              "delta_target_loss_structural_clause_transition_aux": 0.0,
+              "delta_source_loss_structural_clause_transition_aux": 0.0,
+              "delta_target_loss_boundary_contrast_aux": 0.0,
+              "delta_source_loss_boundary_contrast_aux": 0.0,
+              "delta_target_loss_punctuation_profile_aux": 0.0,
+              "delta_source_loss_punctuation_profile_aux": 0.0,
+              "delta_target_loss_structural_clause_profile_aux": 0.0,
+              "delta_source_loss_structural_clause_profile_aux": 0.0,
+              "delta_target_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_source_loss_challenge_proxy_profile_aux": 0.0,
+              "delta_target_loss_z_art_influence_aux": 0.0,
+              "delta_source_loss_z_art_influence_aux": 0.0,
+              "delta_target_loss_text_aux_effective": 0.012397,
+              "delta_source_loss_text_aux_effective": 0.0,
+              "delta_target_loss_text_aux_structural": 0.0,
+              "delta_target_loss_text_aux_lexical": 0.0,
+              "delta_target_acoustic_mae": 1.594384,
+              "delta_source_acoustic_mae": 2.045803,
+              "delta_target_text_aux_mae": 0.096434,
+              "delta_source_text_aux_mae": 0.128295
+            }
+          },
+          "baseline": {
+            "target_loss_total": 2.406727,
+            "source_loss_total": 2.347389
+          }
+        }
+      ],
+      "trends": {
+        "zero_z_art_target_loss_deltas": [
+          {
+            "step": 10,
+            "value": 0.333095
+          },
+          {
+            "step": 20,
+            "value": 0.364927
+          }
+        ],
+        "zero_e_evt_target_loss_deltas": [
+          {
+            "step": 10,
+            "value": 2.74441
+          },
+          {
+            "step": 20,
+            "value": 2.978481
+          }
+        ],
+        "zero_z_art_source_loss_deltas": [
+          {
+            "step": 10,
+            "value": 0.381401
+          },
+          {
+            "step": 20,
+            "value": 0.438136
+          }
+        ],
+        "zero_e_evt_source_loss_deltas": [
+          {
+            "step": 10,
+            "value": 3.631829
+          },
+          {
+            "step": 20,
+            "value": 4.123656
+          }
+        ]
+      },
+      "notes": [
+        "Checkpoint-series evaluation summarizes z_art / e_evt ablation deltas across saved checkpoints.",
+        "Only checkpoints referenced by experiment metrics.training_run.artifacts.checkpoint_paths are included."
+      ]
+    }
+  },
+  "notes": []
+}

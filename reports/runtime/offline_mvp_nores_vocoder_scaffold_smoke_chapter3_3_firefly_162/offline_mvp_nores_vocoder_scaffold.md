@@ -1,0 +1,12 @@
+# Offline MVP No-Residual Vocoder Scaffold
+
+- generated_at: 2026-03-17T22:10:12
+- input_scaffold_path: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_teacher_vocoder_input_scaffold_smoke_chapter3_3_firefly_162/teacher_vocoder_input_scaffold.pt
+- model: {"name": "no_residual_source_filter_vocoder_scaffold", "hidden_dim": 64, "harmonic_bins": 32, "noise_bins": 32}
+- input_contract: {"frame_count": 167, "periodic_input_dim": 35, "noise_input_dim": 29, "missing_periodic_design_keys": ["f0_hz"], "missing_noise_design_keys": ["r_res"]}
+- output_shapes: {"periodic_hidden": [167, 64], "noise_hidden": [167, 64], "fused_hidden": [167, 64], "periodic_gate": [167, 1], "noise_gate": [167, 1], "harmonic_envelope": [167, 32], "noise_envelope": [167, 32]}
+
+## Notes
+- This scaffold is a shape-verified Stage5 code anchor, not a trained vocoder.
+- The periodic branch currently consumes proxy voiced/energy features because explicit f0_hz is still unavailable in the teacher-first path.
+- The noise branch currently omits r_res by construction and should be treated as the no-residual baseline route.

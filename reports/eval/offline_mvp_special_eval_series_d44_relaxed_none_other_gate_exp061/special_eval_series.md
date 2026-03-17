@@ -1,0 +1,62 @@
+# offline MVP special_eval checkpoint 系列汇总
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d44_round1_1_d7_init_d10_teacher_consistency_relaxed_none_other_gate_fused_hidden_20step_smallscale_seeded_shuffle.json
+- experiment_metrics_path: F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-061-offline-mvp-d44-round1-1-d7-init-d10-teacher-consistency-relaxed-none-other-gate-fused-hidden-20step-calibration.metrics.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- selected_steps: [10, 20]
+- checkpoint_count: 2
+
+## checkpoints
+### step 10
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d44_relaxed_none_other_gate_exp061/checkpoints/EXP-20260316-061-offline-mvp-d44-round1-1-d7-init-d10-teacher-consistency-relaxed-none-other-gate-fused-hidden-20step-calibration.step10.pt
+- target_validation.loss_total: 2.585727
+- target_special_eval.loss_total: 2.727455
+- delta_loss_total: 0.141728
+- delta_loss_text_aux: 0.096611
+- delta_loss_text_aux_effective: 0.096611
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- target_validation.event_prob_mean: 0.455476
+- target_special_eval.event_prob_mean: 0.442785
+- delta_event_presence_prob_mean: -0.035259
+- delta_event_fall_prob_mean: 0.015506
+- delta_event_energy_prob_mean: -0.028568
+- delta_event_presence_peak_ratio: 0.0
+- delta_z_art_delta_abs_mean: -0.002655
+- delta_acoustic_energy_mean: -0.474401
+- delta_acoustic_delta_abs_mean: 0.002915
+
+### step 20
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d44_relaxed_none_other_gate_exp061/checkpoints/EXP-20260316-061-offline-mvp-d44-round1-1-d7-init-d10-teacher-consistency-relaxed-none-other-gate-fused-hidden-20step-calibration.step20.pt
+- target_validation.loss_total: 2.504646
+- target_special_eval.loss_total: 2.652876
+- delta_loss_total: 0.14823
+- delta_loss_text_aux: 0.07784
+- delta_loss_text_aux_effective: 0.07784
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- target_validation.event_prob_mean: 0.453242
+- target_special_eval.event_prob_mean: 0.440326
+- delta_event_presence_prob_mean: -0.0367
+- delta_event_fall_prob_mean: 0.015152
+- delta_event_energy_prob_mean: -0.029809
+- delta_event_presence_peak_ratio: 0.0
+- delta_z_art_delta_abs_mean: -0.002564
+- delta_acoustic_energy_mean: -0.347514
+- delta_acoustic_delta_abs_mean: 0.006338
+
+## notes
+- Special-eval series summarizes challenge-slice behavior across selected checkpoints.
+- Each checkpoint also has its own detailed special_eval_model.json and .md under reports/eval.

@@ -1,0 +1,97 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Python cache / local env
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+.venv/
+venv/
+env/
+
+# Local runtime artifacts
+tmp/
+*.log
+
+# Optional large local caches
+*.npy
+*.npz
+*.pt
+
+# Local bundled executables
+python.exe
+pythonw.exe
+codex_perm_cleanup_static.exe
+*.dll
+
+# Never publish raw or derived audio assets
+*.lab
+*.wav
+*.mp3
+*.flac
+*.ogg
+*.m4a
+*.aac
+*.wma
+*.opus
+
+# github auth key and push tools
+ssh-*
+git-*.bat
+git-*.sh
+
+# Common local dataset/audio staging areas
+data_convert/dataset_firefly_raw/
+data_prep/**/audio/
+data_prep/**/segments/
+reports/audio/
+reports/tmp/
+
+# Reports retention policy for repo rebuilds:
+# keep recovery metadata and selected checkpoints,
+# exclude reproducible package payloads and heavy local caches
+reports/training/**
+!reports/training/
+!reports/training/**/
+!reports/training/**/*.train_plan.json
+!reports/training/**/*.train_plan.md
+!reports/training/**/*.summary.json
+!reports/training/**/*.summary.md
+!reports/training/**/checkpoints/
+!reports/training/**/checkpoints/*.pt
+
+reports/runtime/**
+!reports/runtime/
+!reports/runtime/**/
+# Rebuildable package payload trees are intentionally excluded even when
+# their parent experiment directories are kept for recovery metadata.
+reports/runtime/**/packages/**
+!reports/runtime/**/*.summary.json
+!reports/runtime/**/*.summary.md
+!reports/runtime/**/offline_mvp_nores_vocoder_dataset_index.json
+!reports/runtime/**/offline_mvp_nores_vocoder_dataset_index.md
+!reports/runtime/**/nores_vocoder_checkpoint_review.json
+!reports/runtime/**/nores_vocoder_checkpoint_review.md
+!reports/runtime/**/offline_mvp_nores_vocoder_train_step.json
+!reports/runtime/**/offline_mvp_nores_vocoder_train_step.md
+!reports/runtime/**/offline_mvp_nores_vocoder_scaffold.json
+!reports/runtime/**/offline_mvp_nores_vocoder_scaffold.md
+!reports/runtime/**/offline_mvp_nores_vocoder_train_targets.json
+!reports/runtime/**/offline_mvp_nores_vocoder_train_targets.md
+!reports/runtime/**/teacher_vocoder_input_scaffold.json
+!reports/runtime/**/teacher_vocoder_input_scaffold.md
+!reports/runtime/**/teacher_downstream_control_contract.json
+!reports/runtime/**/teacher_downstream_control_contract.md
+!reports/runtime/**/teacher_runtime_summary.json
+!reports/runtime/**/teacher_runtime_summary.md
+!reports/runtime/**/checkpoints/
+!reports/runtime/**/checkpoints/*.pt

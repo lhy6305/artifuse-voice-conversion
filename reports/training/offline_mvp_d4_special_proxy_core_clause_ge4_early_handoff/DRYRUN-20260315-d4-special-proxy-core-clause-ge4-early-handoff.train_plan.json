@@ -1,0 +1,520 @@
+{
+  "experiment_id": "DRYRUN-20260315-d4-special-proxy-core-clause-ge4-early-handoff",
+  "created_at": "2026-03-15T13:57:12",
+  "dry_run": true,
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d4_round1_1_special_proxy_core_clause_ge4_early_handoff_smallscale_100_seeded_shuffle.json",
+  "timing": {
+    "started_at": "2026-03-15T13:57:10",
+    "ended_at": "2026-03-15T13:57:12",
+    "duration_sec": 1.699533
+  },
+  "data": {
+    "manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/manifests",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "split_strategy": "materialized_split",
+    "target_manifest_count": 666,
+    "source_manifest_count": 537,
+    "target_train_count": 592,
+    "target_validation_count": 66,
+    "target_special_eval_count": 8,
+    "source_train_count": 483,
+    "source_validation_count": 54,
+    "dry_run_target_count": 4,
+    "dry_run_source_count": 4,
+    "target_batch_audio_shape": [
+      4,
+      88200
+    ],
+    "target_batch_token_shape": [
+      4,
+      44
+    ],
+    "target_batch_text_feature_shape": [
+      4,
+      13
+    ],
+    "target_text_feature_version": "b1_1_stats_v2",
+    "target_weak_event_hints_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+    "target_special_supervision_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_special_supervision/target_special_supervision_sidecar.jsonl",
+    "source_batch_audio_shape": [
+      4,
+      96000
+    ],
+    "vocab_size": 1369,
+    "target_priority_record_count": 16
+  },
+  "model": {
+    "name": "offline_mvp_scaffold",
+    "r_res_enabled": false,
+    "uses_text_in_training": true,
+    "uses_text_in_runtime": false,
+    "z_art_dim": 8,
+    "event_head_enabled": true,
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "acoustic_dim": 4,
+    "frame_length": 400,
+    "hop_length": 160,
+    "text_aux_dim": 13
+  },
+  "training": {
+    "mode": "offline_mvp",
+    "run_stage": "small_scale_validation",
+    "prerequisite_experiment_id": null,
+    "teacher_required": false,
+    "student_required": false,
+    "vocoder_required": false,
+    "single_step_validation_enabled": true,
+    "seed": 20260315,
+    "shuffle_train_records": true,
+    "num_steps": 100,
+    "validation_interval": 10,
+    "checkpoint_interval": 10,
+    "target_validation_count": 8,
+    "source_validation_count": 8,
+    "learning_rate": 0.0003,
+    "max_grad_norm": 1.0,
+    "targeted_sampling": {
+      "enabled": true,
+      "mode": "priority_interleave",
+      "active_until_step": 0,
+      "priority_ratio": 0.0,
+      "priority_pool_memberships": [
+        "challenge_proxy_core"
+      ],
+      "schedule_phases": [
+        {
+          "active_until_step": 20,
+          "priority_ratio": 0.5,
+          "secondary_sampling": {
+            "enabled": true,
+            "max_slots": 1,
+            "priority_pool_memberships": [
+              "structural_clause_ge4"
+            ],
+            "exclude_primary_matches": true
+          }
+        },
+        {
+          "active_until_step": 60,
+          "priority_ratio": 0.25
+        }
+      ]
+    }
+  },
+  "execution_guard": {
+    "run_stage": "small_scale_validation",
+    "requires_small_scale_prerequisite": false,
+    "prerequisite_experiment_id": null
+  },
+  "reproducibility": {
+    "seed": 20260315,
+    "shuffle_train_records": true,
+    "target_sampler_seed": 20260315,
+    "source_sampler_seed": 20260316
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "option_name": "hybrid_stratified_blocked",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 592,
+      "target_validation": 66,
+      "target_special_eval": 8,
+      "source_train": 483,
+      "source_validation": 54
+    }
+  },
+  "targeted_sampling": {
+    "enabled": true,
+    "mode": "priority_interleave",
+    "active_until_step": 0,
+    "priority_ratio": 0.0,
+    "schedule_phases": [
+      {
+        "active_until_step": 20,
+        "priority_ratio": 0.5,
+        "priority_structure_types": [],
+        "exclude_structure_types": [],
+        "priority_pool_memberships": [
+          "challenge_proxy_core"
+        ],
+        "exclude_pool_memberships": [],
+        "secondary_sampling": {
+          "enabled": true,
+          "max_slots": 1,
+          "priority_structure_types": [],
+          "exclude_structure_types": [],
+          "priority_pool_memberships": [
+            "structural_clause_ge4"
+          ],
+          "exclude_pool_memberships": [],
+          "exclude_primary_matches": true
+        }
+      },
+      {
+        "active_until_step": 60,
+        "priority_ratio": 0.25,
+        "priority_structure_types": [],
+        "exclude_structure_types": [],
+        "priority_pool_memberships": [
+          "challenge_proxy_core"
+        ],
+        "exclude_pool_memberships": []
+      }
+    ],
+    "phase_priority_record_counts": [
+      {
+        "active_until_step": 20,
+        "priority_ratio": 0.5,
+        "priority_record_count": 201
+      },
+      {
+        "active_until_step": 60,
+        "priority_ratio": 0.25,
+        "priority_record_count": 16
+      }
+    ],
+    "min_clause_count": 0,
+    "min_pause_boundary_count": 0,
+    "min_terminal_boundary_count": 0,
+    "priority_structure_types": [],
+    "exclude_structure_types": [],
+    "priority_pool_memberships": [
+      "challenge_proxy_core"
+    ],
+    "exclude_pool_memberships": [],
+    "priority_record_count": 16
+  },
+  "gates": {
+    "requires_r_res_disabled": true,
+    "requires_text_for_training": true,
+    "requires_text_for_runtime": false
+  },
+  "dry_run_validation": {
+    "source_record_ids": [
+      "source::segment_0400_0002604460_0002605660",
+      "source::segment_0281_0001739320_0001740100",
+      "source::segment_0506_0003402820_0003403450",
+      "source::segment_0024_0000101020_0000103510"
+    ],
+    "target_record_ids": [
+      "target::chapter3_3_firefly_109",
+      "target::chapter3_3_firefly_113",
+      "target::chapter3_2_firefly_189",
+      "target::chapter3_29_firefly_117"
+    ],
+    "forward_shapes": {
+      "source_z_art": [
+        4,
+        598,
+        8
+      ],
+      "source_event_logits": [
+        4,
+        598,
+        8
+      ],
+      "source_acoustic": [
+        4,
+        598,
+        4
+      ],
+      "source_frame_mask": [
+        4,
+        598
+      ],
+      "target_z_art": [
+        4,
+        549,
+        8
+      ],
+      "target_event_logits": [
+        4,
+        549,
+        8
+      ],
+      "target_acoustic": [
+        4,
+        549,
+        4
+      ],
+      "target_frame_mask": [
+        4,
+        549
+      ]
+    }
+  },
+  "step_metrics": {
+    "step": 0,
+    "started_at": "2026-03-15T13:57:10",
+    "ended_at": "2026-03-15T13:57:12",
+    "duration_sec": 1.699503,
+    "target_record_ids": [
+      "target::chapter3_3_firefly_109",
+      "target::chapter3_3_firefly_113",
+      "target::chapter3_2_firefly_189",
+      "target::chapter3_29_firefly_117"
+    ],
+    "source_record_ids": [
+      "source::segment_0400_0002604460_0002605660",
+      "source::segment_0281_0001739320_0001740100",
+      "source::segment_0506_0003402820_0003403450",
+      "source::segment_0024_0000101020_0000103510"
+    ],
+    "target": {
+      "loss_total": 13.339129447937012,
+      "loss_acoustic": 10.500293731689453,
+      "loss_event": 5.4848737716674805,
+      "loss_z_smooth": 0.005522569175809622,
+      "loss_text_aux": 0.1680396944284439,
+      "loss_text_aux_effective": 0.1680396944284439,
+      "loss_text_aux_structural": 0.0,
+      "loss_text_aux_lexical": 0.0,
+      "loss_weak_event": 0.20756858587265015,
+      "loss_clause_transition_aux": 0.17782364785671234,
+      "loss_boundary_contrast_aux": 0.0,
+      "loss_punctuation_profile_aux": 0.0
+    },
+    "source": {
+      "loss_total": 26.994625091552734,
+      "loss_acoustic": 24.251667022705078,
+      "loss_event": 5.485523223876953,
+      "loss_z_smooth": 0.0019660741090774536,
+      "loss_text_aux": 0.0,
+      "loss_text_aux_effective": 0.0,
+      "loss_text_aux_structural": 0.0,
+      "loss_text_aux_lexical": 0.0,
+      "loss_weak_event": 0.0,
+      "loss_clause_transition_aux": 0.0,
+      "loss_boundary_contrast_aux": 0.0,
+      "loss_punctuation_profile_aux": 0.0
+    },
+    "effective_loss_weights": {
+      "acoustic": 1.0,
+      "event": 0.5,
+      "z_smooth": 0.1,
+      "text_aux": 0.2,
+      "weak_event": 0.0,
+      "event_boundary_bias": {
+        "enabled": true,
+        "pause_boost": 0.75,
+        "terminal_boost": 1.25,
+        "apply_override": true,
+        "presence_dimension": 0,
+        "delta_dimension": 1,
+        "fall_dimension": 6,
+        "energy_dimension": 7,
+        "pause_fall_target": 0.75,
+        "terminal_fall_target": 1.0,
+        "pause_pre_presence_target": 0.9,
+        "terminal_pre_presence_target": 0.95,
+        "pause_post_presence_target": 0.45,
+        "terminal_post_presence_target": 0.15,
+        "pause_pre_energy_target": 0.85,
+        "terminal_pre_energy_target": 0.9,
+        "pause_post_energy_target": 0.3,
+        "terminal_post_energy_target": 0.08
+      },
+      "clause_transition_aux": {
+        "enabled": true,
+        "weight": 0.35,
+        "presence_dimension": 0,
+        "delta_dimension": 1,
+        "fall_dimension": 6,
+        "energy_dimension": 7,
+        "role_overrides": {
+          "single": {
+            "structure_types": [
+              "single_clause_terminal"
+            ],
+            "boundary_delta_target": 1.0,
+            "boundary_fall_target": 1.0,
+            "pre_presence_target": 0.92,
+            "pre_energy_target": 0.88,
+            "post_presence_target": 0.18,
+            "post_energy_target": 0.1
+          },
+          "middle": {
+            "structure_types": [
+              "multi_clause_single_terminal",
+              "multi_terminal"
+            ],
+            "boundary_delta_target": 0.85,
+            "boundary_fall_target": 0.72,
+            "pre_presence_target": 0.82,
+            "pre_energy_target": 0.78,
+            "post_presence_target": 0.38,
+            "post_energy_target": 0.24,
+            "boundary_weight": 1.15,
+            "pre_weight": 1.0,
+            "post_weight": 1.0
+          },
+          "final": {
+            "structure_types": [
+              "multi_clause_single_terminal",
+              "multi_terminal"
+            ],
+            "boundary_delta_target": 1.0,
+            "boundary_fall_target": 1.0,
+            "pre_presence_target": 0.92,
+            "pre_energy_target": 0.88,
+            "post_presence_target": 0.14,
+            "post_energy_target": 0.08,
+            "boundary_weight": 1.2,
+            "pre_weight": 1.0,
+            "post_weight": 1.0
+          }
+        }
+      }
+    },
+    "loss_total": 40.33375549316406,
+    "grad_norm": 0.0
+  },
+  "validation": {
+    "enabled": true,
+    "history": []
+  },
+  "artifacts": {
+    "checkpoint_path": null,
+    "checkpoint_paths": [],
+    "logs_dir": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d4_special_proxy_core_clause_ge4_early_handoff/logs"
+  },
+  "training_run": {
+    "num_steps": 100,
+    "completed_steps": 0,
+    "validation_interval": 10,
+    "checkpoint_interval": 10,
+    "sampler_mode": "priority_interleave",
+    "history": [
+      {
+        "step": 0,
+        "started_at": "2026-03-15T13:57:10",
+        "ended_at": "2026-03-15T13:57:12",
+        "duration_sec": 1.699503,
+        "target_record_ids": [
+          "target::chapter3_3_firefly_109",
+          "target::chapter3_3_firefly_113",
+          "target::chapter3_2_firefly_189",
+          "target::chapter3_29_firefly_117"
+        ],
+        "source_record_ids": [
+          "source::segment_0400_0002604460_0002605660",
+          "source::segment_0281_0001739320_0001740100",
+          "source::segment_0506_0003402820_0003403450",
+          "source::segment_0024_0000101020_0000103510"
+        ],
+        "target": {
+          "loss_total": 13.339129447937012,
+          "loss_acoustic": 10.500293731689453,
+          "loss_event": 5.4848737716674805,
+          "loss_z_smooth": 0.005522569175809622,
+          "loss_text_aux": 0.1680396944284439,
+          "loss_text_aux_effective": 0.1680396944284439,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.20756858587265015,
+          "loss_clause_transition_aux": 0.17782364785671234,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0
+        },
+        "source": {
+          "loss_total": 26.994625091552734,
+          "loss_acoustic": 24.251667022705078,
+          "loss_event": 5.485523223876953,
+          "loss_z_smooth": 0.0019660741090774536,
+          "loss_text_aux": 0.0,
+          "loss_text_aux_effective": 0.0,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.0,
+          "loss_clause_transition_aux": 0.0,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0
+        },
+        "effective_loss_weights": {
+          "acoustic": 1.0,
+          "event": 0.5,
+          "z_smooth": 0.1,
+          "text_aux": 0.2,
+          "weak_event": 0.0,
+          "event_boundary_bias": {
+            "enabled": true,
+            "pause_boost": 0.75,
+            "terminal_boost": 1.25,
+            "apply_override": true,
+            "presence_dimension": 0,
+            "delta_dimension": 1,
+            "fall_dimension": 6,
+            "energy_dimension": 7,
+            "pause_fall_target": 0.75,
+            "terminal_fall_target": 1.0,
+            "pause_pre_presence_target": 0.9,
+            "terminal_pre_presence_target": 0.95,
+            "pause_post_presence_target": 0.45,
+            "terminal_post_presence_target": 0.15,
+            "pause_pre_energy_target": 0.85,
+            "terminal_pre_energy_target": 0.9,
+            "pause_post_energy_target": 0.3,
+            "terminal_post_energy_target": 0.08
+          },
+          "clause_transition_aux": {
+            "enabled": true,
+            "weight": 0.35,
+            "presence_dimension": 0,
+            "delta_dimension": 1,
+            "fall_dimension": 6,
+            "energy_dimension": 7,
+            "role_overrides": {
+              "single": {
+                "structure_types": [
+                  "single_clause_terminal"
+                ],
+                "boundary_delta_target": 1.0,
+                "boundary_fall_target": 1.0,
+                "pre_presence_target": 0.92,
+                "pre_energy_target": 0.88,
+                "post_presence_target": 0.18,
+                "post_energy_target": 0.1
+              },
+              "middle": {
+                "structure_types": [
+                  "multi_clause_single_terminal",
+                  "multi_terminal"
+                ],
+                "boundary_delta_target": 0.85,
+                "boundary_fall_target": 0.72,
+                "pre_presence_target": 0.82,
+                "pre_energy_target": 0.78,
+                "post_presence_target": 0.38,
+                "post_energy_target": 0.24,
+                "boundary_weight": 1.15,
+                "pre_weight": 1.0,
+                "post_weight": 1.0
+              },
+              "final": {
+                "structure_types": [
+                  "multi_clause_single_terminal",
+                  "multi_terminal"
+                ],
+                "boundary_delta_target": 1.0,
+                "boundary_fall_target": 1.0,
+                "pre_presence_target": 0.92,
+                "pre_energy_target": 0.88,
+                "post_presence_target": 0.14,
+                "post_energy_target": 0.08,
+                "boundary_weight": 1.2,
+                "pre_weight": 1.0,
+                "post_weight": 1.0
+              }
+            }
+          }
+        },
+        "loss_total": 40.33375549316406,
+        "grad_norm": 0.0
+      }
+    ]
+  },
+  "status": "dry_run_ready"
+}

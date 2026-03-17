@@ -1,0 +1,10 @@
+{
+  "name": "streaming_student_loss_weights_eventprior_light_v1",
+  "notes": [
+    "Keep teacher_z_art and teacher_event as the primary Stage3 bootstrap targets.",
+    "Reduce teacher_event_prior because it mirrors teacher_event on the same target and currently dominates short-horizon loss mass."
+  ],
+  "loss_weights": {
+    "teacher_event_prior": 0.25
+  }
+}

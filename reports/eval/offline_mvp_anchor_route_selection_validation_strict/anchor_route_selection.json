@@ -1,0 +1,68 @@
+{
+  "route_summary_ref": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_anchor_route_selection_validation_strict",
+  "inputs": {
+    "max_validation_budget_over_best": 0.0,
+    "special_priority": false,
+    "z_art_priority": false,
+    "require_best_e_evt_floor": false,
+    "require_best_z_art_floor": false
+  },
+  "derived_thresholds": {
+    "budget_to_minimax_anchor": 0.047019,
+    "budget_to_special_anchor": 0.126723,
+    "best_e_evt_floor": 3.299035,
+    "minimax_z_art_floor": 0.438936,
+    "best_z_art_floor": 0.460259
+  },
+  "selected_policy": {
+    "policy_name": "validation_strict",
+    "description": "Use the strongest validation anchor with zero extra validation budget.",
+    "objective": "validation",
+    "constraints": {
+      "max_validation_budget_over_best": 0.0,
+      "min_zero_e_evt_delta_target_loss_total": null,
+      "min_zero_z_art_delta_target_loss_total": null
+    },
+    "eligible_anchor_ids": [
+      "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration"
+    ],
+    "selected_anchor": {
+      "experiment_id": "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration",
+      "target_validation_loss_total": 2.397175,
+      "delta_loss_total": 0.171769,
+      "zero_e_evt_delta_target_loss_total": 2.978481,
+      "zero_z_art_delta_target_loss_total": 0.364927,
+      "normalized_regret": {
+        "validation": 0.0,
+        "special": 1.0,
+        "zero_e_evt": 1.0,
+        "zero_z_art": 1.0,
+        "max_regret": 1.0,
+        "mean_regret": 0.75
+      }
+    }
+  },
+  "selected_anchor": {
+    "experiment_id": "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration",
+    "target_validation_loss_total": 2.397175,
+    "delta_loss_total": 0.171769,
+    "zero_e_evt_delta_target_loss_total": 2.978481,
+    "zero_z_art_delta_target_loss_total": 0.364927,
+    "normalized_regret": {
+      "validation": 0.0,
+      "special": 1.0,
+      "zero_e_evt": 1.0,
+      "zero_z_art": 1.0,
+      "max_regret": 1.0,
+      "mean_regret": 0.75
+    }
+  },
+  "reasons": [
+    "budget is below the minimax threshold, so only the strict validation route is feasible."
+  ],
+  "unmet_intents": [],
+  "notes": [
+    "This selector resolves one concrete route decision from the current three-anchor policy set.",
+    "If unmet_intents is non-empty, the requested intent could not be honored under the provided validation budget."
+  ]
+}

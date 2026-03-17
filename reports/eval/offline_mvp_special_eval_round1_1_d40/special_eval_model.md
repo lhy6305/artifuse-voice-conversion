@@ -1,0 +1,102 @@
+# offline MVP target_special_eval 模型级评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d40_round1_1_d7_init_d10_teacher_consistency_phase_handoff_early_shortpause_late_core_teacheroff_after_step10_fused_hidden_20step_smallscale_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d40_d7_init_d10_teacher_consistency_phase_handoff_early_shortpause_late_core_teacheroff_after_step10_fused_hidden_exp057/checkpoints/EXP-20260315-057-offline-mvp-d40-round1-1-d7-init-d10-teacher-consistency-phase-handoff-early-shortpause-late-core-teacheroff-after-step10-fused-hidden-20step-calibration.step20.pt
+- split_option_name: hybrid_stratified_blocked
+
+## target_validation
+- record_count: 66
+- batch_count: 17
+- loss_total: 2.492335
+- loss_acoustic: 0.185264
+- loss_event: 4.507671
+- loss_text_aux: 0.108733
+- loss_text_aux_effective: 0.108733
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.058471
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- z_art_abs_mean: 0.490957
+- z_art_delta_abs_mean: 0.01378
+- event_prob_mean: 0.451689
+- event_presence_prob_mean: 0.65014
+- event_delta_prob_mean: 0.29004
+- event_rise_prob_mean: 0.492979
+- event_fall_prob_mean: 0.41891
+- event_energy_prob_mean: 0.628502
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 0.900599
+- acoustic_energy_mean: -3.463758
+- acoustic_delta_abs_mean: 0.009649
+- text_aux_abs_mean: 0.250324
+
+## target_special_eval
+- record_count: 8
+- batch_count: 2
+- loss_total: 2.653139
+- loss_acoustic: 0.139706
+- loss_event: 4.931437
+- loss_text_aux: 0.193623
+- loss_text_aux_effective: 0.193623
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.0
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- z_art_abs_mean: 0.387339
+- z_art_delta_abs_mean: 0.011237
+- event_prob_mean: 0.438806
+- event_presence_prob_mean: 0.613743
+- event_delta_prob_mean: 0.303782
+- event_rise_prob_mean: 0.466355
+- event_fall_prob_mean: 0.433965
+- event_energy_prob_mean: 0.598873
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 1.000077
+- acoustic_energy_mean: -3.816525
+- acoustic_delta_abs_mean: 0.016767
+- text_aux_abs_mean: 0.265577
+
+## 对比
+- delta_loss_total: 0.160804
+- delta_loss_acoustic: -0.045558
+- delta_loss_event: 0.423766
+- delta_loss_text_aux: 0.08489
+- delta_loss_text_aux_effective: 0.08489
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_clause_transition_aux: -0.058471
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_z_art_abs_mean: -0.103618
+- delta_z_art_delta_abs_mean: -0.002543
+- delta_event_prob_mean: -0.012883
+- delta_event_presence_prob_mean: -0.036397
+- delta_event_delta_prob_mean: 0.013742
+- delta_event_rise_prob_mean: -0.026624
+- delta_event_fall_prob_mean: 0.015055
+- delta_event_energy_prob_mean: -0.029629
+- delta_event_presence_peak_ratio: 0.0
+- delta_acoustic_abs_mean: 0.099478
+- delta_acoustic_energy_mean: -0.352767
+- delta_acoustic_delta_abs_mean: 0.007118
+- delta_text_aux_abs_mean: 0.015253
+
+## 备注
+- Model-level special_eval is reported separately from regular validation.
+- Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.
+- Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality.

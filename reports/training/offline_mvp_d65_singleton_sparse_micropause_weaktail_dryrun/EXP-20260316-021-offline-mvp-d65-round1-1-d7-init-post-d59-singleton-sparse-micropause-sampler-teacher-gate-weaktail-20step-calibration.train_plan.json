@@ -1,0 +1,856 @@
+{
+  "experiment_id": "EXP-20260316-021-offline-mvp-d65-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-teacher-gate-weaktail-20step-calibration",
+  "created_at": "2026-03-16T13:58:38",
+  "dry_run": true,
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d65_round1_1_d7_init_post_d59_singleton_sparse_micropause_sampler_teacher_gate_weaktail_20step_smallscale_seeded_shuffle.json",
+  "timing": {
+    "started_at": "2026-03-16T13:58:36",
+    "ended_at": "2026-03-16T13:58:38",
+    "duration_sec": 1.581233
+  },
+  "data": {
+    "manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/manifests",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "split_strategy": "materialized_split",
+    "target_manifest_count": 666,
+    "source_manifest_count": 537,
+    "target_train_count": 592,
+    "target_validation_count": 66,
+    "target_special_eval_count": 8,
+    "source_train_count": 483,
+    "source_validation_count": 54,
+    "dry_run_target_count": 4,
+    "dry_run_source_count": 4,
+    "target_batch_audio_shape": [
+      4,
+      88200
+    ],
+    "target_batch_token_shape": [
+      4,
+      34
+    ],
+    "target_batch_text_feature_shape": [
+      4,
+      13
+    ],
+    "target_text_feature_version": "b1_1_stats_v2",
+    "target_weak_event_hints_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+    "target_special_supervision_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_special_supervision/target_special_supervision_sidecar.jsonl",
+    "source_batch_audio_shape": [
+      4,
+      57600
+    ],
+    "vocab_size": 1369,
+    "target_priority_record_count": 19
+  },
+  "model": {
+    "name": "offline_mvp_scaffold",
+    "r_res_enabled": false,
+    "uses_text_in_training": true,
+    "uses_text_in_runtime": false,
+    "z_art_dim": 8,
+    "event_head_enabled": true,
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "acoustic_dim": 4,
+    "frame_length": 400,
+    "hop_length": 160,
+    "text_aux_dim": 13
+  },
+  "training": {
+    "mode": "offline_mvp",
+    "run_stage": "small_scale_validation",
+    "prerequisite_experiment_id": null,
+    "teacher_required": false,
+    "student_required": false,
+    "vocoder_required": false,
+    "single_step_validation_enabled": true,
+    "seed": 20260316,
+    "shuffle_train_records": true,
+    "num_steps": 20,
+    "validation_interval": 10,
+    "checkpoint_interval": 10,
+    "target_validation_count": 8,
+    "source_validation_count": 8,
+    "learning_rate": 0.00015,
+    "max_grad_norm": 1.0,
+    "init_checkpoint_path": "reports/training/offline_mvp_d7_special_proxy_core_clause_ge4_early_handoff_zart_influence_exp023/checkpoints/EXP-20260315-023-offline-mvp-d7-round1-1-special-proxy-core-clause-ge4-early-handoff-zart-influence-100step-calibration.step100.pt",
+    "teacher_consistency": {
+      "enabled": true,
+      "teacher_checkpoint_path": "reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+      "weight": 0.15,
+      "event_weight": 1.0,
+      "z_art_weight": 1.0,
+      "acoustic_weight": 0.0,
+      "fused_hidden_weight": 0.05,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "short_pause_no_terminal"
+      ],
+      "schedule_phases": [
+        {
+          "active_until_step": 10,
+          "teacher_checkpoint_path": "reports/training/offline_mvp_d33_d7_init_d10_teacher_consistency_shortpause_fused_hidden_exp050/checkpoints/EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration.step10.pt",
+          "weight": 0.15,
+          "event_weight": 1.0,
+          "z_art_weight": 1.0,
+          "acoustic_weight": 0.0,
+          "fused_hidden_weight": 0.05,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "short_pause_no_terminal"
+          ]
+        },
+        {
+          "active_until_step": 20,
+          "teacher_checkpoint_path": "reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+          "weight": 0.15,
+          "event_weight": 1.0,
+          "z_art_weight": 1.0,
+          "acoustic_weight": 0.0,
+          "fused_hidden_weight": 0.05,
+          "pool_memberships": [
+            "micro_pause_none_singleton_strict"
+          ],
+          "required_within_special_duration_ceiling": true,
+          "required_utterance_structure_types": [
+            "other"
+          ],
+          "required_final_terminal_types": [
+            "none"
+          ]
+        }
+      ]
+    },
+    "targeted_sampling": {
+      "enabled": true,
+      "mode": "priority_interleave",
+      "active_until_step": 20,
+      "priority_ratio": 0.25,
+      "priority_pool_memberships": [
+        "challenge_proxy_core",
+        "short_pause_no_terminal"
+      ],
+      "schedule_phases": [
+        {
+          "active_until_step": 10,
+          "priority_ratio": 0.25,
+          "priority_pool_memberships": [
+            "challenge_proxy_core",
+            "short_pause_no_terminal"
+          ]
+        },
+        {
+          "active_until_step": 20,
+          "priority_ratio": 0.5,
+          "priority_pool_memberships": [
+            "micro_pause_none_singleton_strict"
+          ],
+          "required_within_special_duration_ceiling": true,
+          "required_utterance_structure_types": [
+            "other"
+          ]
+        }
+      ]
+    }
+  },
+  "execution_guard": {
+    "run_stage": "small_scale_validation",
+    "requires_small_scale_prerequisite": false,
+    "prerequisite_experiment_id": null,
+    "init_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d7_special_proxy_core_clause_ge4_early_handoff_zart_influence_exp023/checkpoints/EXP-20260315-023-offline-mvp-d7-round1-1-special-proxy-core-clause-ge4-early-handoff-zart-influence-100step-calibration.step100.pt"
+  },
+  "reproducibility": {
+    "seed": 20260316,
+    "shuffle_train_records": true,
+    "target_sampler_seed": 20260316,
+    "source_sampler_seed": 20260317
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "option_name": "hybrid_stratified_blocked",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 592,
+      "target_validation": 66,
+      "target_special_eval": 8,
+      "source_train": 483,
+      "source_validation": 54
+    }
+  },
+  "targeted_sampling": {
+    "enabled": true,
+    "mode": "priority_interleave",
+    "active_until_step": 20,
+    "priority_ratio": 0.25,
+    "schedule_phases": [
+      {
+        "active_until_step": 10,
+        "priority_ratio": 0.25,
+        "priority_structure_types": [],
+        "exclude_structure_types": [],
+        "priority_pool_memberships": [
+          "challenge_proxy_core",
+          "short_pause_no_terminal"
+        ],
+        "priority_record_ids": [],
+        "exclude_pool_memberships": []
+      },
+      {
+        "active_until_step": 20,
+        "priority_ratio": 0.5,
+        "priority_structure_types": [],
+        "exclude_structure_types": [],
+        "priority_pool_memberships": [
+          "micro_pause_none_singleton_strict"
+        ],
+        "priority_record_ids": [],
+        "exclude_pool_memberships": [],
+        "required_within_special_duration_ceiling": true,
+        "required_utterance_structure_types": [
+          "other"
+        ]
+      }
+    ],
+    "phase_priority_record_counts": [
+      {
+        "active_until_step": 10,
+        "priority_ratio": 0.25,
+        "priority_record_count": 19
+      },
+      {
+        "active_until_step": 20,
+        "priority_ratio": 0.5,
+        "priority_record_count": 8
+      }
+    ],
+    "min_clause_count": 0,
+    "min_pause_boundary_count": 0,
+    "min_terminal_boundary_count": 0,
+    "required_within_special_duration_ceiling": null,
+    "min_special_proximity_score": 0.0,
+    "max_special_proximity_score": 1.0,
+    "required_final_terminal_types": [],
+    "required_utterance_structure_types": [],
+    "priority_structure_types": [],
+    "exclude_structure_types": [],
+    "priority_pool_memberships": [
+      "challenge_proxy_core",
+      "short_pause_no_terminal"
+    ],
+    "priority_record_ids": [],
+    "exclude_pool_memberships": [],
+    "priority_record_count": 19
+  },
+  "gates": {
+    "requires_r_res_disabled": true,
+    "requires_text_for_training": true,
+    "requires_text_for_runtime": false
+  },
+  "dry_run_validation": {
+    "source_record_ids": [
+      "source::segment_0373_0002376160_0002377360",
+      "source::segment_0370_0002363980_0002365000",
+      "source::segment_0103_0000552550_0000553180",
+      "source::segment_0527_0003603340_0003603910"
+    ],
+    "target_record_ids": [
+      "target::chapter3_3_firefly_125",
+      "target::chapter3_30_firefly_113",
+      "target::chapter3_20_firefly_180",
+      "target::chapter3_4_firefly_132"
+    ],
+    "forward_shapes": {
+      "source_z_art": [
+        4,
+        358,
+        8
+      ],
+      "source_event_logits": [
+        4,
+        358,
+        8
+      ],
+      "source_acoustic": [
+        4,
+        358,
+        4
+      ],
+      "source_frame_mask": [
+        4,
+        358
+      ],
+      "target_z_art": [
+        4,
+        549,
+        8
+      ],
+      "target_event_logits": [
+        4,
+        549,
+        8
+      ],
+      "target_acoustic": [
+        4,
+        549,
+        4
+      ],
+      "target_frame_mask": [
+        4,
+        549
+      ]
+    }
+  },
+  "step_metrics": {
+    "step": 0,
+    "started_at": "2026-03-16T13:58:36",
+    "ended_at": "2026-03-16T13:58:38",
+    "duration_sec": 1.581204,
+    "target_record_ids": [
+      "target::chapter3_3_firefly_125",
+      "target::chapter3_30_firefly_113",
+      "target::chapter3_20_firefly_180",
+      "target::chapter3_4_firefly_132"
+    ],
+    "source_record_ids": [
+      "source::segment_0373_0002376160_0002377360",
+      "source::segment_0370_0002363980_0002365000",
+      "source::segment_0103_0000552550_0000553180",
+      "source::segment_0527_0003603340_0003603910"
+    ],
+    "target": {
+      "loss_total": 2.738762855529785,
+      "loss_acoustic": 0.2869848906993866,
+      "loss_event": 4.784687042236328,
+      "loss_z_smooth": 0.0994502380490303,
+      "loss_text_aux": 0.08142484724521637,
+      "loss_text_aux_effective": 0.08142484724521637,
+      "loss_text_aux_structural": 0.0,
+      "loss_text_aux_lexical": 0.0,
+      "loss_weak_event": 0.15711979568004608,
+      "loss_clause_transition_aux": 0.09486996382474899,
+      "loss_structural_clause_transition_aux": 0.0,
+      "loss_boundary_contrast_aux": 0.0,
+      "loss_punctuation_profile_aux": 0.0,
+      "loss_structural_clause_profile_aux": 0.0,
+      "loss_challenge_proxy_profile_aux": 0.0,
+      "loss_singleton_sparse_proxy_aux": 0.0,
+      "loss_z_art_influence_aux": 0.0,
+      "loss_formal_special_clause_shape_aux": 0.0,
+      "loss_teacher_consistency": 0.027747612446546555,
+      "loss_teacher_event_consistency": 0.014336540363729,
+      "loss_teacher_z_art_consistency": 0.006407946813851595,
+      "loss_teacher_acoustic_consistency": 0.02220829576253891,
+      "loss_teacher_fused_hidden_consistency": 0.14006249606609344
+    },
+    "source": {
+      "loss_total": 2.811028003692627,
+      "loss_acoustic": 0.502242922782898,
+      "loss_event": 4.6065354347229,
+      "loss_z_smooth": 0.05517372861504555,
+      "loss_text_aux": 0.0,
+      "loss_text_aux_effective": 0.0,
+      "loss_text_aux_structural": 0.0,
+      "loss_text_aux_lexical": 0.0,
+      "loss_weak_event": 0.0,
+      "loss_clause_transition_aux": 0.0,
+      "loss_structural_clause_transition_aux": 0.0,
+      "loss_boundary_contrast_aux": 0.0,
+      "loss_punctuation_profile_aux": 0.0,
+      "loss_structural_clause_profile_aux": 0.0,
+      "loss_challenge_proxy_profile_aux": 0.0,
+      "loss_singleton_sparse_proxy_aux": 0.0,
+      "loss_z_art_influence_aux": 0.0,
+      "loss_formal_special_clause_shape_aux": 0.0
+    },
+    "effective_loss_weights": {
+      "acoustic": 1.0,
+      "event": 0.5,
+      "z_smooth": 0.1,
+      "text_aux": 0.2,
+      "weak_event": 0.0,
+      "event_boundary_bias": {
+        "enabled": true,
+        "pause_boost": 0.75,
+        "terminal_boost": 1.25,
+        "apply_override": true,
+        "presence_dimension": 0,
+        "delta_dimension": 1,
+        "fall_dimension": 6,
+        "energy_dimension": 7,
+        "pause_fall_target": 0.75,
+        "terminal_fall_target": 1.0,
+        "pause_pre_presence_target": 0.9,
+        "terminal_pre_presence_target": 0.95,
+        "pause_post_presence_target": 0.45,
+        "terminal_post_presence_target": 0.15,
+        "pause_pre_energy_target": 0.85,
+        "terminal_pre_energy_target": 0.9,
+        "pause_post_energy_target": 0.3,
+        "terminal_post_energy_target": 0.08
+      },
+      "clause_transition_aux": {
+        "enabled": true,
+        "weight": 0.35,
+        "presence_dimension": 0,
+        "delta_dimension": 1,
+        "fall_dimension": 6,
+        "energy_dimension": 7,
+        "role_overrides": {
+          "single": {
+            "structure_types": [
+              "single_clause_terminal"
+            ],
+            "boundary_delta_target": 1.0,
+            "boundary_fall_target": 1.0,
+            "pre_presence_target": 0.92,
+            "pre_energy_target": 0.88,
+            "post_presence_target": 0.18,
+            "post_energy_target": 0.1
+          },
+          "middle": {
+            "structure_types": [
+              "multi_clause_single_terminal",
+              "multi_terminal"
+            ],
+            "boundary_delta_target": 0.85,
+            "boundary_fall_target": 0.72,
+            "pre_presence_target": 0.82,
+            "pre_energy_target": 0.78,
+            "post_presence_target": 0.38,
+            "post_energy_target": 0.24,
+            "boundary_weight": 1.15,
+            "pre_weight": 1.0,
+            "post_weight": 1.0
+          },
+          "final": {
+            "structure_types": [
+              "multi_clause_single_terminal",
+              "multi_terminal"
+            ],
+            "boundary_delta_target": 1.0,
+            "boundary_fall_target": 1.0,
+            "pre_presence_target": 0.92,
+            "pre_energy_target": 0.88,
+            "post_presence_target": 0.14,
+            "post_energy_target": 0.08,
+            "boundary_weight": 1.2,
+            "pre_weight": 1.0,
+            "post_weight": 1.0
+          }
+        }
+      },
+      "singleton_sparse_proxy_aux": {
+        "enabled": true,
+        "weight": 0.0,
+        "pool_memberships": [
+          "micro_pause_none_singleton_strict"
+        ],
+        "required_within_special_duration_ceiling": true,
+        "required_utterance_structure_types": [
+          "other"
+        ],
+        "required_final_terminal_types": [
+          "none"
+        ],
+        "base_sample_weight": 0.45,
+        "proximity_weight_scale": 0.55,
+        "utterance_structure_type_weight_overrides": {
+          "other": 0.1
+        },
+        "final_terminal_type_weight_overrides": {
+          "none": 0.1
+        },
+        "presence_peak_threshold": 0.5,
+        "base_presence_target": 0.24,
+        "proximity_presence_scale": 0.08,
+        "duration_ceiling_presence_offset": 0.03,
+        "base_fall_target": 0.38,
+        "proximity_fall_scale": 0.03,
+        "pause_fall_scale": 0.02,
+        "base_energy_target": 0.28,
+        "proximity_energy_scale": 0.06,
+        "no_terminal_energy_offset": 0.03,
+        "base_peak_ratio_target": 0.08,
+        "proximity_peak_ratio_scale": 0.03,
+        "duration_ceiling_peak_ratio_offset": 0.015,
+        "weight_schedule": {
+          "enabled": true,
+          "mode": "linear_ramp",
+          "start_step": 11,
+          "end_step": 16,
+          "start_weight": 0.0,
+          "end_weight": 0.08
+        }
+      },
+      "z_art_influence_aux": {
+        "enabled": true,
+        "weight": 0.0,
+        "pool_memberships": [
+          "challenge_proxy_core"
+        ],
+        "min_influence": 0.12,
+        "weight_schedule": {
+          "enabled": true,
+          "mode": "linear_ramp",
+          "start_step": 1,
+          "end_step": 15,
+          "start_weight": 0.0,
+          "end_weight": 0.12
+        }
+      }
+    },
+    "effective_teacher_consistency": {
+      "enabled": true,
+      "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d33_d7_init_d10_teacher_consistency_shortpause_fused_hidden_exp050/checkpoints/EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration.step10.pt",
+      "weight": 0.15,
+      "event_weight": 1.0,
+      "z_art_weight": 1.0,
+      "acoustic_weight": 0.0,
+      "fused_hidden_weight": 0.05,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "short_pause_no_terminal"
+      ],
+      "min_clause_count": 0,
+      "min_pause_boundary_count": 0,
+      "min_terminal_boundary_count": 0,
+      "required_within_special_duration_ceiling": null,
+      "min_special_proximity_score": 0.0,
+      "max_special_proximity_score": 1.0,
+      "required_final_terminal_types": [],
+      "required_utterance_structure_types": [],
+      "base_sample_weight": 1.0,
+      "proximity_weight_scale": 0.0,
+      "final_terminal_type_weight_overrides": {},
+      "utterance_structure_type_weight_overrides": {}
+    },
+    "effective_learning_rate": 0.00015,
+    "loss_total": 5.553953170776367,
+    "grad_norm": 0.0
+  },
+  "validation": {
+    "enabled": true,
+    "history": []
+  },
+  "artifacts": {
+    "checkpoint_path": null,
+    "checkpoint_paths": [],
+    "logs_dir": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d65_singleton_sparse_micropause_weaktail_dryrun/logs"
+  },
+  "training_run": {
+    "num_steps": 20,
+    "completed_steps": 0,
+    "validation_interval": 10,
+    "checkpoint_interval": 10,
+    "initial_learning_rate": 0.00015,
+    "learning_rate_schedule": {
+      "enabled": false
+    },
+    "teacher_consistency": {
+      "enabled": true,
+      "teacher_checkpoint_path": "reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+      "weight": 0.15,
+      "event_weight": 1.0,
+      "z_art_weight": 1.0,
+      "acoustic_weight": 0.0,
+      "fused_hidden_weight": 0.05,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "short_pause_no_terminal"
+      ],
+      "schedule_phases": [
+        {
+          "active_until_step": 10,
+          "weight": 0.15,
+          "event_weight": 1.0,
+          "z_art_weight": 1.0,
+          "acoustic_weight": 0.0,
+          "fused_hidden_weight": 0.05,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "short_pause_no_terminal"
+          ],
+          "teacher_checkpoint_path": "reports/training/offline_mvp_d33_d7_init_d10_teacher_consistency_shortpause_fused_hidden_exp050/checkpoints/EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration.step10.pt",
+          "min_clause_count": 0,
+          "min_pause_boundary_count": 0,
+          "min_terminal_boundary_count": 0,
+          "required_within_special_duration_ceiling": null,
+          "min_special_proximity_score": 0.0,
+          "max_special_proximity_score": 1.0,
+          "required_final_terminal_types": [],
+          "required_utterance_structure_types": [],
+          "base_sample_weight": 1.0,
+          "proximity_weight_scale": 0.0,
+          "final_terminal_type_weight_overrides": {},
+          "utterance_structure_type_weight_overrides": {}
+        },
+        {
+          "active_until_step": 20,
+          "weight": 0.15,
+          "event_weight": 1.0,
+          "z_art_weight": 1.0,
+          "acoustic_weight": 0.0,
+          "fused_hidden_weight": 0.05,
+          "pool_memberships": [
+            "micro_pause_none_singleton_strict"
+          ],
+          "teacher_checkpoint_path": "reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+          "min_clause_count": 0,
+          "min_pause_boundary_count": 0,
+          "min_terminal_boundary_count": 0,
+          "required_within_special_duration_ceiling": true,
+          "min_special_proximity_score": 0.0,
+          "max_special_proximity_score": 1.0,
+          "required_final_terminal_types": [
+            "none"
+          ],
+          "required_utterance_structure_types": [
+            "other"
+          ],
+          "base_sample_weight": 1.0,
+          "proximity_weight_scale": 0.0,
+          "final_terminal_type_weight_overrides": {},
+          "utterance_structure_type_weight_overrides": {}
+        }
+      ],
+      "teacher_checkpoint_paths": [
+        "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step10.pt",
+        "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d33_d7_init_d10_teacher_consistency_shortpause_fused_hidden_exp050/checkpoints/EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration.step10.pt"
+      ]
+    },
+    "sampler_mode": "priority_interleave",
+    "history": [
+      {
+        "step": 0,
+        "started_at": "2026-03-16T13:58:36",
+        "ended_at": "2026-03-16T13:58:38",
+        "duration_sec": 1.581204,
+        "target_record_ids": [
+          "target::chapter3_3_firefly_125",
+          "target::chapter3_30_firefly_113",
+          "target::chapter3_20_firefly_180",
+          "target::chapter3_4_firefly_132"
+        ],
+        "source_record_ids": [
+          "source::segment_0373_0002376160_0002377360",
+          "source::segment_0370_0002363980_0002365000",
+          "source::segment_0103_0000552550_0000553180",
+          "source::segment_0527_0003603340_0003603910"
+        ],
+        "target": {
+          "loss_total": 2.738762855529785,
+          "loss_acoustic": 0.2869848906993866,
+          "loss_event": 4.784687042236328,
+          "loss_z_smooth": 0.0994502380490303,
+          "loss_text_aux": 0.08142484724521637,
+          "loss_text_aux_effective": 0.08142484724521637,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.15711979568004608,
+          "loss_clause_transition_aux": 0.09486996382474899,
+          "loss_structural_clause_transition_aux": 0.0,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0,
+          "loss_structural_clause_profile_aux": 0.0,
+          "loss_challenge_proxy_profile_aux": 0.0,
+          "loss_singleton_sparse_proxy_aux": 0.0,
+          "loss_z_art_influence_aux": 0.0,
+          "loss_formal_special_clause_shape_aux": 0.0,
+          "loss_teacher_consistency": 0.027747612446546555,
+          "loss_teacher_event_consistency": 0.014336540363729,
+          "loss_teacher_z_art_consistency": 0.006407946813851595,
+          "loss_teacher_acoustic_consistency": 0.02220829576253891,
+          "loss_teacher_fused_hidden_consistency": 0.14006249606609344
+        },
+        "source": {
+          "loss_total": 2.811028003692627,
+          "loss_acoustic": 0.502242922782898,
+          "loss_event": 4.6065354347229,
+          "loss_z_smooth": 0.05517372861504555,
+          "loss_text_aux": 0.0,
+          "loss_text_aux_effective": 0.0,
+          "loss_text_aux_structural": 0.0,
+          "loss_text_aux_lexical": 0.0,
+          "loss_weak_event": 0.0,
+          "loss_clause_transition_aux": 0.0,
+          "loss_structural_clause_transition_aux": 0.0,
+          "loss_boundary_contrast_aux": 0.0,
+          "loss_punctuation_profile_aux": 0.0,
+          "loss_structural_clause_profile_aux": 0.0,
+          "loss_challenge_proxy_profile_aux": 0.0,
+          "loss_singleton_sparse_proxy_aux": 0.0,
+          "loss_z_art_influence_aux": 0.0,
+          "loss_formal_special_clause_shape_aux": 0.0
+        },
+        "effective_loss_weights": {
+          "acoustic": 1.0,
+          "event": 0.5,
+          "z_smooth": 0.1,
+          "text_aux": 0.2,
+          "weak_event": 0.0,
+          "event_boundary_bias": {
+            "enabled": true,
+            "pause_boost": 0.75,
+            "terminal_boost": 1.25,
+            "apply_override": true,
+            "presence_dimension": 0,
+            "delta_dimension": 1,
+            "fall_dimension": 6,
+            "energy_dimension": 7,
+            "pause_fall_target": 0.75,
+            "terminal_fall_target": 1.0,
+            "pause_pre_presence_target": 0.9,
+            "terminal_pre_presence_target": 0.95,
+            "pause_post_presence_target": 0.45,
+            "terminal_post_presence_target": 0.15,
+            "pause_pre_energy_target": 0.85,
+            "terminal_pre_energy_target": 0.9,
+            "pause_post_energy_target": 0.3,
+            "terminal_post_energy_target": 0.08
+          },
+          "clause_transition_aux": {
+            "enabled": true,
+            "weight": 0.35,
+            "presence_dimension": 0,
+            "delta_dimension": 1,
+            "fall_dimension": 6,
+            "energy_dimension": 7,
+            "role_overrides": {
+              "single": {
+                "structure_types": [
+                  "single_clause_terminal"
+                ],
+                "boundary_delta_target": 1.0,
+                "boundary_fall_target": 1.0,
+                "pre_presence_target": 0.92,
+                "pre_energy_target": 0.88,
+                "post_presence_target": 0.18,
+                "post_energy_target": 0.1
+              },
+              "middle": {
+                "structure_types": [
+                  "multi_clause_single_terminal",
+                  "multi_terminal"
+                ],
+                "boundary_delta_target": 0.85,
+                "boundary_fall_target": 0.72,
+                "pre_presence_target": 0.82,
+                "pre_energy_target": 0.78,
+                "post_presence_target": 0.38,
+                "post_energy_target": 0.24,
+                "boundary_weight": 1.15,
+                "pre_weight": 1.0,
+                "post_weight": 1.0
+              },
+              "final": {
+                "structure_types": [
+                  "multi_clause_single_terminal",
+                  "multi_terminal"
+                ],
+                "boundary_delta_target": 1.0,
+                "boundary_fall_target": 1.0,
+                "pre_presence_target": 0.92,
+                "pre_energy_target": 0.88,
+                "post_presence_target": 0.14,
+                "post_energy_target": 0.08,
+                "boundary_weight": 1.2,
+                "pre_weight": 1.0,
+                "post_weight": 1.0
+              }
+            }
+          },
+          "singleton_sparse_proxy_aux": {
+            "enabled": true,
+            "weight": 0.0,
+            "pool_memberships": [
+              "micro_pause_none_singleton_strict"
+            ],
+            "required_within_special_duration_ceiling": true,
+            "required_utterance_structure_types": [
+              "other"
+            ],
+            "required_final_terminal_types": [
+              "none"
+            ],
+            "base_sample_weight": 0.45,
+            "proximity_weight_scale": 0.55,
+            "utterance_structure_type_weight_overrides": {
+              "other": 0.1
+            },
+            "final_terminal_type_weight_overrides": {
+              "none": 0.1
+            },
+            "presence_peak_threshold": 0.5,
+            "base_presence_target": 0.24,
+            "proximity_presence_scale": 0.08,
+            "duration_ceiling_presence_offset": 0.03,
+            "base_fall_target": 0.38,
+            "proximity_fall_scale": 0.03,
+            "pause_fall_scale": 0.02,
+            "base_energy_target": 0.28,
+            "proximity_energy_scale": 0.06,
+            "no_terminal_energy_offset": 0.03,
+            "base_peak_ratio_target": 0.08,
+            "proximity_peak_ratio_scale": 0.03,
+            "duration_ceiling_peak_ratio_offset": 0.015,
+            "weight_schedule": {
+              "enabled": true,
+              "mode": "linear_ramp",
+              "start_step": 11,
+              "end_step": 16,
+              "start_weight": 0.0,
+              "end_weight": 0.08
+            }
+          },
+          "z_art_influence_aux": {
+            "enabled": true,
+            "weight": 0.0,
+            "pool_memberships": [
+              "challenge_proxy_core"
+            ],
+            "min_influence": 0.12,
+            "weight_schedule": {
+              "enabled": true,
+              "mode": "linear_ramp",
+              "start_step": 1,
+              "end_step": 15,
+              "start_weight": 0.0,
+              "end_weight": 0.12
+            }
+          }
+        },
+        "effective_teacher_consistency": {
+          "enabled": true,
+          "teacher_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d33_d7_init_d10_teacher_consistency_shortpause_fused_hidden_exp050/checkpoints/EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration.step10.pt",
+          "weight": 0.15,
+          "event_weight": 1.0,
+          "z_art_weight": 1.0,
+          "acoustic_weight": 0.0,
+          "fused_hidden_weight": 0.05,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "short_pause_no_terminal"
+          ],
+          "min_clause_count": 0,
+          "min_pause_boundary_count": 0,
+          "min_terminal_boundary_count": 0,
+          "required_within_special_duration_ceiling": null,
+          "min_special_proximity_score": 0.0,
+          "max_special_proximity_score": 1.0,
+          "required_final_terminal_types": [],
+          "required_utterance_structure_types": [],
+          "base_sample_weight": 1.0,
+          "proximity_weight_scale": 0.0,
+          "final_terminal_type_weight_overrides": {},
+          "utterance_structure_type_weight_overrides": {}
+        },
+        "effective_learning_rate": 0.00015,
+        "loss_total": 5.553953170776367,
+        "grad_norm": 0.0
+      }
+    ]
+  },
+  "status": "dry_run_ready"
+}

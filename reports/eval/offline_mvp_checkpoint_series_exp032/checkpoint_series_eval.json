@@ -1,0 +1,482 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_c1_7_round1_1_clause_transition_aux_priority_two_phase_pool_handoff_smallscale_100_seeded_shuffle.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.metrics.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "checkpoint_count": 10,
+  "checkpoints": [
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step10.pt",
+      "step": 10,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.097565,
+          "delta_source_loss_total": 0.133,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.032835,
+          "delta_source_acoustic_mae": 0.034704,
+          "delta_target_text_aux_mae": 0.009013,
+          "delta_source_text_aux_mae": 0.009357
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.288557,
+          "delta_source_loss_total": 1.710827,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.461899,
+          "delta_source_acoustic_mae": 0.459763,
+          "delta_target_text_aux_mae": 0.036963,
+          "delta_source_text_aux_mae": 0.036614
+        }
+      },
+      "baseline": {
+        "target_loss_total": 20.620729,
+        "source_loss_total": 27.103957
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step20.pt",
+      "step": 20,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.207278,
+          "delta_source_loss_total": 0.299926,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.061398,
+          "delta_source_acoustic_mae": 0.063015,
+          "delta_target_text_aux_mae": 0.012895,
+          "delta_source_text_aux_mae": 0.01345
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.727989,
+          "delta_source_loss_total": 2.458132,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.654819,
+          "delta_source_acoustic_mae": 0.649622,
+          "delta_target_text_aux_mae": 0.042585,
+          "delta_source_text_aux_mae": 0.042471
+        }
+      },
+      "baseline": {
+        "target_loss_total": 16.549003,
+        "source_loss_total": 21.427369
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step30.pt",
+      "step": 30,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.246565,
+          "delta_source_loss_total": 0.44872,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.142832,
+          "delta_source_acoustic_mae": 0.143986,
+          "delta_target_text_aux_mae": 0.021828,
+          "delta_source_text_aux_mae": 0.022371
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.558291,
+          "delta_source_loss_total": 2.679096,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.825829,
+          "delta_source_acoustic_mae": 0.817307,
+          "delta_target_text_aux_mae": 0.055044,
+          "delta_source_text_aux_mae": 0.054838
+        }
+      },
+      "baseline": {
+        "target_loss_total": 12.133316,
+        "source_loss_total": 14.463955
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step40.pt",
+      "step": 40,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.022108,
+          "delta_source_loss_total": 0.358651,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.209625,
+          "delta_source_acoustic_mae": 0.210603,
+          "delta_target_text_aux_mae": 0.026202,
+          "delta_source_text_aux_mae": 0.026753
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.367411,
+          "delta_source_loss_total": 1.811173,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.872511,
+          "delta_source_acoustic_mae": 0.859606,
+          "delta_target_text_aux_mae": 0.055679,
+          "delta_source_text_aux_mae": 0.055192
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.652188,
+        "source_loss_total": 8.627285
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step50.pt",
+      "step": 50,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": -0.187733,
+          "delta_source_loss_total": 0.199651,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.226773,
+          "delta_source_acoustic_mae": 0.233833,
+          "delta_target_text_aux_mae": 0.023658,
+          "delta_source_text_aux_mae": 0.024725
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": -0.556712,
+          "delta_source_loss_total": 1.101979,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.947039,
+          "delta_source_acoustic_mae": 0.91472,
+          "delta_target_text_aux_mae": 0.049511,
+          "delta_source_text_aux_mae": 0.048276
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.659978,
+        "source_loss_total": 6.866813
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step60.pt",
+      "step": 60,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.187904,
+          "delta_source_loss_total": 0.280311,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.117347,
+          "delta_source_acoustic_mae": 0.151992,
+          "delta_target_text_aux_mae": 0.013071,
+          "delta_source_text_aux_mae": 0.015009
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.217641,
+          "delta_source_loss_total": 1.860679,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.087021,
+          "delta_source_acoustic_mae": 1.019255,
+          "delta_target_text_aux_mae": 0.053246,
+          "delta_source_text_aux_mae": 0.050904
+        }
+      },
+      "baseline": {
+        "target_loss_total": 8.266724,
+        "source_loss_total": 7.008564
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step70.pt",
+      "step": 70,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.680026,
+          "delta_source_loss_total": 0.319631,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.213497,
+          "delta_source_acoustic_mae": 0.133111,
+          "delta_target_text_aux_mae": 0.012035,
+          "delta_source_text_aux_mae": 0.010579
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.099682,
+          "delta_source_loss_total": 1.297596,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.289742,
+          "delta_source_acoustic_mae": 1.159711,
+          "delta_target_text_aux_mae": 0.063017,
+          "delta_source_text_aux_mae": 0.056931
+        }
+      },
+      "baseline": {
+        "target_loss_total": 6.383815,
+        "source_loss_total": 5.750873
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step80.pt",
+      "step": 80,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.854083,
+          "delta_source_loss_total": 0.673284,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.669427,
+          "delta_source_acoustic_mae": 0.320033,
+          "delta_target_text_aux_mae": 0.038969,
+          "delta_source_text_aux_mae": 0.01355
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.786176,
+          "delta_source_loss_total": 1.322987,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.354813,
+          "delta_source_acoustic_mae": 1.373094,
+          "delta_target_text_aux_mae": 0.067361,
+          "delta_source_text_aux_mae": 0.070438
+        }
+      },
+      "baseline": {
+        "target_loss_total": 3.748488,
+        "source_loss_total": 4.04353
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step90.pt",
+      "step": 90,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": -0.017505,
+          "delta_source_loss_total": 1.047527,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.077048,
+          "delta_source_acoustic_mae": 0.704159,
+          "delta_target_text_aux_mae": 0.064597,
+          "delta_source_text_aux_mae": 0.032281
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.834213,
+          "delta_source_loss_total": 1.227947,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.211234,
+          "delta_source_acoustic_mae": 1.557056,
+          "delta_target_text_aux_mae": 0.058888,
+          "delta_source_text_aux_mae": 0.081357
+        }
+      },
+      "baseline": {
+        "target_loss_total": 3.338758,
+        "source_loss_total": 2.885708
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-032-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-pool-handoff-100step-calibration.step100.pt",
+      "step": 100,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 1.275259,
+          "delta_source_loss_total": 1.670465,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.174284,
+          "delta_source_acoustic_mae": 0.98444,
+          "delta_target_text_aux_mae": 0.085425,
+          "delta_source_text_aux_mae": 0.067755
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.735497,
+          "delta_source_loss_total": 1.523338,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.354795,
+          "delta_source_acoustic_mae": 1.615941,
+          "delta_target_text_aux_mae": 0.066566,
+          "delta_source_text_aux_mae": 0.087929
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.685245,
+        "source_loss_total": 2.691438
+      }
+    }
+  ],
+  "trends": {
+    "zero_z_art_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.097565
+      },
+      {
+        "step": 20,
+        "value": 0.207278
+      },
+      {
+        "step": 30,
+        "value": 0.246565
+      },
+      {
+        "step": 40,
+        "value": 0.022108
+      },
+      {
+        "step": 50,
+        "value": -0.187733
+      },
+      {
+        "step": 60,
+        "value": 0.187904
+      },
+      {
+        "step": 70,
+        "value": 0.680026
+      },
+      {
+        "step": 80,
+        "value": 0.854083
+      },
+      {
+        "step": 90,
+        "value": -0.017505
+      },
+      {
+        "step": 100,
+        "value": 1.275259
+      }
+    ],
+    "zero_e_evt_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 1.288557
+      },
+      {
+        "step": 20,
+        "value": 1.727989
+      },
+      {
+        "step": 30,
+        "value": 1.558291
+      },
+      {
+        "step": 40,
+        "value": 0.367411
+      },
+      {
+        "step": 50,
+        "value": -0.556712
+      },
+      {
+        "step": 60,
+        "value": 0.217641
+      },
+      {
+        "step": 70,
+        "value": 0.099682
+      },
+      {
+        "step": 80,
+        "value": 1.786176
+      },
+      {
+        "step": 90,
+        "value": 1.834213
+      },
+      {
+        "step": 100,
+        "value": 1.735497
+      }
+    ],
+    "zero_z_art_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.133
+      },
+      {
+        "step": 20,
+        "value": 0.299926
+      },
+      {
+        "step": 30,
+        "value": 0.44872
+      },
+      {
+        "step": 40,
+        "value": 0.358651
+      },
+      {
+        "step": 50,
+        "value": 0.199651
+      },
+      {
+        "step": 60,
+        "value": 0.280311
+      },
+      {
+        "step": 70,
+        "value": 0.319631
+      },
+      {
+        "step": 80,
+        "value": 0.673284
+      },
+      {
+        "step": 90,
+        "value": 1.047527
+      },
+      {
+        "step": 100,
+        "value": 1.670465
+      }
+    ],
+    "zero_e_evt_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 1.710827
+      },
+      {
+        "step": 20,
+        "value": 2.458132
+      },
+      {
+        "step": 30,
+        "value": 2.679096
+      },
+      {
+        "step": 40,
+        "value": 1.811173
+      },
+      {
+        "step": 50,
+        "value": 1.101979
+      },
+      {
+        "step": 60,
+        "value": 1.860679
+      },
+      {
+        "step": 70,
+        "value": 1.297596
+      },
+      {
+        "step": 80,
+        "value": 1.322987
+      },
+      {
+        "step": 90,
+        "value": 1.227947
+      },
+      {
+        "step": 100,
+        "value": 1.523338
+      }
+    ]
+  },
+  "notes": [
+    "Checkpoint-series evaluation summarizes z_art / e_evt ablation deltas across saved checkpoints.",
+    "Only checkpoints referenced by experiment metrics.training_run.artifacts.checkpoint_paths are included."
+  ]
+}

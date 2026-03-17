@@ -1,0 +1,4427 @@
+{
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "weak_event_hints_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+  "target_special_supervision_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_special_supervision/target_special_supervision_sidecar.jsonl",
+  "special_profile": {
+    "record_count": 8,
+    "duration_sec": {
+      "count": 8,
+      "min": 0.470998,
+      "max": 2.114989,
+      "mean": 1.05729,
+      "median": 0.956985
+    },
+    "lexical_char_count": {
+      "count": 8,
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "pause_boundary_count": {
+      "count": 8,
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "terminal_boundary_count": {
+      "count": 8,
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "clause_count": {
+      "count": 8,
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "clause_span_count": {
+      "count": 8,
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "clause_transition_count": {
+      "count": 8,
+      "min": 0.0,
+      "max": 0.0,
+      "mean": 0.0,
+      "median": 0.0
+    },
+    "utterance_structure_type_counts": {
+      "nonverbal": 8
+    },
+    "final_terminal_type_counts": {
+      "none": 8
+    },
+    "nonverbal_only_count": 8,
+    "within_special_duration_ceiling_count": 0
+  },
+  "feature_reference": {
+    "duration_sec": {
+      "mean": 1.05729,
+      "std": 0.464816,
+      "effective_std": 1.0
+    },
+    "lexical_char_count": {
+      "mean": 0.0,
+      "std": 0.0,
+      "effective_std": 1.0
+    },
+    "pause_boundary_count": {
+      "mean": 0.0,
+      "std": 0.0,
+      "effective_std": 1.0
+    },
+    "terminal_boundary_count": {
+      "mean": 0.0,
+      "std": 0.0,
+      "effective_std": 1.0
+    },
+    "clause_count": {
+      "mean": 0.0,
+      "std": 0.0,
+      "effective_std": 1.0
+    },
+    "clause_span_count": {
+      "mean": 0.0,
+      "std": 0.0,
+      "effective_std": 1.0
+    }
+  },
+  "split_signature_coverage": {
+    "target_train": {
+      "record_count": 592,
+      "nonverbal_only_count": 0,
+      "lexical_char_count_zero": 0,
+      "pause_boundary_count_zero": 67,
+      "terminal_boundary_count_zero": 102,
+      "clause_count_zero": 0,
+      "clause_span_count_zero": 0,
+      "special_signature_count": 0
+    },
+    "target_validation": {
+      "record_count": 66,
+      "nonverbal_only_count": 0,
+      "lexical_char_count_zero": 0,
+      "pause_boundary_count_zero": 9,
+      "terminal_boundary_count_zero": 9,
+      "clause_count_zero": 0,
+      "clause_span_count_zero": 0,
+      "special_signature_count": 0
+    },
+    "target_special_eval": {
+      "record_count": 8,
+      "nonverbal_only_count": 8,
+      "lexical_char_count_zero": 8,
+      "pause_boundary_count_zero": 8,
+      "terminal_boundary_count_zero": 8,
+      "clause_count_zero": 8,
+      "clause_span_count_zero": 8,
+      "special_signature_count": 8
+    }
+  },
+  "existing_pool_alignment": [
+    {
+      "pool_name": "micro_pause_none_singleton_strict",
+      "record_count": 8,
+      "special_distance": {
+        "count": 8,
+        "min": 2.000764,
+        "max": 2.106488,
+        "mean": 2.047626,
+        "median": 2.039433
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 8,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "micro_pause_none_singleton_relaxed",
+      "record_count": 10,
+      "special_distance": {
+        "count": 10,
+        "min": 2.000764,
+        "max": 2.744266,
+        "mean": 2.183682,
+        "median": 2.054685
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.2,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 10,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "micro_singleton_anypunct_relaxed",
+      "record_count": 13,
+      "special_distance": {
+        "count": 13,
+        "min": 2.000764,
+        "max": 2.829028,
+        "mean": 2.281462,
+        "median": 2.093987
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 13,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.307692,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 13,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.923077,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 13,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.230769,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 13,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 13,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "micro_singleton_anypunct_expansion",
+      "record_count": 5,
+      "special_distance": {
+        "count": 5,
+        "min": 2.164731,
+        "max": 2.829028,
+        "mean": 2.655601,
+        "median": 2.744266
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 5,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.8,
+        "median": 2.0
+      },
+      "pause_boundary_count": {
+        "count": 5,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.8,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 5,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.6,
+        "median": 1.0
+      },
+      "clause_count": {
+        "count": 5,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 5,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_22_firefly_105",
+          "split_name": "target_train",
+          "text_clean": "嗯。",
+          "duration_sec": 0.229002,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 2.164731,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_107",
+          "split_name": "target_train",
+          "text_clean": "请问，",
+          "duration_sec": 1.650998,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.711547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_235",
+          "split_name": "target_train",
+          "text_clean": "天啊，",
+          "duration_sec": 1.785986,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.744266,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_251",
+          "split_name": "target_train",
+          "text_clean": "茄子，！",
+          "duration_sec": 1.051995,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_exclamation",
+          "nonverbal_only": false,
+          "special_distance": 2.828432,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_144",
+          "split_name": "target_train",
+          "text_clean": "你是，？",
+          "duration_sec": 0.99898,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 2.829028,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "challenge_proxy_core",
+      "record_count": 16,
+      "special_distance": {
+        "count": 16,
+        "min": 2.000764,
+        "max": 8.211175,
+        "mean": 3.184231,
+        "median": 2.211208
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 16,
+        "min": 1.0,
+        "max": 8.0,
+        "mean": 2.375,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 16,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 16,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 16,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 16,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "short_pause_no_terminal",
+      "record_count": 18,
+      "special_distance": {
+        "count": 18,
+        "min": 2.000764,
+        "max": 8.211175,
+        "mean": 3.732884,
+        "median": 2.727907
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 18,
+        "min": 1.0,
+        "max": 8.0,
+        "mean": 2.888889,
+        "median": 2.0
+      },
+      "pause_boundary_count": {
+        "count": 18,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.166667,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 18,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 18,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.166667,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 18,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.166667,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "challenge_proxy_relaxed",
+      "record_count": 43,
+      "special_distance": {
+        "count": 43,
+        "min": 2.000764,
+        "max": 11.154292,
+        "mean": 4.623756,
+        "median": 4.360998
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 43,
+        "min": 1.0,
+        "max": 11.0,
+        "mean": 4.0,
+        "median": 4.0
+      },
+      "pause_boundary_count": {
+        "count": 43,
+        "min": 0.0,
+        "max": 2.0,
+        "mean": 0.651163,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 43,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.465116,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 43,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.069767,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 43,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.069767,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "short_terminal_burst",
+      "record_count": 42,
+      "special_distance": {
+        "count": 42,
+        "min": 2.164731,
+        "max": 8.640818,
+        "mean": 5.814705,
+        "median": 6.119891
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 42,
+        "min": 1.0,
+        "max": 8.0,
+        "mean": 5.190476,
+        "median": 5.0
+      },
+      "pause_boundary_count": {
+        "count": 42,
+        "min": 0.0,
+        "max": 2.0,
+        "mean": 0.357143,
+        "median": 0.0
+      },
+      "terminal_boundary_count": {
+        "count": 42,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.095238,
+        "median": 1.0
+      },
+      "clause_count": {
+        "count": 42,
+        "min": 1.0,
+        "max": 3.0,
+        "mean": 1.357143,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 42,
+        "min": 1.0,
+        "max": 3.0,
+        "mean": 1.357143,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_22_firefly_105",
+          "split_name": "target_train",
+          "text_clean": "嗯。",
+          "duration_sec": 0.229002,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 2.164731,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_251",
+          "split_name": "target_train",
+          "text_clean": "茄子，！",
+          "duration_sec": 1.051995,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_exclamation",
+          "nonverbal_only": false,
+          "special_distance": 2.828432,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_144",
+          "split_name": "target_train",
+          "text_clean": "你是，？",
+          "duration_sec": 0.99898,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 2.829028,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_102",
+          "split_name": "target_train",
+          "text_clean": "，对不起。",
+          "duration_sec": 0.98898,
+          "lexical_char_count": 3,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 3.464775,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_149",
+          "split_name": "target_train",
+          "text_clean": "，是这里。",
+          "duration_sec": 1.385986,
+          "lexical_char_count": 3,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 3.479661,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_117",
+          "split_name": "target_train",
+          "text_clean": "，怎么了？",
+          "duration_sec": 1.679977,
+          "lexical_char_count": 3,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 3.519622,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_26_firefly_105",
+          "split_name": "target_train",
+          "text_clean": "谢谢啦。",
+          "duration_sec": 1.925986,
+          "lexical_char_count": 3,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 3.571363,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_102",
+          "split_name": "target_train",
+          "text_clean": "废话少说。",
+          "duration_sec": 0.991995,
+          "lexical_char_count": 4,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 4.359388,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "structural_question_exclaim",
+      "record_count": 131,
+      "special_distance": {
+        "count": 131,
+        "min": 2.828432,
+        "max": 58.83131,
+        "mean": 16.814766,
+        "median": 14.532775
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 131,
+        "min": 2.0,
+        "max": 57.0,
+        "mean": 15.78626,
+        "median": 14.0
+      },
+      "pause_boundary_count": {
+        "count": 131,
+        "min": 0.0,
+        "max": 6.0,
+        "mean": 1.419847,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 131,
+        "min": 1.0,
+        "max": 4.0,
+        "mean": 1.290076,
+        "median": 1.0
+      },
+      "clause_count": {
+        "count": 131,
+        "min": 1.0,
+        "max": 10.0,
+        "mean": 2.625954,
+        "median": 2.0
+      },
+      "clause_span_count": {
+        "count": 131,
+        "min": 1.0,
+        "max": 10.0,
+        "mean": 2.625954,
+        "median": 2.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_3_firefly_251",
+          "split_name": "target_train",
+          "text_clean": "茄子，！",
+          "duration_sec": 1.051995,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_exclamation",
+          "nonverbal_only": false,
+          "special_distance": 2.828432,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_144",
+          "split_name": "target_train",
+          "text_clean": "你是，？",
+          "duration_sec": 0.99898,
+          "lexical_char_count": 2,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 2.829028,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_117",
+          "split_name": "target_train",
+          "text_clean": "，怎么了？",
+          "duration_sec": 1.679977,
+          "lexical_char_count": 3,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 3.519622,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_244",
+          "split_name": "target_train",
+          "text_clean": "，不行吗？",
+          "duration_sec": 2.211995,
+          "lexical_char_count": 3,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 3.651485,
+          "pool_memberships": [
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_121",
+          "split_name": "target_train",
+          "text_clean": "什么意思？",
+          "duration_sec": 0.842993,
+          "lexical_char_count": 4,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 4.364164,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_119",
+          "split_name": "target_train",
+          "text_clean": "，钟表小子？",
+          "duration_sec": 1.325986,
+          "lexical_char_count": 4,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 4.367173,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "这边这边！",
+          "duration_sec": 1.346984,
+          "lexical_char_count": 4,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_exclamation",
+          "nonverbal_only": false,
+          "special_distance": 4.368515,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_118",
+          "split_name": "target_train",
+          "text_clean": "米哈伊尔，？",
+          "duration_sec": 2.005986,
+          "lexical_char_count": 4,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 4.571654,
+          "pool_memberships": [
+            "short_terminal_burst",
+            "structural_question_exclaim"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "structural_no_final_terminal",
+      "record_count": 153,
+      "special_distance": {
+        "count": 153,
+        "min": 2.000764,
+        "max": 64.472031,
+        "mean": 20.004437,
+        "median": 15.517023
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 153,
+        "min": 1.0,
+        "max": 62.0,
+        "mean": 18.601307,
+        "median": 15.0
+      },
+      "pause_boundary_count": {
+        "count": 153,
+        "min": 1.0,
+        "max": 8.0,
+        "mean": 2.418301,
+        "median": 2.0
+      },
+      "terminal_boundary_count": {
+        "count": 153,
+        "min": 0.0,
+        "max": 3.0,
+        "mean": 0.392157,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 153,
+        "min": 1.0,
+        "max": 9.0,
+        "mean": 2.803922,
+        "median": 2.0
+      },
+      "clause_span_count": {
+        "count": 153,
+        "min": 1.0,
+        "max": 9.0,
+        "mean": 2.803922,
+        "median": 2.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "structural_multi_terminal",
+      "record_count": 156,
+      "special_distance": {
+        "count": 156,
+        "min": 6.098924,
+        "max": 70.694737,
+        "mean": 33.447194,
+        "median": 31.517265
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 156,
+        "min": 5.0,
+        "max": 66.0,
+        "mean": 31.576923,
+        "median": 29.5
+      },
+      "pause_boundary_count": {
+        "count": 156,
+        "min": 0.0,
+        "max": 6.0,
+        "mean": 2.339744,
+        "median": 2.0
+      },
+      "terminal_boundary_count": {
+        "count": 156,
+        "min": 2.0,
+        "max": 4.0,
+        "mean": 2.121795,
+        "median": 2.0
+      },
+      "clause_count": {
+        "count": 156,
+        "min": 1.0,
+        "max": 10.0,
+        "mean": 4.403846,
+        "median": 4.0
+      },
+      "clause_span_count": {
+        "count": 156,
+        "min": 1.0,
+        "max": 10.0,
+        "mean": 4.403846,
+        "median": 4.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_3_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "，好了！开始吧。",
+          "duration_sec": 1.500998,
+          "lexical_char_count": 5,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 2,
+          "clause_count": 2,
+          "clause_span_count": 2,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 6.098924,
+          "pool_memberships": [
+            "short_terminal_burst",
+            "structural_multi_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_129",
+          "split_name": "target_train",
+          "text_clean": "咦？米沙是谁？",
+          "duration_sec": 1.899977,
+          "lexical_char_count": 5,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 2,
+          "clause_count": 2,
+          "clause_span_count": 2,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 6.140857,
+          "pool_memberships": [
+            "short_terminal_burst",
+            "structural_multi_terminal",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "，这是什么情况？！",
+          "duration_sec": 2.400998,
+          "lexical_char_count": 6,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 2,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_exclamation",
+          "nonverbal_only": false,
+          "special_distance": 6.618576,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_130",
+          "split_name": "target_train",
+          "text_clean": "咦？你认识她吗？",
+          "duration_sec": 1.835986,
+          "lexical_char_count": 6,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 2,
+          "clause_count": 2,
+          "clause_span_count": 2,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 6.971827,
+          "pool_memberships": [
+            "short_terminal_burst",
+            "structural_multi_terminal",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_145",
+          "split_name": "target_train",
+          "text_clean": "来，这里！跟上哦。",
+          "duration_sec": 2.044989,
+          "lexical_char_count": 6,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 2,
+          "clause_count": 3,
+          "clause_span_count": 3,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 7.744388,
+          "pool_memberships": [
+            "short_terminal_burst",
+            "structural_multi_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_107",
+          "split_name": "target_train",
+          "text_clean": "机甲，？！为什么，",
+          "duration_sec": 5.747007,
+          "lexical_char_count": 5,
+          "pause_boundary_count": 2,
+          "terminal_boundary_count": 2,
+          "clause_count": 2,
+          "clause_span_count": 2,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 7.936841,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_131",
+          "split_name": "target_train",
+          "text_clean": "咦？都是是什么意思，？",
+          "duration_sec": 3.507982,
+          "lexical_char_count": 8,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 2,
+          "clause_count": 2,
+          "clause_span_count": 2,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 9.110757,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_question_exclaim"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_134",
+          "split_name": "target_train",
+          "text_clean": "点好了吗？那我买单啦。",
+          "duration_sec": 1.829977,
+          "lexical_char_count": 9,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 2,
+          "clause_count": 2,
+          "clause_span_count": 2,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 9.674557,
+          "pool_memberships": [
+            "structural_multi_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "structural_clause_ge4_no_final_terminal",
+      "record_count": 38,
+      "special_distance": {
+        "count": 38,
+        "min": 10.679538,
+        "max": 64.472031,
+        "mean": 39.601178,
+        "median": 36.355306
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 38,
+        "min": 8.0,
+        "max": 62.0,
+        "mean": 37.184211,
+        "median": 34.5
+      },
+      "pause_boundary_count": {
+        "count": 38,
+        "min": 3.0,
+        "max": 8.0,
+        "mean": 4.263158,
+        "median": 4.0
+      },
+      "terminal_boundary_count": {
+        "count": 38,
+        "min": 0.0,
+        "max": 3.0,
+        "mean": 0.947368,
+        "median": 1.0
+      },
+      "clause_count": {
+        "count": 38,
+        "min": 4.0,
+        "max": 9.0,
+        "mean": 5.236842,
+        "median": 5.0
+      },
+      "clause_span_count": {
+        "count": 38,
+        "min": 4.0,
+        "max": 9.0,
+        "mean": 5.236842,
+        "median": 5.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_20_firefly_140",
+          "split_name": "target_train",
+          "text_clean": "准备好了吗？一，二，三，",
+          "duration_sec": 3.894989,
+          "lexical_char_count": 8,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 10.679538,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_235",
+          "split_name": "target_train",
+          "text_clean": "讲笑话？啊，我，没什么幽默感，",
+          "duration_sec": 5.977982,
+          "lexical_char_count": 11,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 13.682588,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_132",
+          "split_name": "target_train",
+          "text_clean": "呃，只有一个宝箱？好可疑，要打开看看吗，",
+          "duration_sec": 5.942993,
+          "lexical_char_count": 16,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 17.940738,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_122",
+          "split_name": "target_train",
+          "text_clean": "我？不，不是的，我还不是家族一员，只是在为他们工作，",
+          "duration_sec": 6.941995,
+          "lexical_char_count": 21,
+          "pause_boundary_count": 4,
+          "terminal_boundary_count": 1,
+          "clause_count": 5,
+          "clause_span_count": 5,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 23.294415,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_165",
+          "split_name": "target_train",
+          "text_clean": "终于结束了。不过，这支火箭筒的手感好好，有点舍不得，",
+          "duration_sec": 7.823175,
+          "lexical_char_count": 22,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 23.911863,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_140",
+          "split_name": "target_train",
+          "text_clean": "，已经点好了吗？你，挺有眼光的呢！哈哈，那、那我买单了，",
+          "duration_sec": 8.853991,
+          "lexical_char_count": 21,
+          "pause_boundary_count": 4,
+          "terminal_boundary_count": 2,
+          "clause_count": 6,
+          "clause_span_count": 6,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 24.367777,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_169",
+          "split_name": "target_train",
+          "text_clean": "嗯，既然你没事，那我们就出发去下一站吧。离这里不远，跟我来",
+          "duration_sec": 6.067982,
+          "lexical_char_count": 25,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 5,
+          "clause_span_count": 5,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 26.647834,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_127",
+          "split_name": "target_train",
+          "text_clean": "但我还是不太明白，她是怎么做到的，典押又意味着什么？回去问问吧，",
+          "duration_sec": 9.374989,
+          "lexical_char_count": 28,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 29.919628,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "pool_name": "structural_clause_ge4",
+      "record_count": 185,
+      "special_distance": {
+        "count": 185,
+        "min": 10.679538,
+        "max": 80.166633,
+        "mean": 40.73122,
+        "median": 39.503428
+      },
+      "nonverbal_only_count": 0,
+      "lexical_char_count": {
+        "count": 185,
+        "min": 8.0,
+        "max": 76.0,
+        "mean": 38.508108,
+        "median": 37.0
+      },
+      "pause_boundary_count": {
+        "count": 185,
+        "min": 1.0,
+        "max": 9.0,
+        "mean": 3.502703,
+        "median": 3.0
+      },
+      "terminal_boundary_count": {
+        "count": 185,
+        "min": 0.0,
+        "max": 4.0,
+        "mean": 1.632432,
+        "median": 2.0
+      },
+      "clause_count": {
+        "count": 185,
+        "min": 4.0,
+        "max": 10.0,
+        "mean": 5.140541,
+        "median": 5.0
+      },
+      "clause_span_count": {
+        "count": 185,
+        "min": 4.0,
+        "max": 10.0,
+        "mean": 5.140541,
+        "median": 5.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_20_firefly_140",
+          "split_name": "target_train",
+          "text_clean": "准备好了吗？一，二，三，",
+          "duration_sec": 3.894989,
+          "lexical_char_count": 8,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 10.679538,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_235",
+          "split_name": "target_train",
+          "text_clean": "讲笑话？啊，我，没什么幽默感，",
+          "duration_sec": 5.977982,
+          "lexical_char_count": 11,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 13.682588,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_166",
+          "split_name": "target_train",
+          "text_clean": "，呃，不是，没什么。我们赶紧去下一关吧。",
+          "duration_sec": 3.999977,
+          "lexical_char_count": 15,
+          "pause_boundary_count": 2,
+          "terminal_boundary_count": 2,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 16.542654,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_clause_ge4"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_112",
+          "split_name": "target_train",
+          "text_clean": "太、太好了！我喜欢这种，刺、刺激的生活！",
+          "duration_sec": 5.797982,
+          "lexical_char_count": 15,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 2,
+          "clause_count": 5,
+          "clause_span_count": 5,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_exclamation",
+          "nonverbal_only": false,
+          "special_distance": 17.620277,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_question_exclaim",
+            "structural_clause_ge4"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_131",
+          "split_name": "target_train",
+          "text_clean": "啊！墙壁消失了，感觉应该快到终点了，吧？",
+          "duration_sec": 6.044989,
+          "lexical_char_count": 16,
+          "pause_boundary_count": 2,
+          "terminal_boundary_count": 2,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 17.913044,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_question_exclaim",
+            "structural_clause_ge4"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_132",
+          "split_name": "target_train",
+          "text_clean": "呃，只有一个宝箱？好可疑，要打开看看吗，",
+          "duration_sec": 5.942993,
+          "lexical_char_count": 16,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 17.940738,
+          "pool_memberships": [
+            "structural_clause_ge4_no_final_terminal",
+            "structural_clause_ge4",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "呃，那我心灰意冷，离开匹诺康尼，可以吗？",
+          "duration_sec": 6.999977,
+          "lexical_char_count": 16,
+          "pause_boundary_count": 3,
+          "terminal_boundary_count": 1,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_clause_single_terminal",
+          "final_terminal_type": "terminal_question",
+          "nonverbal_only": false,
+          "special_distance": 18.256931,
+          "pool_memberships": [
+            "structural_question_exclaim",
+            "structural_clause_ge4"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_243",
+          "split_name": "target_train",
+          "text_clean": "我有点怕镜头的，别笑话我哦。来，你拿着吧。",
+          "duration_sec": 7.339977,
+          "lexical_char_count": 17,
+          "pause_boundary_count": 2,
+          "terminal_boundary_count": 2,
+          "clause_count": 4,
+          "clause_span_count": 4,
+          "utterance_structure_type": "multi_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 19.195629,
+          "pool_memberships": [
+            "structural_multi_terminal",
+            "structural_clause_ge4"
+          ]
+        }
+      ]
+    }
+  ],
+  "nearest_train_records": [
+    {
+      "record_id": "target::chapter3_2_firefly_141",
+      "split_name": "target_train",
+      "text_clean": "唔，",
+      "duration_sec": 1.001995,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.000764,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_3_firefly_250",
+      "split_name": "target_train",
+      "text_clean": "二，",
+      "duration_sec": 0.776984,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.019547,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_3_firefly_249",
+      "split_name": "target_train",
+      "text_clean": "一，",
+      "duration_sec": 0.757982,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.022272,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_3_firefly_124",
+      "split_name": "target_train",
+      "text_clean": "欸，",
+      "duration_sec": 0.717982,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.028578,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_17_firefly_136",
+      "split_name": "target_train",
+      "text_clean": "三，",
+      "duration_sec": 0.605986,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.050287,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_2_firefly_248",
+      "split_name": "target_train",
+      "text_clean": "这，",
+      "duration_sec": 1.547007,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.059083,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_17_firefly_137",
+      "split_name": "target_train",
+      "text_clean": "二，",
+      "duration_sec": 0.436984,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.093987,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_17_firefly_138",
+      "split_name": "target_train",
+      "text_clean": "一，",
+      "duration_sec": 0.396009,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.106488,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_strict",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_22_firefly_105",
+      "split_name": "target_train",
+      "text_clean": "嗯。",
+      "duration_sec": 0.229002,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 0,
+      "terminal_boundary_count": 1,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "single_clause_terminal",
+      "final_terminal_type": "terminal_period",
+      "nonverbal_only": false,
+      "special_distance": 2.164731,
+      "pool_memberships": [
+        "challenge_proxy_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "micro_singleton_anypunct_expansion",
+        "short_terminal_burst"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_4_firefly_125",
+      "split_name": "target_train",
+      "text_clean": "唉，",
+      "duration_sec": 2.224989,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.315928,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_29_firefly_107",
+      "split_name": "target_train",
+      "text_clean": "请问，",
+      "duration_sec": 1.650998,
+      "lexical_char_count": 2,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.711547,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "micro_singleton_anypunct_expansion",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_2_firefly_235",
+      "split_name": "target_train",
+      "text_clean": "天啊，",
+      "duration_sec": 1.785986,
+      "lexical_char_count": 2,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 0,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "other",
+      "final_terminal_type": "none",
+      "nonverbal_only": false,
+      "special_distance": 2.744266,
+      "pool_memberships": [
+        "challenge_proxy_core",
+        "challenge_proxy_relaxed",
+        "micro_pause_none_singleton_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "micro_singleton_anypunct_expansion",
+        "short_pause_no_terminal",
+        "structural_no_final_terminal"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_3_firefly_251",
+      "split_name": "target_train",
+      "text_clean": "茄子，！",
+      "duration_sec": 1.051995,
+      "lexical_char_count": 2,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 1,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "single_clause_terminal",
+      "final_terminal_type": "terminal_exclamation",
+      "nonverbal_only": false,
+      "special_distance": 2.828432,
+      "pool_memberships": [
+        "challenge_proxy_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "micro_singleton_anypunct_expansion",
+        "short_terminal_burst",
+        "structural_question_exclaim"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_4_firefly_144",
+      "split_name": "target_train",
+      "text_clean": "你是，？",
+      "duration_sec": 0.99898,
+      "lexical_char_count": 2,
+      "pause_boundary_count": 1,
+      "terminal_boundary_count": 1,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "single_clause_terminal",
+      "final_terminal_type": "terminal_question",
+      "nonverbal_only": false,
+      "special_distance": 2.829028,
+      "pool_memberships": [
+        "challenge_proxy_relaxed",
+        "micro_singleton_anypunct_relaxed",
+        "micro_singleton_anypunct_expansion",
+        "short_terminal_burst",
+        "structural_question_exclaim"
+      ]
+    },
+    {
+      "record_id": "target::chapter3_3_firefly_104",
+      "split_name": "target_train",
+      "text_clean": "，嗯。",
+      "duration_sec": 3.19,
+      "lexical_char_count": 1,
+      "pause_boundary_count": 0,
+      "terminal_boundary_count": 1,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "single_clause_terminal",
+      "final_terminal_type": "terminal_period",
+      "nonverbal_only": false,
+      "special_distance": 2.923774,
+      "pool_memberships": []
+    },
+    {
+      "record_id": "target::chapter3_3_firefly_103",
+      "split_name": "target_train",
+      "text_clean": "，谢谢。",
+      "duration_sec": 2.357982,
+      "lexical_char_count": 2,
+      "pause_boundary_count": 0,
+      "terminal_boundary_count": 1,
+      "clause_count": 1,
+      "clause_span_count": 1,
+      "utterance_structure_type": "single_clause_terminal",
+      "final_terminal_type": "terminal_period",
+      "nonverbal_only": false,
+      "special_distance": 2.948186,
+      "pool_memberships": []
+    }
+  ],
+  "heuristic_cohorts": [
+    {
+      "cohort_name": "micro_pause_none_singleton_strict",
+      "description": "duration <= special ceiling, lexical <= 1, single pause, no terminal, clause = 1, final none",
+      "record_count": 8,
+      "special_distance": {
+        "count": 8,
+        "min": 2.000764,
+        "max": 2.106488,
+        "mean": 2.047626,
+        "median": 2.039433
+      },
+      "lexical_char_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 8,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 8,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "cohort_name": "micro_terminal_singleton_strict",
+      "description": "duration <= special ceiling, lexical <= 1, no pause, single terminal, clause = 1",
+      "record_count": 1,
+      "special_distance": {
+        "count": 1,
+        "min": 2.164731,
+        "max": 2.164731,
+        "mean": 2.164731,
+        "median": 2.164731
+      },
+      "lexical_char_count": {
+        "count": 1,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 1,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "terminal_boundary_count": {
+        "count": 1,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_count": {
+        "count": 1,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 1,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_22_firefly_105",
+          "split_name": "target_train",
+          "text_clean": "嗯。",
+          "duration_sec": 0.229002,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 0,
+          "terminal_boundary_count": 1,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "single_clause_terminal",
+          "final_terminal_type": "terminal_period",
+          "nonverbal_only": false,
+          "special_distance": 2.164731,
+          "pool_memberships": [
+            "challenge_proxy_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "micro_singleton_anypunct_expansion",
+            "short_terminal_burst"
+          ]
+        }
+      ]
+    },
+    {
+      "cohort_name": "micro_no_terminal_singleton_relaxed",
+      "description": "duration <= 2.2, lexical <= 2, no terminal, clause = 1",
+      "record_count": 10,
+      "special_distance": {
+        "count": 10,
+        "min": 2.000764,
+        "max": 2.744266,
+        "mean": 2.183682,
+        "median": 2.054685
+      },
+      "lexical_char_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.2,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 10,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "cohort_name": "micro_pause_none_singleton_relaxed",
+      "description": "duration <= 2.2, lexical <= 2, single pause, no terminal, clause = 1, final none",
+      "record_count": 10,
+      "special_distance": {
+        "count": 10,
+        "min": 2.000764,
+        "max": 2.744266,
+        "mean": 2.183682,
+        "median": 2.054685
+      },
+      "lexical_char_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.2,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 10,
+        "min": 0.0,
+        "max": 0.0,
+        "mean": 0.0,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 10,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    },
+    {
+      "cohort_name": "micro_singleton_anypunct_relaxed",
+      "description": "duration <= 2.2, lexical <= 2, pause <= 1, terminal <= 1, clause = 1",
+      "record_count": 13,
+      "special_distance": {
+        "count": 13,
+        "min": 2.000764,
+        "max": 2.829028,
+        "mean": 2.281462,
+        "median": 2.093987
+      },
+      "lexical_char_count": {
+        "count": 13,
+        "min": 1.0,
+        "max": 2.0,
+        "mean": 1.307692,
+        "median": 1.0
+      },
+      "pause_boundary_count": {
+        "count": 13,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.923077,
+        "median": 1.0
+      },
+      "terminal_boundary_count": {
+        "count": 13,
+        "min": 0.0,
+        "max": 1.0,
+        "mean": 0.230769,
+        "median": 0.0
+      },
+      "clause_count": {
+        "count": 13,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "clause_span_count": {
+        "count": 13,
+        "min": 1.0,
+        "max": 1.0,
+        "mean": 1.0,
+        "median": 1.0
+      },
+      "top_examples": [
+        {
+          "record_id": "target::chapter3_2_firefly_141",
+          "split_name": "target_train",
+          "text_clean": "唔，",
+          "duration_sec": 1.001995,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.000764,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_250",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.776984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.019547,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_249",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.757982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.022272,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_124",
+          "split_name": "target_train",
+          "text_clean": "欸，",
+          "duration_sec": 0.717982,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.028578,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_136",
+          "split_name": "target_train",
+          "text_clean": "三，",
+          "duration_sec": 0.605986,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.050287,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_248",
+          "split_name": "target_train",
+          "text_clean": "这，",
+          "duration_sec": 1.547007,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.059083,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_137",
+          "split_name": "target_train",
+          "text_clean": "二，",
+          "duration_sec": 0.436984,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.093987,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "split_name": "target_train",
+          "text_clean": "一，",
+          "duration_sec": 0.396009,
+          "lexical_char_count": 1,
+          "pause_boundary_count": 1,
+          "terminal_boundary_count": 0,
+          "clause_count": 1,
+          "clause_span_count": 1,
+          "utterance_structure_type": "other",
+          "final_terminal_type": "none",
+          "nonverbal_only": false,
+          "special_distance": 2.106488,
+          "pool_memberships": [
+            "challenge_proxy_core",
+            "challenge_proxy_relaxed",
+            "micro_pause_none_singleton_strict",
+            "micro_pause_none_singleton_relaxed",
+            "micro_singleton_anypunct_relaxed",
+            "short_pause_no_terminal",
+            "structural_no_final_terminal"
+          ]
+        }
+      ]
+    }
+  ],
+  "next_step_recommendation": {
+    "continue_training": true,
+    "continue_current_d58_d59_line": false,
+    "principle_change_required": true,
+    "reason": "No train-side record matches the target_special_eval special signature, and train-side clause-span support never drops to zero.",
+    "recommended_proxy_cohort": "micro_pause_none_singleton_strict",
+    "recommended_proxy_cohort_count": 8,
+    "recommended_supervision_direction": "Pivot from clause-shape supervision to clause-free singleton sparse-frame supervision over the closest micro-utterance cohort."
+  },
+  "notes": [
+    "special_signature is defined as nonverbal_only plus zero lexical, pause, terminal, clause, and clause-span support.",
+    "special_distance is a simple normalized distance to the target_special_eval profile over duration and sparse-structure features.",
+    "This report is diagnostic; it does not modify training sidecars or manifests."
+  ]
+}

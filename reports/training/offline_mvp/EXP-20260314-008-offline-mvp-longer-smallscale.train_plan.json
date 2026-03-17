@@ -1,0 +1,1002 @@
+{
+  "experiment_id": "EXP-20260314-008-offline-mvp-longer-smallscale",
+  "created_at": "2026-03-14T17:11:31",
+  "dry_run": false,
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_smallscale_longer.json",
+  "timing": {
+    "started_at": "2026-03-14T17:11:30",
+    "ended_at": "2026-03-14T17:11:31",
+    "duration_sec": 1.237681
+  },
+  "data": {
+    "manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/manifests",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+    "split_strategy": "materialized_split",
+    "target_manifest_count": 624,
+    "source_manifest_count": 537,
+    "target_train_count": 554,
+    "target_validation_count": 62,
+    "target_special_eval_count": 8,
+    "source_train_count": 483,
+    "source_validation_count": 54,
+    "dry_run_target_count": 4,
+    "dry_run_source_count": 4,
+    "target_batch_audio_shape": [
+      4,
+      88200
+    ],
+    "target_batch_token_shape": [
+      4,
+      67
+    ],
+    "source_batch_audio_shape": [
+      4,
+      73440
+    ],
+    "vocab_size": 1348
+  },
+  "model": {
+    "name": "offline_mvp_scaffold",
+    "r_res_enabled": false,
+    "uses_text_in_training": true,
+    "uses_text_in_runtime": false,
+    "z_art_dim": 8,
+    "event_head_enabled": true,
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "acoustic_dim": 4,
+    "frame_length": 400,
+    "hop_length": 160
+  },
+  "training": {
+    "mode": "offline_mvp",
+    "run_stage": "small_scale_validation",
+    "prerequisite_experiment_id": null,
+    "teacher_required": false,
+    "student_required": false,
+    "vocoder_required": false,
+    "single_step_validation_enabled": true,
+    "num_steps": 20,
+    "validation_interval": 5,
+    "checkpoint_interval": 5,
+    "target_validation_count": 8,
+    "source_validation_count": 8,
+    "learning_rate": 0.0003,
+    "max_grad_norm": 1.0
+  },
+  "execution_guard": {
+    "run_stage": "small_scale_validation",
+    "requires_small_scale_prerequisite": false,
+    "prerequisite_experiment_id": null
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+    "option_name": "hybrid_stratified_blocked",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 554,
+      "target_validation": 62,
+      "target_special_eval": 8,
+      "source_train": 483,
+      "source_validation": 54
+    }
+  },
+  "gates": {
+    "requires_r_res_disabled": true,
+    "requires_text_for_training": true,
+    "requires_text_for_runtime": false
+  },
+  "dry_run_validation": {
+    "source_record_ids": [
+      "source::segment_0001_0000020110_0000021640",
+      "source::segment_0002_0000023770_0000024280",
+      "source::segment_0003_0000036160_0000036880",
+      "source::segment_0004_0000039130_0000039910"
+    ],
+    "target_record_ids": [
+      "target::archive_firefly_1",
+      "target::archive_firefly_10",
+      "target::archive_firefly_11",
+      "target::archive_firefly_12"
+    ],
+    "forward_shapes": {
+      "source_z_art": [
+        4,
+        457,
+        8
+      ],
+      "source_event_logits": [
+        4,
+        457,
+        8
+      ],
+      "source_acoustic": [
+        4,
+        457,
+        4
+      ],
+      "source_frame_mask": [
+        4,
+        457
+      ],
+      "target_z_art": [
+        4,
+        549,
+        8
+      ],
+      "target_event_logits": [
+        4,
+        549,
+        8
+      ],
+      "target_acoustic": [
+        4,
+        549,
+        4
+      ],
+      "target_frame_mask": [
+        4,
+        549
+      ]
+    }
+  },
+  "step_metrics": {
+    "step": 20,
+    "started_at": "2026-03-14T17:11:31",
+    "ended_at": "2026-03-14T17:11:31",
+    "duration_sec": 0.020315,
+    "target_record_ids": [
+      "target::chapter3_20_firefly_117",
+      "target::chapter3_20_firefly_118",
+      "target::chapter3_20_firefly_119",
+      "target::chapter3_20_firefly_120"
+    ],
+    "source_record_ids": [
+      "source::segment_0086_0000468220_0000470020",
+      "source::segment_0087_0000472570_0000473770",
+      "source::segment_0088_0000474310_0000476380",
+      "source::segment_0089_0000482980_0000483730"
+    ],
+    "target": {
+      "loss_total": 7.016870498657227,
+      "loss_acoustic": 4.264560699462891,
+      "loss_event": 5.466403007507324,
+      "loss_z_smooth": 0.004018072504550219,
+      "loss_text_aux": 0.09353077411651611
+    },
+    "source": {
+      "loss_total": 18.891340255737305,
+      "loss_acoustic": 16.184383392333984,
+      "loss_event": 5.413565635681152,
+      "loss_z_smooth": 0.0017292792908847332,
+      "loss_text_aux": 0.0
+    },
+    "loss_total": 25.90821075439453,
+    "grad_norm": 54.110076904296875
+  },
+  "validation": {
+    "enabled": true,
+    "history": [
+      {
+        "step": 5,
+        "target_record_ids": [
+          "target::chapter3_3_firefly_249",
+          "target::chapter3_2_firefly_141",
+          "target::chapter3_22_firefly_101",
+          "target::chapter3_20_firefly_108"
+        ],
+        "source_record_ids": [
+          "source::segment_0042_0000188800_0000190270",
+          "source::segment_0043_0000195700_0000196360",
+          "source::segment_0044_0000202570_0000203410",
+          "source::segment_0045_0000206080_0000207820"
+        ],
+        "target": {
+          "loss_total": 15.987702369689941,
+          "loss_acoustic": 13.221177101135254,
+          "loss_event": 5.48546028137207,
+          "loss_z_smooth": 0.00453017745167017,
+          "loss_text_aux": 0.1167127713561058
+        },
+        "source": {
+          "loss_total": 31.154531478881836,
+          "loss_acoustic": 28.421255111694336,
+          "loss_event": 5.466287612915039,
+          "loss_z_smooth": 0.0013089393032714725,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 47.142234802246094
+      },
+      {
+        "step": 10,
+        "target_record_ids": [
+          "target::chapter3_3_firefly_249",
+          "target::chapter3_2_firefly_141",
+          "target::chapter3_22_firefly_101",
+          "target::chapter3_20_firefly_108"
+        ],
+        "source_record_ids": [
+          "source::segment_0042_0000188800_0000190270",
+          "source::segment_0043_0000195700_0000196360",
+          "source::segment_0044_0000202570_0000203410",
+          "source::segment_0045_0000206080_0000207820"
+        ],
+        "target": {
+          "loss_total": 14.53383731842041,
+          "loss_acoustic": 11.773821830749512,
+          "loss_event": 5.472074031829834,
+          "loss_z_smooth": 0.004261408932507038,
+          "loss_text_aux": 0.11775795370340347
+        },
+        "source": {
+          "loss_total": 28.497751235961914,
+          "loss_acoustic": 25.776023864746094,
+          "loss_event": 5.443188190460205,
+          "loss_z_smooth": 0.0013424206990748644,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 43.03158950805664
+      },
+      {
+        "step": 15,
+        "target_record_ids": [
+          "target::chapter3_3_firefly_249",
+          "target::chapter3_2_firefly_141",
+          "target::chapter3_22_firefly_101",
+          "target::chapter3_20_firefly_108"
+        ],
+        "source_record_ids": [
+          "source::segment_0042_0000188800_0000190270",
+          "source::segment_0043_0000195700_0000196360",
+          "source::segment_0044_0000202570_0000203410",
+          "source::segment_0045_0000206080_0000207820"
+        ],
+        "target": {
+          "loss_total": 13.032675743103027,
+          "loss_acoustic": 10.277055740356445,
+          "loss_event": 5.461595058441162,
+          "loss_z_smooth": 0.004087390843778849,
+          "loss_text_aux": 0.12206440418958664
+        },
+        "source": {
+          "loss_total": 25.59382438659668,
+          "loss_acoustic": 22.881628036499023,
+          "loss_event": 5.424125671386719,
+          "loss_z_smooth": 0.0013377853902056813,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 38.62649917602539
+      },
+      {
+        "step": 20,
+        "target_record_ids": [
+          "target::chapter3_3_firefly_249",
+          "target::chapter3_2_firefly_141",
+          "target::chapter3_22_firefly_101",
+          "target::chapter3_20_firefly_108"
+        ],
+        "source_record_ids": [
+          "source::segment_0042_0000188800_0000190270",
+          "source::segment_0043_0000195700_0000196360",
+          "source::segment_0044_0000202570_0000203410",
+          "source::segment_0045_0000206080_0000207820"
+        ],
+        "target": {
+          "loss_total": 11.511255264282227,
+          "loss_acoustic": 8.75741958618164,
+          "loss_event": 5.45397424697876,
+          "loss_z_smooth": 0.003950315061956644,
+          "loss_text_aux": 0.1322712004184723
+        },
+        "source": {
+          "loss_total": 22.39056968688965,
+          "loss_acoustic": 19.686847686767578,
+          "loss_event": 5.40718412399292,
+          "loss_z_smooth": 0.0012979385210201144,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 33.901824951171875
+      }
+    ]
+  },
+  "artifacts": {
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-008-offline-mvp-longer-smallscale.step20.pt",
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-008-offline-mvp-longer-smallscale.step5.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-008-offline-mvp-longer-smallscale.step10.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-008-offline-mvp-longer-smallscale.step15.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-008-offline-mvp-longer-smallscale.step20.pt"
+    ],
+    "logs_dir": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/logs"
+  },
+  "training_run": {
+    "num_steps": 20,
+    "completed_steps": 20,
+    "validation_interval": 5,
+    "checkpoint_interval": 5,
+    "history": [
+      {
+        "step": 1,
+        "started_at": "2026-03-14T17:11:30",
+        "ended_at": "2026-03-14T17:11:30",
+        "duration_sec": 0.064584,
+        "target_record_ids": [
+          "target::archive_firefly_1",
+          "target::archive_firefly_10",
+          "target::archive_firefly_11",
+          "target::archive_firefly_12"
+        ],
+        "source_record_ids": [
+          "source::segment_0001_0000020110_0000021640",
+          "source::segment_0002_0000023770_0000024280",
+          "source::segment_0003_0000036160_0000036880",
+          "source::segment_0004_0000039130_0000039910"
+        ],
+        "target": {
+          "loss_total": 14.126235961914062,
+          "loss_acoustic": 11.350813865661621,
+          "loss_event": 5.506857872009277,
+          "loss_z_smooth": 0.006372577976435423,
+          "loss_text_aux": 0.10678443312644958
+        },
+        "source": {
+          "loss_total": 33.683963775634766,
+          "loss_acoustic": 30.93719482421875,
+          "loss_event": 5.493285655975342,
+          "loss_z_smooth": 0.001256522024050355,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 47.81019973754883,
+        "grad_norm": 39.32623291015625
+      },
+      {
+        "step": 2,
+        "started_at": "2026-03-14T17:11:30",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.034483,
+        "target_record_ids": [
+          "target::archive_firefly_13",
+          "target::archive_firefly_14",
+          "target::archive_firefly_15",
+          "target::archive_firefly_16"
+        ],
+        "source_record_ids": [
+          "source::segment_0005_0000045280_0000045850",
+          "source::segment_0006_0000046780_0000047710",
+          "source::segment_0007_0000049270_0000050620",
+          "source::segment_0008_0000050950_0000052240"
+        ],
+        "target": {
+          "loss_total": 16.288312911987305,
+          "loss_acoustic": 13.514549255371094,
+          "loss_event": 5.496870994567871,
+          "loss_z_smooth": 0.004518116824328899,
+          "loss_text_aux": 0.12438007444143295
+        },
+        "source": {
+          "loss_total": 29.18987274169922,
+          "loss_acoustic": 26.443893432617188,
+          "loss_event": 5.491649627685547,
+          "loss_z_smooth": 0.001546279527246952,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 45.478187561035156,
+        "grad_norm": 38.9074821472168
+      },
+      {
+        "step": 3,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.020087,
+        "target_record_ids": [
+          "target::archive_firefly_18",
+          "target::archive_firefly_19",
+          "target::archive_firefly_20",
+          "target::archive_firefly_3"
+        ],
+        "source_record_ids": [
+          "source::segment_0009_0000053200_0000054340",
+          "source::segment_0010_0000058750_0000060100",
+          "source::segment_0011_0000063910_0000064599",
+          "source::segment_0012_0000064989_0000065560"
+        ],
+        "target": {
+          "loss_total": 21.211891174316406,
+          "loss_acoustic": 18.44387435913086,
+          "loss_event": 5.492191791534424,
+          "loss_z_smooth": 0.0050818598829209805,
+          "loss_text_aux": 0.10706957429647446
+        },
+        "source": {
+          "loss_total": 32.3177375793457,
+          "loss_acoustic": 29.575218200683594,
+          "loss_event": 5.484757900238037,
+          "loss_z_smooth": 0.0014084860449656844,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 53.52962875366211,
+        "grad_norm": 43.341915130615234
+      },
+      {
+        "step": 4,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.02606,
+        "target_record_ids": [
+          "target::archive_firefly_4",
+          "target::archive_firefly_5",
+          "target::archive_firefly_6",
+          "target::archive_firefly_7"
+        ],
+        "source_record_ids": [
+          "source::segment_0013_0000066520_0000067630",
+          "source::segment_0014_0000068830_0000070120",
+          "source::segment_0015_0000074020_0000076060",
+          "source::segment_0016_0000078850_0000079420"
+        ],
+        "target": {
+          "loss_total": 23.144733428955078,
+          "loss_acoustic": 20.374900817871094,
+          "loss_event": 5.489497184753418,
+          "loss_z_smooth": 0.0039875139482319355,
+          "loss_text_aux": 0.12342309951782227
+        },
+        "source": {
+          "loss_total": 28.965919494628906,
+          "loss_acoustic": 26.224468231201172,
+          "loss_event": 5.482624530792236,
+          "loss_z_smooth": 0.0013866978697478771,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 52.110652923583984,
+        "grad_norm": 44.11515426635742
+      },
+      {
+        "step": 5,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.019974,
+        "target_record_ids": [
+          "target::archive_firefly_8",
+          "target::archive_firefly_9",
+          "target::chapter3_17_firefly_101",
+          "target::chapter3_17_firefly_102"
+        ],
+        "source_record_ids": [
+          "source::segment_0017_0000080260_0000080950",
+          "source::segment_0018_0000085870_0000087880",
+          "source::segment_0019_0000089350_0000090430",
+          "source::segment_0020_0000091060_0000092890"
+        ],
+        "target": {
+          "loss_total": 19.38595199584961,
+          "loss_acoustic": 16.627275466918945,
+          "loss_event": 5.483687400817871,
+          "loss_z_smooth": 0.004665391519665718,
+          "loss_text_aux": 0.08182506263256073
+        },
+        "source": {
+          "loss_total": 26.1506404876709,
+          "loss_acoustic": 23.41254425048828,
+          "loss_event": 5.475897312164307,
+          "loss_z_smooth": 0.0014629130018875003,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 45.536590576171875,
+        "grad_norm": 41.60499954223633
+      },
+      {
+        "step": 6,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.01993,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_104",
+          "target::chapter3_17_firefly_105",
+          "target::chapter3_17_firefly_107",
+          "target::chapter3_17_firefly_108"
+        ],
+        "source_record_ids": [
+          "source::segment_0021_0000093430_0000094840",
+          "source::segment_0022_0000096010_0000096880",
+          "source::segment_0023_0000099310_0000100030",
+          "source::segment_0024_0000101020_0000103510"
+        ],
+        "target": {
+          "loss_total": 15.248974800109863,
+          "loss_acoustic": 12.496344566345215,
+          "loss_event": 5.48322057723999,
+          "loss_z_smooth": 0.004966250620782375,
+          "loss_text_aux": 0.05261538550257683
+        },
+        "source": {
+          "loss_total": 26.505823135375977,
+          "loss_acoustic": 23.769390106201172,
+          "loss_event": 5.472559452056885,
+          "loss_z_smooth": 0.0015341530088335276,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 41.754798889160156,
+        "grad_norm": 41.047142028808594
+      },
+      {
+        "step": 7,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.018889,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_109",
+          "target::chapter3_17_firefly_110",
+          "target::chapter3_17_firefly_111",
+          "target::chapter3_17_firefly_113"
+        ],
+        "source_record_ids": [
+          "source::segment_0025_0000111280_0000111820",
+          "source::segment_0026_0000114970_0000115540",
+          "source::segment_0027_0000119050_0000120490",
+          "source::segment_0028_0000121660_0000122350"
+        ],
+        "target": {
+          "loss_total": 23.055952072143555,
+          "loss_acoustic": 20.312894821166992,
+          "loss_event": 5.472796440124512,
+          "loss_z_smooth": 0.0038454895839095116,
+          "loss_text_aux": 0.03136390820145607
+        },
+        "source": {
+          "loss_total": 32.32321548461914,
+          "loss_acoustic": 29.5965518951416,
+          "loss_event": 5.4531025886535645,
+          "loss_z_smooth": 0.0010880915215238929,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 55.37916564941406,
+        "grad_norm": 51.60888671875
+      },
+      {
+        "step": 8,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.019512,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_114",
+          "target::chapter3_17_firefly_115",
+          "target::chapter3_17_firefly_117",
+          "target::chapter3_17_firefly_118"
+        ],
+        "source_record_ids": [
+          "source::segment_0029_0000134230_0000135730",
+          "source::segment_0030_0000141640_0000143020",
+          "source::segment_0031_0000144790_0000145300",
+          "source::segment_0032_0000146500_0000147880"
+        ],
+        "target": {
+          "loss_total": 15.544893264770508,
+          "loss_acoustic": 12.799456596374512,
+          "loss_event": 5.474898338317871,
+          "loss_z_smooth": 0.004320572596043348,
+          "loss_text_aux": 0.03778017684817314
+        },
+        "source": {
+          "loss_total": 24.5455322265625,
+          "loss_acoustic": 21.811986923217773,
+          "loss_event": 5.4668049812316895,
+          "loss_z_smooth": 0.0014387648552656174,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 40.090423583984375,
+        "grad_norm": 43.57551193237305
+      },
+      {
+        "step": 9,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.023539,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_120",
+          "target::chapter3_17_firefly_121",
+          "target::chapter3_17_firefly_122",
+          "target::chapter3_17_firefly_123"
+        ],
+        "source_record_ids": [
+          "source::segment_0033_0000148870_0000149860",
+          "source::segment_0034_0000154390_0000156400",
+          "source::segment_0035_0000156850_0000157660",
+          "source::segment_0036_0000158380_0000158980"
+        ],
+        "target": {
+          "loss_total": 17.95351219177246,
+          "loss_acoustic": 15.209859848022461,
+          "loss_event": 5.462622165679932,
+          "loss_z_smooth": 0.0034236412029713392,
+          "loss_text_aux": 0.059998106211423874
+        },
+        "source": {
+          "loss_total": 26.649211883544922,
+          "loss_acoustic": 23.919944763183594,
+          "loss_event": 5.458223819732666,
+          "loss_z_smooth": 0.0015381996054202318,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 44.60272216796875,
+        "grad_norm": 48.81864547729492
+      },
+      {
+        "step": 10,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.019843,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_124",
+          "target::chapter3_17_firefly_125",
+          "target::chapter3_17_firefly_126",
+          "target::chapter3_17_firefly_128"
+        ],
+        "source_record_ids": [
+          "source::segment_0037_0000163210_0000164080",
+          "source::segment_0038_0000166120_0000167410",
+          "source::segment_0039_0000167950_0000171460",
+          "source::segment_0040_0000173920_0000174580"
+        ],
+        "target": {
+          "loss_total": 11.352953910827637,
+          "loss_acoustic": 8.601800918579102,
+          "loss_event": 5.476008415222168,
+          "loss_z_smooth": 0.00467437831684947,
+          "loss_text_aux": 0.06340445578098297
+        },
+        "source": {
+          "loss_total": 25.357328414916992,
+          "loss_acoustic": 22.630815505981445,
+          "loss_event": 5.452718734741211,
+          "loss_z_smooth": 0.0015463156159967184,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 36.71028137207031,
+        "grad_norm": 43.76023864746094
+      },
+      {
+        "step": 11,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.019148,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_130",
+          "target::chapter3_17_firefly_131",
+          "target::chapter3_17_firefly_132",
+          "target::chapter3_17_firefly_133"
+        ],
+        "source_record_ids": [
+          "source::segment_0041_0000176350_0000178270",
+          "source::segment_0051_0000249850_0000251470",
+          "source::segment_0052_0000252580_0000253630",
+          "source::segment_0053_0000254740_0000255640"
+        ],
+        "target": {
+          "loss_total": 15.816780090332031,
+          "loss_acoustic": 13.066447257995605,
+          "loss_event": 5.4683637619018555,
+          "loss_z_smooth": 0.00442364951595664,
+          "loss_text_aux": 0.07854462414979935
+        },
+        "source": {
+          "loss_total": 24.913307189941406,
+          "loss_acoustic": 22.19025993347168,
+          "loss_event": 5.445785045623779,
+          "loss_z_smooth": 0.0015544494381174445,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 40.73008728027344,
+        "grad_norm": 49.33267593383789
+      },
+      {
+        "step": 12,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.01848,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_135",
+          "target::chapter3_17_firefly_136",
+          "target::chapter3_17_firefly_137",
+          "target::chapter3_17_firefly_139"
+        ],
+        "source_record_ids": [
+          "source::segment_0054_0000256750_0000258010",
+          "source::segment_0055_0000259209_0000259750",
+          "source::segment_0056_0000261579_0000262900",
+          "source::segment_0057_0000278140_0000280780"
+        ],
+        "target": {
+          "loss_total": 22.274246215820312,
+          "loss_acoustic": 19.519088745117188,
+          "loss_event": 5.459026336669922,
+          "loss_z_smooth": 0.0036314455792307854,
+          "loss_text_aux": 0.12640763819217682
+        },
+        "source": {
+          "loss_total": 23.17526626586914,
+          "loss_acoustic": 20.449026107788086,
+          "loss_event": 5.452133655548096,
+          "loss_z_smooth": 0.0017371214926242828,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 45.44951248168945,
+        "grad_norm": 55.377559661865234
+      },
+      {
+        "step": 13,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.018753,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_140",
+          "target::chapter3_17_firefly_141",
+          "target::chapter3_17_firefly_142",
+          "target::chapter3_17_firefly_143"
+        ],
+        "source_record_ids": [
+          "source::segment_0058_0000282280_0000284890",
+          "source::segment_0059_0000285370_0000286090",
+          "source::segment_0060_0000297160_0000299320",
+          "source::segment_0061_0000300400_0000300910"
+        ],
+        "target": {
+          "loss_total": 13.482137680053711,
+          "loss_acoustic": 10.737732887268066,
+          "loss_event": 5.4613542556762695,
+          "loss_z_smooth": 0.004183554090559483,
+          "loss_text_aux": 0.06654364615678787
+        },
+        "source": {
+          "loss_total": 21.310251235961914,
+          "loss_acoustic": 18.588150024414062,
+          "loss_event": 5.443833351135254,
+          "loss_z_smooth": 0.0018533911788836122,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 34.792388916015625,
+        "grad_norm": 47.23088073730469
+      },
+      {
+        "step": 14,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.020595,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_144",
+          "target::chapter3_17_firefly_147",
+          "target::chapter3_17_firefly_148",
+          "target::chapter3_17_firefly_149"
+        ],
+        "source_record_ids": [
+          "source::segment_0062_0000302530_0000303190",
+          "source::segment_0063_0000304090_0000304780",
+          "source::segment_0064_0000306070_0000307720",
+          "source::segment_0065_0000322450_0000323470"
+        ],
+        "target": {
+          "loss_total": 17.54819107055664,
+          "loss_acoustic": 14.80795955657959,
+          "loss_event": 5.449657440185547,
+          "loss_z_smooth": 0.0037190443836152554,
+          "loss_text_aux": 0.07515915483236313
+        },
+        "source": {
+          "loss_total": 25.00716781616211,
+          "loss_acoustic": 22.288349151611328,
+          "loss_event": 5.437325477600098,
+          "loss_z_smooth": 0.0015709163853898644,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 42.55535888671875,
+        "grad_norm": 56.83773422241211
+      },
+      {
+        "step": 15,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.02105,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_151",
+          "target::chapter3_17_firefly_152",
+          "target::chapter3_17_firefly_153",
+          "target::chapter3_17_firefly_154"
+        ],
+        "source_record_ids": [
+          "source::segment_0066_0000331450_0000333010",
+          "source::segment_0067_0000338770_0000340600",
+          "source::segment_0068_0000342250_0000343030",
+          "source::segment_0069_0000343930_0000344920"
+        ],
+        "target": {
+          "loss_total": 11.97386646270752,
+          "loss_acoustic": 9.23137092590332,
+          "loss_event": 5.46129035949707,
+          "loss_z_smooth": 0.004568691831082106,
+          "loss_text_aux": 0.056966736912727356
+        },
+        "source": {
+          "loss_total": 23.183979034423828,
+          "loss_acoustic": 20.465288162231445,
+          "loss_event": 5.437056064605713,
+          "loss_z_smooth": 0.001619525603018701,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 35.15784454345703,
+        "grad_norm": 51.2860221862793
+      },
+      {
+        "step": 16,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.019629,
+        "target_record_ids": [
+          "target::chapter3_17_firefly_155",
+          "target::chapter3_18_firefly_102",
+          "target::chapter3_20_firefly_101",
+          "target::chapter3_20_firefly_102"
+        ],
+        "source_record_ids": [
+          "source::segment_0070_0000345580_0000346870",
+          "source::segment_0071_0000354280_0000355510",
+          "source::segment_0072_0000356140_0000359560",
+          "source::segment_0073_0000363130_0000365350"
+        ],
+        "target": {
+          "loss_total": 19.34255599975586,
+          "loss_acoustic": 16.60416030883789,
+          "loss_event": 5.452411651611328,
+          "loss_z_smooth": 0.003527216147631407,
+          "loss_text_aux": 0.059188712388277054
+        },
+        "source": {
+          "loss_total": 15.738578796386719,
+          "loss_acoustic": 13.026976585388184,
+          "loss_event": 5.422877311706543,
+          "loss_z_smooth": 0.0016358646098524332,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 35.08113479614258,
+        "grad_norm": 55.728092193603516
+      },
+      {
+        "step": 17,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.01821,
+        "target_record_ids": [
+          "target::chapter3_20_firefly_103",
+          "target::chapter3_20_firefly_104",
+          "target::chapter3_20_firefly_105",
+          "target::chapter3_20_firefly_106"
+        ],
+        "source_record_ids": [
+          "source::segment_0074_0000375820_0000377380",
+          "source::segment_0075_0000391630_0000393220",
+          "source::segment_0076_0000405460_0000407380",
+          "source::segment_0077_0000409450_0000409990"
+        ],
+        "target": {
+          "loss_total": 19.208349227905273,
+          "loss_acoustic": 16.48100471496582,
+          "loss_event": 5.434134483337402,
+          "loss_z_smooth": 0.003461864311248064,
+          "loss_text_aux": 0.04964428022503853
+        },
+        "source": {
+          "loss_total": 21.022743225097656,
+          "loss_acoustic": 18.30946159362793,
+          "loss_event": 5.426258087158203,
+          "loss_z_smooth": 0.0015302399406209588,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 40.23109436035156,
+        "grad_norm": 63.659950256347656
+      },
+      {
+        "step": 18,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.018543,
+        "target_record_ids": [
+          "target::chapter3_20_firefly_107",
+          "target::chapter3_20_firefly_110",
+          "target::chapter3_20_firefly_111",
+          "target::chapter3_20_firefly_112"
+        ],
+        "source_record_ids": [
+          "source::segment_0078_0000411280_0000413920",
+          "source::segment_0079_0000424540_0000425050",
+          "source::segment_0080_0000427210_0000428590",
+          "source::segment_0081_0000435850_0000436930"
+        ],
+        "target": {
+          "loss_total": 10.462982177734375,
+          "loss_acoustic": 7.735066890716553,
+          "loss_event": 5.434106826782227,
+          "loss_z_smooth": 0.0035028187558054924,
+          "loss_text_aux": 0.05256009101867676
+        },
+        "source": {
+          "loss_total": 19.95428466796875,
+          "loss_acoustic": 17.242422103881836,
+          "loss_event": 5.42341423034668,
+          "loss_z_smooth": 0.0015654719900339842,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 30.417266845703125,
+        "grad_norm": 56.267059326171875
+      },
+      {
+        "step": 19,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.017157,
+        "target_record_ids": [
+          "target::chapter3_20_firefly_113",
+          "target::chapter3_20_firefly_114",
+          "target::chapter3_20_firefly_115",
+          "target::chapter3_20_firefly_116"
+        ],
+        "source_record_ids": [
+          "source::segment_0082_0000437470_0000438220",
+          "source::segment_0083_0000441160_0000441730",
+          "source::segment_0084_0000454420_0000455530",
+          "source::segment_0085_0000455950_0000457090"
+        ],
+        "target": {
+          "loss_total": 8.099413871765137,
+          "loss_acoustic": 5.3632965087890625,
+          "loss_event": 5.452263832092285,
+          "loss_z_smooth": 0.0038850794080644846,
+          "loss_text_aux": 0.047988906502723694
+        },
+        "source": {
+          "loss_total": 22.25629234313965,
+          "loss_acoustic": 19.54793357849121,
+          "loss_event": 5.416421413421631,
+          "loss_z_smooth": 0.0014952380442991853,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 30.35570526123047,
+        "grad_norm": 58.50139617919922
+      },
+      {
+        "step": 20,
+        "started_at": "2026-03-14T17:11:31",
+        "ended_at": "2026-03-14T17:11:31",
+        "duration_sec": 0.020315,
+        "target_record_ids": [
+          "target::chapter3_20_firefly_117",
+          "target::chapter3_20_firefly_118",
+          "target::chapter3_20_firefly_119",
+          "target::chapter3_20_firefly_120"
+        ],
+        "source_record_ids": [
+          "source::segment_0086_0000468220_0000470020",
+          "source::segment_0087_0000472570_0000473770",
+          "source::segment_0088_0000474310_0000476380",
+          "source::segment_0089_0000482980_0000483730"
+        ],
+        "target": {
+          "loss_total": 7.016870498657227,
+          "loss_acoustic": 4.264560699462891,
+          "loss_event": 5.466403007507324,
+          "loss_z_smooth": 0.004018072504550219,
+          "loss_text_aux": 0.09353077411651611
+        },
+        "source": {
+          "loss_total": 18.891340255737305,
+          "loss_acoustic": 16.184383392333984,
+          "loss_event": 5.413565635681152,
+          "loss_z_smooth": 0.0017292792908847332,
+          "loss_text_aux": 0.0
+        },
+        "loss_total": 25.90821075439453,
+        "grad_norm": 54.110076904296875
+      }
+    ]
+  },
+  "status": "training_run_completed"
+}

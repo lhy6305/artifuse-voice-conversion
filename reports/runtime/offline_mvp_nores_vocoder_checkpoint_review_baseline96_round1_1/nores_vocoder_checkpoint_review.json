@@ -1,0 +1,649 @@
+{
+  "summary_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_fullsplit_training_gpu_seeded_baseline96_round1_1/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json",
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_checkpoint_review_baseline96_round1_1",
+  "dataset": {
+    "train_package_count": 592,
+    "validation_package_count": 66
+  },
+  "runtime": {
+    "device": "cuda:0"
+  },
+  "training": {
+    "num_steps": 96,
+    "packages_per_step": 8,
+    "validation_interval": 24,
+    "checkpoint_interval": 24,
+    "sampler_mode": "shuffle",
+    "seed": 20260317,
+    "learning_rate": 0.001,
+    "max_grad_norm": 5.0,
+    "loss_weights": {
+      "harmonic": 1.0,
+      "noise": 1.0,
+      "periodic_gate": 0.2,
+      "noise_gate": 0.2
+    }
+  },
+  "checkpoint_count": 4,
+  "checkpoints": [
+    {
+      "step": 24,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 0.469644,
+        "loss_harmonic_envelope": 0.188143,
+        "loss_noise_envelope": 0.039552,
+        "loss_periodic_gate": 0.609126,
+        "loss_noise_gate": 0.600621,
+        "periodic_gate_pred_mean": 0.546651,
+        "noise_gate_pred_mean": 0.595804,
+        "periodic_gate_target_mean": 0.554948,
+        "noise_gate_target_mean": 0.59846
+      },
+      "delta_vs_previous_loss_total": null,
+      "delta_vs_first_loss_total": 0.0
+    },
+    {
+      "step": 48,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 0.441292,
+        "loss_harmonic_envelope": 0.173326,
+        "loss_noise_envelope": 0.032681,
+        "loss_periodic_gate": 0.603485,
+        "loss_noise_gate": 0.572942,
+        "periodic_gate_pred_mean": 0.552442,
+        "noise_gate_pred_mean": 0.601819,
+        "periodic_gate_target_mean": 0.554948,
+        "noise_gate_target_mean": 0.59846
+      },
+      "delta_vs_previous_loss_total": -0.028352,
+      "delta_vs_first_loss_total": -0.028352
+    },
+    {
+      "step": 72,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 0.435399,
+        "loss_harmonic_envelope": 0.170438,
+        "loss_noise_envelope": 0.03088,
+        "loss_periodic_gate": 0.602716,
+        "loss_noise_gate": 0.567684,
+        "periodic_gate_pred_mean": 0.548761,
+        "noise_gate_pred_mean": 0.599557,
+        "periodic_gate_target_mean": 0.554948,
+        "noise_gate_target_mean": 0.59846
+      },
+      "delta_vs_previous_loss_total": -0.005893,
+      "delta_vs_first_loss_total": -0.034245
+    },
+    {
+      "step": 96,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 0.432645,
+        "loss_harmonic_envelope": 0.167554,
+        "loss_noise_envelope": 0.031117,
+        "loss_periodic_gate": 0.602399,
+        "loss_noise_gate": 0.567469,
+        "periodic_gate_pred_mean": 0.547158,
+        "noise_gate_pred_mean": 0.596647,
+        "periodic_gate_target_mean": 0.554948,
+        "noise_gate_target_mean": 0.59846
+      },
+      "delta_vs_previous_loss_total": -0.002754,
+      "delta_vs_first_loss_total": -0.036999
+    }
+  ],
+  "pairwise_reviews": [
+    {
+      "from_step": 24,
+      "to_step": 48,
+      "record_count": 66,
+      "average_delta_loss_total": -0.028352,
+      "improved_count": 66,
+      "worsened_count": 0,
+      "unchanged_count": 0,
+      "improved_ratio": 1.0,
+      "worsened_ratio": 0.0,
+      "top_improved_records": [
+        {
+          "record_id": "target::chapter3_3_firefly_115",
+          "previous_loss_total": 0.360101,
+          "current_loss_total": 0.322465,
+          "delta_loss_total": -0.037636
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_199",
+          "previous_loss_total": 0.42061,
+          "current_loss_total": 0.384878,
+          "delta_loss_total": -0.035732
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "previous_loss_total": 0.451954,
+          "current_loss_total": 0.416348,
+          "delta_loss_total": -0.035606
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_137",
+          "previous_loss_total": 0.462724,
+          "current_loss_total": 0.427377,
+          "delta_loss_total": -0.035347
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_105",
+          "previous_loss_total": 0.452978,
+          "current_loss_total": 0.41804,
+          "delta_loss_total": -0.034938
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_141",
+          "previous_loss_total": 0.461532,
+          "current_loss_total": 0.426967,
+          "delta_loss_total": -0.034565
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_114",
+          "previous_loss_total": 0.439414,
+          "current_loss_total": 0.405035,
+          "delta_loss_total": -0.034379
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_215",
+          "previous_loss_total": 0.437194,
+          "current_loss_total": 0.40337,
+          "delta_loss_total": -0.033824
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_130",
+          "previous_loss_total": 0.390839,
+          "current_loss_total": 0.357358,
+          "delta_loss_total": -0.033481
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_245",
+          "previous_loss_total": 0.420089,
+          "current_loss_total": 0.386859,
+          "delta_loss_total": -0.03323
+        }
+      ],
+      "top_worsened_records": [
+        {
+          "record_id": "target::chapter3_29_firefly_113",
+          "previous_loss_total": 0.499633,
+          "current_loss_total": 0.484245,
+          "delta_loss_total": -0.015388
+        },
+        {
+          "record_id": "target::chapter3_5_firefly_102",
+          "previous_loss_total": 0.493025,
+          "current_loss_total": 0.476501,
+          "delta_loss_total": -0.016524
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_131",
+          "previous_loss_total": 0.495105,
+          "current_loss_total": 0.477728,
+          "delta_loss_total": -0.017377
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_184",
+          "previous_loss_total": 0.544495,
+          "current_loss_total": 0.525844,
+          "delta_loss_total": -0.018651
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_140",
+          "previous_loss_total": 0.585569,
+          "current_loss_total": 0.566266,
+          "delta_loss_total": -0.019303
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_174",
+          "previous_loss_total": 0.499528,
+          "current_loss_total": 0.479829,
+          "delta_loss_total": -0.019699
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_103",
+          "previous_loss_total": 0.466595,
+          "current_loss_total": 0.445721,
+          "delta_loss_total": -0.020874
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_106",
+          "previous_loss_total": 0.431282,
+          "current_loss_total": 0.408969,
+          "delta_loss_total": -0.022313
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_171",
+          "previous_loss_total": 0.524567,
+          "current_loss_total": 0.502156,
+          "delta_loss_total": -0.022411
+        },
+        {
+          "record_id": "target::chapter3_22_firefly_114",
+          "previous_loss_total": 0.466458,
+          "current_loss_total": 0.443152,
+          "delta_loss_total": -0.023306
+        }
+      ]
+    },
+    {
+      "from_step": 48,
+      "to_step": 72,
+      "record_count": 66,
+      "average_delta_loss_total": -0.005894,
+      "improved_count": 64,
+      "worsened_count": 2,
+      "unchanged_count": 0,
+      "improved_ratio": 0.969697,
+      "worsened_ratio": 0.030303,
+      "top_improved_records": [
+        {
+          "record_id": "target::chapter3_2_firefly_131",
+          "previous_loss_total": 0.477728,
+          "current_loss_total": 0.466635,
+          "delta_loss_total": -0.011093
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_101",
+          "previous_loss_total": 0.454674,
+          "current_loss_total": 0.443815,
+          "delta_loss_total": -0.010859
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_140",
+          "previous_loss_total": 0.566266,
+          "current_loss_total": 0.555812,
+          "delta_loss_total": -0.010454
+        },
+        {
+          "record_id": "target::chapter3_5_firefly_102",
+          "previous_loss_total": 0.476501,
+          "current_loss_total": 0.46641,
+          "delta_loss_total": -0.010091
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_117",
+          "previous_loss_total": 0.445152,
+          "current_loss_total": 0.435454,
+          "delta_loss_total": -0.009698
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_184",
+          "previous_loss_total": 0.525844,
+          "current_loss_total": 0.51637,
+          "delta_loss_total": -0.009474
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_132",
+          "previous_loss_total": 0.442114,
+          "current_loss_total": 0.432905,
+          "delta_loss_total": -0.009209
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_174",
+          "previous_loss_total": 0.479829,
+          "current_loss_total": 0.470965,
+          "delta_loss_total": -0.008864
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_164",
+          "previous_loss_total": 0.442937,
+          "current_loss_total": 0.434075,
+          "delta_loss_total": -0.008862
+        },
+        {
+          "record_id": "target::chapter3_26_firefly_107",
+          "previous_loss_total": 0.474168,
+          "current_loss_total": 0.465438,
+          "delta_loss_total": -0.00873
+        }
+      ],
+      "top_worsened_records": [
+        {
+          "record_id": "target::chapter3_3_firefly_207",
+          "previous_loss_total": 0.430987,
+          "current_loss_total": 0.433185,
+          "delta_loss_total": 0.002198
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "previous_loss_total": 0.416348,
+          "current_loss_total": 0.41778,
+          "delta_loss_total": 0.001432
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_137",
+          "previous_loss_total": 0.425816,
+          "current_loss_total": 0.42315,
+          "delta_loss_total": -0.002666
+        },
+        {
+          "record_id": "target::chapter3_22_firefly_114",
+          "previous_loss_total": 0.443152,
+          "current_loss_total": 0.440479,
+          "delta_loss_total": -0.002673
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_106",
+          "previous_loss_total": 0.408969,
+          "current_loss_total": 0.40614,
+          "delta_loss_total": -0.002829
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_215",
+          "previous_loss_total": 0.40337,
+          "current_loss_total": 0.400272,
+          "delta_loss_total": -0.003098
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_103",
+          "previous_loss_total": 0.367486,
+          "current_loss_total": 0.364229,
+          "delta_loss_total": -0.003257
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_182",
+          "previous_loss_total": 0.451591,
+          "current_loss_total": 0.447955,
+          "delta_loss_total": -0.003636
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_105",
+          "previous_loss_total": 0.41804,
+          "current_loss_total": 0.414386,
+          "delta_loss_total": -0.003654
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_246",
+          "previous_loss_total": 0.369579,
+          "current_loss_total": 0.365909,
+          "delta_loss_total": -0.00367
+        }
+      ]
+    },
+    {
+      "from_step": 72,
+      "to_step": 96,
+      "record_count": 66,
+      "average_delta_loss_total": -0.002753,
+      "improved_count": 66,
+      "worsened_count": 0,
+      "unchanged_count": 0,
+      "improved_ratio": 1.0,
+      "worsened_ratio": 0.0,
+      "top_improved_records": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "previous_loss_total": 0.41778,
+          "current_loss_total": 0.411012,
+          "delta_loss_total": -0.006768
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_103",
+          "previous_loss_total": 0.440619,
+          "current_loss_total": 0.435063,
+          "delta_loss_total": -0.005556
+        },
+        {
+          "record_id": "target::chapter3_21_firefly_116",
+          "previous_loss_total": 0.441475,
+          "current_loss_total": 0.436666,
+          "delta_loss_total": -0.004809
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_119",
+          "previous_loss_total": 0.433274,
+          "current_loss_total": 0.428482,
+          "delta_loss_total": -0.004792
+        },
+        {
+          "record_id": "target::chapter3_5_firefly_102",
+          "previous_loss_total": 0.46641,
+          "current_loss_total": 0.461682,
+          "delta_loss_total": -0.004728
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_212",
+          "previous_loss_total": 0.454529,
+          "current_loss_total": 0.449816,
+          "delta_loss_total": -0.004713
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_184",
+          "previous_loss_total": 0.51637,
+          "current_loss_total": 0.511743,
+          "delta_loss_total": -0.004627
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_117",
+          "previous_loss_total": 0.435454,
+          "current_loss_total": 0.430862,
+          "delta_loss_total": -0.004592
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_113",
+          "previous_loss_total": 0.477072,
+          "current_loss_total": 0.472776,
+          "delta_loss_total": -0.004296
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_165",
+          "previous_loss_total": 0.453077,
+          "current_loss_total": 0.44879,
+          "delta_loss_total": -0.004287
+        }
+      ],
+      "top_worsened_records": [
+        {
+          "record_id": "target::chapter3_30_firefly_145",
+          "previous_loss_total": 0.484728,
+          "current_loss_total": 0.484274,
+          "delta_loss_total": -0.000454
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_246",
+          "previous_loss_total": 0.365909,
+          "current_loss_total": 0.36532,
+          "delta_loss_total": -0.000589
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_147",
+          "previous_loss_total": 0.516319,
+          "current_loss_total": 0.515598,
+          "delta_loss_total": -0.000721
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_212",
+          "previous_loss_total": 0.412306,
+          "current_loss_total": 0.411218,
+          "delta_loss_total": -0.001088
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_137",
+          "previous_loss_total": 0.42117,
+          "current_loss_total": 0.420045,
+          "delta_loss_total": -0.001125
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_136",
+          "previous_loss_total": 0.441673,
+          "current_loss_total": 0.440531,
+          "delta_loss_total": -0.001142
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_142",
+          "previous_loss_total": 0.424981,
+          "current_loss_total": 0.423837,
+          "delta_loss_total": -0.001144
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_133",
+          "previous_loss_total": 0.436631,
+          "current_loss_total": 0.435223,
+          "delta_loss_total": -0.001408
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_141",
+          "previous_loss_total": 0.422302,
+          "current_loss_total": 0.420884,
+          "delta_loss_total": -0.001418
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_105",
+          "previous_loss_total": 0.414386,
+          "current_loss_total": 0.412864,
+          "delta_loss_total": -0.001522
+        }
+      ]
+    }
+  ],
+  "overall_review": {
+    "from_step": 24,
+    "to_step": 96,
+    "record_count": 66,
+    "average_delta_loss_total": -0.036999,
+    "improved_count": 66,
+    "worsened_count": 0,
+    "unchanged_count": 0,
+    "improved_ratio": 1.0,
+    "worsened_ratio": 0.0,
+    "top_improved_records": [
+      {
+        "record_id": "target::chapter3_30_firefly_101",
+        "previous_loss_total": 0.487763,
+        "current_loss_total": 0.440829,
+        "delta_loss_total": -0.046934
+      },
+      {
+        "record_id": "target::chapter3_30_firefly_117",
+        "previous_loss_total": 0.477389,
+        "current_loss_total": 0.430862,
+        "delta_loss_total": -0.046527
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_115",
+        "previous_loss_total": 0.360101,
+        "current_loss_total": 0.31524,
+        "delta_loss_total": -0.044861
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_245",
+        "previous_loss_total": 0.420089,
+        "current_loss_total": 0.375676,
+        "delta_loss_total": -0.044413
+      },
+      {
+        "record_id": "target::chapter3_20_firefly_135",
+        "previous_loss_total": 0.426367,
+        "current_loss_total": 0.382646,
+        "delta_loss_total": -0.043721
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_199",
+        "previous_loss_total": 0.42061,
+        "current_loss_total": 0.376964,
+        "delta_loss_total": -0.043646
+      },
+      {
+        "record_id": "target::chapter3_30_firefly_137",
+        "previous_loss_total": 0.462724,
+        "current_loss_total": 0.420045,
+        "delta_loss_total": -0.042679
+      },
+      {
+        "record_id": "target::chapter3_29_firefly_130",
+        "previous_loss_total": 0.390839,
+        "current_loss_total": 0.348768,
+        "delta_loss_total": -0.042071
+      },
+      {
+        "record_id": "target::chapter3_20_firefly_172",
+        "previous_loss_total": 0.470681,
+        "current_loss_total": 0.429084,
+        "delta_loss_total": -0.041597
+      },
+      {
+        "record_id": "target::chapter3_30_firefly_136",
+        "previous_loss_total": 0.475259,
+        "current_loss_total": 0.434217,
+        "delta_loss_total": -0.041042
+      }
+    ],
+    "top_worsened_records": [
+      {
+        "record_id": "target::chapter3_29_firefly_113",
+        "previous_loss_total": 0.499633,
+        "current_loss_total": 0.472776,
+        "delta_loss_total": -0.026857
+      },
+      {
+        "record_id": "target::chapter3_22_firefly_114",
+        "previous_loss_total": 0.466458,
+        "current_loss_total": 0.438488,
+        "delta_loss_total": -0.02797
+      },
+      {
+        "record_id": "target::chapter3_6_firefly_106",
+        "previous_loss_total": 0.431282,
+        "current_loss_total": 0.403066,
+        "delta_loss_total": -0.028216
+      },
+      {
+        "record_id": "target::chapter3_2_firefly_131",
+        "previous_loss_total": 0.495105,
+        "current_loss_total": 0.46511,
+        "delta_loss_total": -0.029995
+      },
+      {
+        "record_id": "target::chapter3_5_firefly_102",
+        "previous_loss_total": 0.493025,
+        "current_loss_total": 0.461682,
+        "delta_loss_total": -0.031343
+      },
+      {
+        "record_id": "target::chapter3_29_firefly_103",
+        "previous_loss_total": 0.466595,
+        "current_loss_total": 0.435063,
+        "delta_loss_total": -0.031532
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_174",
+        "previous_loss_total": 0.499528,
+        "current_loss_total": 0.467663,
+        "delta_loss_total": -0.031865
+      },
+      {
+        "record_id": "target::chapter3_4_firefly_140",
+        "previous_loss_total": 0.585569,
+        "current_loss_total": 0.553632,
+        "delta_loss_total": -0.031937
+      },
+      {
+        "record_id": "target::chapter3_4_firefly_112",
+        "previous_loss_total": 0.527392,
+        "current_loss_total": 0.495417,
+        "delta_loss_total": -0.031975
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_171",
+        "previous_loss_total": 0.524567,
+        "current_loss_total": 0.492189,
+        "delta_loss_total": -0.032378
+      }
+    ]
+  },
+  "notes": [
+    "This review is derived from the dataset-loop summary validation_history payload.",
+    "Checkpoint-level loss_total tracks validation-package averages already recorded by the Stage5 loop.",
+    "Per-record review compares validation package loss_total across checkpoints to see whether gains are broad-based or concentrated."
+  ]
+}

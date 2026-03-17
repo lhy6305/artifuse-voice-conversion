@@ -1,0 +1,70 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d68_round1_1_d7_init_post_d59_singleton_sparse_micropause_sampler_teacher_source_d22late_20step_smallscale_seeded_shuffle.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-024-offline-mvp-d68-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-teacher-source-d22late-20step-calibration.metrics.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "selected_steps": [
+    10,
+    20
+  ],
+  "checkpoint_count": 2,
+  "checkpoints": [
+    {
+      "step": 10,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d68_singleton_sparse_teacher_source_d22late_exp024/checkpoints/EXP-20260316-024-offline-mvp-d68-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-teacher-source-d22late-20step-calibration.step10.pt",
+      "target_validation_loss_total": 2.578968,
+      "target_special_eval_loss_total": 2.740144,
+      "delta_loss_total": 0.161176,
+      "delta_loss_text_aux": 0.090726,
+      "delta_loss_text_aux_effective": 0.090726,
+      "delta_loss_text_aux_structural": 0.0,
+      "delta_loss_text_aux_lexical": 0.0,
+      "delta_loss_structural_clause_transition_aux": 0.0,
+      "delta_loss_boundary_contrast_aux": 0.0,
+      "delta_loss_punctuation_profile_aux": 0.0,
+      "delta_loss_structural_clause_profile_aux": 0.0,
+      "delta_loss_challenge_proxy_profile_aux": 0.0,
+      "delta_loss_z_art_influence_aux": 0.0,
+      "delta_loss_formal_special_clause_shape_aux": 0.0,
+      "target_validation_event_prob_mean": 0.454702,
+      "target_special_eval_event_prob_mean": 0.441931,
+      "delta_event_presence_prob_mean": -0.035612,
+      "delta_event_fall_prob_mean": 0.015585,
+      "delta_event_energy_prob_mean": -0.028852,
+      "delta_event_presence_peak_ratio": 0.0,
+      "delta_z_art_delta_abs_mean": -0.00272,
+      "delta_acoustic_energy_mean": -0.479389,
+      "delta_acoustic_delta_abs_mean": 0.003829
+    },
+    {
+      "step": 20,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d68_singleton_sparse_teacher_source_d22late_exp024/checkpoints/EXP-20260316-024-offline-mvp-d68-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-teacher-source-d22late-20step-calibration.step20.pt",
+      "target_validation_loss_total": 2.522315,
+      "target_special_eval_loss_total": 2.634352,
+      "delta_loss_total": 0.112037,
+      "delta_loss_text_aux": 0.059954,
+      "delta_loss_text_aux_effective": 0.059954,
+      "delta_loss_text_aux_structural": 0.0,
+      "delta_loss_text_aux_lexical": 0.0,
+      "delta_loss_structural_clause_transition_aux": 0.0,
+      "delta_loss_boundary_contrast_aux": 0.0,
+      "delta_loss_punctuation_profile_aux": 0.0,
+      "delta_loss_structural_clause_profile_aux": 0.0,
+      "delta_loss_challenge_proxy_profile_aux": 0.0,
+      "delta_loss_z_art_influence_aux": 0.0,
+      "delta_loss_formal_special_clause_shape_aux": 0.0,
+      "target_validation_event_prob_mean": 0.451724,
+      "target_special_eval_event_prob_mean": 0.438816,
+      "delta_event_presence_prob_mean": -0.036639,
+      "delta_event_fall_prob_mean": 0.014994,
+      "delta_event_energy_prob_mean": -0.02972,
+      "delta_event_presence_peak_ratio": 0.0,
+      "delta_z_art_delta_abs_mean": -0.002652,
+      "delta_acoustic_energy_mean": -0.340794,
+      "delta_acoustic_delta_abs_mean": 0.004758
+    }
+  ],
+  "notes": [
+    "Special-eval series summarizes challenge-slice behavior across selected checkpoints.",
+    "Each checkpoint also has its own detailed special_eval_model.json and .md under reports/eval."
+  ]
+}

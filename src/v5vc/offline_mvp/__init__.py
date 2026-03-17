@@ -1,0 +1,1 @@
+"""Offline MVP scaffold package."""

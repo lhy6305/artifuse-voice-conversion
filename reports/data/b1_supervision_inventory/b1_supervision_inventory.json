@@ -1,0 +1,42 @@
+{
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+  "data_output_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/b1_supervision",
+  "target_inventory_path": "F:/proj_dev/tmp/workdir4/data_prep/round1/b1_supervision/target_supervision_inventory.jsonl",
+  "source_inventory_path": "F:/proj_dev/tmp/workdir4/data_prep/round1/b1_supervision/source_supervision_inventory.jsonl",
+  "target_summary": {
+    "record_count": 624,
+    "split_counts": {
+      "target_special_eval": 8,
+      "target_train": 554,
+      "target_validation": 62
+    },
+    "nonverbal_only_count": 8,
+    "records_with_pause_hints": 624,
+    "punctuation_category_counts": {
+      "pause_colon": 2,
+      "pause_comma": 1227,
+      "pause_enumeration": 36,
+      "terminal_exclamation": 74,
+      "terminal_period": 459,
+      "terminal_question": 168
+    },
+    "avg_lexical_chars_per_record": 21.762821,
+    "avg_audio_duration_sec": 6.13149,
+    "avg_lexical_chars_per_sec": 3.549353
+  },
+  "source_summary": {
+    "record_count": 537,
+    "split_counts": {
+      "source_train": 483,
+      "source_validation": 54
+    },
+    "records_with_text": 0,
+    "avg_audio_duration_sec": 1.220391
+  },
+  "notes": [
+    "This inventory intentionally stays offline and uses only currently materialized manifests.",
+    "Target-side text supervision is available now; source-side text supervision is not available in round1.",
+    "target_special_eval remains a nonverbal challenge slice and should not be treated as normal lexical supervision.",
+    "Phone/manner/place labels are not yet available in the workspace and remain future label slots."
+  ]
+}

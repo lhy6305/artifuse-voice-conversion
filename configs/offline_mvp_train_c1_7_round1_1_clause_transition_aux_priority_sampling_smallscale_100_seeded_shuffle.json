@@ -1,0 +1,131 @@
+{
+  "data": {
+    "manifest_dir": "data_prep/round1_1/manifests",
+    "split_dir": "data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "target_batch_size": 4,
+    "source_batch_size": 4,
+    "max_audio_sec": 2.0,
+    "target_text_feature_version": "b1_1_stats_v2",
+    "target_weak_event_hints_path": "data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl"
+  },
+  "model": {
+    "name": "offline_mvp_scaffold",
+    "r_res_enabled": false,
+    "uses_text_in_training": true,
+    "uses_text_in_runtime": false,
+    "z_art_dim": 8,
+    "event_head_enabled": true,
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "acoustic_dim": 4,
+    "frame_length": 400,
+    "hop_length": 160,
+    "text_aux_dim": 13
+  },
+  "training": {
+    "mode": "offline_mvp",
+    "run_stage": "small_scale_validation",
+    "prerequisite_experiment_id": null,
+    "teacher_required": false,
+    "student_required": false,
+    "vocoder_required": false,
+    "single_step_validation_enabled": true,
+    "seed": 20260314,
+    "shuffle_train_records": true,
+    "num_steps": 100,
+    "validation_interval": 10,
+    "checkpoint_interval": 10,
+    "target_validation_count": 8,
+    "source_validation_count": 8,
+    "learning_rate": 0.0003,
+    "max_grad_norm": 1.0,
+    "targeted_sampling": {
+      "enabled": true,
+      "mode": "priority_interleave",
+      "active_until_step": 70,
+      "priority_ratio": 0.75,
+      "min_clause_count": 4,
+      "priority_structure_types": [
+        "multi_terminal"
+      ]
+    }
+  },
+  "losses": {
+    "acoustic": 1.0,
+    "event": 0.5,
+    "z_smooth": 0.1,
+    "text_aux": 0.2,
+    "weak_event": 0.0,
+    "event_boundary_bias": {
+      "enabled": true,
+      "pause_boost": 0.75,
+      "terminal_boost": 1.25,
+      "apply_override": true,
+      "presence_dimension": 0,
+      "delta_dimension": 1,
+      "fall_dimension": 6,
+      "energy_dimension": 7,
+      "pause_fall_target": 0.75,
+      "terminal_fall_target": 1.0,
+      "pause_pre_presence_target": 0.9,
+      "terminal_pre_presence_target": 0.95,
+      "pause_post_presence_target": 0.45,
+      "terminal_post_presence_target": 0.15,
+      "pause_pre_energy_target": 0.85,
+      "terminal_pre_energy_target": 0.9,
+      "pause_post_energy_target": 0.3,
+      "terminal_post_energy_target": 0.08
+    },
+    "clause_transition_aux": {
+      "enabled": true,
+      "weight": 0.35,
+      "presence_dimension": 0,
+      "delta_dimension": 1,
+      "fall_dimension": 6,
+      "energy_dimension": 7,
+      "role_overrides": {
+        "single": {
+          "structure_types": [
+            "single_clause_terminal"
+          ],
+          "boundary_delta_target": 1.0,
+          "boundary_fall_target": 1.0,
+          "pre_presence_target": 0.92,
+          "pre_energy_target": 0.88,
+          "post_presence_target": 0.18,
+          "post_energy_target": 0.1
+        },
+        "middle": {
+          "structure_types": [
+            "multi_clause_single_terminal",
+            "multi_terminal"
+          ],
+          "boundary_delta_target": 0.85,
+          "boundary_fall_target": 0.72,
+          "pre_presence_target": 0.82,
+          "pre_energy_target": 0.78,
+          "post_presence_target": 0.38,
+          "post_energy_target": 0.24,
+          "boundary_weight": 1.15,
+          "pre_weight": 1.0,
+          "post_weight": 1.0
+        },
+        "final": {
+          "structure_types": [
+            "multi_clause_single_terminal",
+            "multi_terminal"
+          ],
+          "boundary_delta_target": 1.0,
+          "boundary_fall_target": 1.0,
+          "pre_presence_target": 0.92,
+          "pre_energy_target": 0.88,
+          "post_presence_target": 0.14,
+          "post_energy_target": 0.08,
+          "boundary_weight": 1.2,
+          "pre_weight": 1.0,
+          "post_weight": 1.0
+        }
+      }
+    }
+  }
+}

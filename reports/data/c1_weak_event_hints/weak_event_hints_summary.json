@@ -1,0 +1,59 @@
+{
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+  "record_count": 624,
+  "split_counts": {
+    "target_special_eval": 8,
+    "target_train": 554,
+    "target_validation": 62
+  },
+  "frame_length": 400,
+  "hop_length": 160,
+  "nonverbal_only_count": 8,
+  "records_with_pause_boundaries": 549,
+  "records_with_terminal_boundaries": 516,
+  "pause_boundary_total": 1209,
+  "terminal_boundary_total": 701,
+  "final_terminal_type_counts": {
+    "none": 167,
+    "terminal_exclamation": 41,
+    "terminal_period": 317,
+    "terminal_question": 99
+  },
+  "lexical_char_count_stats": {
+    "count": 624,
+    "min": 0,
+    "max": 76,
+    "mean": 21.762821,
+    "median": 18.0,
+    "stdev": 15.416176
+  },
+  "estimated_frame_count_stats": {
+    "count": 624,
+    "min": 118,
+    "max": 7025,
+    "mean": 1687.996795,
+    "median": 1378.5,
+    "stdev": 1167.199132
+  },
+  "pause_boundaries_per_lexical_record_stats": {
+    "count": 616,
+    "min": 0,
+    "max": 9,
+    "mean": 1.962662,
+    "median": 2.0,
+    "stdev": 1.461709
+  },
+  "terminal_boundaries_per_lexical_record_stats": {
+    "count": 616,
+    "min": 0,
+    "max": 4,
+    "mean": 1.137987,
+    "median": 1.0,
+    "stdev": 0.715405
+  },
+  "notes": [
+    "Weak event hints are target-side only and remain fully offline.",
+    "Boundary positions are estimated from clean text punctuation and lexical progress, not forced alignment.",
+    "These sidecars are intended as route-C bootstrap assets for later e_evt supervision experiments."
+  ]
+}

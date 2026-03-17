@@ -1,0 +1,336 @@
+{
+  "anchor_selection_summary_ref": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_anchor_routes_round1_1_d22_d26_d29",
+  "anchor_count": 3,
+  "anchors": [
+    {
+      "experiment_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+      "completed_steps": 30,
+      "target_validation_loss_total": 2.444194,
+      "target_special_eval_loss_total": 2.584195,
+      "delta_loss_total": 0.140001,
+      "zero_e_evt_delta_target_loss_total": 3.299035,
+      "zero_z_art_delta_target_loss_total": 0.438936,
+      "normalized_regret": {
+        "validation": 0.371038,
+        "special": 0.410339,
+        "zero_e_evt": 0.0,
+        "zero_z_art": 0.223671,
+        "max_regret": 0.410339,
+        "mean_regret": 0.251262
+      }
+    },
+    {
+      "experiment_id": "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d26_d7_init_d10_teacher_consolidation_teacher_consistency_shortpausegate_priority_exp043/checkpoints/EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration.step20.pt",
+      "completed_steps": 20,
+      "target_validation_loss_total": 2.523898,
+      "target_special_eval_loss_total": 2.641792,
+      "delta_loss_total": 0.117894,
+      "zero_e_evt_delta_target_loss_total": 3.27265,
+      "zero_z_art_delta_target_loss_total": 0.460259,
+      "normalized_regret": {
+        "validation": 1.0,
+        "special": 0.0,
+        "zero_e_evt": 0.082311,
+        "zero_z_art": 0.0,
+        "max_regret": 1.0,
+        "mean_regret": 0.270578
+      }
+    },
+    {
+      "experiment_id": "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt",
+      "completed_steps": 20,
+      "target_validation_loss_total": 2.397175,
+      "target_special_eval_loss_total": 2.568944,
+      "delta_loss_total": 0.171769,
+      "zero_e_evt_delta_target_loss_total": 2.978481,
+      "zero_z_art_delta_target_loss_total": 0.364927,
+      "normalized_regret": {
+        "validation": 0.0,
+        "special": 1.0,
+        "zero_e_evt": 1.0,
+        "zero_z_art": 1.0,
+        "max_regret": 1.0,
+        "mean_regret": 0.75
+      }
+    }
+  ],
+  "leaders": {
+    "validation": {
+      "experiment_id": "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d29_d26_init_d22_teacher_cross_anchor_consolidation_exp045/checkpoints/EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration.step20.pt",
+      "completed_steps": 20,
+      "target_validation_loss_total": 2.397175,
+      "target_special_eval_loss_total": 2.568944,
+      "delta_loss_total": 0.171769,
+      "zero_e_evt_delta_target_loss_total": 2.978481,
+      "zero_z_art_delta_target_loss_total": 0.364927
+    },
+    "special": {
+      "experiment_id": "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d26_d7_init_d10_teacher_consolidation_teacher_consistency_shortpausegate_priority_exp043/checkpoints/EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration.step20.pt",
+      "completed_steps": 20,
+      "target_validation_loss_total": 2.523898,
+      "target_special_eval_loss_total": 2.641792,
+      "delta_loss_total": 0.117894,
+      "zero_e_evt_delta_target_loss_total": 3.27265,
+      "zero_z_art_delta_target_loss_total": 0.460259
+    },
+    "zero_e_evt": {
+      "experiment_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+      "completed_steps": 30,
+      "target_validation_loss_total": 2.444194,
+      "target_special_eval_loss_total": 2.584195,
+      "delta_loss_total": 0.140001,
+      "zero_e_evt_delta_target_loss_total": 3.299035,
+      "zero_z_art_delta_target_loss_total": 0.438936
+    },
+    "zero_z_art": {
+      "experiment_id": "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d26_d7_init_d10_teacher_consolidation_teacher_consistency_shortpausegate_priority_exp043/checkpoints/EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration.step20.pt",
+      "completed_steps": 20,
+      "target_validation_loss_total": 2.523898,
+      "target_special_eval_loss_total": 2.641792,
+      "delta_loss_total": 0.117894,
+      "zero_e_evt_delta_target_loss_total": 3.27265,
+      "zero_z_art_delta_target_loss_total": 0.460259
+    },
+    "minimax": {
+      "experiment_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.metrics.json",
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d22_d7_init_d10_teacher_consolidation_teacher_consistency_exp039/checkpoints/EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration.step30.pt",
+      "completed_steps": 30,
+      "target_validation_loss_total": 2.444194,
+      "target_special_eval_loss_total": 2.584195,
+      "delta_loss_total": 0.140001,
+      "zero_e_evt_delta_target_loss_total": 3.299035,
+      "zero_z_art_delta_target_loss_total": 0.438936,
+      "normalized_regret": {
+        "validation": 0.371038,
+        "special": 0.410339,
+        "zero_e_evt": 0.0,
+        "zero_z_art": 0.223671,
+        "max_regret": 0.410339,
+        "mean_regret": 0.251262
+      }
+    }
+  },
+  "derived_thresholds": {
+    "budget_to_minimax_anchor": 0.047019,
+    "budget_to_special_anchor": 0.126723,
+    "best_e_evt_floor": 3.299035,
+    "minimax_z_art_floor": 0.438936,
+    "best_z_art_floor": 0.460259
+  },
+  "policies": [
+    {
+      "policy_name": "validation_strict",
+      "description": "Use the strongest validation anchor with zero extra validation budget.",
+      "objective": "validation",
+      "constraints": {
+        "max_validation_budget_over_best": 0.0,
+        "min_zero_e_evt_delta_target_loss_total": null,
+        "min_zero_z_art_delta_target_loss_total": null
+      },
+      "eligible_anchor_ids": [
+        "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration"
+      ],
+      "selected_anchor": {
+        "experiment_id": "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration",
+        "target_validation_loss_total": 2.397175,
+        "delta_loss_total": 0.171769,
+        "zero_e_evt_delta_target_loss_total": 2.978481,
+        "zero_z_art_delta_target_loss_total": 0.364927,
+        "normalized_regret": {
+          "validation": 0.0,
+          "special": 1.0,
+          "zero_e_evt": 1.0,
+          "zero_z_art": 1.0,
+          "max_regret": 1.0,
+          "mean_regret": 0.75
+        }
+      }
+    },
+    {
+      "policy_name": "default_minimax",
+      "description": "Use the least-worst final anchor without extra route constraints.",
+      "objective": "minimax",
+      "constraints": {
+        "max_validation_budget_over_best": null,
+        "min_zero_e_evt_delta_target_loss_total": null,
+        "min_zero_z_art_delta_target_loss_total": null
+      },
+      "eligible_anchor_ids": [
+        "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+        "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration",
+        "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration"
+      ],
+      "selected_anchor": {
+        "experiment_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+        "target_validation_loss_total": 2.444194,
+        "delta_loss_total": 0.140001,
+        "zero_e_evt_delta_target_loss_total": 3.299035,
+        "zero_z_art_delta_target_loss_total": 0.438936,
+        "normalized_regret": {
+          "validation": 0.371038,
+          "special": 0.410339,
+          "zero_e_evt": 0.0,
+          "zero_z_art": 0.223671,
+          "max_regret": 0.410339,
+          "mean_regret": 0.251262
+        }
+      }
+    },
+    {
+      "policy_name": "guarded_default",
+      "description": "Allow just enough validation budget to include the minimax anchor, then keep minimax selection.",
+      "objective": "minimax",
+      "constraints": {
+        "max_validation_budget_over_best": 0.047019,
+        "min_zero_e_evt_delta_target_loss_total": null,
+        "min_zero_z_art_delta_target_loss_total": null
+      },
+      "eligible_anchor_ids": [
+        "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+        "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration"
+      ],
+      "selected_anchor": {
+        "experiment_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+        "target_validation_loss_total": 2.444194,
+        "delta_loss_total": 0.140001,
+        "zero_e_evt_delta_target_loss_total": 3.299035,
+        "zero_z_art_delta_target_loss_total": 0.438936,
+        "normalized_regret": {
+          "validation": 0.371038,
+          "special": 0.410339,
+          "zero_e_evt": 0.0,
+          "zero_z_art": 0.223671,
+          "max_regret": 0.410339,
+          "mean_regret": 0.251262
+        }
+      }
+    },
+    {
+      "policy_name": "e_evt_guard",
+      "description": "Require the current best e_evt floor and select the least-worst eligible anchor.",
+      "objective": "minimax",
+      "constraints": {
+        "max_validation_budget_over_best": null,
+        "min_zero_e_evt_delta_target_loss_total": 3.299035,
+        "min_zero_z_art_delta_target_loss_total": 0.438936
+      },
+      "eligible_anchor_ids": [
+        "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration"
+      ],
+      "selected_anchor": {
+        "experiment_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+        "target_validation_loss_total": 2.444194,
+        "delta_loss_total": 0.140001,
+        "zero_e_evt_delta_target_loss_total": 3.299035,
+        "zero_z_art_delta_target_loss_total": 0.438936,
+        "normalized_regret": {
+          "validation": 0.371038,
+          "special": 0.410339,
+          "zero_e_evt": 0.0,
+          "zero_z_art": 0.223671,
+          "max_regret": 0.410339,
+          "mean_regret": 0.251262
+        }
+      }
+    },
+    {
+      "policy_name": "special_push",
+      "description": "Allow enough validation budget to include the special/z_art leader and pick the best special eligible anchor.",
+      "objective": "special",
+      "constraints": {
+        "max_validation_budget_over_best": 0.126723,
+        "min_zero_e_evt_delta_target_loss_total": null,
+        "min_zero_z_art_delta_target_loss_total": null
+      },
+      "eligible_anchor_ids": [
+        "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration",
+        "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration",
+        "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration"
+      ],
+      "selected_anchor": {
+        "experiment_id": "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration",
+        "target_validation_loss_total": 2.523898,
+        "delta_loss_total": 0.117894,
+        "zero_e_evt_delta_target_loss_total": 3.27265,
+        "zero_z_art_delta_target_loss_total": 0.460259,
+        "normalized_regret": {
+          "validation": 1.0,
+          "special": 0.0,
+          "zero_e_evt": 0.082311,
+          "zero_z_art": 0.0,
+          "max_regret": 1.0,
+          "mean_regret": 0.270578
+        }
+      }
+    },
+    {
+      "policy_name": "z_art_push",
+      "description": "Require the current best z_art floor and enough validation budget to include that anchor, then pick the best special eligible anchor.",
+      "objective": "special",
+      "constraints": {
+        "max_validation_budget_over_best": 0.126723,
+        "min_zero_e_evt_delta_target_loss_total": null,
+        "min_zero_z_art_delta_target_loss_total": 0.460259
+      },
+      "eligible_anchor_ids": [
+        "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration"
+      ],
+      "selected_anchor": {
+        "experiment_id": "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration",
+        "target_validation_loss_total": 2.523898,
+        "delta_loss_total": 0.117894,
+        "zero_e_evt_delta_target_loss_total": 3.27265,
+        "zero_z_art_delta_target_loss_total": 0.460259,
+        "normalized_regret": {
+          "validation": 1.0,
+          "special": 0.0,
+          "zero_e_evt": 0.082311,
+          "zero_z_art": 0.0,
+          "max_regret": 1.0,
+          "mean_regret": 0.270578
+        }
+      }
+    }
+  ],
+  "recommended_policy": {
+    "default_policy": "default_minimax",
+    "route_switch_rules": [
+      {
+        "when": "max_validation_budget_over_best < 0.047019",
+        "use_policy": "validation_strict",
+        "selected_anchor_id": "EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration"
+      },
+      {
+        "when": "max_validation_budget_over_best >= 0.047019 and (special_priority is false and z_art_priority is false)",
+        "use_policy": "default_minimax",
+        "selected_anchor_id": "EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration"
+      },
+      {
+        "when": "max_validation_budget_over_best >= 0.126723 and (special_priority is true or z_art_priority is true)",
+        "use_policy": "special_push",
+        "selected_anchor_id": "EXP-20260315-043-offline-mvp-d26-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-20step-calibration"
+      }
+    ]
+  },
+  "notes": [
+    "Policies operate on final anchors only and are intended for route/reporting decisions, not new training.",
+    "validation_strict picks D29-like anchors whenever no extra validation budget is allowed.",
+    "default_minimax picks D22-like anchors when a single least-worst default is needed.",
+    "special_push picks D26-like anchors only after enough validation budget is explicitly granted."
+  ]
+}

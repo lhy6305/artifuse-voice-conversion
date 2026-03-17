@@ -1,0 +1,21 @@
+{
+  "baseline_name": "offline_mvp_round1",
+  "data": {
+    "target_manifest": "data_prep/round1/manifests/target_train.jsonl",
+    "source_manifest": "data_prep/round1/manifests/source_train.jsonl",
+    "combined_manifest": "data_prep/round1/manifests/combined_round1.jsonl"
+  },
+  "checks": {
+    "data_integrity": true,
+    "target_text_coverage": true,
+    "source_segment_duration_distribution": true,
+    "r_res_disabled_required": true,
+    "z_art_ablation_slot": true,
+    "e_evt_ablation_slot": true,
+    "latency_slot": true
+  },
+  "report_targets": {
+    "experiment_record": "reports/experiments/EXP-YYYYMMDD-001.md",
+    "metrics_json": "reports/experiments/EXP-YYYYMMDD-001.metrics.json"
+  }
+}

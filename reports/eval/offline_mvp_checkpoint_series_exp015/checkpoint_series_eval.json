@@ -1,0 +1,442 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_b1_smallscale_100_seeded_shuffle.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260314-015-offline-mvp-b1-100step-calibration.metrics.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+  "checkpoint_count": 10,
+  "checkpoints": [
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step10.pt",
+      "step": 10,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.097014,
+          "delta_source_loss_total": 0.132661,
+          "delta_target_acoustic_mae": 0.032824,
+          "delta_source_acoustic_mae": 0.034648,
+          "delta_target_text_aux_mae": 0.010016,
+          "delta_source_text_aux_mae": 0.010454
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.293825,
+          "delta_source_loss_total": 1.70949,
+          "delta_target_acoustic_mae": 0.462131,
+          "delta_source_acoustic_mae": 0.460035,
+          "delta_target_text_aux_mae": 0.043004,
+          "delta_source_text_aux_mae": 0.043154
+        }
+      },
+      "baseline": {
+        "target_loss_total": 20.455091,
+        "source_loss_total": 27.10211
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step20.pt",
+      "step": 20,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.207014,
+          "delta_source_loss_total": 0.298836,
+          "delta_target_acoustic_mae": 0.061145,
+          "delta_source_acoustic_mae": 0.062741,
+          "delta_target_text_aux_mae": 0.009176,
+          "delta_source_text_aux_mae": 0.009704
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.733871,
+          "delta_source_loss_total": 2.455121,
+          "delta_target_acoustic_mae": 0.655007,
+          "delta_source_acoustic_mae": 0.649894,
+          "delta_target_text_aux_mae": 0.057788,
+          "delta_source_text_aux_mae": 0.058166
+        }
+      },
+      "baseline": {
+        "target_loss_total": 16.37399,
+        "source_loss_total": 21.425115
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step30.pt",
+      "step": 30,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.248665,
+          "delta_source_loss_total": 0.447657,
+          "delta_target_acoustic_mae": 0.141884,
+          "delta_source_acoustic_mae": 0.143079,
+          "delta_target_text_aux_mae": 0.017273,
+          "delta_source_text_aux_mae": 0.017748
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.568373,
+          "delta_source_loss_total": 2.677,
+          "delta_target_acoustic_mae": 0.82291,
+          "delta_source_acoustic_mae": 0.814522,
+          "delta_target_text_aux_mae": 0.069211,
+          "delta_source_text_aux_mae": 0.069315
+        }
+      },
+      "baseline": {
+        "target_loss_total": 11.942529,
+        "source_loss_total": 14.461219
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step40.pt",
+      "step": 40,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.025216,
+          "delta_source_loss_total": 0.356673,
+          "delta_target_acoustic_mae": 0.208978,
+          "delta_source_acoustic_mae": 0.210007,
+          "delta_target_text_aux_mae": 0.02029,
+          "delta_source_text_aux_mae": 0.020807
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.373772,
+          "delta_source_loss_total": 1.804284,
+          "delta_target_acoustic_mae": 0.870294,
+          "delta_source_acoustic_mae": 0.85759,
+          "delta_target_text_aux_mae": 0.065281,
+          "delta_source_text_aux_mae": 0.064646
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.450107,
+        "source_loss_total": 8.615387
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step50.pt",
+      "step": 50,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": -0.17391,
+          "delta_source_loss_total": 0.204594,
+          "delta_target_acoustic_mae": 0.226493,
+          "delta_source_acoustic_mae": 0.234121,
+          "delta_target_text_aux_mae": 0.019029,
+          "delta_source_text_aux_mae": 0.020098
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": -0.521803,
+          "delta_source_loss_total": 1.104932,
+          "delta_target_acoustic_mae": 0.948843,
+          "delta_source_acoustic_mae": 0.916665,
+          "delta_target_text_aux_mae": 0.057114,
+          "delta_source_text_aux_mae": 0.055815
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.426597,
+        "source_loss_total": 6.876946
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step60.pt",
+      "step": 60,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.218725,
+          "delta_source_loss_total": 0.274261,
+          "delta_target_acoustic_mae": 0.107772,
+          "delta_source_acoustic_mae": 0.143323,
+          "delta_target_text_aux_mae": 0.00966,
+          "delta_source_text_aux_mae": 0.011179
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.269633,
+          "delta_source_loss_total": 1.874161,
+          "delta_target_acoustic_mae": 1.105155,
+          "delta_source_acoustic_mae": 1.03456,
+          "delta_target_text_aux_mae": 0.047868,
+          "delta_source_text_aux_mae": 0.046928
+        }
+      },
+      "baseline": {
+        "target_loss_total": 7.988705,
+        "source_loss_total": 6.994324
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step70.pt",
+      "step": 70,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.708298,
+          "delta_source_loss_total": 0.336892,
+          "delta_target_acoustic_mae": 0.232189,
+          "delta_source_acoustic_mae": 0.127742,
+          "delta_target_text_aux_mae": 0.010261,
+          "delta_source_text_aux_mae": 0.009489
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.352005,
+          "delta_source_loss_total": 1.445787,
+          "delta_target_acoustic_mae": 1.293933,
+          "delta_source_acoustic_mae": 1.164244,
+          "delta_target_text_aux_mae": 0.050339,
+          "delta_source_text_aux_mae": 0.051952
+        }
+      },
+      "baseline": {
+        "target_loss_total": 6.057245,
+        "source_loss_total": 5.768098
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step80.pt",
+      "step": 80,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.917957,
+          "delta_source_loss_total": 0.717538,
+          "delta_target_acoustic_mae": 0.694673,
+          "delta_source_acoustic_mae": 0.323857,
+          "delta_target_text_aux_mae": 0.030584,
+          "delta_source_text_aux_mae": 0.012356
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.466497,
+          "delta_source_loss_total": 0.835429,
+          "delta_target_acoustic_mae": 1.341645,
+          "delta_source_acoustic_mae": 1.338443,
+          "delta_target_text_aux_mae": 0.051578,
+          "delta_source_text_aux_mae": 0.064511
+        }
+      },
+      "baseline": {
+        "target_loss_total": 3.544307,
+        "source_loss_total": 3.990637
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step90.pt",
+      "step": 90,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": -0.169832,
+          "delta_source_loss_total": 1.083875,
+          "delta_target_acoustic_mae": 1.12021,
+          "delta_source_acoustic_mae": 0.77036,
+          "delta_target_text_aux_mae": 0.063264,
+          "delta_source_text_aux_mae": 0.030581
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.734398,
+          "delta_source_loss_total": 1.227729,
+          "delta_target_acoustic_mae": 1.171601,
+          "delta_source_acoustic_mae": 1.54182,
+          "delta_target_text_aux_mae": 0.05245,
+          "delta_source_text_aux_mae": 0.070641
+        }
+      },
+      "baseline": {
+        "target_loss_total": 3.377886,
+        "source_loss_total": 2.823662
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260314-015-offline-mvp-b1-100step-calibration.step100.pt",
+      "step": 100,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 1.332663,
+          "delta_source_loss_total": 1.997582,
+          "delta_target_acoustic_mae": 1.217411,
+          "delta_source_acoustic_mae": 1.012046,
+          "delta_target_text_aux_mae": 0.074679,
+          "delta_source_text_aux_mae": 0.053423
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.407506,
+          "delta_source_loss_total": 1.005402,
+          "delta_target_acoustic_mae": 1.310195,
+          "delta_source_acoustic_mae": 1.584664,
+          "delta_target_text_aux_mae": 0.057291,
+          "delta_source_text_aux_mae": 0.073275
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.676195,
+        "source_loss_total": 2.689358
+      }
+    }
+  ],
+  "trends": {
+    "zero_z_art_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.097014
+      },
+      {
+        "step": 20,
+        "value": 0.207014
+      },
+      {
+        "step": 30,
+        "value": 0.248665
+      },
+      {
+        "step": 40,
+        "value": 0.025216
+      },
+      {
+        "step": 50,
+        "value": -0.17391
+      },
+      {
+        "step": 60,
+        "value": 0.218725
+      },
+      {
+        "step": 70,
+        "value": 0.708298
+      },
+      {
+        "step": 80,
+        "value": 0.917957
+      },
+      {
+        "step": 90,
+        "value": -0.169832
+      },
+      {
+        "step": 100,
+        "value": 1.332663
+      }
+    ],
+    "zero_e_evt_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 1.293825
+      },
+      {
+        "step": 20,
+        "value": 1.733871
+      },
+      {
+        "step": 30,
+        "value": 1.568373
+      },
+      {
+        "step": 40,
+        "value": 0.373772
+      },
+      {
+        "step": 50,
+        "value": -0.521803
+      },
+      {
+        "step": 60,
+        "value": 0.269633
+      },
+      {
+        "step": 70,
+        "value": 0.352005
+      },
+      {
+        "step": 80,
+        "value": 1.466497
+      },
+      {
+        "step": 90,
+        "value": 1.734398
+      },
+      {
+        "step": 100,
+        "value": 1.407506
+      }
+    ],
+    "zero_z_art_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.132661
+      },
+      {
+        "step": 20,
+        "value": 0.298836
+      },
+      {
+        "step": 30,
+        "value": 0.447657
+      },
+      {
+        "step": 40,
+        "value": 0.356673
+      },
+      {
+        "step": 50,
+        "value": 0.204594
+      },
+      {
+        "step": 60,
+        "value": 0.274261
+      },
+      {
+        "step": 70,
+        "value": 0.336892
+      },
+      {
+        "step": 80,
+        "value": 0.717538
+      },
+      {
+        "step": 90,
+        "value": 1.083875
+      },
+      {
+        "step": 100,
+        "value": 1.997582
+      }
+    ],
+    "zero_e_evt_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 1.70949
+      },
+      {
+        "step": 20,
+        "value": 2.455121
+      },
+      {
+        "step": 30,
+        "value": 2.677
+      },
+      {
+        "step": 40,
+        "value": 1.804284
+      },
+      {
+        "step": 50,
+        "value": 1.104932
+      },
+      {
+        "step": 60,
+        "value": 1.874161
+      },
+      {
+        "step": 70,
+        "value": 1.445787
+      },
+      {
+        "step": 80,
+        "value": 0.835429
+      },
+      {
+        "step": 90,
+        "value": 1.227729
+      },
+      {
+        "step": 100,
+        "value": 1.005402
+      }
+    ]
+  },
+  "notes": [
+    "Checkpoint-series evaluation summarizes z_art / e_evt ablation deltas across saved checkpoints.",
+    "Only checkpoints referenced by experiment metrics.training_run.artifacts.checkpoint_paths are included."
+  ]
+}

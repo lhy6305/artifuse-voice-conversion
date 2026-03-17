@@ -1,0 +1,46 @@
+{
+  "data": {
+    "manifest_dir": "data_prep/round1/manifests",
+    "split_dir": "data_prep/round1/splits/hybrid_stratified_blocked",
+    "target_batch_size": 4,
+    "source_batch_size": 4,
+    "max_audio_sec": 2.0
+  },
+  "model": {
+    "name": "offline_mvp_scaffold",
+    "r_res_enabled": false,
+    "uses_text_in_training": true,
+    "uses_text_in_runtime": false,
+    "z_art_dim": 8,
+    "event_head_enabled": true,
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "acoustic_dim": 4,
+    "frame_length": 400,
+    "hop_length": 160
+  },
+  "training": {
+    "mode": "offline_mvp",
+    "run_stage": "small_scale_validation",
+    "prerequisite_experiment_id": null,
+    "teacher_required": false,
+    "student_required": false,
+    "vocoder_required": false,
+    "single_step_validation_enabled": true,
+    "seed": 20260314,
+    "shuffle_train_records": true,
+    "num_steps": 3,
+    "validation_interval": 1,
+    "checkpoint_interval": 1,
+    "target_validation_count": 8,
+    "source_validation_count": 8,
+    "learning_rate": 0.0003,
+    "max_grad_norm": 1.0
+  },
+  "losses": {
+    "acoustic": 1.0,
+    "event": 0.5,
+    "z_smooth": 0.1,
+    "text_aux": 0.2
+  }
+}

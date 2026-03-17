@@ -1,0 +1,168 @@
+{
+  "generated_at": "2026-03-17T21:31:22",
+  "machine": {
+    "torch": "2.5.0+cu124",
+    "cuda_available": true,
+    "cuda_devices": [
+      "NVIDIA GeForce RTX 3060 Laptop GPU"
+    ]
+  },
+  "teacher_checkpoint_path": "F:\\proj_dev\\tmp\\workdir4\\reports\\training\\offline_mvp\\checkpoints\\EXP-20260316-043.step200.pt",
+  "teacher_experiment_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+  "sample_rate": 44100,
+  "frame_length": 400,
+  "hop_length": 160,
+  "frame_ms": 9.070295,
+  "hop_ms": 3.628118,
+  "uses_text_in_runtime": false,
+  "model_dims": {
+    "hidden_dim": 64,
+    "event_dim": 8,
+    "z_art_dim": 8,
+    "acoustic_dim": 4
+  },
+  "dataset": {
+    "record_count": 74,
+    "min_audio_sec": 0.470998,
+    "median_audio_sec": 2.0,
+    "max_audio_sec": 2.0,
+    "probe_record_ids": {
+      "short": "target::no_text_voice/chapter3_17_firefly_106",
+      "median": "target::chapter3_2_firefly_163",
+      "long": "target::no_text_voice/chapter3_21_firefly_108"
+    }
+  },
+  "devices": {
+    "cpu": {
+      "device": "cpu",
+      "record_count": 74,
+      "avg_audio_sec": 1.835382,
+      "avg_latency_ms": 6.952321,
+      "p50_latency_ms": 6.760787,
+      "p95_latency_ms": 11.633498,
+      "max_latency_ms": 14.175917,
+      "avg_rtf": 0.003812657,
+      "p50_rtf": 0.003469895,
+      "p95_rtf": 0.005816748,
+      "max_rtf": 0.007087958,
+      "avg_per_frame_ms": 0.013900021,
+      "p95_per_frame_ms": 0.021190341,
+      "max_per_frame_ms": 0.025821342,
+      "top_slowest_records": [
+        {
+          "record_id": "target::chapter3_3_firefly_210",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 14.175917,
+          "rtf": 0.007087958,
+          "per_frame_ms": 0.025821342
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_119",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 12.678173,
+          "rtf": 0.006339087,
+          "per_frame_ms": 0.023093212
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_105",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 12.059623,
+          "rtf": 0.006029812,
+          "per_frame_ms": 0.021966527
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_157",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 11.739207,
+          "rtf": 0.005869603,
+          "per_frame_ms": 0.02138289
+        },
+        {
+          "record_id": "target::no_text_voice/chapter3_21_firefly_108",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 11.576577,
+          "rtf": 0.005788288,
+          "per_frame_ms": 0.021086661
+        }
+      ]
+    },
+    "cuda_0": {
+      "device": "cuda:0",
+      "record_count": 74,
+      "avg_audio_sec": 1.835382,
+      "avg_latency_ms": 1.481529,
+      "p50_latency_ms": 1.019915,
+      "p95_latency_ms": 2.46726,
+      "max_latency_ms": 2.580416,
+      "avg_rtf": 0.000949361,
+      "p50_rtf": 0.000509958,
+      "p95_rtf": 0.002383867,
+      "max_rtf": 0.004366807,
+      "avg_per_frame_ms": 0.003465475,
+      "p95_per_frame_ms": 0.008720882,
+      "max_per_frame_ms": 0.016068406,
+      "top_slowest_records": [
+        {
+          "record_id": "target::chapter3_29_firefly_113",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 2.580416,
+          "rtf": 0.001290208,
+          "per_frame_ms": 0.004700211
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_115",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 2.56401,
+          "rtf": 0.001282005,
+          "per_frame_ms": 0.004670328
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_199",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 2.509304,
+          "rtf": 0.001254652,
+          "per_frame_ms": 0.004570681
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_147",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 2.487086,
+          "rtf": 0.001243543,
+          "per_frame_ms": 0.004530211
+        },
+        {
+          "record_id": "target::chapter3_26_firefly_114",
+          "audio_sec": 2.0,
+          "samples": 88200,
+          "frame_count": 549,
+          "avg_infer_ms": 2.456584,
+          "rtf": 0.001228292,
+          "per_frame_ms": 0.004474652
+        }
+      ]
+    }
+  },
+  "notes": [
+    "Benchmark measures single-utterance waveform->teacher-control forward latency and includes host/device tensor movement, but excludes disk I/O and any future vocoder/runtime wrapper overhead.",
+    "Teacher runtime outputs do not require text at inference under the current d87 config.",
+    "This benchmark is for control prediction only, not final speech waveform synthesis."
+  ]
+}

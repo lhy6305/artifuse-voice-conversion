@@ -1,0 +1,105 @@
+# offline MVP target_special_eval 模型级评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d75_round1_1_d26_init_post_d59_singleton_sparse_micropause_sampler_d22late_late_fusedhidden_boost_20step_smallscale_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d75_singleton_sparse_d26_init_d22late_fusedhidden_boost_exp030/checkpoints/EXP-20260316-030-offline-mvp-d75-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-20step-calibration.step10.pt
+- split_option_name: hybrid_stratified_blocked
+
+## target_validation
+- record_count: 66
+- batch_count: 17
+- loss_total: 2.442652
+- loss_acoustic: 0.153399
+- loss_event: 4.47088
+- loss_text_aux: 0.109172
+- loss_text_aux_effective: 0.109172
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.05878
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- loss_formal_special_clause_shape_aux: 0.0
+- z_art_abs_mean: 0.504825
+- z_art_delta_abs_mean: 0.014258
+- event_prob_mean: 0.449992
+- event_presence_prob_mean: 0.649018
+- event_delta_prob_mean: 0.286222
+- event_rise_prob_mean: 0.494655
+- event_fall_prob_mean: 0.427577
+- event_energy_prob_mean: 0.631391
+- event_presence_peak_ratio: 0.823837
+- acoustic_abs_mean: 0.907576
+- acoustic_energy_mean: -3.491432
+- acoustic_delta_abs_mean: 0.011096
+- text_aux_abs_mean: 0.237997
+
+## target_special_eval
+- record_count: 8
+- batch_count: 2
+- loss_total: 2.613796
+- loss_acoustic: 0.116011
+- loss_event: 4.905813
+- loss_text_aux: 0.177452
+- loss_text_aux_effective: 0.177452
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.0
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- loss_formal_special_clause_shape_aux: 0.0
+- z_art_abs_mean: 0.398571
+- z_art_delta_abs_mean: 0.011736
+- event_prob_mean: 0.436607
+- event_presence_prob_mean: 0.610802
+- event_delta_prob_mean: 0.299995
+- event_rise_prob_mean: 0.467737
+- event_fall_prob_mean: 0.442441
+- event_energy_prob_mean: 0.600056
+- event_presence_peak_ratio: 0.95316
+- acoustic_abs_mean: 0.98569
+- acoustic_energy_mean: -3.769315
+- acoustic_delta_abs_mean: 0.015404
+- text_aux_abs_mean: 0.248031
+
+## 对比
+- delta_loss_total: 0.171144
+- delta_loss_acoustic: -0.037388
+- delta_loss_event: 0.434933
+- delta_loss_text_aux: 0.06828
+- delta_loss_text_aux_effective: 0.06828
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_clause_transition_aux: -0.05878
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- delta_z_art_abs_mean: -0.106254
+- delta_z_art_delta_abs_mean: -0.002522
+- delta_event_prob_mean: -0.013385
+- delta_event_presence_prob_mean: -0.038216
+- delta_event_delta_prob_mean: 0.013773
+- delta_event_rise_prob_mean: -0.026918
+- delta_event_fall_prob_mean: 0.014864
+- delta_event_energy_prob_mean: -0.031335
+- delta_event_presence_peak_ratio: 0.129323
+- delta_acoustic_abs_mean: 0.078114
+- delta_acoustic_energy_mean: -0.277883
+- delta_acoustic_delta_abs_mean: 0.004308
+- delta_text_aux_abs_mean: 0.010034
+
+## 备注
+- Model-level special_eval is reported separately from regular validation.
+- Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.
+- Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality.

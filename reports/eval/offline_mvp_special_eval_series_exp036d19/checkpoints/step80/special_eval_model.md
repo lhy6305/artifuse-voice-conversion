@@ -1,0 +1,102 @@
+# offline MVP target_special_eval 模型级评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d19_round1_1_special_proxy_core_clause_ge4_early_handoff_zart_influence_structural_clause_transition_late_only_late_clause_tail_smallscale_100_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d19_special_proxy_core_clause_ge4_early_handoff_zart_influence_structural_clause_transition_late_only_late_clause_tail_exp036/checkpoints/EXP-20260315-036-offline-mvp-d19-round1-1-special-proxy-core-clause-ge4-early-handoff-zart-influence-structural-clause-transition-late-only-late-clause-tail-100step-calibration.step80.pt
+- split_option_name: hybrid_stratified_blocked
+
+## target_validation
+- record_count: 66
+- batch_count: 17
+- loss_total: 3.918003
+- loss_acoustic: 1.438977
+- loss_event: 4.867868
+- loss_text_aux: 0.110208
+- loss_text_aux_effective: 0.110208
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.047562
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- z_art_abs_mean: 0.221813
+- z_art_delta_abs_mean: 0.008005
+- event_prob_mean: 0.463278
+- event_presence_prob_mean: 0.581836
+- event_delta_prob_mean: 0.398931
+- event_rise_prob_mean: 0.474571
+- event_fall_prob_mean: 0.433832
+- event_energy_prob_mean: 0.559803
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 0.882561
+- acoustic_energy_mean: -3.388396
+- acoustic_delta_abs_mean: 0.014329
+- text_aux_abs_mean: 0.217728
+
+## target_special_eval
+- record_count: 8
+- batch_count: 2
+- loss_total: 3.639056
+- loss_acoustic: 1.051927
+- loss_event: 5.082199
+- loss_text_aux: 0.208888
+- loss_text_aux_effective: 0.208888
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.0
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- z_art_abs_mean: 0.1656
+- z_art_delta_abs_mean: 0.005315
+- event_prob_mean: 0.453573
+- event_presence_prob_mean: 0.558687
+- event_delta_prob_mean: 0.410558
+- event_rise_prob_mean: 0.456629
+- event_fall_prob_mean: 0.451715
+- event_energy_prob_mean: 0.540933
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 1.096438
+- acoustic_energy_mean: -4.266237
+- acoustic_delta_abs_mean: 0.005311
+- text_aux_abs_mean: 0.271875
+
+## 对比
+- delta_loss_total: -0.278947
+- delta_loss_acoustic: -0.38705
+- delta_loss_event: 0.214331
+- delta_loss_text_aux: 0.09868
+- delta_loss_text_aux_effective: 0.09868
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_clause_transition_aux: -0.047562
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_z_art_abs_mean: -0.056213
+- delta_z_art_delta_abs_mean: -0.00269
+- delta_event_prob_mean: -0.009705
+- delta_event_presence_prob_mean: -0.023149
+- delta_event_delta_prob_mean: 0.011627
+- delta_event_rise_prob_mean: -0.017942
+- delta_event_fall_prob_mean: 0.017883
+- delta_event_energy_prob_mean: -0.01887
+- delta_event_presence_peak_ratio: 0.0
+- delta_acoustic_abs_mean: 0.213877
+- delta_acoustic_energy_mean: -0.877841
+- delta_acoustic_delta_abs_mean: -0.009018
+- delta_text_aux_abs_mean: 0.054147
+
+## 备注
+- Model-level special_eval is reported separately from regular validation.
+- Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.
+- Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality.

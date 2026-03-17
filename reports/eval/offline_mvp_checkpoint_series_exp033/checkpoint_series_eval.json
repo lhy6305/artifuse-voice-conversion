@@ -1,0 +1,482 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_c1_7_round1_1_clause_transition_aux_priority_two_phase_multiterm_cap1_smallscale_100_seeded_shuffle.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.metrics.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "checkpoint_count": 10,
+  "checkpoints": [
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step10.pt",
+      "step": 10,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.097722,
+          "delta_source_loss_total": 0.133184,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.032802,
+          "delta_source_acoustic_mae": 0.034657,
+          "delta_target_text_aux_mae": 0.009103,
+          "delta_source_text_aux_mae": 0.009459
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.285942,
+          "delta_source_loss_total": 1.70753,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.462596,
+          "delta_source_acoustic_mae": 0.460482,
+          "delta_target_text_aux_mae": 0.036937,
+          "delta_source_text_aux_mae": 0.03658
+        }
+      },
+      "baseline": {
+        "target_loss_total": 20.619562,
+        "source_loss_total": 27.101397
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step20.pt",
+      "step": 20,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.207028,
+          "delta_source_loss_total": 0.299518,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.061314,
+          "delta_source_acoustic_mae": 0.062941,
+          "delta_target_text_aux_mae": 0.012999,
+          "delta_source_text_aux_mae": 0.013563
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.72194,
+          "delta_source_loss_total": 2.450113,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.656597,
+          "delta_source_acoustic_mae": 0.651426,
+          "delta_target_text_aux_mae": 0.04328,
+          "delta_source_text_aux_mae": 0.043139
+        }
+      },
+      "baseline": {
+        "target_loss_total": 16.548234,
+        "source_loss_total": 21.424685
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step30.pt",
+      "step": 30,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.246076,
+          "delta_source_loss_total": 0.447746,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.142965,
+          "delta_source_acoustic_mae": 0.14421,
+          "delta_target_text_aux_mae": 0.021953,
+          "delta_source_text_aux_mae": 0.022493
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.548079,
+          "delta_source_loss_total": 2.662739,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.826277,
+          "delta_source_acoustic_mae": 0.817795,
+          "delta_target_text_aux_mae": 0.056181,
+          "delta_source_text_aux_mae": 0.055796
+        }
+      },
+      "baseline": {
+        "target_loss_total": 12.129236,
+        "source_loss_total": 14.456241
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step40.pt",
+      "step": 40,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.019834,
+          "delta_source_loss_total": 0.355432,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.210155,
+          "delta_source_acoustic_mae": 0.211229,
+          "delta_target_text_aux_mae": 0.026252,
+          "delta_source_text_aux_mae": 0.026815
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.354242,
+          "delta_source_loss_total": 1.790557,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.872395,
+          "delta_source_acoustic_mae": 0.859518,
+          "delta_target_text_aux_mae": 0.054957,
+          "delta_source_text_aux_mae": 0.054566
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.651002,
+        "source_loss_total": 8.60639
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step50.pt",
+      "step": 50,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": -0.183152,
+          "delta_source_loss_total": 0.19995,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.228449,
+          "delta_source_acoustic_mae": 0.235692,
+          "delta_target_text_aux_mae": 0.024046,
+          "delta_source_text_aux_mae": 0.025116
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": -0.549967,
+          "delta_source_loss_total": 1.092112,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.947607,
+          "delta_source_acoustic_mae": 0.915258,
+          "delta_target_text_aux_mae": 0.050259,
+          "delta_source_text_aux_mae": 0.048836
+        }
+      },
+      "baseline": {
+        "target_loss_total": 9.647031,
+        "source_loss_total": 6.870256
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step60.pt",
+      "step": 60,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.198785,
+          "delta_source_loss_total": 0.279925,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.117452,
+          "delta_source_acoustic_mae": 0.152883,
+          "delta_target_text_aux_mae": 0.013538,
+          "delta_source_text_aux_mae": 0.015537
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.211158,
+          "delta_source_loss_total": 1.837396,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.085126,
+          "delta_source_acoustic_mae": 1.016975,
+          "delta_target_text_aux_mae": 0.054871,
+          "delta_source_text_aux_mae": 0.052514
+        }
+      },
+      "baseline": {
+        "target_loss_total": 8.241824,
+        "source_loss_total": 7.001031
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step70.pt",
+      "step": 70,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.711495,
+          "delta_source_loss_total": 0.32747,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.22692,
+          "delta_source_acoustic_mae": 0.135765,
+          "delta_target_text_aux_mae": 0.012724,
+          "delta_source_text_aux_mae": 0.010814
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 0.104903,
+          "delta_source_loss_total": 1.269487,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.287723,
+          "delta_source_acoustic_mae": 1.155326,
+          "delta_target_text_aux_mae": 0.062799,
+          "delta_source_text_aux_mae": 0.056685
+        }
+      },
+      "baseline": {
+        "target_loss_total": 6.317368,
+        "source_loss_total": 5.71986
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step80.pt",
+      "step": 80,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.855822,
+          "delta_source_loss_total": 0.695982,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 0.690417,
+          "delta_source_acoustic_mae": 0.333604,
+          "delta_target_text_aux_mae": 0.040338,
+          "delta_source_text_aux_mae": 0.013959
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.774394,
+          "delta_source_loss_total": 1.262188,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.350422,
+          "delta_source_acoustic_mae": 1.371184,
+          "delta_target_text_aux_mae": 0.066854,
+          "delta_source_text_aux_mae": 0.070047
+        }
+      },
+      "baseline": {
+        "target_loss_total": 3.706675,
+        "source_loss_total": 3.997818
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step90.pt",
+      "step": 90,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 0.003657,
+          "delta_source_loss_total": 1.079512,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.091377,
+          "delta_source_acoustic_mae": 0.72108,
+          "delta_target_text_aux_mae": 0.065773,
+          "delta_source_text_aux_mae": 0.033573
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.801118,
+          "delta_source_loss_total": 1.183933,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.210695,
+          "delta_source_acoustic_mae": 1.556694,
+          "delta_target_text_aux_mae": 0.058627,
+          "delta_source_text_aux_mae": 0.080797
+        }
+      },
+      "baseline": {
+        "target_loss_total": 3.326903,
+        "source_loss_total": 2.880812
+      }
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-033-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-multiterm-cap1-100step-calibration.step100.pt",
+      "step": 100,
+      "comparisons": {
+        "zero_z_art": {
+          "delta_target_loss_total": 1.337046,
+          "delta_source_loss_total": 1.720719,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.194476,
+          "delta_source_acoustic_mae": 1.008645,
+          "delta_target_text_aux_mae": 0.087705,
+          "delta_source_text_aux_mae": 0.070326
+        },
+        "zero_e_evt": {
+          "delta_target_loss_total": 1.714039,
+          "delta_source_loss_total": 1.506208,
+          "delta_target_loss_clause_transition_aux": 0.0,
+          "delta_source_loss_clause_transition_aux": 0.0,
+          "delta_target_acoustic_mae": 1.355538,
+          "delta_source_acoustic_mae": 1.613748,
+          "delta_target_text_aux_mae": 0.066596,
+          "delta_source_text_aux_mae": 0.088239
+        }
+      },
+      "baseline": {
+        "target_loss_total": 2.676657,
+        "source_loss_total": 2.689348
+      }
+    }
+  ],
+  "trends": {
+    "zero_z_art_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.097722
+      },
+      {
+        "step": 20,
+        "value": 0.207028
+      },
+      {
+        "step": 30,
+        "value": 0.246076
+      },
+      {
+        "step": 40,
+        "value": 0.019834
+      },
+      {
+        "step": 50,
+        "value": -0.183152
+      },
+      {
+        "step": 60,
+        "value": 0.198785
+      },
+      {
+        "step": 70,
+        "value": 0.711495
+      },
+      {
+        "step": 80,
+        "value": 0.855822
+      },
+      {
+        "step": 90,
+        "value": 0.003657
+      },
+      {
+        "step": 100,
+        "value": 1.337046
+      }
+    ],
+    "zero_e_evt_target_loss_deltas": [
+      {
+        "step": 10,
+        "value": 1.285942
+      },
+      {
+        "step": 20,
+        "value": 1.72194
+      },
+      {
+        "step": 30,
+        "value": 1.548079
+      },
+      {
+        "step": 40,
+        "value": 0.354242
+      },
+      {
+        "step": 50,
+        "value": -0.549967
+      },
+      {
+        "step": 60,
+        "value": 0.211158
+      },
+      {
+        "step": 70,
+        "value": 0.104903
+      },
+      {
+        "step": 80,
+        "value": 1.774394
+      },
+      {
+        "step": 90,
+        "value": 1.801118
+      },
+      {
+        "step": 100,
+        "value": 1.714039
+      }
+    ],
+    "zero_z_art_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 0.133184
+      },
+      {
+        "step": 20,
+        "value": 0.299518
+      },
+      {
+        "step": 30,
+        "value": 0.447746
+      },
+      {
+        "step": 40,
+        "value": 0.355432
+      },
+      {
+        "step": 50,
+        "value": 0.19995
+      },
+      {
+        "step": 60,
+        "value": 0.279925
+      },
+      {
+        "step": 70,
+        "value": 0.32747
+      },
+      {
+        "step": 80,
+        "value": 0.695982
+      },
+      {
+        "step": 90,
+        "value": 1.079512
+      },
+      {
+        "step": 100,
+        "value": 1.720719
+      }
+    ],
+    "zero_e_evt_source_loss_deltas": [
+      {
+        "step": 10,
+        "value": 1.70753
+      },
+      {
+        "step": 20,
+        "value": 2.450113
+      },
+      {
+        "step": 30,
+        "value": 2.662739
+      },
+      {
+        "step": 40,
+        "value": 1.790557
+      },
+      {
+        "step": 50,
+        "value": 1.092112
+      },
+      {
+        "step": 60,
+        "value": 1.837396
+      },
+      {
+        "step": 70,
+        "value": 1.269487
+      },
+      {
+        "step": 80,
+        "value": 1.262188
+      },
+      {
+        "step": 90,
+        "value": 1.183933
+      },
+      {
+        "step": 100,
+        "value": 1.506208
+      }
+    ]
+  },
+  "notes": [
+    "Checkpoint-series evaluation summarizes z_art / e_evt ablation deltas across saved checkpoints.",
+    "Only checkpoints referenced by experiment metrics.training_run.artifacts.checkpoint_paths are included."
+  ]
+}

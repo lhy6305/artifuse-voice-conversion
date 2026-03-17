@@ -1,0 +1,102 @@
+# offline MVP target_special_eval 模型级评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d18_round1_1_special_proxy_core_clause_ge4_early_handoff_zart_influence_structural_clause_transition_late_only_smallscale_100_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d18_special_proxy_core_clause_ge4_early_handoff_zart_influence_structural_clause_transition_late_only_exp035/checkpoints/EXP-20260315-035-offline-mvp-d18-round1-1-special-proxy-core-clause-ge4-early-handoff-zart-influence-structural-clause-transition-late-only-100step-calibration.step100.pt
+- split_option_name: hybrid_stratified_blocked
+
+## target_validation
+- record_count: 66
+- batch_count: 17
+- loss_total: 2.729923
+- loss_acoustic: 0.376802
+- loss_event: 4.601618
+- loss_text_aux: 0.112636
+- loss_text_aux_effective: 0.112636
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.056518
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- z_art_abs_mean: 0.438497
+- z_art_delta_abs_mean: 0.012505
+- event_prob_mean: 0.457954
+- event_presence_prob_mean: 0.645757
+- event_delta_prob_mean: 0.313407
+- event_rise_prob_mean: 0.49708
+- event_fall_prob_mean: 0.404397
+- event_energy_prob_mean: 0.612638
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 0.860909
+- acoustic_energy_mean: -3.270247
+- acoustic_delta_abs_mean: 0.012865
+- text_aux_abs_mean: 0.242874
+
+## target_special_eval
+- record_count: 8
+- batch_count: 2
+- loss_total: 2.72695
+- loss_acoustic: 0.18502
+- loss_event: 4.981756
+- loss_text_aux: 0.21566
+- loss_text_aux_effective: 0.21566
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.0
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- z_art_abs_mean: 0.341584
+- z_art_delta_abs_mean: 0.0099
+- event_prob_mean: 0.445629
+- event_presence_prob_mean: 0.612572
+- event_delta_prob_mean: 0.326502
+- event_rise_prob_mean: 0.472211
+- event_fall_prob_mean: 0.419853
+- event_energy_prob_mean: 0.585948
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 0.998529
+- acoustic_energy_mean: -3.789004
+- acoustic_delta_abs_mean: 0.014781
+- text_aux_abs_mean: 0.270275
+
+## 对比
+- delta_loss_total: -0.002973
+- delta_loss_acoustic: -0.191782
+- delta_loss_event: 0.380138
+- delta_loss_text_aux: 0.103024
+- delta_loss_text_aux_effective: 0.103024
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_clause_transition_aux: -0.056518
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_z_art_abs_mean: -0.096913
+- delta_z_art_delta_abs_mean: -0.002605
+- delta_event_prob_mean: -0.012325
+- delta_event_presence_prob_mean: -0.033185
+- delta_event_delta_prob_mean: 0.013095
+- delta_event_rise_prob_mean: -0.024869
+- delta_event_fall_prob_mean: 0.015456
+- delta_event_energy_prob_mean: -0.02669
+- delta_event_presence_peak_ratio: 0.0
+- delta_acoustic_abs_mean: 0.13762
+- delta_acoustic_energy_mean: -0.518757
+- delta_acoustic_delta_abs_mean: 0.001916
+- delta_text_aux_abs_mean: 0.027401
+
+## 备注
+- Model-level special_eval is reported separately from regular validation.
+- Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.
+- Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality.

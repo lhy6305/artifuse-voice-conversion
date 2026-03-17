@@ -1,0 +1,99 @@
+{
+  "option_name": "current_tail_holdout",
+  "description": "当前实现：目标/源都取尾部 8 条作为固定验证切片。",
+  "pros": [
+    "实现最简单，已在当前训练入口中验证可运行。",
+    "源侧尾部切片连续，时间轴泄漏边界少。"
+  ],
+  "cons": [
+    "目标侧 8 条全部来自 no_text_voice 子组，严重偏离主训练分布。",
+    "源侧 8 条全部位于录音尾部，只覆盖极窄时间区域。",
+    "验证样本过少，波动大，不适合作为正式评估拆分。"
+  ],
+  "target": {
+    "train_count": 616,
+    "validation_count": 8,
+    "special_eval_count": 0,
+    "validation_summary": {
+      "record_count": 8,
+      "duration_sec": {
+        "min": 0.470998,
+        "p50": 0.956985,
+        "mean": 1.05729,
+        "max": 2.114989
+      },
+      "clean_char_count": {
+        "min": 1.0,
+        "p50": 1.0,
+        "mean": 1.0,
+        "max": 1.0
+      },
+      "punctuation_ratio": {
+        "min": 1.0,
+        "p50": 1.0,
+        "mean": 1.0,
+        "max": 1.0
+      },
+      "group_counts": {
+        "no_text_voice": 8
+      }
+    },
+    "special_eval_summary": {
+      "record_count": 0,
+      "duration_sec": {},
+      "clean_char_count": {},
+      "punctuation_ratio": {},
+      "group_counts": {}
+    },
+    "validation_record_ids": [
+      "target::no_text_voice/chapter3_17_firefly_106",
+      "target::no_text_voice/chapter3_18_firefly_101",
+      "target::no_text_voice/chapter3_21_firefly_108",
+      "target::no_text_voice/chapter3_22_firefly_115",
+      "target::no_text_voice/chapter3_29_firefly_139",
+      "target::no_text_voice/chapter3_2_firefly_102",
+      "target::no_text_voice/chapter3_30_firefly_144",
+      "target::no_text_voice/chapter3_3_firefly_110"
+    ],
+    "special_eval_record_ids": []
+  },
+  "source": {
+    "train_count": 529,
+    "validation_count": 8,
+    "validation_summary": {
+      "record_count": 8,
+      "duration_sec": {
+        "min": 0.54,
+        "p50": 0.765,
+        "mean": 0.99375,
+        "max": 2.01
+      },
+      "start_sec": {
+        "min": 3612.1,
+        "p50": 3652.39,
+        "mean": 3644.15125,
+        "max": 3666.91
+      },
+      "end_sec": {
+        "min": 3612.79,
+        "p50": 3653.41,
+        "mean": 3645.145,
+        "max": 3667.51
+      }
+    },
+    "validation_record_ids": [
+      "source::segment_0530_0003612100_0003612790",
+      "source::segment_0531_0003624730_0003625390",
+      "source::segment_0532_0003629230_0003630070",
+      "source::segment_0533_0003650140_0003651640",
+      "source::segment_0534_0003654640_0003655180",
+      "source::segment_0535_0003655780_0003656890",
+      "source::segment_0536_0003659680_0003661690",
+      "source::segment_0537_0003666910_0003667510"
+    ],
+    "boundary_contacts": {
+      "validation_record_count": 8,
+      "adjacent_train_contacts": 1
+    }
+  }
+}

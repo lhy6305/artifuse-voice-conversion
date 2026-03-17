@@ -1,0 +1,18 @@
+# offline MVP route recap
+
+- route_context: {'route_selection_path': 'F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_anchor_route_selection_round1_1_d22_d29_d33_d60_d68_d69_default_minimax/anchor_route_selection.json', 'inputs': {'max_validation_budget_over_best': 0.05, 'special_priority': False, 'z_art_priority': False, 'require_best_e_evt_floor': False, 'require_best_z_art_floor': False}, 'selected_policy': 'default_minimax', 'selected_anchor_id': 'EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration'}
+- route_anchor: EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration (val=2.444194, special_delta=0.140001, zero_e_evt=3.299035, zero_z_art=0.438936) [vs_route={'target_validation_loss_total': 0.0, 'delta_loss_total': 0.0, 'zero_e_evt_delta_target_loss_total': 0.0, 'zero_z_art_delta_target_loss_total': 0.0}]
+
+## recommended language
+- summary_line: Current route is default_minimax, so the active reference anchor is EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration (val=2.444194, special_delta=0.140001, zero_e_evt=3.299035, zero_z_art=0.438936).
+- tradeoff_line: Relative to EXP-20260315-039-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-30step-calibration, the strongest validation alternative is EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration (val=-0.047019, special=0.031768, zero_e_evt=-0.320554, zero_z_art=-0.074009), while the strongest special alternative is EXP-20260316-023-offline-mvp-d69-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-d22like-latehandoff-20step-calibration (val=0.079754, special=-0.028857, zero_e_evt=-0.027638, zero_z_art=-0.004693).
+
+## alternatives
+- best_validation_alternative: EXP-20260315-045-offline-mvp-d29-round1-1-d26-init-d22-teacher-cross-anchor-consolidation-20step-calibration (val=2.397175, special_delta=0.171769, zero_e_evt=2.978481, zero_z_art=0.364927) [vs_route={'target_validation_loss_total': -0.047019, 'delta_loss_total': 0.031768, 'zero_e_evt_delta_target_loss_total': -0.320554, 'zero_z_art_delta_target_loss_total': -0.074009}]
+- best_special_alternative: EXP-20260316-023-offline-mvp-d69-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-d22like-latehandoff-20step-calibration (val=2.523948, special_delta=0.111144, zero_e_evt=3.271397, zero_z_art=0.434243) [vs_route={'target_validation_loss_total': 0.079754, 'delta_loss_total': -0.028857, 'zero_e_evt_delta_target_loss_total': -0.027638, 'zero_z_art_delta_target_loss_total': -0.004693}]
+- best_e_evt_alternative: EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration (val=2.52818, special_delta=0.111677, zero_e_evt=3.312339, zero_z_art=0.465828) [vs_route={'target_validation_loss_total': 0.083986, 'delta_loss_total': -0.028324, 'zero_e_evt_delta_target_loss_total': 0.013304, 'zero_z_art_delta_target_loss_total': 0.026892}]
+- best_z_art_alternative: EXP-20260315-050-offline-mvp-d33-round1-1-d7-init-d10-teacher-consistency-shortpausegate-fused-hidden-20step-calibration (val=2.52818, special_delta=0.111677, zero_e_evt=3.312339, zero_z_art=0.465828) [vs_route={'target_validation_loss_total': 0.083986, 'delta_loss_total': -0.028324, 'zero_e_evt_delta_target_loss_total': 0.013304, 'zero_z_art_delta_target_loss_total': 0.026892}]
+
+## notes
+- This recap is route-aware: all alternative deltas are relative to the currently selected route anchor.
+- Use summary_line and tradeoff_line directly in phase summaries or experiment reviews when helpful.

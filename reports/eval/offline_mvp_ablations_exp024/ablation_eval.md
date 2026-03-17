@@ -1,0 +1,77 @@
+# offline MVP 控制消融评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d8_round1_1_special_proxy_core_clause_ge4_early_handoff_zart_influence_highfloor_smallscale_100_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d8_special_proxy_core_clause_ge4_early_handoff_zart_influence_highfloor_exp024/checkpoints/EXP-20260315-024-offline-mvp-d8-round1-1-special-proxy-core-clause-ge4-early-handoff-zart-influence-highfloor-100step-calibration.step100.pt
+
+## none
+- batch_count: 14
+- target.loss_total: 2.756558
+- source.loss_total: 2.734692
+- target.loss_text_aux_effective: 0.101436
+- source.loss_text_aux_effective: 0.0
+- target.loss_text_aux_structural: 0.0
+- target.loss_text_aux_lexical: 0.0
+- target.loss_clause_transition_aux: 0.068705
+- target.loss_boundary_contrast_aux: 0.0
+- target.loss_punctuation_profile_aux: 0.0
+- target.loss_z_art_influence_aux: 0.0
+- source.loss_clause_transition_aux: 0.0
+- source.loss_boundary_contrast_aux: 0.0
+- source.loss_punctuation_profile_aux: 0.0
+- source.loss_z_art_influence_aux: 0.0
+- target_acoustic_mae: 0.0
+- source_acoustic_mae: 0.0
+- target_text_aux_mae: 0.0
+- source_text_aux_mae: 0.0
+
+## zero_z_art
+- batch_count: 14
+- target.loss_total: 3.367927
+- source.loss_total: 3.440487
+- target.loss_text_aux_effective: 0.096551
+- source.loss_text_aux_effective: 0.0
+- target.loss_text_aux_structural: 0.0
+- target.loss_text_aux_lexical: 0.0
+- target.loss_clause_transition_aux: 0.068705
+- target.loss_boundary_contrast_aux: 0.0
+- target.loss_punctuation_profile_aux: 0.0
+- target.loss_z_art_influence_aux: 0.0
+- source.loss_clause_transition_aux: 0.0
+- source.loss_boundary_contrast_aux: 0.0
+- source.loss_punctuation_profile_aux: 0.0
+- source.loss_z_art_influence_aux: 0.0
+- target_acoustic_mae: 0.479796
+- source_acoustic_mae: 0.627721
+- target_text_aux_mae: 0.044267
+- source_text_aux_mae: 0.057919
+
+## zero_e_evt
+- batch_count: 14
+- target.loss_total: 6.236889
+- source.loss_total: 7.006684
+- target.loss_text_aux_effective: 0.109746
+- source.loss_text_aux_effective: 0.0
+- target.loss_text_aux_structural: 0.0
+- target.loss_text_aux_lexical: 0.0
+- target.loss_clause_transition_aux: 0.068705
+- target.loss_boundary_contrast_aux: 0.0
+- target.loss_punctuation_profile_aux: 0.0
+- target.loss_z_art_influence_aux: 0.0
+- source.loss_clause_transition_aux: 0.0
+- source.loss_boundary_contrast_aux: 0.0
+- source.loss_punctuation_profile_aux: 0.0
+- source.loss_z_art_influence_aux: 0.0
+- target_acoustic_mae: 1.627303
+- source_acoustic_mae: 2.108182
+- target_text_aux_mae: 0.113199
+- source_text_aux_mae: 0.155243
+
+## 对比
+- zero_z_art: {"delta_target_loss_total": 0.611369, "delta_source_loss_total": 0.705795, "delta_target_loss_clause_transition_aux": 0.0, "delta_source_loss_clause_transition_aux": 0.0, "delta_target_loss_boundary_contrast_aux": 0.0, "delta_source_loss_boundary_contrast_aux": 0.0, "delta_target_loss_punctuation_profile_aux": 0.0, "delta_source_loss_punctuation_profile_aux": 0.0, "delta_target_loss_z_art_influence_aux": 0.0, "delta_source_loss_z_art_influence_aux": 0.0, "delta_target_loss_text_aux_effective": -0.004885, "delta_source_loss_text_aux_effective": 0.0, "delta_target_loss_text_aux_structural": 0.0, "delta_target_loss_text_aux_lexical": 0.0, "delta_target_acoustic_mae": 0.479796, "delta_source_acoustic_mae": 0.627721, "delta_target_text_aux_mae": 0.044267, "delta_source_text_aux_mae": 0.057919}
+- zero_e_evt: {"delta_target_loss_total": 3.480331, "delta_source_loss_total": 4.271992, "delta_target_loss_clause_transition_aux": 0.0, "delta_source_loss_clause_transition_aux": 0.0, "delta_target_loss_boundary_contrast_aux": 0.0, "delta_source_loss_boundary_contrast_aux": 0.0, "delta_target_loss_punctuation_profile_aux": 0.0, "delta_source_loss_punctuation_profile_aux": 0.0, "delta_target_loss_z_art_influence_aux": 0.0, "delta_source_loss_z_art_influence_aux": 0.0, "delta_target_loss_text_aux_effective": 0.00831, "delta_source_loss_text_aux_effective": 0.0, "delta_target_loss_text_aux_structural": 0.0, "delta_target_loss_text_aux_lexical": 0.0, "delta_target_acoustic_mae": 1.627303, "delta_source_acoustic_mae": 2.108182, "delta_target_text_aux_mae": 0.113199, "delta_source_text_aux_mae": 0.155243}
+
+## 备注
+- Ablation results are computed on the formal hybrid validation split only.
+- zero_z_art zeroes the articulatory control before control fusion.
+- zero_e_evt zeroes the event control path before control fusion.

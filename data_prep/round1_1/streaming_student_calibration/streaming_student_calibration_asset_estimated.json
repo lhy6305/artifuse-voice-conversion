@@ -1,0 +1,164 @@
+{
+  "asset_version": "stage3_calibration_asset_v1",
+  "status": "heuristic_bootstrap_estimated",
+  "generated_at": "2026-03-17T11:51:39",
+  "selection_summary": {
+    "selected_record_count": 11,
+    "selected_total_duration_sec": 135.964922,
+    "selected_record_ids": [
+      "target::chapter3_20_firefly_112",
+      "target::chapter3_29_firefly_107",
+      "target::chapter3_30_firefly_127",
+      "target::chapter3_22_firefly_105",
+      "target::chapter3_30_firefly_104",
+      "target::chapter3_17_firefly_138",
+      "target::archive_firefly_5",
+      "target::archive_firefly_9",
+      "target::archive_firefly_18",
+      "target::archive_firefly_14",
+      "target::chapter3_3_firefly_218"
+    ],
+    "covered_tags": [
+      "clause:ge4",
+      "content:lexical",
+      "duration_bucket:long",
+      "duration_bucket:mid",
+      "duration_bucket:short",
+      "final_terminal:none",
+      "final_terminal:terminal_exclamation",
+      "final_terminal:terminal_period",
+      "final_terminal:terminal_question",
+      "pause:multi",
+      "pool:challenge_proxy_core",
+      "pool:challenge_proxy_relaxed",
+      "pool:micro_pause_none_singleton_strict",
+      "pool:micro_singleton_anypunct_expansion",
+      "pool:structural_clause_ge4",
+      "pool:structural_clause_ge4_no_final_terminal",
+      "pool:structural_multi_terminal",
+      "pool:structural_question_exclaim",
+      "special_duration_ceiling:False",
+      "special_duration_ceiling:True",
+      "special_proximity:high",
+      "special_proximity:low",
+      "special_proximity:mid",
+      "structure:multi_clause_single_terminal",
+      "structure:multi_terminal",
+      "structure:other",
+      "structure:single_clause_terminal",
+      "terminal:present",
+      "text_bucket:long",
+      "text_bucket:mid",
+      "text_bucket:short"
+    ],
+    "utterance_structure_type_counts": {
+      "multi_clause_single_terminal": 5,
+      "multi_terminal": 3,
+      "other": 2,
+      "single_clause_terminal": 1
+    },
+    "final_terminal_type_counts": {
+      "none": 4,
+      "terminal_exclamation": 1,
+      "terminal_period": 5,
+      "terminal_question": 1
+    },
+    "pool_membership_counts": {
+      "challenge_proxy_core": 2,
+      "challenge_proxy_relaxed": 3,
+      "micro_pause_none_singleton_relaxed": 2,
+      "micro_pause_none_singleton_strict": 1,
+      "micro_singleton_anypunct_expansion": 2,
+      "micro_singleton_anypunct_relaxed": 3,
+      "short_pause_no_terminal": 2,
+      "short_terminal_burst": 1,
+      "structural_clause_ge4": 8,
+      "structural_clause_ge4_no_final_terminal": 2,
+      "structural_multi_terminal": 3,
+      "structural_no_final_terminal": 4,
+      "structural_question_exclaim": 2
+    }
+  },
+  "conditioning_assets": {
+    "s_spk_target": {
+      "dim": 16,
+      "status": "heuristic_estimated",
+      "vector": [
+        -0.339577,
+        -0.327584,
+        -0.299542,
+        -0.215397,
+        -0.301077,
+        0.134835,
+        1.0,
+        0.29015,
+        -0.24203,
+        -0.293355,
+        -0.172353,
+        0.749265,
+        -0.339577,
+        -0.327584,
+        -0.299542,
+        -0.215397
+      ]
+    },
+    "s_geom_target": {
+      "dim": 8,
+      "status": "heuristic_estimated",
+      "vector": [
+        -0.086814,
+        -0.321044,
+        -0.340123,
+        -0.252514,
+        0.052869,
+        0.983333,
+        -0.333133,
+        0.297425
+      ]
+    },
+    "alpha": {
+      "parameterization": "global_scalar",
+      "status": "heuristic_estimated",
+      "value": 1.15,
+      "suggested_bounds": [
+        0.85,
+        1.15
+      ]
+    }
+  },
+  "estimation_contract": {
+    "selected_record_ids": [
+      "target::chapter3_20_firefly_112",
+      "target::chapter3_29_firefly_107",
+      "target::chapter3_30_firefly_127",
+      "target::chapter3_22_firefly_105",
+      "target::chapter3_30_firefly_104",
+      "target::chapter3_17_firefly_138",
+      "target::archive_firefly_5",
+      "target::archive_firefly_9",
+      "target::archive_firefly_18",
+      "target::archive_firefly_14",
+      "target::chapter3_3_firefly_218"
+    ],
+    "selected_total_duration_sec": 135.964922,
+    "required_outputs": [
+      "s_spk_target",
+      "s_geom_target",
+      "alpha"
+    ]
+  },
+  "notes": [
+    "Replace placeholder vectors after a real calibration estimation step is implemented.",
+    "Keep the dimensions aligned with streaming_student_stage_template.json unless the Stage3 contract is intentionally changed.",
+    "This asset replaces placeholder zeros with heuristic waveform-derived estimates.",
+    "Treat these values as bootstrap conditioning priors until a dedicated calibration estimator exists."
+  ],
+  "estimation_metadata": {
+    "estimator": "waveform_feature_bootstrap_v1",
+    "source_records_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/target_calibration_records.jsonl",
+    "frame_length": 1024,
+    "hop_length": 256,
+    "record_count": 11,
+    "total_duration_sec": 135.964922
+  }
+}

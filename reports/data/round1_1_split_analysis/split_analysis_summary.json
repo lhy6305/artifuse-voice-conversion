@@ -1,0 +1,589 @@
+{
+  "manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/manifests",
+  "dataset_summary": {
+    "target": {
+      "record_count": 666,
+      "duration_sec": {
+        "min": 0.229002,
+        "p50": 5.010998,
+        "mean": 6.098379,
+        "max": 25.493991
+      },
+      "clean_char_count": {
+        "min": 1.0,
+        "p50": 20.0,
+        "mean": 24.418919,
+        "max": 85.0
+      },
+      "punctuation_ratio": {
+        "min": 0.055556,
+        "p50": 0.133333,
+        "mean": 0.169716,
+        "max": 1.0
+      },
+      "group_counts": {
+        "<root>": 658,
+        "no_text_voice": 8
+      }
+    },
+    "source": {
+      "record_count": 537,
+      "duration_sec": {
+        "min": 0.51,
+        "p50": 1.05,
+        "mean": 1.220391,
+        "max": 3.51
+      },
+      "start_sec": {
+        "min": 20.11,
+        "p50": 1649.41,
+        "mean": 1708.173017,
+        "max": 3666.91
+      },
+      "end_sec": {
+        "min": 21.64,
+        "p50": 1650.31,
+        "mean": 1709.393408,
+        "max": 3667.51
+      }
+    }
+  },
+  "options": {
+    "current_tail_holdout": {
+      "option_name": "current_tail_holdout",
+      "description": "当前实现：目标/源都取尾部 8 条作为固定验证切片。",
+      "pros": [
+        "实现最简单，已在当前训练入口中验证可运行。",
+        "源侧尾部切片连续，时间轴泄漏边界少。"
+      ],
+      "cons": [
+        "目标侧 8 条全部来自 no_text_voice 子组，严重偏离主训练分布。",
+        "源侧 8 条全部位于录音尾部，只覆盖极窄时间区域。",
+        "验证样本过少，波动大，不适合作为正式评估拆分。"
+      ],
+      "target": {
+        "train_count": 658,
+        "validation_count": 8,
+        "special_eval_count": 0,
+        "validation_summary": {
+          "record_count": 8,
+          "duration_sec": {
+            "min": 3.858005,
+            "p50": 9.375998,
+            "mean": 8.623498,
+            "max": 14.770998
+          },
+          "clean_char_count": {
+            "min": 17.0,
+            "p50": 33.0,
+            "mean": 32.0,
+            "max": 50.0
+          },
+          "punctuation_ratio": {
+            "min": 0.058824,
+            "p50": 0.112194,
+            "mean": 0.115769,
+            "max": 0.176471
+          },
+          "group_counts": {
+            "<root>": 8
+          }
+        },
+        "special_eval_summary": {
+          "record_count": 0,
+          "duration_sec": {},
+          "clean_char_count": {},
+          "punctuation_ratio": {},
+          "group_counts": {}
+        },
+        "validation_record_ids": [
+          "target::chapter4_7_firefly_115",
+          "target::chapter4_7_firefly_116",
+          "target::chapter4_7_firefly_117",
+          "target::chapter4_7_firefly_118",
+          "target::chapter4_7_firefly_119",
+          "target::chapter4_7_firefly_120",
+          "target::chapter4_7_firefly_122",
+          "target::chapter4_7_firefly_124"
+        ],
+        "special_eval_record_ids": []
+      },
+      "source": {
+        "train_count": 529,
+        "validation_count": 8,
+        "validation_summary": {
+          "record_count": 8,
+          "duration_sec": {
+            "min": 0.54,
+            "p50": 0.765,
+            "mean": 0.99375,
+            "max": 2.01
+          },
+          "start_sec": {
+            "min": 3612.1,
+            "p50": 3652.39,
+            "mean": 3644.15125,
+            "max": 3666.91
+          },
+          "end_sec": {
+            "min": 3612.79,
+            "p50": 3653.41,
+            "mean": 3645.145,
+            "max": 3667.51
+          }
+        },
+        "validation_record_ids": [
+          "source::segment_0530_0003612100_0003612790",
+          "source::segment_0531_0003624730_0003625390",
+          "source::segment_0532_0003629230_0003630070",
+          "source::segment_0533_0003650140_0003651640",
+          "source::segment_0534_0003654640_0003655180",
+          "source::segment_0535_0003655780_0003656890",
+          "source::segment_0536_0003659680_0003661690",
+          "source::segment_0537_0003666910_0003667510"
+        ],
+        "boundary_contacts": {
+          "validation_record_count": 8,
+          "adjacent_train_contacts": 1
+        }
+      }
+    },
+    "random_split_seed20260314": {
+      "option_name": "random_split_seed20260314",
+      "description": "目标/源都按 10% 做固定随机拆分，使用种子 20260314。",
+      "pros": [
+        "分布覆盖通常优于尾部切片，验证集规模更接近正式训练需求。",
+        "实现成本低，后续复现实验方便。"
+      ],
+      "cons": [
+        "源侧来自同一长录音，随机拆分会把时间上相邻片段打散到 train/val，泄漏风险高。",
+        "目标侧 no_text_voice 子组会混入常规验证集，难以区分主分布和特殊子组表现。"
+      ],
+      "target": {
+        "train_count": 599,
+        "validation_count": 67,
+        "special_eval_count": 0,
+        "validation_summary": {
+          "record_count": 67,
+          "duration_sec": {
+            "min": 1.051995,
+            "p50": 6.356984,
+            "mean": 7.942326,
+            "max": 21.700998
+          },
+          "clean_char_count": {
+            "min": 1.0,
+            "p50": 27.0,
+            "mean": 31.61194,
+            "max": 84.0
+          },
+          "punctuation_ratio": {
+            "min": 0.071429,
+            "p50": 0.12,
+            "mean": 0.154818,
+            "max": 1.0
+          },
+          "group_counts": {
+            "<root>": 66,
+            "no_text_voice": 1
+          }
+        },
+        "special_eval_summary": {
+          "record_count": 0,
+          "duration_sec": {},
+          "clean_char_count": {},
+          "punctuation_ratio": {},
+          "group_counts": {}
+        },
+        "validation_record_ids": [
+          "target::chapter4_7_firefly_117",
+          "target::chapter3_26_firefly_105",
+          "target::chapter3_4_firefly_127",
+          "target::chapter3_3_firefly_253",
+          "target::chapter3_29_firefly_138",
+          "target::chapter3_2_firefly_153",
+          "target::chapter3_3_firefly_109",
+          "target::chapter3_3_firefly_235",
+          "target::archive_firefly_12",
+          "target::archive_firefly_17",
+          "target::archive_firefly_8",
+          "target::chapter3_3_firefly_189",
+          "target::no_text_voice/chapter3_21_firefly_108",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_3_firefly_132",
+          "target::chapter3_3_firefly_251",
+          "target::chapter3_22_firefly_125",
+          "target::chapter3_20_firefly_106",
+          "target::chapter3_2_firefly_245",
+          "target::chapter3_2_firefly_135",
+          "target::chapter3_20_firefly_132",
+          "target::chapter3_3_firefly_214",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_2_firefly_166",
+          "target::chapter3_21_firefly_110",
+          "target::chapter3_30_firefly_147",
+          "target::archive_firefly_19",
+          "target::chapter3_3_firefly_134",
+          "target::chapter3_4_firefly_108",
+          "target::chapter3_2_firefly_147",
+          "target::chapter3_2_firefly_168",
+          "target::chapter3_17_firefly_147",
+          "target::chapter3_26_firefly_108",
+          "target::chapter3_20_firefly_174",
+          "target::chapter3_2_firefly_194",
+          "target::chapter3_30_firefly_113",
+          "target::chapter3_17_firefly_139",
+          "target::chapter3_4_firefly_133",
+          "target::chapter3_29_firefly_136",
+          "target::archive_firefly_18",
+          "target::chapter3_30_firefly_119",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_3_firefly_151",
+          "target::chapter3_20_firefly_130",
+          "target::chapter3_2_firefly_140",
+          "target::chapter3_2_firefly_155",
+          "target::chapter3_17_firefly_143",
+          "target::chapter3_29_firefly_104",
+          "target::chapter3_26_firefly_112",
+          "target::chapter3_20_firefly_152",
+          "target::chapter3_26_firefly_111",
+          "target::chapter3_17_firefly_131",
+          "target::chapter3_29_firefly_109",
+          "target::chapter3_22_firefly_103",
+          "target::chapter3_2_firefly_154",
+          "target::chapter3_17_firefly_151",
+          "target::chapter3_22_firefly_109",
+          "target::chapter3_20_firefly_101",
+          "target::chapter3_2_firefly_167",
+          "target::chapter3_3_firefly_242",
+          "target::chapter3_3_firefly_229",
+          "target::chapter3_17_firefly_135",
+          "target::chapter3_2_firefly_116",
+          "target::chapter3_4_firefly_106",
+          "target::chapter3_3_firefly_108",
+          "target::chapter3_2_firefly_113",
+          "target::chapter3_3_firefly_143"
+        ],
+        "special_eval_record_ids": []
+      },
+      "source": {
+        "train_count": 483,
+        "validation_count": 54,
+        "validation_summary": {
+          "record_count": 54,
+          "duration_sec": {
+            "min": 0.51,
+            "p50": 0.99,
+            "mean": 1.128889,
+            "max": 3.3
+          },
+          "start_sec": {
+            "min": 23.77,
+            "p50": 1496.02,
+            "mean": 1600.843889,
+            "max": 3607.03
+          },
+          "end_sec": {
+            "min": 24.28,
+            "p50": 1496.65,
+            "mean": 1601.972778,
+            "max": 3607.63
+          }
+        },
+        "validation_record_ids": [
+          "source::segment_0495_0003310540_0003311200",
+          "source::segment_0397_0002580040_0002580850",
+          "source::segment_0350_0002265700_0002266420",
+          "source::segment_0385_0002505640_0002507230",
+          "source::segment_0528_0003607030_0003607630",
+          "source::segment_0320_0002061610_0002062449",
+          "source::segment_0066_0000331450_0000333010",
+          "source::segment_0203_0001173400_0001174300",
+          "source::segment_0144_0000823900_0000824410",
+          "source::segment_0153_0000876160_0000876670",
+          "source::segment_0197_0001133230_0001134250",
+          "source::segment_0246_0001456810_0001459000",
+          "source::segment_0340_0002216920_0002217520",
+          "source::segment_0415_0002707540_0002708260",
+          "source::segment_0225_0001284250_0001285750",
+          "source::segment_0140_0000810250_0000811750",
+          "source::segment_0009_0000053200_0000054340",
+          "source::segment_0044_0000202570_0000203410",
+          "source::segment_0420_0002769310_0002770180",
+          "source::segment_0005_0000045280_0000045850",
+          "source::segment_0143_0000821680_0000822310",
+          "source::segment_0479_0003183280_0003184270",
+          "source::segment_0190_0001113040_0001116340",
+          "source::segment_0073_0000363130_0000365350",
+          "source::segment_0111_0000650980_0000652360",
+          "source::segment_0026_0000114970_0000115540",
+          "source::segment_0308_0001960630_0001961200",
+          "source::segment_0063_0000304090_0000304780",
+          "source::segment_0181_0001057300_0001058290",
+          "source::segment_0321_0002073190_0002074030",
+          "source::segment_0257_0001521880_0001522570",
+          "source::segment_0418_0002750590_0002752030",
+          "source::segment_0401_0002606380_0002608210",
+          "source::segment_0315_0002015770_0002017720",
+          "source::segment_0032_0000146500_0000147880",
+          "source::segment_0403_0002614810_0002615920",
+          "source::segment_0448_0002955310_0002957920",
+          "source::segment_0096_0000515650_0000517480",
+          "source::segment_0313_0001995550_0001996990",
+          "source::segment_0124_0000744940_0000746440",
+          "source::segment_0166_0000946180_0000947200",
+          "source::segment_0525_0003597400_0003598480",
+          "source::segment_0300_0001876810_0001878370",
+          "source::segment_0010_0000058750_0000060100",
+          "source::segment_0391_0002553040_0002553610",
+          "source::segment_0365_0002335870_0002337100",
+          "source::segment_0353_0002280160_0002281360",
+          "source::segment_0083_0000441160_0000441730",
+          "source::segment_0523_0003571750_0003572320",
+          "source::segment_0416_0002715190_0002717140",
+          "source::segment_0421_0002771980_0002772580",
+          "source::segment_0247_0001470160_0001470730",
+          "source::segment_0002_0000023770_0000024280",
+          "source::segment_0016_0000078850_0000079420"
+        ],
+        "boundary_contacts": {
+          "validation_record_count": 54,
+          "adjacent_train_contacts": 96
+        }
+      }
+    },
+    "hybrid_stratified_blocked": {
+      "option_name": "hybrid_stratified_blocked",
+      "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+      "pros": [
+        "目标主验证集更接近主训练分布，同时保留 no_text_voice 独立观察位。",
+        "源侧验证集跨越整段录音，分布覆盖明显优于尾部切片。",
+        "相比随机拆分，源侧 blocked holdout 能减少相邻片段泄漏。"
+      ],
+      "cons": [
+        "实现与维护成本高于随机拆分。",
+        "blocked holdout 仍不是严格按语义或场景分层，后续仍需用户确认是否采用。"
+      ],
+      "target": {
+        "train_count": 592,
+        "validation_count": 66,
+        "special_eval_count": 8,
+        "validation_summary": {
+          "record_count": 66,
+          "duration_sec": {
+            "min": 0.612993,
+            "p50": 5.072993,
+            "mean": 6.173509,
+            "max": 21.104989
+          },
+          "clean_char_count": {
+            "min": 3.0,
+            "p50": 21.0,
+            "mean": 24.80303,
+            "max": 70.0
+          },
+          "punctuation_ratio": {
+            "min": 0.058824,
+            "p50": 0.130769,
+            "mean": 0.164943,
+            "max": 0.666667
+          },
+          "group_counts": {
+            "<root>": 66
+          }
+        },
+        "special_eval_summary": {
+          "record_count": 8,
+          "duration_sec": {
+            "min": 0.470998,
+            "p50": 0.956985,
+            "mean": 1.05729,
+            "max": 2.114989
+          },
+          "clean_char_count": {
+            "min": 1.0,
+            "p50": 1.0,
+            "mean": 1.0,
+            "max": 1.0
+          },
+          "punctuation_ratio": {
+            "min": 1.0,
+            "p50": 1.0,
+            "mean": 1.0,
+            "max": 1.0
+          },
+          "group_counts": {
+            "no_text_voice": 8
+          }
+        },
+        "validation_record_ids": [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131",
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115",
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145",
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199",
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102",
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106",
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155",
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245",
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107",
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133",
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ],
+        "special_eval_record_ids": [
+          "target::no_text_voice/chapter3_17_firefly_106",
+          "target::no_text_voice/chapter3_18_firefly_101",
+          "target::no_text_voice/chapter3_21_firefly_108",
+          "target::no_text_voice/chapter3_22_firefly_115",
+          "target::no_text_voice/chapter3_29_firefly_139",
+          "target::no_text_voice/chapter3_2_firefly_102",
+          "target::no_text_voice/chapter3_30_firefly_144",
+          "target::no_text_voice/chapter3_3_firefly_110"
+        ]
+      },
+      "source": {
+        "train_count": 483,
+        "validation_count": 54,
+        "validation_summary": {
+          "record_count": 54,
+          "duration_sec": {
+            "min": 0.54,
+            "p50": 1.11,
+            "mean": 1.215,
+            "max": 2.7
+          },
+          "start_sec": {
+            "min": 188.8,
+            "p50": 1648.15,
+            "mean": 1712.126111,
+            "max": 3343.84
+          },
+          "end_sec": {
+            "min": 190.27,
+            "p50": 1649.815,
+            "mean": 1713.341111,
+            "max": 3344.62
+          }
+        },
+        "validation_record_ids": [
+          "source::segment_0042_0000188800_0000190270",
+          "source::segment_0043_0000195700_0000196360",
+          "source::segment_0044_0000202570_0000203410",
+          "source::segment_0045_0000206080_0000207820",
+          "source::segment_0046_0000209200_0000209740",
+          "source::segment_0047_0000218380_0000219490",
+          "source::segment_0048_0000233500_0000236110",
+          "source::segment_0049_0000245980_0000247090",
+          "source::segment_0050_0000248230_0000248800",
+          "source::segment_0132_0000782860_0000783700",
+          "source::segment_0133_0000788020_0000789310",
+          "source::segment_0134_0000791530_0000793150",
+          "source::segment_0135_0000794590_0000795400",
+          "source::segment_0136_0000796780_0000798070",
+          "source::segment_0137_0000801670_0000802540",
+          "source::segment_0138_0000803650_0000804280",
+          "source::segment_0139_0000804640_0000805240",
+          "source::segment_0140_0000810250_0000811750",
+          "source::segment_0222_0001275070_0001275880",
+          "source::segment_0223_0001276660_0001277440",
+          "source::segment_0224_0001282000_0001283350",
+          "source::segment_0225_0001284250_0001285750",
+          "source::segment_0226_0001288450_0001289290",
+          "source::segment_0227_0001292260_0001293610",
+          "source::segment_0228_0001297120_0001298410",
+          "source::segment_0229_0001302070_0001303840",
+          "source::segment_0230_0001311640_0001314070",
+          "source::segment_0312_0001984660_0001985560",
+          "source::segment_0313_0001995550_0001996990",
+          "source::segment_0314_0002011180_0002013340",
+          "source::segment_0315_0002015770_0002017720",
+          "source::segment_0316_0002019670_0002021050",
+          "source::segment_0317_0002027080_0002029780",
+          "source::segment_0318_0002030260_0002032120",
+          "source::segment_0319_0002055040_0002055909",
+          "source::segment_0320_0002061610_0002062449",
+          "source::segment_0402_0002611480_0002612740",
+          "source::segment_0403_0002614810_0002615920",
+          "source::segment_0404_0002623240_0002624890",
+          "source::segment_0405_0002631940_0002634010",
+          "source::segment_0406_0002640190_0002641600",
+          "source::segment_0407_0002655010_0002655730",
+          "source::segment_0408_0002656480_0002657170",
+          "source::segment_0409_0002657560_0002658250",
+          "source::segment_0410_0002661280_0002662450",
+          "source::segment_0490_0003278020_0003279250",
+          "source::segment_0491_0003279880_0003281560",
+          "source::segment_0492_0003302650_0003303370",
+          "source::segment_0493_0003303970_0003305050",
+          "source::segment_0494_0003306460_0003307270",
+          "source::segment_0495_0003310540_0003311200",
+          "source::segment_0496_0003319120_0003320110",
+          "source::segment_0497_0003325570_0003326140",
+          "source::segment_0498_0003343840_0003344620"
+        ],
+        "boundary_contacts": {
+          "validation_record_count": 54,
+          "adjacent_train_contacts": 12
+        }
+      }
+    }
+  },
+  "recommendation": {
+    "recommended_option": "hybrid_stratified_blocked",
+    "reason": "目标侧当前尾部 8 条全部来自 no_text_voice 子组，源侧当前尾部 8 条全部集中在录音尾部。推荐将目标主集做分布覆盖抽样，把 no_text_voice 作为单独 challenge eval，同时把源录音验证集改为跨时间轴的分段 blocked holdout。"
+  }
+}

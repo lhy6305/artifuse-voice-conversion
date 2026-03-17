@@ -1,0 +1,105 @@
+# offline MVP target_special_eval 模型级评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d69_round1_1_d7_init_post_d59_singleton_sparse_micropause_sampler_d22like_latehandoff_20step_smallscale_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d69_singleton_sparse_d22like_latehandoff_exp023/checkpoints/EXP-20260316-023-offline-mvp-d69-round1-1-d7-init-post-d59-singleton-sparse-micropause-sampler-d22like-latehandoff-20step-calibration.step20.pt
+- split_option_name: hybrid_stratified_blocked
+
+## target_validation
+- record_count: 66
+- batch_count: 17
+- loss_total: 2.523948
+- loss_acoustic: 0.219048
+- loss_event: 4.501539
+- loss_text_aux: 0.111474
+- loss_text_aux_effective: 0.111474
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.05865
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- loss_formal_special_clause_shape_aux: 0.0
+- z_art_abs_mean: 0.504906
+- z_art_delta_abs_mean: 0.014136
+- event_prob_mean: 0.45171
+- event_presence_prob_mean: 0.653821
+- event_delta_prob_mean: 0.287598
+- event_rise_prob_mean: 0.493538
+- event_fall_prob_mean: 0.419933
+- event_energy_prob_mean: 0.630833
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 0.874579
+- acoustic_energy_mean: -3.379429
+- acoustic_delta_abs_mean: 0.012349
+- text_aux_abs_mean: 0.222934
+
+## target_special_eval
+- record_count: 8
+- batch_count: 2
+- loss_total: 2.635092
+- loss_acoustic: 0.128104
+- loss_event: 4.92697
+- loss_text_aux: 0.17159
+- loss_text_aux_effective: 0.17159
+- loss_text_aux_structural: 0.0
+- loss_text_aux_lexical: 0.0
+- loss_clause_transition_aux: 0.0
+- loss_structural_clause_transition_aux: 0.0
+- loss_boundary_contrast_aux: 0.0
+- loss_punctuation_profile_aux: 0.0
+- loss_structural_clause_profile_aux: 0.0
+- loss_challenge_proxy_profile_aux: 0.0
+- loss_z_art_influence_aux: 0.0
+- loss_formal_special_clause_shape_aux: 0.0
+- z_art_abs_mean: 0.398716
+- z_art_delta_abs_mean: 0.011481
+- event_prob_mean: 0.438798
+- event_presence_prob_mean: 0.617168
+- event_delta_prob_mean: 0.301785
+- event_rise_prob_mean: 0.466436
+- event_fall_prob_mean: 0.434937
+- event_energy_prob_mean: 0.601099
+- event_presence_peak_ratio: 1.0
+- acoustic_abs_mean: 0.967378
+- acoustic_energy_mean: -3.721301
+- acoustic_delta_abs_mean: 0.016869
+- text_aux_abs_mean: 0.236182
+
+## 对比
+- delta_loss_total: 0.111144
+- delta_loss_acoustic: -0.090944
+- delta_loss_event: 0.425431
+- delta_loss_text_aux: 0.060116
+- delta_loss_text_aux_effective: 0.060116
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_clause_transition_aux: -0.05865
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- delta_z_art_abs_mean: -0.10619
+- delta_z_art_delta_abs_mean: -0.002655
+- delta_event_prob_mean: -0.012912
+- delta_event_presence_prob_mean: -0.036653
+- delta_event_delta_prob_mean: 0.014187
+- delta_event_rise_prob_mean: -0.027102
+- delta_event_fall_prob_mean: 0.015004
+- delta_event_energy_prob_mean: -0.029734
+- delta_event_presence_peak_ratio: 0.0
+- delta_acoustic_abs_mean: 0.092799
+- delta_acoustic_energy_mean: -0.341872
+- delta_acoustic_delta_abs_mean: 0.00452
+- delta_text_aux_abs_mean: 0.013248
+
+## 备注
+- Model-level special_eval is reported separately from regular validation.
+- Current target_special_eval remains a punctuation-only challenge slice from no_text_voice.
+- Loss comparisons here indicate relative stress behavior on the current checkpoint, not final model quality.

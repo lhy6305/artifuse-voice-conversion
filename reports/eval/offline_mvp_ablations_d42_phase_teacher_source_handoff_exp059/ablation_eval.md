@@ -1,0 +1,95 @@
+# offline MVP 控制消融评估
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d42_round1_1_d7_init_phase_teacher_source_handoff_d33step10_to_d22_fused_hidden_20step_smallscale_seeded_shuffle.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp_d42_phase_teacher_source_handoff_exp059/checkpoints/EXP-20260315-059-offline-mvp-d42-round1-1-d7-init-phase-teacher-source-handoff-d33step10-to-d22-fused-hidden-20step-calibration.step20.pt
+
+## none
+- batch_count: 14
+- target.loss_total: 2.502762
+- source.loss_total: 2.480068
+- target.loss_text_aux_effective: 0.097516
+- source.loss_text_aux_effective: 0.0
+- target.loss_text_aux_structural: 0.0
+- target.loss_text_aux_lexical: 0.0
+- target.loss_clause_transition_aux: 0.07154
+- target.loss_structural_clause_transition_aux: 0.0
+- target.loss_boundary_contrast_aux: 0.0
+- target.loss_punctuation_profile_aux: 0.0
+- target.loss_structural_clause_profile_aux: 0.0
+- target.loss_challenge_proxy_profile_aux: 0.0
+- target.loss_z_art_influence_aux: 0.0
+- source.loss_clause_transition_aux: 0.0
+- source.loss_structural_clause_transition_aux: 0.0
+- source.loss_boundary_contrast_aux: 0.0
+- source.loss_punctuation_profile_aux: 0.0
+- source.loss_structural_clause_profile_aux: 0.0
+- source.loss_challenge_proxy_profile_aux: 0.0
+- source.loss_z_art_influence_aux: 0.0
+- target_acoustic_mae: 0.0
+- source_acoustic_mae: 0.0
+- target_text_aux_mae: 0.0
+- source_text_aux_mae: 0.0
+
+## zero_z_art
+- batch_count: 14
+- target.loss_total: 2.919948
+- source.loss_total: 2.965957
+- target.loss_text_aux_effective: 0.093261
+- source.loss_text_aux_effective: 0.0
+- target.loss_text_aux_structural: 0.0
+- target.loss_text_aux_lexical: 0.0
+- target.loss_clause_transition_aux: 0.07154
+- target.loss_structural_clause_transition_aux: 0.0
+- target.loss_boundary_contrast_aux: 0.0
+- target.loss_punctuation_profile_aux: 0.0
+- target.loss_structural_clause_profile_aux: 0.0
+- target.loss_challenge_proxy_profile_aux: 0.0
+- target.loss_z_art_influence_aux: 0.0
+- source.loss_clause_transition_aux: 0.0
+- source.loss_structural_clause_transition_aux: 0.0
+- source.loss_boundary_contrast_aux: 0.0
+- source.loss_punctuation_profile_aux: 0.0
+- source.loss_structural_clause_profile_aux: 0.0
+- source.loss_challenge_proxy_profile_aux: 0.0
+- source.loss_z_art_influence_aux: 0.0
+- target_acoustic_mae: 0.482107
+- source_acoustic_mae: 0.561608
+- target_text_aux_mae: 0.044698
+- source_text_aux_mae: 0.051369
+
+## zero_e_evt
+- batch_count: 14
+- target.loss_total: 5.617878
+- source.loss_total: 6.549901
+- target.loss_text_aux_effective: 0.106478
+- source.loss_text_aux_effective: 0.0
+- target.loss_text_aux_structural: 0.0
+- target.loss_text_aux_lexical: 0.0
+- target.loss_clause_transition_aux: 0.07154
+- target.loss_structural_clause_transition_aux: 0.0
+- target.loss_boundary_contrast_aux: 0.0
+- target.loss_punctuation_profile_aux: 0.0
+- target.loss_structural_clause_profile_aux: 0.0
+- target.loss_challenge_proxy_profile_aux: 0.0
+- target.loss_z_art_influence_aux: 0.0
+- source.loss_clause_transition_aux: 0.0
+- source.loss_structural_clause_transition_aux: 0.0
+- source.loss_boundary_contrast_aux: 0.0
+- source.loss_punctuation_profile_aux: 0.0
+- source.loss_structural_clause_profile_aux: 0.0
+- source.loss_challenge_proxy_profile_aux: 0.0
+- source.loss_z_art_influence_aux: 0.0
+- target_acoustic_mae: 1.659109
+- source_acoustic_mae: 2.153586
+- target_text_aux_mae: 0.110398
+- source_text_aux_mae: 0.152181
+
+## 对比
+- zero_z_art: {"delta_target_loss_total": 0.417186, "delta_source_loss_total": 0.485889, "delta_target_loss_clause_transition_aux": 0.0, "delta_source_loss_clause_transition_aux": 0.0, "delta_target_loss_structural_clause_transition_aux": 0.0, "delta_source_loss_structural_clause_transition_aux": 0.0, "delta_target_loss_boundary_contrast_aux": 0.0, "delta_source_loss_boundary_contrast_aux": 0.0, "delta_target_loss_punctuation_profile_aux": 0.0, "delta_source_loss_punctuation_profile_aux": 0.0, "delta_target_loss_structural_clause_profile_aux": 0.0, "delta_source_loss_structural_clause_profile_aux": 0.0, "delta_target_loss_challenge_proxy_profile_aux": 0.0, "delta_source_loss_challenge_proxy_profile_aux": 0.0, "delta_target_loss_z_art_influence_aux": 0.0, "delta_source_loss_z_art_influence_aux": 0.0, "delta_target_loss_text_aux_effective": -0.004255, "delta_source_loss_text_aux_effective": 0.0, "delta_target_loss_text_aux_structural": 0.0, "delta_target_loss_text_aux_lexical": 0.0, "delta_target_acoustic_mae": 0.482107, "delta_source_acoustic_mae": 0.561608, "delta_target_text_aux_mae": 0.044698, "delta_source_text_aux_mae": 0.051369}
+- zero_e_evt: {"delta_target_loss_total": 3.115116, "delta_source_loss_total": 4.069833, "delta_target_loss_clause_transition_aux": 0.0, "delta_source_loss_clause_transition_aux": 0.0, "delta_target_loss_structural_clause_transition_aux": 0.0, "delta_source_loss_structural_clause_transition_aux": 0.0, "delta_target_loss_boundary_contrast_aux": 0.0, "delta_source_loss_boundary_contrast_aux": 0.0, "delta_target_loss_punctuation_profile_aux": 0.0, "delta_source_loss_punctuation_profile_aux": 0.0, "delta_target_loss_structural_clause_profile_aux": 0.0, "delta_source_loss_structural_clause_profile_aux": 0.0, "delta_target_loss_challenge_proxy_profile_aux": 0.0, "delta_source_loss_challenge_proxy_profile_aux": 0.0, "delta_target_loss_z_art_influence_aux": 0.0, "delta_source_loss_z_art_influence_aux": 0.0, "delta_target_loss_text_aux_effective": 0.008962, "delta_source_loss_text_aux_effective": 0.0, "delta_target_loss_text_aux_structural": 0.0, "delta_target_loss_text_aux_lexical": 0.0, "delta_target_acoustic_mae": 1.659109, "delta_source_acoustic_mae": 2.153586, "delta_target_text_aux_mae": 0.110398, "delta_source_text_aux_mae": 0.152181}
+
+## 备注
+- Ablation results are computed on the formal hybrid validation split only.
+- zero_z_art zeroes the articulatory control before control fusion.
+- zero_e_evt zeroes the event control path before control fusion.

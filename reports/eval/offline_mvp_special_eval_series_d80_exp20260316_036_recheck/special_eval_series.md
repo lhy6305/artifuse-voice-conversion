@@ -1,0 +1,116 @@
+# offline MVP special_eval checkpoint 系列汇总
+
+- config_path: F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_d80_round1_1_d26_init_post_d59_singleton_sparse_micropause_sampler_d22late_late_teacherweight_zartboost_200step_smallscale_seeded_shuffle.json
+- experiment_metrics_path: F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-036-offline-mvp-d80-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-teacherweight-zartboost-200step-calibration.metrics.json
+- split_dir: F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked
+- selected_steps: [50, 100, 150, 200]
+- checkpoint_count: 4
+
+## checkpoints
+### step 50
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-036-offline-mvp-d80-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-teacherweight-zartboost-200step-calibration.step50.pt
+- target_validation.loss_total: 2.31019
+- target_special_eval.loss_total: 2.503706
+- delta_loss_total: 0.193516
+- delta_loss_text_aux: 0.001286
+- delta_loss_text_aux_effective: 0.001286
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.439388
+- target_special_eval.event_prob_mean: 0.422042
+- delta_event_presence_prob_mean: -0.048305
+- delta_event_fall_prob_mean: 0.014725
+- delta_event_energy_prob_mean: -0.040637
+- delta_event_presence_peak_ratio: 0.145146
+- delta_z_art_delta_abs_mean: -0.002347
+- delta_acoustic_energy_mean: -0.092903
+- delta_acoustic_delta_abs_mean: 0.007094
+
+### step 100
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-036-offline-mvp-d80-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-teacherweight-zartboost-200step-calibration.step100.pt
+- target_validation.loss_total: 2.236866
+- target_special_eval.loss_total: 2.436729
+- delta_loss_total: 0.199863
+- delta_loss_text_aux: -0.017404
+- delta_loss_text_aux_effective: -0.017404
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.434655
+- target_special_eval.event_prob_mean: 0.411076
+- delta_event_presence_prob_mean: -0.059804
+- delta_event_fall_prob_mean: 0.015734
+- delta_event_energy_prob_mean: -0.052083
+- delta_event_presence_peak_ratio: 0.012765
+- delta_z_art_delta_abs_mean: -0.001622
+- delta_acoustic_energy_mean: -0.090458
+- delta_acoustic_delta_abs_mean: 0.001546
+
+### step 150
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-036-offline-mvp-d80-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-teacherweight-zartboost-200step-calibration.step150.pt
+- target_validation.loss_total: 2.171678
+- target_special_eval.loss_total: 2.395706
+- delta_loss_total: 0.224028
+- delta_loss_text_aux: -0.014202
+- delta_loss_text_aux_effective: -0.014202
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.431891
+- target_special_eval.event_prob_mean: 0.40552
+- delta_event_presence_prob_mean: -0.066246
+- delta_event_fall_prob_mean: 0.014845
+- delta_event_energy_prob_mean: -0.057519
+- delta_event_presence_peak_ratio: -0.008951
+- delta_z_art_delta_abs_mean: -0.0009
+- delta_acoustic_energy_mean: -0.088994
+- delta_acoustic_delta_abs_mean: 0.005208
+
+### step 200
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-036-offline-mvp-d80-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-teacherweight-zartboost-200step-calibration.step200.pt
+- target_validation.loss_total: 2.140498
+- target_special_eval.loss_total: 2.374156
+- delta_loss_total: 0.233658
+- delta_loss_text_aux: -0.013618
+- delta_loss_text_aux_effective: -0.013618
+- delta_loss_text_aux_structural: 0.0
+- delta_loss_text_aux_lexical: 0.0
+- delta_loss_structural_clause_transition_aux: 0.0
+- delta_loss_boundary_contrast_aux: 0.0
+- delta_loss_punctuation_profile_aux: 0.0
+- delta_loss_structural_clause_profile_aux: 0.0
+- delta_loss_challenge_proxy_profile_aux: 0.0
+- delta_loss_z_art_influence_aux: 0.0
+- delta_loss_formal_special_clause_shape_aux: 0.0
+- target_validation.event_prob_mean: 0.430985
+- target_special_eval.event_prob_mean: 0.406452
+- delta_event_presence_prob_mean: -0.064273
+- delta_event_fall_prob_mean: 0.014079
+- delta_event_energy_prob_mean: -0.053591
+- delta_event_presence_peak_ratio: -0.013062
+- delta_z_art_delta_abs_mean: -0.000381
+- delta_acoustic_energy_mean: -0.088046
+- delta_acoustic_delta_abs_mean: -0.001916
+
+## notes
+- Special-eval series summarizes challenge-slice behavior across selected checkpoints.
+- Each checkpoint also has its own detailed special_eval_model.json and .md under reports/eval.

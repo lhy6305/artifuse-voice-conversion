@@ -1,0 +1,1202 @@
+{
+  "dataset_dir": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw",
+  "output_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/firefly_mainstream",
+  "mainstream_rule": {
+    "sample_rate": 44100,
+    "channels": 1
+  },
+  "counts": {
+    "all_records": 671,
+    "round1_train_records": 624,
+    "excluded_records": 47
+  },
+  "round1_total_duration_sec": 3826.049737,
+  "clean_text_length_stats": {
+    "count": 671,
+    "min": 1,
+    "max": 85,
+    "mean": 24.244411,
+    "median": 20,
+    "stdev": 16.859015
+  },
+  "kept_punctuation_frequency": [
+    [
+      "，",
+      1544
+    ],
+    [
+      "。",
+      488
+    ],
+    [
+      "？",
+      178
+    ],
+    [
+      "！",
+      77
+    ],
+    [
+      "、",
+      36
+    ],
+    [
+      "：",
+      2
+    ]
+  ],
+  "removed_symbol_frequency": [
+    [
+      "「",
+      159
+    ],
+    [
+      "」",
+      159
+    ],
+    [
+      "（",
+      19
+    ],
+    [
+      "）",
+      19
+    ],
+    [
+      "～",
+      6
+    ],
+    [
+      "《",
+      2
+    ],
+    [
+      "》",
+      2
+    ],
+    [
+      "『",
+      1
+    ],
+    [
+      "』",
+      1
+    ]
+  ],
+  "normalized_symbol_frequency": [
+    [
+      "…",
+      726
+    ],
+    [
+      "—",
+      128
+    ]
+  ],
+  "excluded_examples": [
+    {
+      "id": "chapter3_17_firefly_138",
+      "wav_path": "chapter3_17_firefly_138.wav",
+      "original_lab_path": "chapter3_17_firefly_138.lab",
+      "cleaned_lab_path": "labels/chapter3_17_firefly_138.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 36000,
+        "frame_count": 14256,
+        "duration_sec": 0.396,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "一……",
+        "cleaned": "一，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=36000"
+      ]
+    },
+    {
+      "id": "chapter3_22_firefly_105",
+      "wav_path": "chapter3_22_firefly_105.wav",
+      "original_lab_path": "chapter3_22_firefly_105.lab",
+      "cleaned_lab_path": "labels/chapter3_22_firefly_105.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 7328,
+        "duration_sec": 0.229,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "嗯。",
+        "cleaned": "嗯。",
+        "kept_punctuation": [
+          "。"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": []
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_29_firefly_140",
+      "wav_path": "chapter3_29_firefly_140.wav",
+      "original_lab_path": "chapter3_29_firefly_140.lab",
+      "cleaned_lab_path": "labels/chapter3_29_firefly_140.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 36000,
+        "frame_count": 27468,
+        "duration_sec": 0.763,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "…我明白了。",
+        "cleaned": "，我明白了。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=36000"
+      ]
+    },
+    {
+      "id": "chapter3_2_firefly_247",
+      "wav_path": "chapter3_2_firefly_247.wav",
+      "original_lab_path": "chapter3_2_firefly_247.lab",
+      "cleaned_lab_path": "labels/chapter3_2_firefly_247.lab",
+      "wav": {
+        "channels": 2,
+        "sample_width_bytes": 2,
+        "sample_rate": 16000,
+        "frame_count": 48976,
+        "duration_sec": 3.061,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "（唔…这是哪儿？）",
+        "cleaned": "唔，这是哪儿？",
+        "kept_punctuation": [
+          "，",
+          "？"
+        ],
+        "removed_symbols": [
+          "（",
+          "）"
+        ],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=16000",
+        "channels=2"
+      ]
+    },
+    {
+      "id": "chapter3_2_firefly_248",
+      "wav_path": "chapter3_2_firefly_248.wav",
+      "original_lab_path": "chapter3_2_firefly_248.lab",
+      "cleaned_lab_path": "labels/chapter3_2_firefly_248.lab",
+      "wav": {
+        "channels": 2,
+        "sample_width_bytes": 2,
+        "sample_rate": 16000,
+        "frame_count": 24752,
+        "duration_sec": 1.547,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "（这……）",
+        "cleaned": "这，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [
+          "（",
+          "）"
+        ],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=16000",
+        "channels=2"
+      ]
+    },
+    {
+      "id": "chapter3_2_firefly_249",
+      "wav_path": "chapter3_2_firefly_249.wav",
+      "original_lab_path": "chapter3_2_firefly_249.lab",
+      "cleaned_lab_path": "labels/chapter3_2_firefly_249.lab",
+      "wav": {
+        "channels": 2,
+        "sample_width_bytes": 2,
+        "sample_rate": 16000,
+        "frame_count": 38416,
+        "duration_sec": 2.401,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "（…这是什么情况？！）",
+        "cleaned": "，这是什么情况？！",
+        "kept_punctuation": [
+          "！",
+          "，",
+          "？"
+        ],
+        "removed_symbols": [
+          "（",
+          "）"
+        ],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=16000",
+        "channels=2"
+      ]
+    },
+    {
+      "id": "chapter3_2_firefly_250",
+      "wav_path": "chapter3_2_firefly_250.wav",
+      "original_lab_path": "chapter3_2_firefly_250.lab",
+      "cleaned_lab_path": "labels/chapter3_2_firefly_250.lab",
+      "wav": {
+        "channels": 2,
+        "sample_width_bytes": 2,
+        "sample_rate": 44100,
+        "frame_count": 85553,
+        "duration_sec": 1.939977,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "（看来她确实是这个意思……）",
+        "cleaned": "看来她确实是这个意思，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [
+          "（",
+          "）"
+        ],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "channels=2"
+      ]
+    },
+    {
+      "id": "chapter3_2_firefly_251",
+      "wav_path": "chapter3_2_firefly_251.wav",
+      "original_lab_path": "chapter3_2_firefly_251.lab",
+      "cleaned_lab_path": "labels/chapter3_2_firefly_251.lab",
+      "wav": {
+        "channels": 2,
+        "sample_width_bytes": 2,
+        "sample_rate": 16000,
+        "frame_count": 164496,
+        "duration_sec": 10.281,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "（她应该是想说，只有你能团结这群，呃，垃圾桶，然后带领他们打倒邪恶的坏人…吧。）",
+        "cleaned": "她应该是想说，只有你能团结这群，呃，垃圾桶，然后带领他们打倒邪恶的坏人，吧。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [
+          "（",
+          "）"
+        ],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=16000",
+        "channels=2"
+      ]
+    },
+    {
+      "id": "chapter3_3_firefly_104",
+      "wav_path": "chapter3_3_firefly_104.wav",
+      "original_lab_path": "chapter3_3_firefly_104.lab",
+      "cleaned_lab_path": "labels/chapter3_3_firefly_104.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 36000,
+        "frame_count": 114840,
+        "duration_sec": 3.19,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "…嗯。",
+        "cleaned": "，嗯。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=36000"
+      ]
+    },
+    {
+      "id": "chapter3_3_firefly_115",
+      "wav_path": "chapter3_3_firefly_115.wav",
+      "original_lab_path": "chapter3_3_firefly_115.lab",
+      "cleaned_lab_path": "labels/chapter3_3_firefly_115.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 36000,
+        "frame_count": 92916,
+        "duration_sec": 2.581,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "…嗯。",
+        "cleaned": "，嗯。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=36000"
+      ]
+    },
+    {
+      "id": "chapter3_3_firefly_162",
+      "wav_path": "chapter3_3_firefly_162.wav",
+      "original_lab_path": "chapter3_3_firefly_162.lab",
+      "cleaned_lab_path": "labels/chapter3_3_firefly_162.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 36000,
+        "frame_count": 22068,
+        "duration_sec": 0.613,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "我来吧。",
+        "cleaned": "我来吧。",
+        "kept_punctuation": [
+          "。"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": []
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=36000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_101",
+      "wav_path": "chapter3_6_firefly_101.wav",
+      "original_lab_path": "chapter3_6_firefly_101.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_101.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 167200,
+        "duration_sec": 5.225,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "如果，能再来一次……",
+        "cleaned": "如果，能再来一次，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_102",
+      "wav_path": "chapter3_6_firefly_102.wav",
+      "original_lab_path": "chapter3_6_firefly_102.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_102.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 319328,
+        "duration_sec": 9.979,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "冷静，流萤…冷静一点……",
+        "cleaned": "冷静，流萤，冷静一点，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_103",
+      "wav_path": "chapter3_6_firefly_103.wav",
+      "original_lab_path": "chapter3_6_firefly_103.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_103.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 183456,
+        "duration_sec": 5.733,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "我们出发吧……",
+        "cleaned": "我们出发吧，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_105",
+      "wav_path": "chapter3_6_firefly_105.wav",
+      "original_lab_path": "chapter3_6_firefly_105.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_105.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 179008,
+        "duration_sec": 5.594,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "如果我没猜错…它一定和「钟表匠」有关。",
+        "cleaned": "如果我没猜错，它一定和钟表匠有关。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [
+          "「",
+          "」"
+        ],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_106",
+      "wav_path": "chapter3_6_firefly_106.wav",
+      "original_lab_path": "chapter3_6_firefly_106.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_106.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 171296,
+        "duration_sec": 5.353,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "你怎么…？！这和说好的不一样……",
+        "cleaned": "你怎么，？！这和说好的不一样，",
+        "kept_punctuation": [
+          "！",
+          "，",
+          "？"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_107",
+      "wav_path": "chapter3_6_firefly_107.wav",
+      "original_lab_path": "chapter3_6_firefly_107.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_107.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 183904,
+        "duration_sec": 5.747,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "机甲…？！为什么……",
+        "cleaned": "机甲，？！为什么，",
+        "kept_punctuation": [
+          "！",
+          "，",
+          "？"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_108",
+      "wav_path": "chapter3_6_firefly_108.wav",
+      "original_lab_path": "chapter3_6_firefly_108.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_108.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 213280,
+        "duration_sec": 6.665,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "门…打不开……",
+        "cleaned": "门，打不开，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_109",
+      "wav_path": "chapter3_6_firefly_109.wav",
+      "original_lab_path": "chapter3_6_firefly_109.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_109.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 236384,
+        "duration_sec": 7.387,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "门…打不开…这里是死路……",
+        "cleaned": "门，打不开，这里是死路，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_110",
+      "wav_path": "chapter3_6_firefly_110.wav",
+      "original_lab_path": "chapter3_6_firefly_110.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_110.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 141600,
+        "duration_sec": 4.425,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "这里竟然有路……",
+        "cleaned": "这里竟然有路，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_111",
+      "wav_path": "chapter3_6_firefly_111.wav",
+      "original_lab_path": "chapter3_6_firefly_111.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_111.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 187968,
+        "duration_sec": 5.874,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "是出口…沿着这边应该能离开……",
+        "cleaned": "是出口，沿着这边应该能离开，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter3_6_firefly_112",
+      "wav_path": "chapter3_6_firefly_112.wav",
+      "original_lab_path": "chapter3_6_firefly_112.lab",
+      "cleaned_lab_path": "labels/chapter3_6_firefly_112.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 32000,
+        "frame_count": 164800,
+        "duration_sec": 5.15,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "总算回到大堂了，这样就……",
+        "cleaned": "总算回到大堂了，这样就，",
+        "kept_punctuation": [
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=32000"
+      ]
+    },
+    {
+      "id": "chapter4_29_firefly_101",
+      "wav_path": "chapter4_29_firefly_101.wav",
+      "original_lab_path": "chapter4_29_firefly_101.lab",
+      "cleaned_lab_path": "labels/chapter4_29_firefly_101.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 204144,
+        "duration_sec": 4.253,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "迷茫的时候，就寻找流星落下的方向吧。",
+        "cleaned": "迷茫的时候，就寻找流星落下的方向吧。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": []
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    },
+    {
+      "id": "chapter4_29_firefly_102",
+      "wav_path": "chapter4_29_firefly_102.wav",
+      "original_lab_path": "chapter4_29_firefly_102.lab",
+      "cleaned_lab_path": "labels/chapter4_29_firefly_102.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 150720,
+        "duration_sec": 3.14,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "总有一天，我们的道路还会相交。",
+        "cleaned": "总有一天，我们的道路还会相交。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": []
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    },
+    {
+      "id": "chapter4_7_firefly_102",
+      "wav_path": "chapter4_7_firefly_102.wav",
+      "original_lab_path": "chapter4_7_firefly_102.lab",
+      "cleaned_lab_path": "labels/chapter4_7_firefly_102.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 171984,
+        "duration_sec": 3.583,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "怎么了，你看起来…很紧张。",
+        "cleaned": "怎么了，你看起来，很紧张。",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    },
+    {
+      "id": "chapter4_7_firefly_103",
+      "wav_path": "chapter4_7_firefly_103.wav",
+      "original_lab_path": "chapter4_7_firefly_103.lab",
+      "cleaned_lab_path": "labels/chapter4_7_firefly_103.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 268272,
+        "duration_sec": 5.589,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "别怕，一切都会尘埃落定的。我们再通读一遍「剧本」吧……",
+        "cleaned": "别怕，一切都会尘埃落定的。我们再通读一遍剧本吧，",
+        "kept_punctuation": [
+          "。",
+          "，"
+        ],
+        "removed_symbols": [
+          "「",
+          "」"
+        ],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    },
+    {
+      "id": "chapter4_7_firefly_105",
+      "wav_path": "chapter4_7_firefly_105.wav",
+      "original_lab_path": "chapter4_7_firefly_105.lab",
+      "cleaned_lab_path": "labels/chapter4_7_firefly_105.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 342720,
+        "duration_sec": 7.14,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "「剧本」又顺利完成了，对吗？有你在我们身边，总是令人安心。",
+        "cleaned": "剧本又顺利完成了，对吗？有你在我们身边，总是令人安心。",
+        "kept_punctuation": [
+          "。",
+          "，",
+          "？"
+        ],
+        "removed_symbols": [
+          "「",
+          "」"
+        ],
+        "normalized_symbols": []
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    },
+    {
+      "id": "chapter4_7_firefly_106",
+      "wav_path": "chapter4_7_firefly_106.wav",
+      "original_lab_path": "chapter4_7_firefly_106.lab",
+      "cleaned_lab_path": "labels/chapter4_7_firefly_106.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 225696,
+        "duration_sec": 4.702,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "怎么了吗？你这样的表情…我从没见过。",
+        "cleaned": "怎么了吗？你这样的表情，我从没见过。",
+        "kept_punctuation": [
+          "。",
+          "，",
+          "？"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    },
+    {
+      "id": "chapter4_7_firefly_107",
+      "wav_path": "chapter4_7_firefly_107.wav",
+      "original_lab_path": "chapter4_7_firefly_107.lab",
+      "cleaned_lab_path": "labels/chapter4_7_firefly_107.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 193968,
+        "duration_sec": 4.041,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "这是…什么意思？",
+        "cleaned": "这是，什么意思？",
+        "kept_punctuation": [
+          "，",
+          "？"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    },
+    {
+      "id": "chapter4_7_firefly_109",
+      "wav_path": "chapter4_7_firefly_109.wav",
+      "original_lab_path": "chapter4_7_firefly_109.lab",
+      "cleaned_lab_path": "labels/chapter4_7_firefly_109.lab",
+      "wav": {
+        "channels": 1,
+        "sample_width_bytes": 2,
+        "sample_rate": 48000,
+        "frame_count": 611184,
+        "duration_sec": 12.733,
+        "compression_type": "NONE",
+        "compression_name": "not compressed"
+      },
+      "text": {
+        "raw": "发生什么了吗？我…我也不知道该不该这样问你。我只是…想表达一些关心，对同伴的关心。",
+        "cleaned": "发生什么了吗？我，我也不知道该不该这样问你。我只是，想表达一些关心，对同伴的关心。",
+        "kept_punctuation": [
+          "。",
+          "，",
+          "？"
+        ],
+        "removed_symbols": [],
+        "normalized_symbols": [
+          {
+            "from": "…",
+            "to": "，"
+          },
+          {
+            "from": "…",
+            "to": "，"
+          }
+        ]
+      },
+      "include_in_round1": false,
+      "exclusion_reasons": [
+        "sample_rate=48000"
+      ]
+    }
+  ]
+}

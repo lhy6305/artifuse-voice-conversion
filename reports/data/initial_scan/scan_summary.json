@@ -1,0 +1,13 @@
+{
+  "high_level_findings": {
+    "firefly_paired_ratio": 1.0,
+    "firefly_has_orphans": false,
+    "source_duration_sec": 3671.957333,
+    "source_silence_ratio_dbfs_minus_40": 0.819036
+  },
+  "next_decisions_to_report": [
+    "是否保留或归一化 firefly 文本中的标点符号",
+    "源说话人音频的静音裁剪阈值和切分策略",
+    "目标数据是否需要按子目录或场景做分桶"
+  ]
+}

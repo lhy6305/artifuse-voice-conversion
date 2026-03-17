@@ -1,0 +1,118 @@
+{
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/offline_mvp_train_c1_7_round1_1_clause_transition_aux_priority_two_phase_all_multiterm_cap1_smallscale_100_seeded_shuffle.json",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260315-034-offline-mvp-c1-7-round1-1-transition-aux-priority-two-phase-all-multiterm-cap1-100step-calibration.step100.pt",
+  "ablation_modes": {
+    "none": {
+      "ablation_mode": "none",
+      "batch_count": 14,
+      "target": {
+        "loss_total": 2.683255,
+        "loss_acoustic": 0.314805,
+        "loss_event": 4.639878,
+        "loss_z_smooth": 0.068668,
+        "loss_text_aux": 0.098531,
+        "loss_weak_event": 0.197885,
+        "loss_clause_transition_aux": 0.062681
+      },
+      "source": {
+        "loss_total": 2.691008,
+        "loss_acoustic": 0.401659,
+        "loss_event": 4.568804,
+        "loss_z_smooth": 0.04947,
+        "loss_text_aux": 0.0,
+        "loss_weak_event": 0.0,
+        "loss_clause_transition_aux": 0.0
+      },
+      "shift": {
+        "target_acoustic_mae": 0.0,
+        "target_text_aux_mae": 0.0,
+        "source_acoustic_mae": 0.0,
+        "source_text_aux_mae": 0.0
+      }
+    },
+    "zero_z_art": {
+      "ablation_mode": "zero_z_art",
+      "batch_count": 14,
+      "target": {
+        "loss_total": 3.988163,
+        "loss_acoustic": 1.618067,
+        "loss_event": 4.639878,
+        "loss_z_smooth": 0.068668,
+        "loss_text_aux": 0.106761,
+        "loss_weak_event": 0.197885,
+        "loss_clause_transition_aux": 0.062681
+      },
+      "source": {
+        "loss_total": 4.386627,
+        "loss_acoustic": 2.097278,
+        "loss_event": 4.568804,
+        "loss_z_smooth": 0.04947,
+        "loss_text_aux": 0.0,
+        "loss_weak_event": 0.0,
+        "loss_clause_transition_aux": 0.0
+      },
+      "shift": {
+        "target_acoustic_mae": 1.18482,
+        "target_text_aux_mae": 0.087152,
+        "source_acoustic_mae": 0.994964,
+        "source_text_aux_mae": 0.069014
+      }
+    },
+    "zero_e_evt": {
+      "ablation_mode": "zero_e_evt",
+      "batch_count": 14,
+      "target": {
+        "loss_total": 4.418362,
+        "loss_acoustic": 2.049522,
+        "loss_event": 4.639878,
+        "loss_z_smooth": 0.068668,
+        "loss_text_aux": 0.10048,
+        "loss_weak_event": 0.197885,
+        "loss_clause_transition_aux": 0.062681
+      },
+      "source": {
+        "loss_total": 4.220745,
+        "loss_acoustic": 1.931396,
+        "loss_event": 4.568804,
+        "loss_z_smooth": 0.04947,
+        "loss_text_aux": 0.0,
+        "loss_weak_event": 0.0,
+        "loss_clause_transition_aux": 0.0
+      },
+      "shift": {
+        "target_acoustic_mae": 1.355491,
+        "target_text_aux_mae": 0.067177,
+        "source_acoustic_mae": 1.619118,
+        "source_text_aux_mae": 0.088803
+      }
+    }
+  },
+  "comparisons": {
+    "zero_z_art": {
+      "delta_target_loss_total": 1.304908,
+      "delta_source_loss_total": 1.695619,
+      "delta_target_loss_clause_transition_aux": 0.0,
+      "delta_source_loss_clause_transition_aux": 0.0,
+      "delta_target_acoustic_mae": 1.18482,
+      "delta_source_acoustic_mae": 0.994964,
+      "delta_target_text_aux_mae": 0.087152,
+      "delta_source_text_aux_mae": 0.069014
+    },
+    "zero_e_evt": {
+      "delta_target_loss_total": 1.735107,
+      "delta_source_loss_total": 1.529737,
+      "delta_target_loss_clause_transition_aux": 0.0,
+      "delta_source_loss_clause_transition_aux": 0.0,
+      "delta_target_acoustic_mae": 1.355491,
+      "delta_source_acoustic_mae": 1.619118,
+      "delta_target_text_aux_mae": 0.067177,
+      "delta_source_text_aux_mae": 0.088803
+    }
+  },
+  "notes": [
+    "Ablation results are computed on the formal hybrid validation split only.",
+    "zero_z_art zeroes the articulatory control before control fusion.",
+    "zero_e_evt zeroes the event control path before control fusion."
+  ]
+}

@@ -1,0 +1,12 @@
+{
+  "loss_weights": {
+    "teacher_proxy_temporal": 20.0
+  },
+  "loss_weight_schedule": {
+    "teacher_proxy_temporal": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    }
+  }
+}

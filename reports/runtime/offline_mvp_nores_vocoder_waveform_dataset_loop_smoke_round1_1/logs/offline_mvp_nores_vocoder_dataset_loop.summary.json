@@ -1,0 +1,3028 @@
+{
+  "generated_at": "2026-03-18T00:01:56",
+  "dataset_index_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/offline_mvp_nores_vocoder_dataset_index.json",
+  "timing": {
+    "started_at": "2026-03-18T00:01:47",
+    "ended_at": "2026-03-18T00:01:56",
+    "duration_sec": 8.740809
+  },
+  "dataset": {
+    "train_package_count": 592,
+    "validation_package_count": 66
+  },
+  "model": {
+    "name": "no_residual_source_filter_vocoder_scaffold",
+    "hidden_dim": 64,
+    "harmonic_bins": 32,
+    "noise_bins": 32,
+    "decoder_frame_length": 400
+  },
+  "runtime": {
+    "device": "cuda:0"
+  },
+  "training": {
+    "num_steps": 2,
+    "packages_per_step": 2,
+    "validation_interval": 1,
+    "checkpoint_interval": 1,
+    "sampler_mode": "shuffle",
+    "seed": 20260317,
+    "learning_rate": 0.001,
+    "max_grad_norm": 5.0,
+    "loss_weights": {
+      "harmonic": 1.0,
+      "noise": 1.0,
+      "periodic_gate": 0.2,
+      "noise_gate": 0.2,
+      "waveform": 0.5,
+      "stft": 0.5
+    }
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-18T00:01:49",
+      "ended_at": "2026-03-18T00:01:50",
+      "duration_sec": 1.235361,
+      "packages_per_step": 2,
+      "record_ids": [
+        "target::chapter3_2_firefly_110",
+        "target::chapter3_29_firefly_129"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.801747,
+        "loss_harmonic_envelope": 0.391676,
+        "loss_noise_envelope": 0.29387,
+        "loss_periodic_gate": 0.710878,
+        "loss_noise_gate": 0.676381,
+        "loss_waveform": 0.311651,
+        "loss_stft": 1.365849,
+        "periodic_gate_pred_mean": 0.557443,
+        "noise_gate_pred_mean": 0.637494,
+        "periodic_gate_target_mean": 0.548547,
+        "noise_gate_target_mean": 0.590364,
+        "decoded_waveform_rms": 0.357943,
+        "target_waveform_rms": 0.122121
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_2_firefly_110",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/train/target__chapter3_2_firefly_110/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2995,
+          "loss_metrics": {
+            "loss_total": 1.78928,
+            "loss_harmonic_envelope": 0.383275,
+            "loss_noise_envelope": 0.294505,
+            "loss_periodic_gate": 0.707053,
+            "loss_noise_gate": 0.670891,
+            "loss_waveform": 0.308368,
+            "loss_stft": 1.363454,
+            "periodic_gate_pred_mean": 0.556132,
+            "noise_gate_pred_mean": 0.638126,
+            "periodic_gate_target_mean": 0.556452,
+            "noise_gate_target_mean": 0.601182,
+            "decoded_waveform_rms": 0.35744,
+            "target_waveform_rms": 0.112019
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_129",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/train/target__chapter3_29_firefly_129/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1994,
+          "loss_metrics": {
+            "loss_total": 1.814214,
+            "loss_harmonic_envelope": 0.400077,
+            "loss_noise_envelope": 0.293234,
+            "loss_periodic_gate": 0.714702,
+            "loss_noise_gate": 0.68187,
+            "loss_waveform": 0.314935,
+            "loss_stft": 1.368243,
+            "periodic_gate_pred_mean": 0.558754,
+            "noise_gate_pred_mean": 0.636863,
+            "periodic_gate_target_mean": 0.540642,
+            "noise_gate_target_mean": 0.579547,
+            "decoded_waveform_rms": 0.358446,
+            "target_waveform_rms": 0.132224
+          }
+        }
+      ],
+      "grad_norm": 2.24582,
+      "status": "step_completed"
+    },
+    {
+      "step": 2,
+      "started_at": "2026-03-18T00:01:53",
+      "ended_at": "2026-03-18T00:01:53",
+      "duration_sec": 0.306404,
+      "packages_per_step": 2,
+      "record_ids": [
+        "target::chapter3_3_firefly_145",
+        "target::chapter3_3_firefly_224"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.600885,
+        "loss_harmonic_envelope": 0.306347,
+        "loss_noise_envelope": 0.23504,
+        "loss_periodic_gate": 0.710607,
+        "loss_noise_gate": 0.692865,
+        "loss_waveform": 0.278434,
+        "loss_stft": 1.279173,
+        "periodic_gate_pred_mean": 0.556153,
+        "noise_gate_pred_mean": 0.629273,
+        "periodic_gate_target_mean": 0.510563,
+        "noise_gate_target_mean": 0.549237,
+        "decoded_waveform_rms": 0.326105,
+        "target_waveform_rms": 0.102064
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_145",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/train/target__chapter3_3_firefly_145/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1023,
+          "loss_metrics": {
+            "loss_total": 1.62028,
+            "loss_harmonic_envelope": 0.352092,
+            "loss_noise_envelope": 0.239795,
+            "loss_periodic_gate": 0.691413,
+            "loss_noise_gate": 0.64547,
+            "loss_waveform": 0.280285,
+            "loss_stft": 1.241748,
+            "periodic_gate_pred_mean": 0.549474,
+            "noise_gate_pred_mean": 0.63281,
+            "periodic_gate_target_mean": 0.592059,
+            "noise_gate_target_mean": 0.641367,
+            "decoded_waveform_rms": 0.321885,
+            "target_waveform_rms": 0.121157
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_224",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/train/target__chapter3_3_firefly_224/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1479,
+          "loss_metrics": {
+            "loss_total": 1.581491,
+            "loss_harmonic_envelope": 0.260603,
+            "loss_noise_envelope": 0.230286,
+            "loss_periodic_gate": 0.729801,
+            "loss_noise_gate": 0.74026,
+            "loss_waveform": 0.276583,
+            "loss_stft": 1.316598,
+            "periodic_gate_pred_mean": 0.562832,
+            "noise_gate_pred_mean": 0.625736,
+            "periodic_gate_target_mean": 0.429066,
+            "noise_gate_target_mean": 0.457107,
+            "decoded_waveform_rms": 0.330325,
+            "target_waveform_rms": 0.08297
+          }
+        }
+      ],
+      "grad_norm": 2.128525,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 1,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "record_ids": [
+        "target::chapter3_3_firefly_162",
+        "target::chapter3_20_firefly_184",
+        "target::chapter3_21_firefly_116",
+        "target::chapter3_3_firefly_207",
+        "target::chapter3_30_firefly_101",
+        "target::chapter3_2_firefly_131",
+        "target::chapter3_2_firefly_212",
+        "target::chapter3_3_firefly_246",
+        "target::chapter3_20_firefly_145",
+        "target::chapter3_29_firefly_130",
+        "target::chapter3_30_firefly_117",
+        "target::chapter3_3_firefly_115",
+        "target::chapter3_29_firefly_113",
+        "target::chapter3_22_firefly_114",
+        "target::chapter3_2_firefly_137",
+        "target::chapter3_3_firefly_234",
+        "target::chapter3_3_firefly_171",
+        "target::chapter3_30_firefly_145",
+        "target::chapter3_3_firefly_174",
+        "target::chapter3_26_firefly_114",
+        "target::chapter3_30_firefly_147",
+        "target::chapter3_2_firefly_183",
+        "target::chapter3_4_firefly_126",
+        "target::chapter3_3_firefly_199",
+        "target::chapter3_20_firefly_133",
+        "target::chapter3_29_firefly_141",
+        "target::chapter3_3_firefly_213",
+        "target::chapter3_2_firefly_164",
+        "target::chapter3_30_firefly_132",
+        "target::chapter3_5_firefly_102",
+        "target::chapter3_2_firefly_163",
+        "target::chapter3_4_firefly_140",
+        "target::chapter3_3_firefly_138",
+        "target::chapter3_3_firefly_114",
+        "target::chapter3_20_firefly_172",
+        "target::chapter3_6_firefly_106",
+        "target::chapter3_20_firefly_135",
+        "target::chapter3_2_firefly_220",
+        "target::chapter3_6_firefly_103",
+        "target::chapter3_3_firefly_122",
+        "target::chapter3_2_firefly_170",
+        "target::chapter3_2_firefly_155",
+        "target::chapter3_2_firefly_165",
+        "target::chapter3_3_firefly_182",
+        "target::chapter3_4_firefly_112",
+        "target::chapter3_30_firefly_136",
+        "target::chapter4_7_firefly_105",
+        "target::chapter3_3_firefly_245",
+        "target::chapter3_3_firefly_197",
+        "target::chapter3_29_firefly_103",
+        "target::chapter3_30_firefly_137",
+        "target::chapter3_3_firefly_212",
+        "target::chapter3_4_firefly_109",
+        "target::chapter3_26_firefly_107",
+        "target::chapter3_29_firefly_142",
+        "target::chapter3_3_firefly_215",
+        "target::chapter3_3_firefly_210",
+        "target::chapter3_29_firefly_136",
+        "target::chapter3_4_firefly_105",
+        "target::chapter3_17_firefly_133",
+        "target::chapter3_2_firefly_157",
+        "target::chapter3_2_firefly_178",
+        "target::chapter4_7_firefly_119",
+        "target::chapter3_17_firefly_129",
+        "target::chapter3_2_firefly_206",
+        "target::chapter3_4_firefly_106"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.62506,
+        "loss_harmonic_envelope": 0.34884,
+        "loss_noise_envelope": 0.237047,
+        "loss_periodic_gate": 0.70062,
+        "loss_noise_gate": 0.667465,
+        "loss_waveform": 0.28216,
+        "loss_stft": 1.248954,
+        "periodic_gate_pred_mean": 0.55287,
+        "noise_gate_pred_mean": 0.631027,
+        "periodic_gate_target_mean": 0.554948,
+        "noise_gate_target_mean": 0.59846,
+        "decoded_waveform_rms": 0.324007,
+        "target_waveform_rms": 0.123402
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 167,
+          "loss_metrics": {
+            "loss_total": 1.648799,
+            "loss_harmonic_envelope": 0.387711,
+            "loss_noise_envelope": 0.230303,
+            "loss_periodic_gate": 0.679833,
+            "loss_noise_gate": 0.616366,
+            "loss_waveform": 0.286001,
+            "loss_stft": 1.25709,
+            "periodic_gate_pred_mean": 0.545949,
+            "noise_gate_pred_mean": 0.635017,
+            "periodic_gate_target_mean": 0.644517,
+            "noise_gate_target_mean": 0.698585,
+            "decoded_waveform_rms": 0.321649,
+            "target_waveform_rms": 0.13987
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_184",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_184/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 267,
+          "loss_metrics": {
+            "loss_total": 1.673341,
+            "loss_harmonic_envelope": 0.42842,
+            "loss_noise_envelope": 0.249198,
+            "loss_periodic_gate": 0.680559,
+            "loss_noise_gate": 0.619456,
+            "loss_waveform": 0.290046,
+            "loss_stft": 1.181396,
+            "periodic_gate_pred_mean": 0.546215,
+            "noise_gate_pred_mean": 0.635037,
+            "periodic_gate_target_mean": 0.639646,
+            "noise_gate_target_mean": 0.692909,
+            "decoded_waveform_rms": 0.320756,
+            "target_waveform_rms": 0.158916
+          }
+        },
+        {
+          "record_id": "target::chapter3_21_firefly_116",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_21_firefly_116/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 320,
+          "loss_metrics": {
+            "loss_total": 1.630308,
+            "loss_harmonic_envelope": 0.369493,
+            "loss_noise_envelope": 0.230454,
+            "loss_periodic_gate": 0.686163,
+            "loss_noise_gate": 0.635225,
+            "loss_waveform": 0.293173,
+            "loss_stft": 1.238993,
+            "periodic_gate_pred_mean": 0.54871,
+            "noise_gate_pred_mean": 0.634371,
+            "periodic_gate_target_mean": 0.614522,
+            "noise_gate_target_mean": 0.664027,
+            "decoded_waveform_rms": 0.32194,
+            "target_waveform_rms": 0.164423
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_207",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_207/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 373,
+          "loss_metrics": {
+            "loss_total": 1.608595,
+            "loss_harmonic_envelope": 0.367005,
+            "loss_noise_envelope": 0.232102,
+            "loss_periodic_gate": 0.672562,
+            "loss_noise_gate": 0.600601,
+            "loss_waveform": 0.281404,
+            "loss_stft": 1.228307,
+            "periodic_gate_pred_mean": 0.543346,
+            "noise_gate_pred_mean": 0.636585,
+            "periodic_gate_target_mean": 0.670043,
+            "noise_gate_target_mean": 0.730064,
+            "decoded_waveform_rms": 0.318505,
+            "target_waveform_rms": 0.131602
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_101",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_101/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 432,
+          "loss_metrics": {
+            "loss_total": 1.674732,
+            "loss_harmonic_envelope": 0.391846,
+            "loss_noise_envelope": 0.237827,
+            "loss_periodic_gate": 0.708244,
+            "loss_noise_gate": 0.679991,
+            "loss_waveform": 0.288981,
+            "loss_stft": 1.245844,
+            "periodic_gate_pred_mean": 0.55482,
+            "noise_gate_pred_mean": 0.62868,
+            "periodic_gate_target_mean": 0.533694,
+            "noise_gate_target_mean": 0.569745,
+            "decoded_waveform_rms": 0.326095,
+            "target_waveform_rms": 0.151001
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_131",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_131/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 494,
+          "loss_metrics": {
+            "loss_total": 1.622159,
+            "loss_harmonic_envelope": 0.353271,
+            "loss_noise_envelope": 0.237143,
+            "loss_periodic_gate": 0.705962,
+            "loss_noise_gate": 0.685047,
+            "loss_waveform": 0.280299,
+            "loss_stft": 1.226785,
+            "periodic_gate_pred_mean": 0.554818,
+            "noise_gate_pred_mean": 0.630651,
+            "periodic_gate_target_mean": 0.524484,
+            "noise_gate_target_mean": 0.566616,
+            "decoded_waveform_rms": 0.325443,
+            "target_waveform_rms": 0.114155
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_212",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_212/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 544,
+          "loss_metrics": {
+            "loss_total": 1.627069,
+            "loss_harmonic_envelope": 0.346628,
+            "loss_noise_envelope": 0.253296,
+            "loss_periodic_gate": 0.698528,
+            "loss_noise_gate": 0.663624,
+            "loss_waveform": 0.280029,
+            "loss_stft": 1.2294,
+            "periodic_gate_pred_mean": 0.552038,
+            "noise_gate_pred_mean": 0.631598,
+            "periodic_gate_target_mean": 0.561068,
+            "noise_gate_target_mean": 0.606478,
+            "decoded_waveform_rms": 0.323858,
+            "target_waveform_rms": 0.114555
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_246",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_246/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 581,
+          "loss_metrics": {
+            "loss_total": 1.595565,
+            "loss_harmonic_envelope": 0.281199,
+            "loss_noise_envelope": 0.232539,
+            "loss_periodic_gate": 0.721397,
+            "loss_noise_gate": 0.71307,
+            "loss_waveform": 0.279966,
+            "loss_stft": 1.309901,
+            "periodic_gate_pred_mean": 0.558962,
+            "noise_gate_pred_mean": 0.626199,
+            "periodic_gate_target_mean": 0.473297,
+            "noise_gate_target_mean": 0.505112,
+            "decoded_waveform_rms": 0.328578,
+            "target_waveform_rms": 0.103611
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_145",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_145/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 622,
+          "loss_metrics": {
+            "loss_total": 1.622585,
+            "loss_harmonic_envelope": 0.342193,
+            "loss_noise_envelope": 0.23429,
+            "loss_periodic_gate": 0.701652,
+            "loss_noise_gate": 0.670055,
+            "loss_waveform": 0.28948,
+            "loss_stft": 1.254042,
+            "periodic_gate_pred_mean": 0.553611,
+            "noise_gate_pred_mean": 0.630902,
+            "periodic_gate_target_mean": 0.55214,
+            "noise_gate_target_mean": 0.593941,
+            "decoded_waveform_rms": 0.324495,
+            "target_waveform_rms": 0.149074
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_130",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_130/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 648,
+          "loss_metrics": {
+            "loss_total": 1.587377,
+            "loss_harmonic_envelope": 0.270593,
+            "loss_noise_envelope": 0.227646,
+            "loss_periodic_gate": 0.723968,
+            "loss_noise_gate": 0.723529,
+            "loss_waveform": 0.283455,
+            "loss_stft": 1.31582,
+            "periodic_gate_pred_mean": 0.561081,
+            "noise_gate_pred_mean": 0.626466,
+            "periodic_gate_target_mean": 0.458946,
+            "noise_gate_target_mean": 0.488715,
+            "decoded_waveform_rms": 0.329386,
+            "target_waveform_rms": 0.119577
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_117",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_117/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 682,
+          "loss_metrics": {
+            "loss_total": 1.655754,
+            "loss_harmonic_envelope": 0.379921,
+            "loss_noise_envelope": 0.236291,
+            "loss_periodic_gate": 0.705337,
+            "loss_noise_gate": 0.676091,
+            "loss_waveform": 0.284918,
+            "loss_stft": 1.241596,
+            "periodic_gate_pred_mean": 0.553908,
+            "noise_gate_pred_mean": 0.629687,
+            "periodic_gate_target_mean": 0.539835,
+            "noise_gate_target_mean": 0.579264,
+            "decoded_waveform_rms": 0.325114,
+            "target_waveform_rms": 0.134748
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_115",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_115/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 709,
+          "loss_metrics": {
+            "loss_total": 1.55108,
+            "loss_harmonic_envelope": 0.210802,
+            "loss_noise_envelope": 0.224591,
+            "loss_periodic_gate": 0.739653,
+            "loss_noise_gate": 0.767576,
+            "loss_waveform": 0.27858,
+            "loss_stft": 1.349902,
+            "periodic_gate_pred_mean": 0.565934,
+            "noise_gate_pred_mean": 0.624376,
+            "periodic_gate_target_mean": 0.382533,
+            "noise_gate_target_mean": 0.405041,
+            "decoded_waveform_rms": 0.332554,
+            "target_waveform_rms": 0.090491
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_113",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_113/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 749,
+          "loss_metrics": {
+            "loss_total": 1.642712,
+            "loss_harmonic_envelope": 0.372719,
+            "loss_noise_envelope": 0.234532,
+            "loss_periodic_gate": 0.703784,
+            "loss_noise_gate": 0.677552,
+            "loss_waveform": 0.279167,
+            "loss_stft": 1.23922,
+            "periodic_gate_pred_mean": 0.555669,
+            "noise_gate_pred_mean": 0.63084,
+            "periodic_gate_target_mean": 0.53943,
+            "noise_gate_target_mean": 0.582524,
+            "decoded_waveform_rms": 0.325398,
+            "target_waveform_rms": 0.106644
+          }
+        },
+        {
+          "record_id": "target::chapter3_22_firefly_114",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_22_firefly_114/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 765,
+          "loss_metrics": {
+            "loss_total": 1.621144,
+            "loss_harmonic_envelope": 0.34508,
+            "loss_noise_envelope": 0.235301,
+            "loss_periodic_gate": 0.697059,
+            "loss_noise_gate": 0.657245,
+            "loss_waveform": 0.290034,
+            "loss_stft": 1.249772,
+            "periodic_gate_pred_mean": 0.552753,
+            "noise_gate_pred_mean": 0.631581,
+            "periodic_gate_target_mean": 0.574856,
+            "noise_gate_target_mean": 0.619101,
+            "decoded_waveform_rms": 0.323726,
+            "target_waveform_rms": 0.151857
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_137",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_137/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 789,
+          "loss_metrics": {
+            "loss_total": 1.610117,
+            "loss_harmonic_envelope": 0.338711,
+            "loss_noise_envelope": 0.235157,
+            "loss_periodic_gate": 0.694009,
+            "loss_noise_gate": 0.652065,
+            "loss_waveform": 0.27932,
+            "loss_stft": 1.254751,
+            "periodic_gate_pred_mean": 0.550741,
+            "noise_gate_pred_mean": 0.632348,
+            "periodic_gate_target_mean": 0.580707,
+            "noise_gate_target_mean": 0.629101,
+            "decoded_waveform_rms": 0.322686,
+            "target_waveform_rms": 0.115329
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_234",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_234/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 807,
+          "loss_metrics": {
+            "loss_total": 1.633528,
+            "loss_harmonic_envelope": 0.380241,
+            "loss_noise_envelope": 0.241825,
+            "loss_periodic_gate": 0.686765,
+            "loss_noise_gate": 0.635841,
+            "loss_waveform": 0.278474,
+            "loss_stft": 1.215407,
+            "periodic_gate_pred_mean": 0.548007,
+            "noise_gate_pred_mean": 0.633941,
+            "periodic_gate_target_mean": 0.608463,
+            "noise_gate_target_mean": 0.661254,
+            "decoded_waveform_rms": 0.320939,
+            "target_waveform_rms": 0.117327
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_171",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_171/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 834,
+          "loss_metrics": {
+            "loss_total": 1.643926,
+            "loss_harmonic_envelope": 0.398371,
+            "loss_noise_envelope": 0.239719,
+            "loss_periodic_gate": 0.6862,
+            "loss_noise_gate": 0.634144,
+            "loss_waveform": 0.279066,
+            "loss_stft": 1.204468,
+            "periodic_gate_pred_mean": 0.547941,
+            "noise_gate_pred_mean": 0.633983,
+            "periodic_gate_target_mean": 0.611428,
+            "noise_gate_target_mean": 0.664534,
+            "decoded_waveform_rms": 0.320818,
+            "target_waveform_rms": 0.11946
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_145",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_145/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 872,
+          "loss_metrics": {
+            "loss_total": 1.659338,
+            "loss_harmonic_envelope": 0.385757,
+            "loss_noise_envelope": 0.23946,
+            "loss_periodic_gate": 0.705956,
+            "loss_noise_gate": 0.67769,
+            "loss_waveform": 0.281045,
+            "loss_stft": 1.233739,
+            "periodic_gate_pred_mean": 0.554156,
+            "noise_gate_pred_mean": 0.629583,
+            "periodic_gate_target_mean": 0.536355,
+            "noise_gate_target_mean": 0.576329,
+            "decoded_waveform_rms": 0.325209,
+            "target_waveform_rms": 0.116813
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_174",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_174/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 892,
+          "loss_metrics": {
+            "loss_total": 1.616458,
+            "loss_harmonic_envelope": 0.365573,
+            "loss_noise_envelope": 0.238895,
+            "loss_periodic_gate": 0.687273,
+            "loss_noise_gate": 0.640257,
+            "loss_waveform": 0.279527,
+            "loss_stft": 1.213441,
+            "periodic_gate_pred_mean": 0.548342,
+            "noise_gate_pred_mean": 0.634335,
+            "periodic_gate_target_mean": 0.602017,
+            "noise_gate_target_mean": 0.654514,
+            "decoded_waveform_rms": 0.320969,
+            "target_waveform_rms": 0.121695
+          }
+        },
+        {
+          "record_id": "target::chapter3_26_firefly_114",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_26_firefly_114/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 919,
+          "loss_metrics": {
+            "loss_total": 1.632008,
+            "loss_harmonic_envelope": 0.373552,
+            "loss_noise_envelope": 0.234592,
+            "loss_periodic_gate": 0.692793,
+            "loss_noise_gate": 0.646195,
+            "loss_waveform": 0.28703,
+            "loss_stft": 1.225103,
+            "periodic_gate_pred_mean": 0.550047,
+            "noise_gate_pred_mean": 0.632193,
+            "periodic_gate_target_mean": 0.591792,
+            "noise_gate_target_mean": 0.638649,
+            "decoded_waveform_rms": 0.322224,
+            "target_waveform_rms": 0.142261
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_147",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_147/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 949,
+          "loss_metrics": {
+            "loss_total": 1.662564,
+            "loss_harmonic_envelope": 0.398466,
+            "loss_noise_envelope": 0.24882,
+            "loss_periodic_gate": 0.698754,
+            "loss_noise_gate": 0.661145,
+            "loss_waveform": 0.28026,
+            "loss_stft": 1.206336,
+            "periodic_gate_pred_mean": 0.551754,
+            "noise_gate_pred_mean": 0.631068,
+            "periodic_gate_target_mean": 0.564536,
+            "noise_gate_target_mean": 0.609227,
+            "decoded_waveform_rms": 0.323522,
+            "target_waveform_rms": 0.119105
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_183",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_183/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 992,
+          "loss_metrics": {
+            "loss_total": 1.622041,
+            "loss_harmonic_envelope": 0.373398,
+            "loss_noise_envelope": 0.243694,
+            "loss_periodic_gate": 0.679808,
+            "loss_noise_gate": 0.619251,
+            "loss_waveform": 0.281377,
+            "loss_stft": 1.208897,
+            "periodic_gate_pred_mean": 0.545963,
+            "noise_gate_pred_mean": 0.635324,
+            "periodic_gate_target_mean": 0.637885,
+            "noise_gate_target_mean": 0.694262,
+            "decoded_waveform_rms": 0.319377,
+            "target_waveform_rms": 0.129585
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_126",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_126/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1039,
+          "loss_metrics": {
+            "loss_total": 1.64535,
+            "loss_harmonic_envelope": 0.368712,
+            "loss_noise_envelope": 0.242395,
+            "loss_periodic_gate": 0.700608,
+            "loss_noise_gate": 0.66689,
+            "loss_waveform": 0.2854,
+            "loss_stft": 1.236087,
+            "periodic_gate_pred_mean": 0.553244,
+            "noise_gate_pred_mean": 0.631041,
+            "periodic_gate_target_mean": 0.557418,
+            "noise_gate_target_mean": 0.59989,
+            "decoded_waveform_rms": 0.324216,
+            "target_waveform_rms": 0.13408
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_199",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_199/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1061,
+          "loss_metrics": {
+            "loss_total": 1.617172,
+            "loss_harmonic_envelope": 0.319151,
+            "loss_noise_envelope": 0.230473,
+            "loss_periodic_gate": 0.713951,
+            "loss_noise_gate": 0.697088,
+            "loss_waveform": 0.280703,
+            "loss_stft": 1.289979,
+            "periodic_gate_pred_mean": 0.557196,
+            "noise_gate_pred_mean": 0.628054,
+            "periodic_gate_target_mean": 0.503064,
+            "noise_gate_target_mean": 0.538769,
+            "decoded_waveform_rms": 0.326964,
+            "target_waveform_rms": 0.110236
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_133",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_133/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1105,
+          "loss_metrics": {
+            "loss_total": 1.630936,
+            "loss_harmonic_envelope": 0.347027,
+            "loss_noise_envelope": 0.236376,
+            "loss_periodic_gate": 0.705621,
+            "loss_noise_gate": 0.678397,
+            "loss_waveform": 0.283309,
+            "loss_stft": 1.258149,
+            "periodic_gate_pred_mean": 0.554643,
+            "noise_gate_pred_mean": 0.629863,
+            "periodic_gate_target_mean": 0.535539,
+            "noise_gate_target_mean": 0.576473,
+            "decoded_waveform_rms": 0.325024,
+            "target_waveform_rms": 0.127645
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_141",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_141/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1151,
+          "loss_metrics": {
+            "loss_total": 1.622504,
+            "loss_harmonic_envelope": 0.353087,
+            "loss_noise_envelope": 0.237272,
+            "loss_periodic_gate": 0.692034,
+            "loss_noise_gate": 0.644503,
+            "loss_waveform": 0.286825,
+            "loss_stft": 1.24285,
+            "periodic_gate_pred_mean": 0.54961,
+            "noise_gate_pred_mean": 0.632393,
+            "periodic_gate_target_mean": 0.595428,
+            "noise_gate_target_mean": 0.641828,
+            "decoded_waveform_rms": 0.322028,
+            "target_waveform_rms": 0.145518
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_213",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_213/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1203,
+          "loss_metrics": {
+            "loss_total": 1.612592,
+            "loss_harmonic_envelope": 0.321067,
+            "loss_noise_envelope": 0.238166,
+            "loss_periodic_gate": 0.714082,
+            "loss_noise_gate": 0.702583,
+            "loss_waveform": 0.276091,
+            "loss_stft": 1.263961,
+            "periodic_gate_pred_mean": 0.557247,
+            "noise_gate_pred_mean": 0.62878,
+            "periodic_gate_target_mean": 0.49323,
+            "noise_gate_target_mean": 0.530747,
+            "decoded_waveform_rms": 0.326844,
+            "target_waveform_rms": 0.091376
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_164",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_164/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1222,
+          "loss_metrics": {
+            "loss_total": 1.622733,
+            "loss_harmonic_envelope": 0.346122,
+            "loss_noise_envelope": 0.235522,
+            "loss_periodic_gate": 0.706151,
+            "loss_noise_gate": 0.681889,
+            "loss_waveform": 0.277794,
+            "loss_stft": 1.249165,
+            "periodic_gate_pred_mean": 0.554559,
+            "noise_gate_pred_mean": 0.630054,
+            "periodic_gate_target_mean": 0.528846,
+            "noise_gate_target_mean": 0.570476,
+            "decoded_waveform_rms": 0.325048,
+            "target_waveform_rms": 0.10544
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_132",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1262,
+          "loss_metrics": {
+            "loss_total": 1.637528,
+            "loss_harmonic_envelope": 0.365144,
+            "loss_noise_envelope": 0.232752,
+            "loss_periodic_gate": 0.702296,
+            "loss_noise_gate": 0.672211,
+            "loss_waveform": 0.284944,
+            "loss_stft": 1.244517,
+            "periodic_gate_pred_mean": 0.553546,
+            "noise_gate_pred_mean": 0.630868,
+            "periodic_gate_target_mean": 0.548234,
+            "noise_gate_target_mean": 0.589715,
+            "decoded_waveform_rms": 0.324365,
+            "target_waveform_rms": 0.134267
+          }
+        },
+        {
+          "record_id": "target::chapter3_5_firefly_102",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_5_firefly_102/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1284,
+          "loss_metrics": {
+            "loss_total": 1.612095,
+            "loss_harmonic_envelope": 0.333097,
+            "loss_noise_envelope": 0.240473,
+            "loss_periodic_gate": 0.705881,
+            "loss_noise_gate": 0.69109,
+            "loss_waveform": 0.277687,
+            "loss_stft": 1.240577,
+            "periodic_gate_pred_mean": 0.55624,
+            "noise_gate_pred_mean": 0.631797,
+            "periodic_gate_target_mean": 0.51791,
+            "noise_gate_target_mean": 0.560391,
+            "decoded_waveform_rms": 0.325545,
+            "target_waveform_rms": 0.101856
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_163",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_163/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1312,
+          "loss_metrics": {
+            "loss_total": 1.605158,
+            "loss_harmonic_envelope": 0.325048,
+            "loss_noise_envelope": 0.231073,
+            "loss_periodic_gate": 0.702735,
+            "loss_noise_gate": 0.674282,
+            "loss_waveform": 0.278765,
+            "loss_stft": 1.268503,
+            "periodic_gate_pred_mean": 0.553635,
+            "noise_gate_pred_mean": 0.63089,
+            "periodic_gate_target_mean": 0.543118,
+            "noise_gate_target_mean": 0.586163,
+            "decoded_waveform_rms": 0.324448,
+            "target_waveform_rms": 0.110195
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_140",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_140/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1351,
+          "loss_metrics": {
+            "loss_total": 1.683649,
+            "loss_harmonic_envelope": 0.424597,
+            "loss_noise_envelope": 0.260023,
+            "loss_periodic_gate": 0.692474,
+            "loss_noise_gate": 0.646465,
+            "loss_waveform": 0.282765,
+            "loss_stft": 1.179717,
+            "periodic_gate_pred_mean": 0.550118,
+            "noise_gate_pred_mean": 0.632417,
+            "periodic_gate_target_mean": 0.591189,
+            "noise_gate_target_mean": 0.638985,
+            "decoded_waveform_rms": 0.322174,
+            "target_waveform_rms": 0.130276
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_138",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_138/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1379,
+          "loss_metrics": {
+            "loss_total": 1.630868,
+            "loss_harmonic_envelope": 0.374193,
+            "loss_noise_envelope": 0.240375,
+            "loss_periodic_gate": 0.687585,
+            "loss_noise_gate": 0.636914,
+            "loss_waveform": 0.279805,
+            "loss_stft": 1.222996,
+            "periodic_gate_pred_mean": 0.548468,
+            "noise_gate_pred_mean": 0.63367,
+            "periodic_gate_target_mean": 0.607141,
+            "noise_gate_target_mean": 0.658918,
+            "decoded_waveform_rms": 0.321052,
+            "target_waveform_rms": 0.121436
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_114",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_114/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1413,
+          "loss_metrics": {
+            "loss_total": 1.603647,
+            "loss_harmonic_envelope": 0.302699,
+            "loss_noise_envelope": 0.236748,
+            "loss_periodic_gate": 0.714844,
+            "loss_noise_gate": 0.701533,
+            "loss_waveform": 0.277111,
+            "loss_stft": 1.284737,
+            "periodic_gate_pred_mean": 0.557077,
+            "noise_gate_pred_mean": 0.628134,
+            "periodic_gate_target_mean": 0.493907,
+            "noise_gate_target_mean": 0.530591,
+            "decoded_waveform_rms": 0.326793,
+            "target_waveform_rms": 0.096292
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_172",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_172/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1442,
+          "loss_metrics": {
+            "loss_total": 1.634171,
+            "loss_harmonic_envelope": 0.366318,
+            "loss_noise_envelope": 0.23567,
+            "loss_periodic_gate": 0.693205,
+            "loss_noise_gate": 0.64723,
+            "loss_waveform": 0.288442,
+            "loss_stft": 1.239752,
+            "periodic_gate_pred_mean": 0.550184,
+            "noise_gate_pred_mean": 0.632131,
+            "periodic_gate_target_mean": 0.590435,
+            "noise_gate_target_mean": 0.636558,
+            "decoded_waveform_rms": 0.32222,
+            "target_waveform_rms": 0.150195
+          }
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_106",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_6_firefly_106/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1473,
+          "loss_metrics": {
+            "loss_total": 1.591871,
+            "loss_harmonic_envelope": 0.28545,
+            "loss_noise_envelope": 0.225945,
+            "loss_periodic_gate": 0.718979,
+            "loss_noise_gate": 0.716753,
+            "loss_waveform": 0.275354,
+            "loss_stft": 1.311306,
+            "periodic_gate_pred_mean": 0.559792,
+            "noise_gate_pred_mean": 0.628194,
+            "periodic_gate_target_mean": 0.469775,
+            "noise_gate_target_mean": 0.505492,
+            "decoded_waveform_rms": 0.327981,
+            "target_waveform_rms": 0.084114
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_135",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_135/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1500,
+          "loss_metrics": {
+            "loss_total": 1.608588,
+            "loss_harmonic_envelope": 0.318419,
+            "loss_noise_envelope": 0.231212,
+            "loss_periodic_gate": 0.708652,
+            "loss_noise_gate": 0.688248,
+            "loss_waveform": 0.284233,
+            "loss_stft": 1.27492,
+            "periodic_gate_pred_mean": 0.555893,
+            "noise_gate_pred_mean": 0.629726,
+            "periodic_gate_target_mean": 0.520021,
+            "noise_gate_target_mean": 0.558898,
+            "decoded_waveform_rms": 0.325683,
+            "target_waveform_rms": 0.130517
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_220",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_220/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1532,
+          "loss_metrics": {
+            "loss_total": 1.615217,
+            "loss_harmonic_envelope": 0.340687,
+            "loss_noise_envelope": 0.236568,
+            "loss_periodic_gate": 0.698458,
+            "loss_noise_gate": 0.662229,
+            "loss_waveform": 0.280501,
+            "loss_stft": 1.251148,
+            "periodic_gate_pred_mean": 0.551724,
+            "noise_gate_pred_mean": 0.631401,
+            "periodic_gate_target_mean": 0.563083,
+            "noise_gate_target_mean": 0.608124,
+            "decoded_waveform_rms": 0.32326,
+            "target_waveform_rms": 0.120136
+          }
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_103",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_6_firefly_103/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1578,
+          "loss_metrics": {
+            "loss_total": 1.569095,
+            "loss_harmonic_envelope": 0.24014,
+            "loss_noise_envelope": 0.22499,
+            "loss_periodic_gate": 0.731684,
+            "loss_noise_gate": 0.748502,
+            "loss_waveform": 0.273402,
+            "loss_stft": 1.342452,
+            "periodic_gate_pred_mean": 0.56378,
+            "noise_gate_pred_mean": 0.625884,
+            "periodic_gate_target_mean": 0.414862,
+            "noise_gate_target_mean": 0.443367,
+            "decoded_waveform_rms": 0.33063,
+            "target_waveform_rms": 0.06308
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_122",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_122/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1607,
+          "loss_metrics": {
+            "loss_total": 1.620593,
+            "loss_harmonic_envelope": 0.345426,
+            "loss_noise_envelope": 0.23614,
+            "loss_periodic_gate": 0.701389,
+            "loss_noise_gate": 0.670312,
+            "loss_waveform": 0.27914,
+            "loss_stft": 1.250232,
+            "periodic_gate_pred_mean": 0.552886,
+            "noise_gate_pred_mean": 0.630973,
+            "periodic_gate_target_mean": 0.548974,
+            "noise_gate_target_mean": 0.593034,
+            "decoded_waveform_rms": 0.32393,
+            "target_waveform_rms": 0.113056
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_170",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_170/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1647,
+          "loss_metrics": {
+            "loss_total": 1.610192,
+            "loss_harmonic_envelope": 0.34918,
+            "loss_noise_envelope": 0.233372,
+            "loss_periodic_gate": 0.687939,
+            "loss_noise_gate": 0.637902,
+            "loss_waveform": 0.280404,
+            "loss_stft": 1.244539,
+            "periodic_gate_pred_mean": 0.548597,
+            "noise_gate_pred_mean": 0.633647,
+            "periodic_gate_target_mean": 0.605891,
+            "noise_gate_target_mean": 0.657078,
+            "decoded_waveform_rms": 0.321111,
+            "target_waveform_rms": 0.123972
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_155",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_155/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1699,
+          "loss_metrics": {
+            "loss_total": 1.62686,
+            "loss_harmonic_envelope": 0.377881,
+            "loss_noise_envelope": 0.236042,
+            "loss_periodic_gate": 0.683595,
+            "loss_noise_gate": 0.627018,
+            "loss_waveform": 0.280563,
+            "loss_stft": 1.221065,
+            "periodic_gate_pred_mean": 0.547052,
+            "noise_gate_pred_mean": 0.634393,
+            "periodic_gate_target_mean": 0.624206,
+            "noise_gate_target_mean": 0.678069,
+            "decoded_waveform_rms": 0.320061,
+            "target_waveform_rms": 0.126074
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_165",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_165/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1728,
+          "loss_metrics": {
+            "loss_total": 1.618997,
+            "loss_harmonic_envelope": 0.345712,
+            "loss_noise_envelope": 0.247054,
+            "loss_periodic_gate": 0.691409,
+            "loss_noise_gate": 0.647532,
+            "loss_waveform": 0.279419,
+            "loss_stft": 1.237467,
+            "periodic_gate_pred_mean": 0.549734,
+            "noise_gate_pred_mean": 0.633124,
+            "periodic_gate_target_mean": 0.588909,
+            "noise_gate_target_mean": 0.638765,
+            "decoded_waveform_rms": 0.32176,
+            "target_waveform_rms": 0.119231
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_182",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_182/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1759,
+          "loss_metrics": {
+            "loss_total": 1.624007,
+            "loss_harmonic_envelope": 0.364979,
+            "loss_noise_envelope": 0.239634,
+            "loss_periodic_gate": 0.688237,
+            "loss_noise_gate": 0.637435,
+            "loss_waveform": 0.278889,
+            "loss_stft": 1.229631,
+            "periodic_gate_pred_mean": 0.548304,
+            "noise_gate_pred_mean": 0.633333,
+            "periodic_gate_target_mean": 0.605129,
+            "noise_gate_target_mean": 0.656705,
+            "decoded_waveform_rms": 0.32098,
+            "target_waveform_rms": 0.12023
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_112",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_112/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1842,
+          "loss_metrics": {
+            "loss_total": 1.650805,
+            "loss_harmonic_envelope": 0.40745,
+            "loss_noise_envelope": 0.241033,
+            "loss_periodic_gate": 0.682441,
+            "loss_noise_gate": 0.621384,
+            "loss_waveform": 0.286451,
+            "loss_stft": 1.196664,
+            "periodic_gate_pred_mean": 0.54653,
+            "noise_gate_pred_mean": 0.634255,
+            "periodic_gate_target_mean": 0.635078,
+            "noise_gate_target_mean": 0.687368,
+            "decoded_waveform_rms": 0.319818,
+            "target_waveform_rms": 0.147959
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_136",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_136/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1923,
+          "loss_metrics": {
+            "loss_total": 1.640617,
+            "loss_harmonic_envelope": 0.366136,
+            "loss_noise_envelope": 0.23634,
+            "loss_periodic_gate": 0.700672,
+            "loss_noise_gate": 0.665354,
+            "loss_waveform": 0.284687,
+            "loss_stft": 1.245183,
+            "periodic_gate_pred_mean": 0.552731,
+            "noise_gate_pred_mean": 0.630709,
+            "periodic_gate_target_mean": 0.559107,
+            "noise_gate_target_mean": 0.601218,
+            "decoded_waveform_rms": 0.323852,
+            "target_waveform_rms": 0.135592
+          }
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_105",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter4_7_firefly_105/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1966,
+          "loss_metrics": {
+            "loss_total": 1.629133,
+            "loss_harmonic_envelope": 0.339095,
+            "loss_noise_envelope": 0.237412,
+            "loss_periodic_gate": 0.709458,
+            "loss_noise_gate": 0.684765,
+            "loss_waveform": 0.283298,
+            "loss_stft": 1.264266,
+            "periodic_gate_pred_mean": 0.556049,
+            "noise_gate_pred_mean": 0.628732,
+            "periodic_gate_target_mean": 0.524775,
+            "noise_gate_target_mean": 0.562695,
+            "decoded_waveform_rms": 0.325863,
+            "target_waveform_rms": 0.123851
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_245",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_245/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2022,
+          "loss_metrics": {
+            "loss_total": 1.600389,
+            "loss_harmonic_envelope": 0.307582,
+            "loss_noise_envelope": 0.230042,
+            "loss_periodic_gate": 0.713358,
+            "loss_noise_gate": 0.699686,
+            "loss_waveform": 0.278355,
+            "loss_stft": 1.281957,
+            "periodic_gate_pred_mean": 0.556929,
+            "noise_gate_pred_mean": 0.628756,
+            "periodic_gate_target_mean": 0.498823,
+            "noise_gate_target_mean": 0.535747,
+            "decoded_waveform_rms": 0.326521,
+            "target_waveform_rms": 0.103886
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_197",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_197/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2101,
+          "loss_metrics": {
+            "loss_total": 1.617559,
+            "loss_harmonic_envelope": 0.3446,
+            "loss_noise_envelope": 0.236419,
+            "loss_periodic_gate": 0.699505,
+            "loss_noise_gate": 0.664562,
+            "loss_waveform": 0.279326,
+            "loss_stft": 1.248126,
+            "periodic_gate_pred_mean": 0.552183,
+            "noise_gate_pred_mean": 0.63114,
+            "periodic_gate_target_mean": 0.558487,
+            "noise_gate_target_mean": 0.603563,
+            "decoded_waveform_rms": 0.323415,
+            "target_waveform_rms": 0.114594
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_103",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_103/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2207,
+          "loss_metrics": {
+            "loss_total": 1.625023,
+            "loss_harmonic_envelope": 0.343987,
+            "loss_noise_envelope": 0.23635,
+            "loss_periodic_gate": 0.700136,
+            "loss_noise_gate": 0.669201,
+            "loss_waveform": 0.283453,
+            "loss_stft": 1.258186,
+            "periodic_gate_pred_mean": 0.55478,
+            "noise_gate_pred_mean": 0.63168,
+            "periodic_gate_target_mean": 0.555742,
+            "noise_gate_target_mean": 0.599572,
+            "decoded_waveform_rms": 0.324395,
+            "target_waveform_rms": 0.126983
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_137",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_137/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2348,
+          "loss_metrics": {
+            "loss_total": 1.635959,
+            "loss_harmonic_envelope": 0.357423,
+            "loss_noise_envelope": 0.236563,
+            "loss_periodic_gate": 0.702855,
+            "loss_noise_gate": 0.667574,
+            "loss_waveform": 0.285768,
+            "loss_stft": 1.250007,
+            "periodic_gate_pred_mean": 0.553012,
+            "noise_gate_pred_mean": 0.629805,
+            "periodic_gate_target_mean": 0.554381,
+            "noise_gate_target_mean": 0.594567,
+            "decoded_waveform_rms": 0.324213,
+            "target_waveform_rms": 0.136678
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_212",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_212/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2512,
+          "loss_metrics": {
+            "loss_total": 1.602583,
+            "loss_harmonic_envelope": 0.318397,
+            "loss_noise_envelope": 0.235418,
+            "loss_periodic_gate": 0.706135,
+            "loss_noise_gate": 0.680018,
+            "loss_waveform": 0.278703,
+            "loss_stft": 1.264372,
+            "periodic_gate_pred_mean": 0.554148,
+            "noise_gate_pred_mean": 0.629767,
+            "periodic_gate_target_mean": 0.53146,
+            "noise_gate_target_mean": 0.572542,
+            "decoded_waveform_rms": 0.3248,
+            "target_waveform_rms": 0.109604
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_109",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_109/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2589,
+          "loss_metrics": {
+            "loss_total": 1.627809,
+            "loss_harmonic_envelope": 0.348667,
+            "loss_noise_envelope": 0.236704,
+            "loss_periodic_gate": 0.699048,
+            "loss_noise_gate": 0.661683,
+            "loss_waveform": 0.286849,
+            "loss_stft": 1.253734,
+            "periodic_gate_pred_mean": 0.55234,
+            "noise_gate_pred_mean": 0.631082,
+            "periodic_gate_target_mean": 0.566045,
+            "noise_gate_target_mean": 0.608686,
+            "decoded_waveform_rms": 0.3235,
+            "target_waveform_rms": 0.142116
+          }
+        },
+        {
+          "record_id": "target::chapter3_26_firefly_107",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_26_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2686,
+          "loss_metrics": {
+            "loss_total": 1.657781,
+            "loss_harmonic_envelope": 0.395275,
+            "loss_noise_envelope": 0.238173,
+            "loss_periodic_gate": 0.696111,
+            "loss_noise_gate": 0.655101,
+            "loss_waveform": 0.286028,
+            "loss_stft": 1.222155,
+            "periodic_gate_pred_mean": 0.551133,
+            "noise_gate_pred_mean": 0.631686,
+            "periodic_gate_target_mean": 0.576628,
+            "noise_gate_target_mean": 0.621597,
+            "decoded_waveform_rms": 0.322675,
+            "target_waveform_rms": 0.141964
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_142",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_142/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2787,
+          "loss_metrics": {
+            "loss_total": 1.626529,
+            "loss_harmonic_envelope": 0.341809,
+            "loss_noise_envelope": 0.237333,
+            "loss_periodic_gate": 0.706637,
+            "loss_noise_gate": 0.679123,
+            "loss_waveform": 0.283059,
+            "loss_stft": 1.257411,
+            "periodic_gate_pred_mean": 0.554494,
+            "noise_gate_pred_mean": 0.629414,
+            "periodic_gate_target_mean": 0.534332,
+            "noise_gate_target_mean": 0.573495,
+            "decoded_waveform_rms": 0.325017,
+            "target_waveform_rms": 0.126803
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_215",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_215/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2922,
+          "loss_metrics": {
+            "loss_total": 1.604498,
+            "loss_harmonic_envelope": 0.318114,
+            "loss_noise_envelope": 0.233781,
+            "loss_periodic_gate": 0.70407,
+            "loss_noise_gate": 0.675101,
+            "loss_waveform": 0.280273,
+            "loss_stft": 1.273264,
+            "periodic_gate_pred_mean": 0.553522,
+            "noise_gate_pred_mean": 0.630203,
+            "periodic_gate_target_mean": 0.54058,
+            "noise_gate_target_mean": 0.58234,
+            "decoded_waveform_rms": 0.324347,
+            "target_waveform_rms": 0.116752
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_210",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_210/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3022,
+          "loss_metrics": {
+            "loss_total": 1.602251,
+            "loss_harmonic_envelope": 0.314876,
+            "loss_noise_envelope": 0.233284,
+            "loss_periodic_gate": 0.708455,
+            "loss_noise_gate": 0.685705,
+            "loss_waveform": 0.278699,
+            "loss_stft": 1.271818,
+            "periodic_gate_pred_mean": 0.55497,
+            "noise_gate_pred_mean": 0.62934,
+            "periodic_gate_target_mean": 0.521814,
+            "noise_gate_target_mean": 0.561509,
+            "decoded_waveform_rms": 0.32531,
+            "target_waveform_rms": 0.107835
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_136",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_136/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3169,
+          "loss_metrics": {
+            "loss_total": 1.641276,
+            "loss_harmonic_envelope": 0.359236,
+            "loss_noise_envelope": 0.239098,
+            "loss_periodic_gate": 0.704825,
+            "loss_noise_gate": 0.674058,
+            "loss_waveform": 0.283336,
+            "loss_stft": 1.250995,
+            "periodic_gate_pred_mean": 0.553848,
+            "noise_gate_pred_mean": 0.629673,
+            "periodic_gate_target_mean": 0.543186,
+            "noise_gate_target_mean": 0.583025,
+            "decoded_waveform_rms": 0.324625,
+            "target_waveform_rms": 0.129324
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_105",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_105/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3239,
+          "loss_metrics": {
+            "loss_total": 1.627133,
+            "loss_harmonic_envelope": 0.345902,
+            "loss_noise_envelope": 0.237545,
+            "loss_periodic_gate": 0.700391,
+            "loss_noise_gate": 0.66415,
+            "loss_waveform": 0.288018,
+            "loss_stft": 1.253539,
+            "periodic_gate_pred_mean": 0.552766,
+            "noise_gate_pred_mean": 0.630713,
+            "periodic_gate_target_mean": 0.561901,
+            "noise_gate_target_mean": 0.603396,
+            "decoded_waveform_rms": 0.323752,
+            "target_waveform_rms": 0.146744
+          }
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_133",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_17_firefly_133/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3438,
+          "loss_metrics": {
+            "loss_total": 1.638509,
+            "loss_harmonic_envelope": 0.360505,
+            "loss_noise_envelope": 0.236086,
+            "loss_periodic_gate": 0.704973,
+            "loss_noise_gate": 0.674031,
+            "loss_waveform": 0.284368,
+            "loss_stft": 1.247864,
+            "periodic_gate_pred_mean": 0.55446,
+            "noise_gate_pred_mean": 0.629609,
+            "periodic_gate_target_mean": 0.543626,
+            "noise_gate_target_mean": 0.58365,
+            "decoded_waveform_rms": 0.324796,
+            "target_waveform_rms": 0.130088
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_157",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_157/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3684,
+          "loss_metrics": {
+            "loss_total": 1.626175,
+            "loss_harmonic_envelope": 0.361706,
+            "loss_noise_envelope": 0.23911,
+            "loss_periodic_gate": 0.692205,
+            "loss_noise_gate": 0.647817,
+            "loss_waveform": 0.279305,
+            "loss_stft": 1.235403,
+            "periodic_gate_pred_mean": 0.549889,
+            "noise_gate_pred_mean": 0.63272,
+            "periodic_gate_target_mean": 0.587968,
+            "noise_gate_target_mean": 0.637162,
+            "decoded_waveform_rms": 0.321822,
+            "target_waveform_rms": 0.118739
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_178",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_178/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3810,
+          "loss_metrics": {
+            "loss_total": 1.62545,
+            "loss_harmonic_envelope": 0.36442,
+            "loss_noise_envelope": 0.244244,
+            "loss_periodic_gate": 0.690989,
+            "loss_noise_gate": 0.644848,
+            "loss_waveform": 0.279232,
+            "loss_stft": 1.220006,
+            "periodic_gate_pred_mean": 0.549275,
+            "noise_gate_pred_mean": 0.63291,
+            "periodic_gate_target_mean": 0.592559,
+            "noise_gate_target_mean": 0.642637,
+            "decoded_waveform_rms": 0.321419,
+            "target_waveform_rms": 0.119426
+          }
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_119",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter4_7_firefly_119/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 4069,
+          "loss_metrics": {
+            "loss_total": 1.618462,
+            "loss_harmonic_envelope": 0.331225,
+            "loss_noise_envelope": 0.236126,
+            "loss_periodic_gate": 0.709157,
+            "loss_noise_gate": 0.690687,
+            "loss_waveform": 0.279994,
+            "loss_stft": 1.262291,
+            "periodic_gate_pred_mean": 0.557137,
+            "noise_gate_pred_mean": 0.629851,
+            "periodic_gate_target_mean": 0.516746,
+            "noise_gate_target_mean": 0.556417,
+            "decoded_waveform_rms": 0.325967,
+            "target_waveform_rms": 0.110968
+          }
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_129",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_17_firefly_129/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 4264,
+          "loss_metrics": {
+            "loss_total": 1.631197,
+            "loss_harmonic_envelope": 0.356254,
+            "loss_noise_envelope": 0.236227,
+            "loss_periodic_gate": 0.699315,
+            "loss_noise_gate": 0.661399,
+            "loss_waveform": 0.286722,
+            "loss_stft": 1.246426,
+            "periodic_gate_pred_mean": 0.552317,
+            "noise_gate_pred_mean": 0.630867,
+            "periodic_gate_target_mean": 0.565821,
+            "noise_gate_target_mean": 0.608608,
+            "decoded_waveform_rms": 0.323427,
+            "target_waveform_rms": 0.141274
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_206",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_206/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 4600,
+          "loss_metrics": {
+            "loss_total": 1.617813,
+            "loss_harmonic_envelope": 0.336812,
+            "loss_noise_envelope": 0.241007,
+            "loss_periodic_gate": 0.703219,
+            "loss_noise_gate": 0.672718,
+            "loss_waveform": 0.278434,
+            "loss_stft": 1.251181,
+            "periodic_gate_pred_mean": 0.55323,
+            "noise_gate_pred_mean": 0.63028,
+            "periodic_gate_target_mean": 0.543834,
+            "noise_gate_target_mean": 0.586833,
+            "decoded_waveform_rms": 0.324087,
+            "target_waveform_rms": 0.109604
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_106",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_106/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 5815,
+          "loss_metrics": {
+            "loss_total": 1.622014,
+            "loss_harmonic_envelope": 0.328907,
+            "loss_noise_envelope": 0.240827,
+            "loss_periodic_gate": 0.708883,
+            "loss_noise_gate": 0.684729,
+            "loss_waveform": 0.284993,
+            "loss_stft": 1.262124,
+            "periodic_gate_pred_mean": 0.555392,
+            "noise_gate_pred_mean": 0.629034,
+            "periodic_gate_target_mean": 0.525159,
+            "noise_gate_target_mean": 0.562723,
+            "decoded_waveform_rms": 0.325458,
+            "target_waveform_rms": 0.132414
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "record_ids": [
+        "target::chapter3_3_firefly_162",
+        "target::chapter3_20_firefly_184",
+        "target::chapter3_21_firefly_116",
+        "target::chapter3_3_firefly_207",
+        "target::chapter3_30_firefly_101",
+        "target::chapter3_2_firefly_131",
+        "target::chapter3_2_firefly_212",
+        "target::chapter3_3_firefly_246",
+        "target::chapter3_20_firefly_145",
+        "target::chapter3_29_firefly_130",
+        "target::chapter3_30_firefly_117",
+        "target::chapter3_3_firefly_115",
+        "target::chapter3_29_firefly_113",
+        "target::chapter3_22_firefly_114",
+        "target::chapter3_2_firefly_137",
+        "target::chapter3_3_firefly_234",
+        "target::chapter3_3_firefly_171",
+        "target::chapter3_30_firefly_145",
+        "target::chapter3_3_firefly_174",
+        "target::chapter3_26_firefly_114",
+        "target::chapter3_30_firefly_147",
+        "target::chapter3_2_firefly_183",
+        "target::chapter3_4_firefly_126",
+        "target::chapter3_3_firefly_199",
+        "target::chapter3_20_firefly_133",
+        "target::chapter3_29_firefly_141",
+        "target::chapter3_3_firefly_213",
+        "target::chapter3_2_firefly_164",
+        "target::chapter3_30_firefly_132",
+        "target::chapter3_5_firefly_102",
+        "target::chapter3_2_firefly_163",
+        "target::chapter3_4_firefly_140",
+        "target::chapter3_3_firefly_138",
+        "target::chapter3_3_firefly_114",
+        "target::chapter3_20_firefly_172",
+        "target::chapter3_6_firefly_106",
+        "target::chapter3_20_firefly_135",
+        "target::chapter3_2_firefly_220",
+        "target::chapter3_6_firefly_103",
+        "target::chapter3_3_firefly_122",
+        "target::chapter3_2_firefly_170",
+        "target::chapter3_2_firefly_155",
+        "target::chapter3_2_firefly_165",
+        "target::chapter3_3_firefly_182",
+        "target::chapter3_4_firefly_112",
+        "target::chapter3_30_firefly_136",
+        "target::chapter4_7_firefly_105",
+        "target::chapter3_3_firefly_245",
+        "target::chapter3_3_firefly_197",
+        "target::chapter3_29_firefly_103",
+        "target::chapter3_30_firefly_137",
+        "target::chapter3_3_firefly_212",
+        "target::chapter3_4_firefly_109",
+        "target::chapter3_26_firefly_107",
+        "target::chapter3_29_firefly_142",
+        "target::chapter3_3_firefly_215",
+        "target::chapter3_3_firefly_210",
+        "target::chapter3_29_firefly_136",
+        "target::chapter3_4_firefly_105",
+        "target::chapter3_17_firefly_133",
+        "target::chapter3_2_firefly_157",
+        "target::chapter3_2_firefly_178",
+        "target::chapter4_7_firefly_119",
+        "target::chapter3_17_firefly_129",
+        "target::chapter3_2_firefly_206",
+        "target::chapter3_4_firefly_106"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.482311,
+        "loss_harmonic_envelope": 0.314515,
+        "loss_noise_envelope": 0.192461,
+        "loss_periodic_gate": 0.69264,
+        "loss_noise_gate": 0.663057,
+        "loss_waveform": 0.253003,
+        "loss_stft": 1.155389,
+        "periodic_gate_pred_mean": 0.557821,
+        "noise_gate_pred_mean": 0.6266,
+        "periodic_gate_target_mean": 0.554948,
+        "noise_gate_target_mean": 0.59846,
+        "decoded_waveform_rms": 0.283736,
+        "target_waveform_rms": 0.123402
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 167,
+          "loss_metrics": {
+            "loss_total": 1.502296,
+            "loss_harmonic_envelope": 0.340719,
+            "loss_noise_envelope": 0.188713,
+            "loss_periodic_gate": 0.671275,
+            "loss_noise_gate": 0.614611,
+            "loss_waveform": 0.260739,
+            "loss_stft": 1.170635,
+            "periodic_gate_pred_mean": 0.555028,
+            "noise_gate_pred_mean": 0.632453,
+            "periodic_gate_target_mean": 0.644517,
+            "noise_gate_target_mean": 0.698585,
+            "decoded_waveform_rms": 0.286154,
+            "target_waveform_rms": 0.13987
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_184",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_184/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 267,
+          "loss_metrics": {
+            "loss_total": 1.548225,
+            "loss_harmonic_envelope": 0.399738,
+            "loss_noise_envelope": 0.207879,
+            "loss_periodic_gate": 0.672243,
+            "loss_noise_gate": 0.617654,
+            "loss_waveform": 0.265251,
+            "loss_stft": 1.100009,
+            "periodic_gate_pred_mean": 0.555103,
+            "noise_gate_pred_mean": 0.632418,
+            "periodic_gate_target_mean": 0.639646,
+            "noise_gate_target_mean": 0.692909,
+            "decoded_waveform_rms": 0.284835,
+            "target_waveform_rms": 0.158916
+          }
+        },
+        {
+          "record_id": "target::chapter3_21_firefly_116",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_21_firefly_116/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 320,
+          "loss_metrics": {
+            "loss_total": 1.488526,
+            "loss_harmonic_envelope": 0.330362,
+            "loss_noise_envelope": 0.186588,
+            "loss_periodic_gate": 0.678457,
+            "loss_noise_gate": 0.632845,
+            "loss_waveform": 0.266929,
+            "loss_stft": 1.151703,
+            "periodic_gate_pred_mean": 0.556451,
+            "noise_gate_pred_mean": 0.631193,
+            "periodic_gate_target_mean": 0.614522,
+            "noise_gate_target_mean": 0.664027,
+            "decoded_waveform_rms": 0.284289,
+            "target_waveform_rms": 0.164423
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_207",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_207/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 373,
+          "loss_metrics": {
+            "loss_total": 1.472097,
+            "loss_harmonic_envelope": 0.324259,
+            "loss_noise_envelope": 0.192402,
+            "loss_periodic_gate": 0.664516,
+            "loss_noise_gate": 0.599966,
+            "loss_waveform": 0.256957,
+            "loss_stft": 1.148122,
+            "periodic_gate_pred_mean": 0.553932,
+            "noise_gate_pred_mean": 0.634734,
+            "periodic_gate_target_mean": 0.670043,
+            "noise_gate_target_mean": 0.730064,
+            "decoded_waveform_rms": 0.284365,
+            "target_waveform_rms": 0.131602
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_101",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_101/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 432,
+          "loss_metrics": {
+            "loss_total": 1.535504,
+            "loss_harmonic_envelope": 0.36413,
+            "loss_noise_envelope": 0.192006,
+            "loss_periodic_gate": 0.698483,
+            "loss_noise_gate": 0.674026,
+            "loss_waveform": 0.25892,
+            "loss_stft": 1.150812,
+            "periodic_gate_pred_mean": 0.558121,
+            "noise_gate_pred_mean": 0.62354,
+            "periodic_gate_target_mean": 0.533694,
+            "noise_gate_target_mean": 0.569745,
+            "decoded_waveform_rms": 0.284931,
+            "target_waveform_rms": 0.151001
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_131",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_131/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 494,
+          "loss_metrics": {
+            "loss_total": 1.487897,
+            "loss_harmonic_envelope": 0.327674,
+            "loss_noise_envelope": 0.191942,
+            "loss_periodic_gate": 0.699319,
+            "loss_noise_gate": 0.680307,
+            "loss_waveform": 0.250023,
+            "loss_stft": 1.134688,
+            "periodic_gate_pred_mean": 0.558764,
+            "noise_gate_pred_mean": 0.625788,
+            "periodic_gate_target_mean": 0.524484,
+            "noise_gate_target_mean": 0.566616,
+            "decoded_waveform_rms": 0.283757,
+            "target_waveform_rms": 0.114155
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_212",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_212/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 544,
+          "loss_metrics": {
+            "loss_total": 1.490008,
+            "loss_harmonic_envelope": 0.314583,
+            "loss_noise_envelope": 0.210339,
+            "loss_periodic_gate": 0.690787,
+            "loss_noise_gate": 0.659563,
+            "loss_waveform": 0.251078,
+            "loss_stft": 1.138955,
+            "periodic_gate_pred_mean": 0.557426,
+            "noise_gate_pred_mean": 0.627388,
+            "periodic_gate_target_mean": 0.561068,
+            "noise_gate_target_mean": 0.606478,
+            "decoded_waveform_rms": 0.28406,
+            "target_waveform_rms": 0.114555
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_246",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_246/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 581,
+          "loss_metrics": {
+            "loss_total": 1.437521,
+            "loss_harmonic_envelope": 0.244981,
+            "loss_noise_envelope": 0.184979,
+            "loss_periodic_gate": 0.712374,
+            "loss_noise_gate": 0.705532,
+            "loss_waveform": 0.247654,
+            "loss_stft": 1.200305,
+            "periodic_gate_pred_mean": 0.559741,
+            "noise_gate_pred_mean": 0.619926,
+            "periodic_gate_target_mean": 0.473297,
+            "noise_gate_target_mean": 0.505112,
+            "decoded_waveform_rms": 0.284764,
+            "target_waveform_rms": 0.103611
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_145",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_145/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 622,
+          "loss_metrics": {
+            "loss_total": 1.47857,
+            "loss_harmonic_envelope": 0.308143,
+            "loss_noise_envelope": 0.189439,
+            "loss_periodic_gate": 0.693799,
+            "loss_noise_gate": 0.665556,
+            "loss_waveform": 0.260551,
+            "loss_stft": 1.157684,
+            "periodic_gate_pred_mean": 0.55833,
+            "noise_gate_pred_mean": 0.626351,
+            "periodic_gate_target_mean": 0.55214,
+            "noise_gate_target_mean": 0.593941,
+            "decoded_waveform_rms": 0.283864,
+            "target_waveform_rms": 0.149074
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_130",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_130/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 648,
+          "loss_metrics": {
+            "loss_total": 1.425518,
+            "loss_harmonic_envelope": 0.23274,
+            "loss_noise_envelope": 0.178026,
+            "loss_periodic_gate": 0.716224,
+            "loss_noise_gate": 0.716038,
+            "loss_waveform": 0.250011,
+            "loss_stft": 1.20659,
+            "periodic_gate_pred_mean": 0.561342,
+            "noise_gate_pred_mean": 0.61987,
+            "periodic_gate_target_mean": 0.458946,
+            "noise_gate_target_mean": 0.488715,
+            "decoded_waveform_rms": 0.284117,
+            "target_waveform_rms": 0.119577
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_117",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_117/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 682,
+          "loss_metrics": {
+            "loss_total": 1.516343,
+            "loss_harmonic_envelope": 0.350371,
+            "loss_noise_envelope": 0.191552,
+            "loss_periodic_gate": 0.696437,
+            "loss_noise_gate": 0.670772,
+            "loss_waveform": 0.255501,
+            "loss_stft": 1.146458,
+            "periodic_gate_pred_mean": 0.557861,
+            "noise_gate_pred_mean": 0.624848,
+            "periodic_gate_target_mean": 0.539835,
+            "noise_gate_target_mean": 0.579264,
+            "decoded_waveform_rms": 0.284257,
+            "target_waveform_rms": 0.134748
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_115",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_115/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 709,
+          "loss_metrics": {
+            "loss_total": 1.380383,
+            "loss_harmonic_envelope": 0.171574,
+            "loss_noise_envelope": 0.171685,
+            "loss_periodic_gate": 0.733253,
+            "loss_noise_gate": 0.758334,
+            "loss_waveform": 0.242393,
+            "loss_stft": 1.235218,
+            "periodic_gate_pred_mean": 0.563093,
+            "noise_gate_pred_mean": 0.616455,
+            "periodic_gate_target_mean": 0.382533,
+            "noise_gate_target_mean": 0.405041,
+            "decoded_waveform_rms": 0.283539,
+            "target_waveform_rms": 0.090491
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_113",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_113/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 749,
+          "loss_metrics": {
+            "loss_total": 1.497702,
+            "loss_harmonic_envelope": 0.339413,
+            "loss_noise_envelope": 0.188504,
+            "loss_periodic_gate": 0.697186,
+            "loss_noise_gate": 0.673146,
+            "loss_waveform": 0.248149,
+            "loss_stft": 1.143289,
+            "periodic_gate_pred_mean": 0.560058,
+            "noise_gate_pred_mean": 0.625981,
+            "periodic_gate_target_mean": 0.53943,
+            "noise_gate_target_mean": 0.582524,
+            "decoded_waveform_rms": 0.283731,
+            "target_waveform_rms": 0.106644
+          }
+        },
+        {
+          "record_id": "target::chapter3_22_firefly_114",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_22_firefly_114/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 765,
+          "loss_metrics": {
+            "loss_total": 1.478426,
+            "loss_harmonic_envelope": 0.3091,
+            "loss_noise_envelope": 0.190691,
+            "loss_periodic_gate": 0.689005,
+            "loss_noise_gate": 0.653311,
+            "loss_waveform": 0.26142,
+            "loss_stft": 1.158924,
+            "periodic_gate_pred_mean": 0.558376,
+            "noise_gate_pred_mean": 0.627354,
+            "periodic_gate_target_mean": 0.574856,
+            "noise_gate_target_mean": 0.619101,
+            "decoded_waveform_rms": 0.283931,
+            "target_waveform_rms": 0.151857
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_137",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_137/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 789,
+          "loss_metrics": {
+            "loss_total": 1.465562,
+            "loss_harmonic_envelope": 0.299975,
+            "loss_noise_envelope": 0.192084,
+            "loss_periodic_gate": 0.686274,
+            "loss_noise_gate": 0.648621,
+            "loss_waveform": 0.25111,
+            "loss_stft": 1.161939,
+            "periodic_gate_pred_mean": 0.557054,
+            "noise_gate_pred_mean": 0.628526,
+            "periodic_gate_target_mean": 0.580707,
+            "noise_gate_target_mean": 0.629101,
+            "decoded_waveform_rms": 0.283848,
+            "target_waveform_rms": 0.115329
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_234",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_234/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 807,
+          "loss_metrics": {
+            "loss_total": 1.501809,
+            "loss_harmonic_envelope": 0.346616,
+            "loss_noise_envelope": 0.200376,
+            "loss_periodic_gate": 0.679169,
+            "loss_noise_gate": 0.633419,
+            "loss_waveform": 0.251782,
+            "loss_stft": 1.132818,
+            "periodic_gate_pred_mean": 0.55579,
+            "noise_gate_pred_mean": 0.630831,
+            "periodic_gate_target_mean": 0.608463,
+            "noise_gate_target_mean": 0.661254,
+            "decoded_waveform_rms": 0.283624,
+            "target_waveform_rms": 0.117327
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_171",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_171/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 834,
+          "loss_metrics": {
+            "loss_total": 1.512559,
+            "loss_harmonic_envelope": 0.365575,
+            "loss_noise_envelope": 0.198506,
+            "loss_periodic_gate": 0.678595,
+            "loss_noise_gate": 0.631798,
+            "loss_waveform": 0.252318,
+            "loss_stft": 1.120483,
+            "periodic_gate_pred_mean": 0.555837,
+            "noise_gate_pred_mean": 0.630908,
+            "periodic_gate_target_mean": 0.611428,
+            "noise_gate_target_mean": 0.664534,
+            "decoded_waveform_rms": 0.283638,
+            "target_waveform_rms": 0.11946
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_145",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_145/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 872,
+          "loss_metrics": {
+            "loss_total": 1.519103,
+            "loss_harmonic_envelope": 0.354853,
+            "loss_noise_envelope": 0.194448,
+            "loss_periodic_gate": 0.697179,
+            "loss_noise_gate": 0.672323,
+            "loss_waveform": 0.250987,
+            "loss_stft": 1.140817,
+            "periodic_gate_pred_mean": 0.558017,
+            "noise_gate_pred_mean": 0.624684,
+            "periodic_gate_target_mean": 0.536355,
+            "noise_gate_target_mean": 0.576329,
+            "decoded_waveform_rms": 0.284182,
+            "target_waveform_rms": 0.116813
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_174",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_174/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 892,
+          "loss_metrics": {
+            "loss_total": 1.48666,
+            "loss_harmonic_envelope": 0.33509,
+            "loss_noise_envelope": 0.197167,
+            "loss_periodic_gate": 0.68038,
+            "loss_noise_gate": 0.637972,
+            "loss_waveform": 0.252557,
+            "loss_stft": 1.128907,
+            "periodic_gate_pred_mean": 0.556022,
+            "noise_gate_pred_mean": 0.63119,
+            "periodic_gate_target_mean": 0.602017,
+            "noise_gate_target_mean": 0.654514,
+            "decoded_waveform_rms": 0.283191,
+            "target_waveform_rms": 0.121695
+          }
+        },
+        {
+          "record_id": "target::chapter3_26_firefly_114",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_26_firefly_114/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 919,
+          "loss_metrics": {
+            "loss_total": 1.498571,
+            "loss_harmonic_envelope": 0.34327,
+            "loss_noise_envelope": 0.191607,
+            "loss_periodic_gate": 0.684126,
+            "loss_noise_gate": 0.642652,
+            "loss_waveform": 0.259593,
+            "loss_stft": 1.137082,
+            "periodic_gate_pred_mean": 0.556537,
+            "noise_gate_pred_mean": 0.628481,
+            "periodic_gate_target_mean": 0.591792,
+            "noise_gate_target_mean": 0.638649,
+            "decoded_waveform_rms": 0.283891,
+            "target_waveform_rms": 0.142261
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_147",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_147/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 949,
+          "loss_metrics": {
+            "loss_total": 1.530172,
+            "loss_harmonic_envelope": 0.370523,
+            "loss_noise_envelope": 0.205762,
+            "loss_periodic_gate": 0.690217,
+            "loss_noise_gate": 0.656823,
+            "loss_waveform": 0.251401,
+            "loss_stft": 1.117555,
+            "periodic_gate_pred_mean": 0.557082,
+            "noise_gate_pred_mean": 0.626841,
+            "periodic_gate_target_mean": 0.564536,
+            "noise_gate_target_mean": 0.609227,
+            "decoded_waveform_rms": 0.284001,
+            "target_waveform_rms": 0.119105
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_183",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_183/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 992,
+          "loss_metrics": {
+            "loss_total": 1.492512,
+            "loss_harmonic_envelope": 0.339207,
+            "loss_noise_envelope": 0.20324,
+            "loss_periodic_gate": 0.672252,
+            "loss_noise_gate": 0.617783,
+            "loss_waveform": 0.255824,
+            "loss_stft": 1.128294,
+            "periodic_gate_pred_mean": 0.55512,
+            "noise_gate_pred_mean": 0.632815,
+            "periodic_gate_target_mean": 0.637885,
+            "noise_gate_target_mean": 0.694262,
+            "decoded_waveform_rms": 0.283437,
+            "target_waveform_rms": 0.129585
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_126",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_126/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1039,
+          "loss_metrics": {
+            "loss_total": 1.502974,
+            "loss_harmonic_envelope": 0.335017,
+            "loss_noise_envelope": 0.197425,
+            "loss_periodic_gate": 0.692467,
+            "loss_noise_gate": 0.662437,
+            "loss_waveform": 0.256114,
+            "loss_stft": 1.14299,
+            "periodic_gate_pred_mean": 0.558156,
+            "noise_gate_pred_mean": 0.62656,
+            "periodic_gate_target_mean": 0.557418,
+            "noise_gate_target_mean": 0.59989,
+            "decoded_waveform_rms": 0.28375,
+            "target_waveform_rms": 0.13408
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_199",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_199/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1061,
+          "loss_metrics": {
+            "loss_total": 1.460411,
+            "loss_harmonic_envelope": 0.280558,
+            "loss_noise_envelope": 0.183277,
+            "loss_periodic_gate": 0.705451,
+            "loss_noise_gate": 0.690722,
+            "loss_waveform": 0.248967,
+            "loss_stft": 1.185716,
+            "periodic_gate_pred_mean": 0.559466,
+            "noise_gate_pred_mean": 0.622396,
+            "periodic_gate_target_mean": 0.503064,
+            "noise_gate_target_mean": 0.538769,
+            "decoded_waveform_rms": 0.284127,
+            "target_waveform_rms": 0.110236
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_133",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_133/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1105,
+          "loss_metrics": {
+            "loss_total": 1.484941,
+            "loss_harmonic_envelope": 0.312459,
+            "loss_noise_envelope": 0.191225,
+            "loss_periodic_gate": 0.69762,
+            "loss_noise_gate": 0.673312,
+            "loss_waveform": 0.253615,
+            "loss_stft": 1.160526,
+            "periodic_gate_pred_mean": 0.558613,
+            "noise_gate_pred_mean": 0.624977,
+            "periodic_gate_target_mean": 0.535539,
+            "noise_gate_target_mean": 0.576473,
+            "decoded_waveform_rms": 0.2838,
+            "target_waveform_rms": 0.127645
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_141",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_141/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1151,
+          "loss_metrics": {
+            "loss_total": 1.485062,
+            "loss_harmonic_envelope": 0.318099,
+            "loss_noise_envelope": 0.193945,
+            "loss_periodic_gate": 0.683088,
+            "loss_noise_gate": 0.640975,
+            "loss_waveform": 0.259383,
+            "loss_stft": 1.157027,
+            "periodic_gate_pred_mean": 0.556208,
+            "noise_gate_pred_mean": 0.628747,
+            "periodic_gate_target_mean": 0.595428,
+            "noise_gate_target_mean": 0.641828,
+            "decoded_waveform_rms": 0.283787,
+            "target_waveform_rms": 0.145518
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_213",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_213/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1203,
+          "loss_metrics": {
+            "loss_total": 1.463534,
+            "loss_harmonic_envelope": 0.287444,
+            "loss_noise_envelope": 0.191043,
+            "loss_periodic_gate": 0.706869,
+            "loss_noise_gate": 0.696567,
+            "loss_waveform": 0.2442,
+            "loss_stft": 1.16452,
+            "periodic_gate_pred_mean": 0.559552,
+            "noise_gate_pred_mean": 0.623173,
+            "periodic_gate_target_mean": 0.49323,
+            "noise_gate_target_mean": 0.530747,
+            "decoded_waveform_rms": 0.283555,
+            "target_waveform_rms": 0.091376
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_164",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_164/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1222,
+          "loss_metrics": {
+            "loss_total": 1.480433,
+            "loss_harmonic_envelope": 0.315582,
+            "loss_noise_envelope": 0.189993,
+            "loss_periodic_gate": 0.698564,
+            "loss_noise_gate": 0.676845,
+            "loss_waveform": 0.247642,
+            "loss_stft": 1.151912,
+            "periodic_gate_pred_mean": 0.558448,
+            "noise_gate_pred_mean": 0.625161,
+            "periodic_gate_target_mean": 0.528846,
+            "noise_gate_target_mean": 0.570476,
+            "decoded_waveform_rms": 0.283629,
+            "target_waveform_rms": 0.10544
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_132",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1262,
+          "loss_metrics": {
+            "loss_total": 1.497559,
+            "loss_harmonic_envelope": 0.334323,
+            "loss_noise_envelope": 0.187153,
+            "loss_periodic_gate": 0.694338,
+            "loss_noise_gate": 0.667586,
+            "loss_waveform": 0.25546,
+            "loss_stft": 1.151937,
+            "periodic_gate_pred_mean": 0.558124,
+            "noise_gate_pred_mean": 0.626275,
+            "periodic_gate_target_mean": 0.548234,
+            "noise_gate_target_mean": 0.589715,
+            "decoded_waveform_rms": 0.283508,
+            "target_waveform_rms": 0.134267
+          }
+        },
+        {
+          "record_id": "target::chapter3_5_firefly_102",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_5_firefly_102/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1284,
+          "loss_metrics": {
+            "loss_total": 1.464692,
+            "loss_harmonic_envelope": 0.298234,
+            "loss_noise_envelope": 0.193655,
+            "loss_periodic_gate": 0.700896,
+            "loss_noise_gate": 0.686854,
+            "loss_waveform": 0.246138,
+            "loss_stft": 1.144369,
+            "periodic_gate_pred_mean": 0.56021,
+            "noise_gate_pred_mean": 0.626834,
+            "periodic_gate_target_mean": 0.51791,
+            "noise_gate_target_mean": 0.560391,
+            "decoded_waveform_rms": 0.282534,
+            "target_waveform_rms": 0.101856
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_163",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_163/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1312,
+          "loss_metrics": {
+            "loss_total": 1.457182,
+            "loss_harmonic_envelope": 0.288863,
+            "loss_noise_envelope": 0.18534,
+            "loss_periodic_gate": 0.695191,
+            "loss_noise_gate": 0.669713,
+            "loss_waveform": 0.248914,
+            "loss_stft": 1.171081,
+            "periodic_gate_pred_mean": 0.558188,
+            "noise_gate_pred_mean": 0.626281,
+            "periodic_gate_target_mean": 0.543118,
+            "noise_gate_target_mean": 0.586163,
+            "decoded_waveform_rms": 0.283518,
+            "target_waveform_rms": 0.110195
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_140",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_140/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1351,
+          "loss_metrics": {
+            "loss_total": 1.556819,
+            "loss_harmonic_envelope": 0.397666,
+            "loss_noise_envelope": 0.218886,
+            "loss_periodic_gate": 0.684093,
+            "loss_noise_gate": 0.643043,
+            "loss_waveform": 0.255127,
+            "loss_stft": 1.094551,
+            "periodic_gate_pred_mean": 0.55669,
+            "noise_gate_pred_mean": 0.628718,
+            "periodic_gate_target_mean": 0.591189,
+            "noise_gate_target_mean": 0.638985,
+            "decoded_waveform_rms": 0.283722,
+            "target_waveform_rms": 0.130276
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_138",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_138/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1379,
+          "loss_metrics": {
+            "loss_total": 1.495636,
+            "loss_harmonic_envelope": 0.339789,
+            "loss_noise_envelope": 0.198359,
+            "loss_periodic_gate": 0.679762,
+            "loss_noise_gate": 0.634312,
+            "loss_waveform": 0.252866,
+            "loss_stft": 1.13648,
+            "periodic_gate_pred_mean": 0.556058,
+            "noise_gate_pred_mean": 0.630445,
+            "periodic_gate_target_mean": 0.607141,
+            "noise_gate_target_mean": 0.658918,
+            "decoded_waveform_rms": 0.28351,
+            "target_waveform_rms": 0.121436
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_114",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_114/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1413,
+          "loss_metrics": {
+            "loss_total": 1.449268,
+            "loss_harmonic_envelope": 0.265349,
+            "loss_noise_envelope": 0.18985,
+            "loss_periodic_gate": 0.7069,
+            "loss_noise_gate": 0.6952,
+            "loss_waveform": 0.245553,
+            "loss_stft": 1.181744,
+            "periodic_gate_pred_mean": 0.559218,
+            "noise_gate_pred_mean": 0.622475,
+            "periodic_gate_target_mean": 0.493907,
+            "noise_gate_target_mean": 0.530591,
+            "decoded_waveform_rms": 0.28379,
+            "target_waveform_rms": 0.096292
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_172",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_172/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1442,
+          "loss_metrics": {
+            "loss_total": 1.49592,
+            "loss_harmonic_envelope": 0.331784,
+            "loss_noise_envelope": 0.192468,
+            "loss_periodic_gate": 0.684408,
+            "loss_noise_gate": 0.643583,
+            "loss_waveform": 0.261196,
+            "loss_stft": 1.150944,
+            "periodic_gate_pred_mean": 0.556554,
+            "noise_gate_pred_mean": 0.628368,
+            "periodic_gate_target_mean": 0.590435,
+            "noise_gate_target_mean": 0.636558,
+            "decoded_waveform_rms": 0.283709,
+            "target_waveform_rms": 0.150195
+          }
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_106",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_6_firefly_106/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1473,
+          "loss_metrics": {
+            "loss_total": 1.432749,
+            "loss_harmonic_envelope": 0.248372,
+            "loss_noise_envelope": 0.17678,
+            "loss_periodic_gate": 0.712863,
+            "loss_noise_gate": 0.710416,
+            "loss_waveform": 0.242332,
+            "loss_stft": 1.20355,
+            "periodic_gate_pred_mean": 0.561177,
+            "noise_gate_pred_mean": 0.622091,
+            "periodic_gate_target_mean": 0.469775,
+            "noise_gate_target_mean": 0.505492,
+            "decoded_waveform_rms": 0.283209,
+            "target_waveform_rms": 0.084114
+          }
+        },
+        {
+          "record_id": "target::chapter3_20_firefly_135",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_20_firefly_135/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1500,
+          "loss_metrics": {
+            "loss_total": 1.459313,
+            "loss_harmonic_envelope": 0.283495,
+            "loss_noise_envelope": 0.184953,
+            "loss_periodic_gate": 0.701183,
+            "loss_noise_gate": 0.68291,
+            "loss_waveform": 0.253638,
+            "loss_stft": 1.174453,
+            "periodic_gate_pred_mean": 0.559244,
+            "noise_gate_pred_mean": 0.624556,
+            "periodic_gate_target_mean": 0.520021,
+            "noise_gate_target_mean": 0.558898,
+            "decoded_waveform_rms": 0.283403,
+            "target_waveform_rms": 0.130517
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_220",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_220/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1532,
+          "loss_metrics": {
+            "loss_total": 1.472665,
+            "loss_harmonic_envelope": 0.304976,
+            "loss_noise_envelope": 0.192685,
+            "loss_periodic_gate": 0.690338,
+            "loss_noise_gate": 0.658067,
+            "loss_waveform": 0.251869,
+            "loss_stft": 1.158778,
+            "periodic_gate_pred_mean": 0.557116,
+            "noise_gate_pred_mean": 0.627216,
+            "periodic_gate_target_mean": 0.563083,
+            "noise_gate_target_mean": 0.608124,
+            "decoded_waveform_rms": 0.283583,
+            "target_waveform_rms": 0.120136
+          }
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_103",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_6_firefly_103/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1578,
+          "loss_metrics": {
+            "loss_total": 1.398982,
+            "loss_harmonic_envelope": 0.199,
+            "loss_noise_envelope": 0.173718,
+            "loss_periodic_gate": 0.725743,
+            "loss_noise_gate": 0.740492,
+            "loss_waveform": 0.238194,
+            "loss_stft": 1.22784,
+            "periodic_gate_pred_mean": 0.562616,
+            "noise_gate_pred_mean": 0.618657,
+            "periodic_gate_target_mean": 0.414862,
+            "noise_gate_target_mean": 0.443367,
+            "decoded_waveform_rms": 0.283155,
+            "target_waveform_rms": 0.06308
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_122",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_122/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1607,
+          "loss_metrics": {
+            "loss_total": 1.477538,
+            "loss_harmonic_envelope": 0.311763,
+            "loss_noise_envelope": 0.19201,
+            "loss_periodic_gate": 0.693658,
+            "loss_noise_gate": 0.665867,
+            "loss_waveform": 0.249925,
+            "loss_stft": 1.153796,
+            "periodic_gate_pred_mean": 0.557714,
+            "noise_gate_pred_mean": 0.626517,
+            "periodic_gate_target_mean": 0.548974,
+            "noise_gate_target_mean": 0.593034,
+            "decoded_waveform_rms": 0.283517,
+            "target_waveform_rms": 0.113056
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_170",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_170/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1647,
+          "loss_metrics": {
+            "loss_total": 1.471113,
+            "loss_harmonic_envelope": 0.312397,
+            "loss_noise_envelope": 0.190644,
+            "loss_periodic_gate": 0.680071,
+            "loss_noise_gate": 0.635237,
+            "loss_waveform": 0.253329,
+            "loss_stft": 1.156692,
+            "periodic_gate_pred_mean": 0.556098,
+            "noise_gate_pred_mean": 0.630385,
+            "periodic_gate_target_mean": 0.605891,
+            "noise_gate_target_mean": 0.657078,
+            "decoded_waveform_rms": 0.283427,
+            "target_waveform_rms": 0.123972
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_155",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_155/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1699,
+          "loss_metrics": {
+            "loss_total": 1.492995,
+            "loss_harmonic_envelope": 0.342789,
+            "loss_noise_envelope": 0.194692,
+            "loss_periodic_gate": 0.675651,
+            "loss_noise_gate": 0.624922,
+            "loss_waveform": 0.254266,
+            "loss_stft": 1.136532,
+            "periodic_gate_pred_mean": 0.555437,
+            "noise_gate_pred_mean": 0.631539,
+            "periodic_gate_target_mean": 0.624206,
+            "noise_gate_target_mean": 0.678069,
+            "decoded_waveform_rms": 0.283416,
+            "target_waveform_rms": 0.126074
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_165",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_165/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1728,
+          "loss_metrics": {
+            "loss_total": 1.479231,
+            "loss_harmonic_envelope": 0.309745,
+            "loss_noise_envelope": 0.204507,
+            "loss_periodic_gate": 0.683943,
+            "loss_noise_gate": 0.644516,
+            "loss_waveform": 0.251751,
+            "loss_stft": 1.146824,
+            "periodic_gate_pred_mean": 0.556567,
+            "noise_gate_pred_mean": 0.62957,
+            "periodic_gate_target_mean": 0.588909,
+            "noise_gate_target_mean": 0.638765,
+            "decoded_waveform_rms": 0.28329,
+            "target_waveform_rms": 0.119231
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_182",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_182/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1759,
+          "loss_metrics": {
+            "loss_total": 1.488854,
+            "loss_harmonic_envelope": 0.329741,
+            "loss_noise_envelope": 0.198001,
+            "loss_periodic_gate": 0.680105,
+            "loss_noise_gate": 0.634648,
+            "loss_waveform": 0.252072,
+            "loss_stft": 1.144251,
+            "periodic_gate_pred_mean": 0.555763,
+            "noise_gate_pred_mean": 0.630081,
+            "periodic_gate_target_mean": 0.605129,
+            "noise_gate_target_mean": 0.656705,
+            "decoded_waveform_rms": 0.283549,
+            "target_waveform_rms": 0.12023
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_112",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_112/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1842,
+          "loss_metrics": {
+            "loss_total": 1.523491,
+            "loss_harmonic_envelope": 0.37701,
+            "loss_noise_envelope": 0.199789,
+            "loss_periodic_gate": 0.673532,
+            "loss_noise_gate": 0.619159,
+            "loss_waveform": 0.260764,
+            "loss_stft": 1.115544,
+            "periodic_gate_pred_mean": 0.555056,
+            "noise_gate_pred_mean": 0.631474,
+            "periodic_gate_target_mean": 0.635078,
+            "noise_gate_target_mean": 0.687368,
+            "decoded_waveform_rms": 0.283595,
+            "target_waveform_rms": 0.147959
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_136",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_136/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1923,
+          "loss_metrics": {
+            "loss_total": 1.500038,
+            "loss_harmonic_envelope": 0.333906,
+            "loss_noise_envelope": 0.191595,
+            "loss_periodic_gate": 0.691989,
+            "loss_noise_gate": 0.660737,
+            "loss_waveform": 0.255532,
+            "loss_stft": 1.152453,
+            "periodic_gate_pred_mean": 0.557625,
+            "noise_gate_pred_mean": 0.626261,
+            "periodic_gate_target_mean": 0.559107,
+            "noise_gate_target_mean": 0.601218,
+            "decoded_waveform_rms": 0.283703,
+            "target_waveform_rms": 0.135592
+          }
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_105",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter4_7_firefly_105/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 1966,
+          "loss_metrics": {
+            "loss_total": 1.480915,
+            "loss_harmonic_envelope": 0.30395,
+            "loss_noise_envelope": 0.191312,
+            "loss_periodic_gate": 0.700819,
+            "loss_noise_gate": 0.678983,
+            "loss_waveform": 0.252599,
+            "loss_stft": 1.166787,
+            "periodic_gate_pred_mean": 0.559229,
+            "noise_gate_pred_mean": 0.623447,
+            "periodic_gate_target_mean": 0.524775,
+            "noise_gate_target_mean": 0.562695,
+            "decoded_waveform_rms": 0.283939,
+            "target_waveform_rms": 0.123851
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_245",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_245/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2022,
+          "loss_metrics": {
+            "loss_total": 1.448247,
+            "loss_harmonic_envelope": 0.2724,
+            "loss_noise_envelope": 0.182913,
+            "loss_periodic_gate": 0.705775,
+            "loss_noise_gate": 0.693669,
+            "loss_waveform": 0.247014,
+            "loss_stft": 1.179076,
+            "periodic_gate_pred_mean": 0.559354,
+            "noise_gate_pred_mean": 0.623206,
+            "periodic_gate_target_mean": 0.498823,
+            "noise_gate_target_mean": 0.535747,
+            "decoded_waveform_rms": 0.283452,
+            "target_waveform_rms": 0.103886
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_197",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_197/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2101,
+          "loss_metrics": {
+            "loss_total": 1.475247,
+            "loss_harmonic_envelope": 0.310587,
+            "loss_noise_envelope": 0.192553,
+            "loss_periodic_gate": 0.69152,
+            "loss_noise_gate": 0.6603,
+            "loss_waveform": 0.250451,
+            "loss_stft": 1.153035,
+            "periodic_gate_pred_mean": 0.557392,
+            "noise_gate_pred_mean": 0.626855,
+            "periodic_gate_target_mean": 0.558487,
+            "noise_gate_target_mean": 0.603563,
+            "decoded_waveform_rms": 0.283541,
+            "target_waveform_rms": 0.114594
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_103",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_103/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2207,
+          "loss_metrics": {
+            "loss_total": 1.474921,
+            "loss_harmonic_envelope": 0.305445,
+            "loss_noise_envelope": 0.190033,
+            "loss_periodic_gate": 0.693475,
+            "loss_noise_gate": 0.665266,
+            "loss_waveform": 0.25278,
+            "loss_stft": 1.16261,
+            "periodic_gate_pred_mean": 0.559834,
+            "noise_gate_pred_mean": 0.627104,
+            "periodic_gate_target_mean": 0.555742,
+            "noise_gate_target_mean": 0.599572,
+            "decoded_waveform_rms": 0.283182,
+            "target_waveform_rms": 0.126983
+          }
+        },
+        {
+          "record_id": "target::chapter3_30_firefly_137",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_30_firefly_137/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2348,
+          "loss_metrics": {
+            "loss_total": 1.495093,
+            "loss_harmonic_envelope": 0.324871,
+            "loss_noise_envelope": 0.191772,
+            "loss_periodic_gate": 0.693307,
+            "loss_noise_gate": 0.662404,
+            "loss_waveform": 0.256659,
+            "loss_stft": 1.157956,
+            "periodic_gate_pred_mean": 0.557439,
+            "noise_gate_pred_mean": 0.625167,
+            "periodic_gate_target_mean": 0.554381,
+            "noise_gate_target_mean": 0.594567,
+            "decoded_waveform_rms": 0.283999,
+            "target_waveform_rms": 0.136678
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_212",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_212/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2512,
+          "loss_metrics": {
+            "loss_total": 1.457032,
+            "loss_harmonic_envelope": 0.284322,
+            "loss_noise_envelope": 0.190179,
+            "loss_periodic_gate": 0.697926,
+            "loss_noise_gate": 0.674786,
+            "loss_waveform": 0.248669,
+            "loss_stft": 1.167309,
+            "periodic_gate_pred_mean": 0.558011,
+            "noise_gate_pred_mean": 0.624892,
+            "periodic_gate_target_mean": 0.53146,
+            "noise_gate_target_mean": 0.572542,
+            "decoded_waveform_rms": 0.283619,
+            "target_waveform_rms": 0.109604
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_109",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_109/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2589,
+          "loss_metrics": {
+            "loss_total": 1.482676,
+            "loss_harmonic_envelope": 0.311734,
+            "loss_noise_envelope": 0.191995,
+            "loss_periodic_gate": 0.690373,
+            "loss_noise_gate": 0.657281,
+            "loss_waveform": 0.258315,
+            "loss_stft": 1.160516,
+            "periodic_gate_pred_mean": 0.557531,
+            "noise_gate_pred_mean": 0.626762,
+            "periodic_gate_target_mean": 0.566045,
+            "noise_gate_target_mean": 0.608686,
+            "decoded_waveform_rms": 0.283583,
+            "target_waveform_rms": 0.142116
+          }
+        },
+        {
+          "record_id": "target::chapter3_26_firefly_107",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_26_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2686,
+          "loss_metrics": {
+            "loss_total": 1.522538,
+            "loss_harmonic_envelope": 0.365162,
+            "loss_noise_envelope": 0.19465,
+            "loss_periodic_gate": 0.687607,
+            "loss_noise_gate": 0.651152,
+            "loss_waveform": 0.258205,
+            "loss_stft": 1.131743,
+            "periodic_gate_pred_mean": 0.556952,
+            "noise_gate_pred_mean": 0.627678,
+            "periodic_gate_target_mean": 0.576628,
+            "noise_gate_target_mean": 0.621597,
+            "decoded_waveform_rms": 0.28348,
+            "target_waveform_rms": 0.141964
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_142",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_142/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2787,
+          "loss_metrics": {
+            "loss_total": 1.482945,
+            "loss_harmonic_envelope": 0.309685,
+            "loss_noise_envelope": 0.19184,
+            "loss_periodic_gate": 0.697853,
+            "loss_noise_gate": 0.673665,
+            "loss_waveform": 0.253039,
+            "loss_stft": 1.161194,
+            "periodic_gate_pred_mean": 0.558207,
+            "noise_gate_pred_mean": 0.624442,
+            "periodic_gate_target_mean": 0.534332,
+            "noise_gate_target_mean": 0.573495,
+            "decoded_waveform_rms": 0.283765,
+            "target_waveform_rms": 0.126803
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_215",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_215/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 2922,
+          "loss_metrics": {
+            "loss_total": 1.454472,
+            "loss_harmonic_envelope": 0.279671,
+            "loss_noise_envelope": 0.188373,
+            "loss_periodic_gate": 0.695816,
+            "loss_noise_gate": 0.670138,
+            "loss_waveform": 0.250726,
+            "loss_stft": 1.175749,
+            "periodic_gate_pred_mean": 0.557783,
+            "noise_gate_pred_mean": 0.625508,
+            "periodic_gate_target_mean": 0.54058,
+            "noise_gate_target_mean": 0.58234,
+            "decoded_waveform_rms": 0.283538,
+            "target_waveform_rms": 0.116752
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_210",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_3_firefly_210/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3022,
+          "loss_metrics": {
+            "loss_total": 1.454037,
+            "loss_harmonic_envelope": 0.280096,
+            "loss_noise_envelope": 0.187272,
+            "loss_periodic_gate": 0.700279,
+            "loss_noise_gate": 0.680169,
+            "loss_waveform": 0.248385,
+            "loss_stft": 1.172773,
+            "periodic_gate_pred_mean": 0.558366,
+            "noise_gate_pred_mean": 0.624249,
+            "periodic_gate_target_mean": 0.521814,
+            "noise_gate_target_mean": 0.561509,
+            "decoded_waveform_rms": 0.283596,
+            "target_waveform_rms": 0.107835
+          }
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_136",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_29_firefly_136/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3169,
+          "loss_metrics": {
+            "loss_total": 1.499096,
+            "loss_harmonic_envelope": 0.326655,
+            "loss_noise_envelope": 0.193718,
+            "loss_periodic_gate": 0.695812,
+            "loss_noise_gate": 0.668779,
+            "loss_waveform": 0.25382,
+            "loss_stft": 1.157791,
+            "periodic_gate_pred_mean": 0.55791,
+            "noise_gate_pred_mean": 0.62486,
+            "periodic_gate_target_mean": 0.543186,
+            "noise_gate_target_mean": 0.583025,
+            "decoded_waveform_rms": 0.283806,
+            "target_waveform_rms": 0.129324
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_105",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_105/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3239,
+          "loss_metrics": {
+            "loss_total": 1.482779,
+            "loss_harmonic_envelope": 0.30988,
+            "loss_noise_envelope": 0.192875,
+            "loss_periodic_gate": 0.691531,
+            "loss_noise_gate": 0.659514,
+            "loss_waveform": 0.259269,
+            "loss_stft": 1.16036,
+            "periodic_gate_pred_mean": 0.557678,
+            "noise_gate_pred_mean": 0.626267,
+            "periodic_gate_target_mean": 0.561901,
+            "noise_gate_target_mean": 0.603396,
+            "decoded_waveform_rms": 0.283608,
+            "target_waveform_rms": 0.146744
+          }
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_133",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_17_firefly_133/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3438,
+          "loss_metrics": {
+            "loss_total": 1.494913,
+            "loss_harmonic_envelope": 0.327266,
+            "loss_noise_envelope": 0.190766,
+            "loss_periodic_gate": 0.696182,
+            "loss_noise_gate": 0.668806,
+            "loss_waveform": 0.254482,
+            "loss_stft": 1.153286,
+            "periodic_gate_pred_mean": 0.55851,
+            "noise_gate_pred_mean": 0.624732,
+            "periodic_gate_target_mean": 0.543626,
+            "noise_gate_target_mean": 0.58365,
+            "decoded_waveform_rms": 0.283808,
+            "target_waveform_rms": 0.130088
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_157",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_157/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3684,
+          "loss_metrics": {
+            "loss_total": 1.487272,
+            "loss_harmonic_envelope": 0.326418,
+            "loss_noise_envelope": 0.19643,
+            "loss_periodic_gate": 0.684341,
+            "loss_noise_gate": 0.644576,
+            "loss_waveform": 0.251563,
+            "loss_stft": 1.145718,
+            "periodic_gate_pred_mean": 0.556553,
+            "noise_gate_pred_mean": 0.629087,
+            "periodic_gate_target_mean": 0.587968,
+            "noise_gate_target_mean": 0.637162,
+            "decoded_waveform_rms": 0.283329,
+            "target_waveform_rms": 0.118739
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_178",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_178/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 3810,
+          "loss_metrics": {
+            "loss_total": 1.493751,
+            "loss_harmonic_envelope": 0.333732,
+            "loss_noise_envelope": 0.202476,
+            "loss_periodic_gate": 0.683097,
+            "loss_noise_gate": 0.641764,
+            "loss_waveform": 0.251816,
+            "loss_stft": 1.133324,
+            "periodic_gate_pred_mean": 0.556193,
+            "noise_gate_pred_mean": 0.629414,
+            "periodic_gate_target_mean": 0.592559,
+            "noise_gate_target_mean": 0.642637,
+            "decoded_waveform_rms": 0.283301,
+            "target_waveform_rms": 0.119426
+          }
+        },
+        {
+          "record_id": "target::chapter4_7_firefly_119",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter4_7_firefly_119/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 4069,
+          "loss_metrics": {
+            "loss_total": 1.468516,
+            "loss_harmonic_envelope": 0.294497,
+            "loss_noise_envelope": 0.189557,
+            "loss_periodic_gate": 0.702529,
+            "loss_noise_gate": 0.68555,
+            "loss_waveform": 0.248491,
+            "loss_stft": 1.165202,
+            "periodic_gate_pred_mean": 0.560453,
+            "noise_gate_pred_mean": 0.624549,
+            "periodic_gate_target_mean": 0.516746,
+            "noise_gate_target_mean": 0.556417,
+            "decoded_waveform_rms": 0.283104,
+            "target_waveform_rms": 0.110968
+          }
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_129",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_17_firefly_129/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 4264,
+          "loss_metrics": {
+            "loss_total": 1.489817,
+            "loss_harmonic_envelope": 0.322238,
+            "loss_noise_envelope": 0.191788,
+            "loss_periodic_gate": 0.690515,
+            "loss_noise_gate": 0.65693,
+            "loss_waveform": 0.258235,
+            "loss_stft": 1.154368,
+            "periodic_gate_pred_mean": 0.557478,
+            "noise_gate_pred_mean": 0.626537,
+            "periodic_gate_target_mean": 0.565821,
+            "noise_gate_target_mean": 0.608608,
+            "decoded_waveform_rms": 0.283597,
+            "target_waveform_rms": 0.141274
+          }
+        },
+        {
+          "record_id": "target::chapter3_2_firefly_206",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_2_firefly_206/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 4600,
+          "loss_metrics": {
+            "loss_total": 1.474949,
+            "loss_harmonic_envelope": 0.302897,
+            "loss_noise_envelope": 0.196883,
+            "loss_periodic_gate": 0.695022,
+            "loss_noise_gate": 0.667888,
+            "loss_waveform": 0.248885,
+            "loss_stft": 1.15629,
+            "periodic_gate_pred_mean": 0.557693,
+            "noise_gate_pred_mean": 0.625668,
+            "periodic_gate_target_mean": 0.543834,
+            "noise_gate_target_mean": 0.586833,
+            "decoded_waveform_rms": 0.283543,
+            "target_waveform_rms": 0.109604
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_106",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/validation/target__chapter3_4_firefly_106/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 5815,
+          "loss_metrics": {
+            "loss_total": 1.475965,
+            "loss_harmonic_envelope": 0.295229,
+            "loss_noise_envelope": 0.195102,
+            "loss_periodic_gate": 0.700168,
+            "loss_noise_gate": 0.678985,
+            "loss_waveform": 0.254796,
+            "loss_stft": 1.164811,
+            "periodic_gate_pred_mean": 0.558637,
+            "noise_gate_pred_mean": 0.623847,
+            "periodic_gate_target_mean": 0.525159,
+            "noise_gate_target_mean": 0.562723,
+            "decoded_waveform_rms": 0.283616,
+            "target_waveform_rms": 0.132414
+          }
+        }
+      ]
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_waveform_dataset_loop_smoke_round1_1/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step1.pt",
+      "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_waveform_dataset_loop_smoke_round1_1/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step2.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_waveform_dataset_loop_smoke_round1_1/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step2.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 2,
+      "loss_total": 1.482311,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_waveform_dataset_loop_smoke_round1_1/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step2.pt"
+    }
+  },
+  "notes": [
+    "This loop is the first dataset-level Stage5 path: each step now samples from multiple aligned target packages instead of reusing one package forever.",
+    "Current package batches are still Python-level lists of variable-length packages rather than a packed tensor dataloader.",
+    "Validation reflects the current objective mix, including optional aligned waveform/STFT bootstrap losses when enabled, and should not be confused with final vocoder generalization."
+  ],
+  "next_steps": [
+    "Scale the dataset index from tiny smoke subsets to a larger split-backed package pool once runtime cost is acceptable.",
+    "Decide whether to keep package-level sequential loading or move to a cached/packed dataset for throughput.",
+    "Decide whether the current bootstrap decoder objective should be scaled further or replaced by a stronger multi-resolution/adversarial waveform recipe."
+  ]
+}

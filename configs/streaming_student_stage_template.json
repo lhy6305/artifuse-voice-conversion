@@ -1,0 +1,46 @@
+{
+  "data": {
+    "manifest_dir": "data_prep/round1_1/manifests",
+    "split_dir": "data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "target_weak_event_hints_path": "data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+    "target_special_supervision_path": "data_prep/round1_1/target_special_supervision/target_special_supervision_sidecar.jsonl",
+    "target_validation_count": 8,
+    "source_validation_count": 8
+  },
+  "model": {
+    "name": "streaming_student_stage_scaffold",
+    "r_res_enabled": false,
+    "frame_length": 400,
+    "hop_length": 160,
+    "shared_dim": 96,
+    "frontend_dim": 96,
+    "frontend_layers": 2,
+    "student_dim": 96,
+    "student_layers": 2,
+    "z_art_dim": 8,
+    "event_dim": 8,
+    "event_prior_dim": 8,
+    "speaker_embed_dim": 16,
+    "geom_embed_dim": 8,
+    "conditioning_dim": 32,
+    "r_res_dim": 16,
+    "f0_correction_enabled": true,
+    "aper_correction_enabled": true
+  },
+  "training": {
+    "mode": "streaming_student_stage",
+    "run_stage": "scaffold_bootstrap",
+    "teacher_required": true,
+    "student_required": true,
+    "vocoder_required": false,
+    "seed": 20260317
+  },
+  "planning": {
+    "synthetic_batch_size": 2,
+    "synthetic_waveform_length": 6400,
+    "notes": [
+      "Stage3 bootstrap keeps the same frame contract as offline_mvp for evaluation bridge planning.",
+      "r_res stays disabled until the frontend/student contract and calibration assets are stable."
+    ]
+  }
+}

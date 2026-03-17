@@ -1,0 +1,8 @@
+{
+  "target_round1_train_records": 624,
+  "target_excluded_records": 47,
+  "source_segment_count": 537,
+  "source_peak_clip_count": 11,
+  "source_noise_floor_dbfs": -74.184457,
+  "source_content_threshold_dbfs": -38.0
+}

@@ -1,0 +1,1823 @@
+{
+  "experiment_id": "streaming_student_stage_loop_eventprior025_fullval48_v1",
+  "generated_at": "2026-03-17T16:42:55",
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "timing": {
+    "started_at": "2026-03-17T16:42:50",
+    "ended_at": "2026-03-17T16:42:55",
+    "duration_sec": 4.835243
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "option_name": "hybrid_stratified_blocked",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 592,
+      "target_validation": 66,
+      "target_special_eval": 8,
+      "source_train": 483,
+      "source_validation": 54
+    }
+  },
+  "conditioning": {
+    "asset_version": "stage3_calibration_asset_v1",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha_value": 1.15,
+    "source": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
+  },
+  "training": {
+    "batch_size": 3,
+    "validation_batch_size": 6,
+    "num_steps": 48,
+    "validation_interval": 12,
+    "checkpoint_interval": 12,
+    "validation_batches": 4,
+    "validation_mode": "full",
+    "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
+    "use_teacher_confidence": true,
+    "loss_weights": {
+      "teacher_z_art": 1.0,
+      "teacher_event": 1.0,
+      "teacher_event_prior": 0.25,
+      "teacher_energy_proxy": 0.25,
+      "teacher_vuv_proxy": 0.15,
+      "teacher_aper_proxy": 0.1,
+      "log_f0_correction_l1": 0.01,
+      "aper_correction_l1": 0.01
+    },
+    "loss_weight_overrides_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_loss_weights_eventprior_light_v1.json"
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.101177,
+      "record_ids": [
+        "target::archive_firefly_1",
+        "target::archive_firefly_10",
+        "target::archive_firefly_11"
+      ],
+      "loss_metrics": {
+        "loss_total": 19.2505,
+        "loss_total_default_reference": 20.612329,
+        "loss_teacher_z_art": 8.814978,
+        "loss_teacher_event": 5.720385,
+        "loss_teacher_event_prior": 5.447319,
+        "loss_teacher_energy_proxy": 12.97434,
+        "loss_teacher_vuv_proxy": 0.703443,
+        "loss_teacher_aper_proxy": 0.034406,
+        "loss_log_f0_correction_l1": 0.046038,
+        "loss_aper_correction_l1": 0.030448,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5661.639648
+      },
+      "grad_norm": 64.24408,
+      "status": "step_completed"
+    },
+    {
+      "step": 2,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.065159,
+      "record_ids": [
+        "target::archive_firefly_12",
+        "target::archive_firefly_13",
+        "target::archive_firefly_14"
+      ],
+      "loss_metrics": {
+        "loss_total": 13.61797,
+        "loss_total_default_reference": 14.97782,
+        "loss_teacher_z_art": 3.85535,
+        "loss_teacher_event": 5.545846,
+        "loss_teacher_event_prior": 5.4394,
+        "loss_teacher_energy_proxy": 10.972624,
+        "loss_teacher_vuv_proxy": 0.70449,
+        "loss_teacher_aper_proxy": 0.06028,
+        "loss_log_f0_correction_l1": 0.01494,
+        "loss_aper_correction_l1": 0.191706,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 7175.620117
+      },
+      "grad_norm": 35.846138,
+      "status": "step_completed"
+    },
+    {
+      "step": 3,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.052324,
+      "record_ids": [
+        "target::archive_firefly_15",
+        "target::archive_firefly_16",
+        "target::archive_firefly_17"
+      ],
+      "loss_metrics": {
+        "loss_total": 10.729006,
+        "loss_total_default_reference": 12.086529,
+        "loss_teacher_z_art": 1.741052,
+        "loss_teacher_event": 5.449531,
+        "loss_teacher_event_prior": 5.430091,
+        "loss_teacher_energy_proxy": 8.245029,
+        "loss_teacher_vuv_proxy": 0.70778,
+        "loss_teacher_aper_proxy": 0.108558,
+        "loss_log_f0_correction_l1": 0.050897,
+        "loss_aper_correction_l1": 0.21114,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5409.497559
+      },
+      "grad_norm": 21.078161,
+      "status": "step_completed"
+    },
+    {
+      "step": 4,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.059316,
+      "record_ids": [
+        "target::archive_firefly_18",
+        "target::archive_firefly_19",
+        "target::archive_firefly_20"
+      ],
+      "loss_metrics": {
+        "loss_total": 9.459835,
+        "loss_total_default_reference": 10.804316,
+        "loss_teacher_z_art": 0.894599,
+        "loss_teacher_event": 5.339924,
+        "loss_teacher_event_prior": 5.377922,
+        "loss_teacher_energy_proxy": 7.02073,
+        "loss_teacher_vuv_proxy": 0.709924,
+        "loss_teacher_aper_proxy": 0.160243,
+        "loss_log_f0_correction_l1": 0.147706,
+        "loss_aper_correction_l1": 0.165841,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 6412.637207
+      },
+      "grad_norm": 12.829979,
+      "status": "step_completed"
+    },
+    {
+      "step": 5,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.064774,
+      "record_ids": [
+        "target::archive_firefly_3",
+        "target::archive_firefly_4",
+        "target::archive_firefly_5"
+      ],
+      "loss_metrics": {
+        "loss_total": 9.153522,
+        "loss_total_default_reference": 10.483436,
+        "loss_teacher_z_art": 0.56705,
+        "loss_teacher_event": 5.269718,
+        "loss_teacher_event_prior": 5.319653,
+        "loss_teacher_energy_proxy": 7.436368,
+        "loss_teacher_vuv_proxy": 0.705771,
+        "loss_teacher_aper_proxy": 0.184748,
+        "loss_log_f0_correction_l1": 0.242973,
+        "loss_aper_correction_l1": 0.097913,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5913.905273
+      },
+      "grad_norm": 8.3797,
+      "status": "step_completed"
+    },
+    {
+      "step": 6,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.05237,
+      "record_ids": [
+        "target::archive_firefly_6",
+        "target::archive_firefly_7",
+        "target::archive_firefly_8"
+      ],
+      "loss_metrics": {
+        "loss_total": 8.504943,
+        "loss_total_default_reference": 9.812281,
+        "loss_teacher_z_art": 0.536003,
+        "loss_teacher_event": 5.151186,
+        "loss_teacher_event_prior": 5.229352,
+        "loss_teacher_energy_proxy": 5.536903,
+        "loss_teacher_vuv_proxy": 0.701611,
+        "loss_teacher_aper_proxy": 0.177161,
+        "loss_log_f0_correction_l1": 0.313665,
+        "loss_aper_correction_l1": 0.0095,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5880.014648
+      },
+      "grad_norm": 7.6018,
+      "status": "step_completed"
+    },
+    {
+      "step": 7,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.057017,
+      "record_ids": [
+        "target::archive_firefly_9",
+        "target::chapter3_17_firefly_101",
+        "target::chapter3_17_firefly_102"
+      ],
+      "loss_metrics": {
+        "loss_total": 8.043442,
+        "loss_total_default_reference": 9.325655,
+        "loss_teacher_z_art": 0.449655,
+        "loss_teacher_event": 5.045413,
+        "loss_teacher_event_prior": 5.128853,
+        "loss_teacher_energy_proxy": 4.578695,
+        "loss_teacher_vuv_proxy": 0.696349,
+        "loss_teacher_aper_proxy": 0.129281,
+        "loss_log_f0_correction_l1": 0.332898,
+        "loss_aper_correction_l1": 0.077703,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3427.585938
+      },
+      "grad_norm": 6.572475,
+      "status": "step_completed"
+    },
+    {
+      "step": 8,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.061595,
+      "record_ids": [
+        "target::chapter3_17_firefly_103",
+        "target::chapter3_17_firefly_104",
+        "target::chapter3_17_firefly_105"
+      ],
+      "loss_metrics": {
+        "loss_total": 7.566546,
+        "loss_total_default_reference": 8.823214,
+        "loss_teacher_z_art": 0.296762,
+        "loss_teacher_event": 4.950896,
+        "loss_teacher_event_prior": 5.02667,
+        "loss_teacher_energy_proxy": 3.796343,
+        "loss_teacher_vuv_proxy": 0.688309,
+        "loss_teacher_aper_proxy": 0.058005,
+        "loss_log_f0_correction_l1": 0.3054,
+        "loss_aper_correction_l1": 0.103389,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1257.067871
+      },
+      "grad_norm": 7.146733,
+      "status": "step_completed"
+    },
+    {
+      "step": 9,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.035619,
+      "record_ids": [
+        "target::chapter3_17_firefly_107",
+        "target::chapter3_17_firefly_108",
+        "target::chapter3_17_firefly_109"
+      ],
+      "loss_metrics": {
+        "loss_total": 7.364277,
+        "loss_total_default_reference": 8.60822,
+        "loss_teacher_z_art": 0.232885,
+        "loss_teacher_event": 4.929726,
+        "loss_teacher_event_prior": 4.97577,
+        "loss_teacher_energy_proxy": 3.397382,
+        "loss_teacher_vuv_proxy": 0.692317,
+        "loss_teacher_aper_proxy": 0.009061,
+        "loss_log_f0_correction_l1": 0.247595,
+        "loss_aper_correction_l1": 0.114937,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1788.973633
+      },
+      "grad_norm": 6.366364,
+      "status": "step_completed"
+    },
+    {
+      "step": 10,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.028392,
+      "record_ids": [
+        "target::chapter3_17_firefly_110",
+        "target::chapter3_17_firefly_111",
+        "target::chapter3_17_firefly_113"
+      ],
+      "loss_metrics": {
+        "loss_total": 7.226331,
+        "loss_total_default_reference": 8.463184,
+        "loss_teacher_z_art": 0.201057,
+        "loss_teacher_event": 4.918466,
+        "loss_teacher_event_prior": 4.947417,
+        "loss_teacher_energy_proxy": 3.04436,
+        "loss_teacher_vuv_proxy": 0.700313,
+        "loss_teacher_aper_proxy": 0.007079,
+        "loss_log_f0_correction_l1": 0.183943,
+        "loss_aper_correction_l1": 0.126866,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1100.526855
+      },
+      "grad_norm": 5.803028,
+      "status": "step_completed"
+    },
+    {
+      "step": 11,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.042342,
+      "record_ids": [
+        "target::chapter3_17_firefly_114",
+        "target::chapter3_17_firefly_115",
+        "target::chapter3_17_firefly_116"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.98,
+        "loss_total_default_reference": 8.214176,
+        "loss_teacher_z_art": 0.140474,
+        "loss_teacher_event": 4.901685,
+        "loss_teacher_event_prior": 4.936707,
+        "loss_teacher_energy_proxy": 2.369416,
+        "loss_teacher_vuv_proxy": 0.701565,
+        "loss_teacher_aper_proxy": 0.034694,
+        "loss_log_f0_correction_l1": 0.13162,
+        "loss_aper_correction_l1": 0.128963,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2506.463623
+      },
+      "grad_norm": 5.894033,
+      "status": "step_completed"
+    },
+    {
+      "step": 12,
+      "started_at": "2026-03-17T16:42:52",
+      "ended_at": "2026-03-17T16:42:52",
+      "duration_sec": 0.046666,
+      "record_ids": [
+        "target::chapter3_17_firefly_117",
+        "target::chapter3_17_firefly_118",
+        "target::chapter3_17_firefly_120"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.985175,
+        "loss_total_default_reference": 8.218805,
+        "loss_teacher_z_art": 0.068044,
+        "loss_teacher_event": 4.881259,
+        "loss_teacher_event_prior": 4.93452,
+        "loss_teacher_energy_proxy": 2.748545,
+        "loss_teacher_vuv_proxy": 0.708211,
+        "loss_teacher_aper_proxy": 0.06748,
+        "loss_log_f0_correction_l1": 0.097603,
+        "loss_aper_correction_l1": 0.114871,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3474.905518
+      },
+      "grad_norm": 4.958564,
+      "status": "step_completed"
+    },
+    {
+      "step": 13,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.043563,
+      "record_ids": [
+        "target::chapter3_17_firefly_121",
+        "target::chapter3_17_firefly_122",
+        "target::chapter3_17_firefly_123"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.854805,
+        "loss_total_default_reference": 8.093186,
+        "loss_teacher_z_art": 0.065514,
+        "loss_teacher_event": 4.880865,
+        "loss_teacher_event_prior": 4.953533,
+        "loss_teacher_energy_proxy": 2.216051,
+        "loss_teacher_vuv_proxy": 0.716584,
+        "loss_teacher_aper_proxy": 0.064461,
+        "loss_log_f0_correction_l1": 0.137351,
+        "loss_aper_correction_l1": 0.072174,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2389.226562
+      },
+      "grad_norm": 5.919952,
+      "status": "step_completed"
+    },
+    {
+      "step": 14,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.047998,
+      "record_ids": [
+        "target::chapter3_17_firefly_124",
+        "target::chapter3_17_firefly_125",
+        "target::chapter3_17_firefly_126"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.593482,
+        "loss_total_default_reference": 7.811984,
+        "loss_teacher_z_art": 0.117654,
+        "loss_teacher_event": 4.778792,
+        "loss_teacher_event_prior": 4.874009,
+        "loss_teacher_energy_proxy": 1.464984,
+        "loss_teacher_vuv_proxy": 0.701451,
+        "loss_teacher_aper_proxy": 0.047966,
+        "loss_log_f0_correction_l1": 0.19308,
+        "loss_aper_correction_l1": 0.034199,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4212.713379
+      },
+      "grad_norm": 5.161644,
+      "status": "step_completed"
+    },
+    {
+      "step": 15,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.04179,
+      "record_ids": [
+        "target::chapter3_17_firefly_127",
+        "target::chapter3_17_firefly_128",
+        "target::chapter3_17_firefly_130"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.574242,
+        "loss_total_default_reference": 7.787378,
+        "loss_teacher_z_art": 0.148967,
+        "loss_teacher_event": 4.756734,
+        "loss_teacher_event_prior": 4.852544,
+        "loss_teacher_energy_proxy": 1.378515,
+        "loss_teacher_vuv_proxy": 0.704027,
+        "loss_teacher_aper_proxy": 0.024618,
+        "loss_log_f0_correction_l1": 0.240546,
+        "loss_aper_correction_l1": 0.030407,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3698.762695
+      },
+      "grad_norm": 5.607924,
+      "status": "step_completed"
+    },
+    {
+      "step": 16,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.047969,
+      "record_ids": [
+        "target::chapter3_17_firefly_131",
+        "target::chapter3_17_firefly_132",
+        "target::chapter3_17_firefly_134"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.499288,
+        "loss_total_default_reference": 7.709257,
+        "loss_teacher_z_art": 0.111842,
+        "loss_teacher_event": 4.740357,
+        "loss_teacher_event_prior": 4.839879,
+        "loss_teacher_energy_proxy": 1.300614,
+        "loss_teacher_vuv_proxy": 0.71084,
+        "loss_teacher_aper_proxy": 0.018776,
+        "loss_log_f0_correction_l1": 0.285458,
+        "loss_aper_correction_l1": 0.060686,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3100.36084
+      },
+      "grad_norm": 4.767193,
+      "status": "step_completed"
+    },
+    {
+      "step": 17,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.0357,
+      "record_ids": [
+        "target::chapter3_17_firefly_135",
+        "target::chapter3_17_firefly_136",
+        "target::chapter3_17_firefly_137"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.598748,
+        "loss_total_default_reference": 7.813992,
+        "loss_teacher_z_art": 0.072471,
+        "loss_teacher_event": 4.749537,
+        "loss_teacher_event_prior": 4.860977,
+        "loss_teacher_energy_proxy": 1.773217,
+        "loss_teacher_vuv_proxy": 0.737713,
+        "loss_teacher_aper_proxy": 0.038817,
+        "loss_log_f0_correction_l1": 0.289516,
+        "loss_aper_correction_l1": 0.075741,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1191.604492
+      },
+      "grad_norm": 4.743984,
+      "status": "step_completed"
+    },
+    {
+      "step": 18,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.050748,
+      "record_ids": [
+        "target::chapter3_17_firefly_139",
+        "target::chapter3_17_firefly_140",
+        "target::chapter3_17_firefly_141"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.292432,
+        "loss_total_default_reference": 7.497322,
+        "loss_teacher_z_art": 0.053378,
+        "loss_teacher_event": 4.715397,
+        "loss_teacher_event_prior": 4.819562,
+        "loss_teacher_energy_proxy": 0.80649,
+        "loss_teacher_vuv_proxy": 0.71859,
+        "loss_teacher_aper_proxy": 0.053233,
+        "loss_log_f0_correction_l1": 0.319842,
+        "loss_aper_correction_l1": 0.083247,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4355.643555
+      },
+      "grad_norm": 2.843719,
+      "status": "step_completed"
+    },
+    {
+      "step": 19,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.044235,
+      "record_ids": [
+        "target::chapter3_17_firefly_142",
+        "target::chapter3_17_firefly_143",
+        "target::chapter3_17_firefly_144"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.226001,
+        "loss_total_default_reference": 7.418969,
+        "loss_teacher_z_art": 0.041404,
+        "loss_teacher_event": 4.678807,
+        "loss_teacher_event_prior": 4.771876,
+        "loss_teacher_energy_proxy": 0.794856,
+        "loss_teacher_vuv_proxy": 0.700573,
+        "loss_teacher_aper_proxy": 0.04777,
+        "loss_log_f0_correction_l1": 0.355196,
+        "loss_aper_correction_l1": 0.069125,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3274.130615
+      },
+      "grad_norm": 3.299972,
+      "status": "step_completed"
+    },
+    {
+      "step": 20,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.039025,
+      "record_ids": [
+        "target::chapter3_17_firefly_145",
+        "target::chapter3_17_firefly_146",
+        "target::chapter3_17_firefly_147"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.306039,
+        "loss_total_default_reference": 7.515563,
+        "loss_teacher_z_art": 0.053796,
+        "loss_teacher_event": 4.728331,
+        "loss_teacher_event_prior": 4.838095,
+        "loss_teacher_energy_proxy": 0.777347,
+        "loss_teacher_vuv_proxy": 0.740636,
+        "loss_teacher_aper_proxy": 0.055077,
+        "loss_log_f0_correction_l1": 0.289764,
+        "loss_aper_correction_l1": 0.055075,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2481.208496
+      },
+      "grad_norm": 3.636017,
+      "status": "step_completed"
+    },
+    {
+      "step": 21,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.04784,
+      "record_ids": [
+        "target::chapter3_17_firefly_148",
+        "target::chapter3_17_firefly_149",
+        "target::chapter3_17_firefly_151"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.158105,
+        "loss_total_default_reference": 7.343081,
+        "loss_teacher_z_art": 0.039515,
+        "loss_teacher_event": 4.661964,
+        "loss_teacher_event_prior": 4.739901,
+        "loss_teacher_energy_proxy": 0.645017,
+        "loss_teacher_vuv_proxy": 0.693882,
+        "loss_teacher_aper_proxy": 0.023801,
+        "loss_log_f0_correction_l1": 0.348872,
+        "loss_aper_correction_l1": 0.04457,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 5193.430664
+      },
+      "grad_norm": 2.379182,
+      "status": "step_completed"
+    },
+    {
+      "step": 22,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.040279,
+      "record_ids": [
+        "target::chapter3_17_firefly_152",
+        "target::chapter3_17_firefly_153",
+        "target::chapter3_17_firefly_154"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.112603,
+        "loss_total_default_reference": 7.288859,
+        "loss_teacher_z_art": 0.035261,
+        "loss_teacher_event": 4.644074,
+        "loss_teacher_event_prior": 4.705025,
+        "loss_teacher_energy_proxy": 0.600863,
+        "loss_teacher_vuv_proxy": 0.678246,
+        "loss_teacher_aper_proxy": 0.010693,
+        "loss_log_f0_correction_l1": 0.337683,
+        "loss_aper_correction_l1": 0.061228,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3235.243408
+      },
+      "grad_norm": 2.446384,
+      "status": "step_completed"
+    },
+    {
+      "step": 23,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.039602,
+      "record_ids": [
+        "target::chapter3_17_firefly_155",
+        "target::chapter3_17_firefly_156",
+        "target::chapter3_17_firefly_157"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.108493,
+        "loss_total_default_reference": 7.282984,
+        "loss_teacher_z_art": 0.03895,
+        "loss_teacher_event": 4.649806,
+        "loss_teacher_event_prior": 4.697964,
+        "loss_teacher_energy_proxy": 0.561363,
+        "loss_teacher_vuv_proxy": 0.671488,
+        "loss_teacher_aper_proxy": 0.006927,
+        "loss_log_f0_correction_l1": 0.289031,
+        "loss_aper_correction_l1": 0.059821,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3312.373047
+      },
+      "grad_norm": 2.634935,
+      "status": "step_completed"
+    },
+    {
+      "step": 24,
+      "started_at": "2026-03-17T16:42:53",
+      "ended_at": "2026-03-17T16:42:53",
+      "duration_sec": 0.036162,
+      "record_ids": [
+        "target::chapter3_18_firefly_102",
+        "target::chapter3_18_firefly_103",
+        "target::chapter3_18_firefly_104"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.151259,
+        "loss_total_default_reference": 7.33198,
+        "loss_teacher_z_art": 0.045543,
+        "loss_teacher_event": 4.67907,
+        "loss_teacher_event_prior": 4.722883,
+        "loss_teacher_energy_proxy": 0.55143,
+        "loss_teacher_vuv_proxy": 0.698339,
+        "loss_teacher_aper_proxy": 0.006795,
+        "loss_log_f0_correction_l1": 0.215735,
+        "loss_aper_correction_l1": 0.047965,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2252.368164
+      },
+      "grad_norm": 3.003417,
+      "status": "step_completed"
+    },
+    {
+      "step": 25,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.04589,
+      "record_ids": [
+        "target::chapter3_20_firefly_101",
+        "target::chapter3_20_firefly_102",
+        "target::chapter3_20_firefly_103"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.082499,
+        "loss_total_default_reference": 7.252008,
+        "loss_teacher_z_art": 0.02145,
+        "loss_teacher_event": 4.651004,
+        "loss_teacher_event_prior": 4.678039,
+        "loss_teacher_energy_proxy": 0.550963,
+        "loss_teacher_vuv_proxy": 0.664694,
+        "loss_teacher_aper_proxy": 0.010253,
+        "loss_log_f0_correction_l1": 0.182484,
+        "loss_aper_correction_l1": 0.023964,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3078.049561
+      },
+      "grad_norm": 1.650373,
+      "status": "step_completed"
+    },
+    {
+      "step": 26,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.043009,
+      "record_ids": [
+        "target::chapter3_20_firefly_104",
+        "target::chapter3_20_firefly_105",
+        "target::chapter3_20_firefly_106"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.080099,
+        "loss_total_default_reference": 7.25267,
+        "loss_teacher_z_art": 0.020325,
+        "loss_teacher_event": 4.662211,
+        "loss_teacher_event_prior": 4.690284,
+        "loss_teacher_energy_proxy": 0.488611,
+        "loss_teacher_vuv_proxy": 0.666584,
+        "loss_teacher_aper_proxy": 0.01011,
+        "loss_log_f0_correction_l1": 0.137185,
+        "loss_aper_correction_l1": 0.046854,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2855.910645
+      },
+      "grad_norm": 1.772231,
+      "status": "step_completed"
+    },
+    {
+      "step": 27,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.066721,
+      "record_ids": [
+        "target::chapter3_20_firefly_107",
+        "target::chapter3_20_firefly_108",
+        "target::chapter3_20_firefly_110"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.156672,
+        "loss_total_default_reference": 7.33858,
+        "loss_teacher_z_art": 0.022456,
+        "loss_teacher_event": 4.703556,
+        "loss_teacher_event_prior": 4.727631,
+        "loss_teacher_energy_proxy": 0.592954,
+        "loss_teacher_vuv_proxy": 0.657307,
+        "loss_teacher_aper_proxy": 0.005125,
+        "loss_log_f0_correction_l1": 0.093494,
+        "loss_aper_correction_l1": 0.047181,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1704.074219
+      },
+      "grad_norm": 3.814465,
+      "status": "step_completed"
+    },
+    {
+      "step": 28,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.057777,
+      "record_ids": [
+        "target::chapter3_20_firefly_111",
+        "target::chapter3_20_firefly_112",
+        "target::chapter3_20_firefly_113"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.155124,
+        "loss_total_default_reference": 7.34731,
+        "loss_teacher_z_art": 0.031353,
+        "loss_teacher_event": 4.746465,
+        "loss_teacher_event_prior": 4.768744,
+        "loss_teacher_energy_proxy": 0.342973,
+        "loss_teacher_vuv_proxy": 0.654612,
+        "loss_teacher_aper_proxy": 0.001177,
+        "loss_log_f0_correction_l1": 0.0576,
+        "loss_aper_correction_l1": 0.049153,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2314.817383
+      },
+      "grad_norm": 3.510684,
+      "status": "step_completed"
+    },
+    {
+      "step": 29,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.031303,
+      "record_ids": [
+        "target::chapter3_20_firefly_114",
+        "target::chapter3_20_firefly_115",
+        "target::chapter3_20_firefly_116"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.153778,
+        "loss_total_default_reference": 7.352844,
+        "loss_teacher_z_art": 0.041806,
+        "loss_teacher_event": 4.779716,
+        "loss_teacher_event_prior": 4.796266,
+        "loss_teacher_energy_proxy": 0.135024,
+        "loss_teacher_vuv_proxy": 0.65493,
+        "loss_teacher_aper_proxy": 0.002033,
+        "loss_log_f0_correction_l1": 0.048537,
+        "loss_aper_correction_l1": 0.05053,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2182.358398
+      },
+      "grad_norm": 3.586081,
+      "status": "step_completed"
+    },
+    {
+      "step": 30,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.035546,
+      "record_ids": [
+        "target::chapter3_20_firefly_117",
+        "target::chapter3_20_firefly_118",
+        "target::chapter3_20_firefly_119"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.137254,
+        "loss_total_default_reference": 7.336996,
+        "loss_teacher_z_art": 0.031177,
+        "loss_teacher_event": 4.772785,
+        "loss_teacher_event_prior": 4.798966,
+        "loss_teacher_energy_proxy": 0.133873,
+        "loss_teacher_vuv_proxy": 0.653303,
+        "loss_teacher_aper_proxy": 0.00908,
+        "loss_log_f0_correction_l1": 0.077395,
+        "loss_aper_correction_l1": 0.0405,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2161.481445
+      },
+      "grad_norm": 3.048234,
+      "status": "step_completed"
+    },
+    {
+      "step": 31,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.030776,
+      "record_ids": [
+        "target::chapter3_20_firefly_120",
+        "target::chapter3_20_firefly_121",
+        "target::chapter3_20_firefly_122"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.170725,
+        "loss_total_default_reference": 7.374146,
+        "loss_teacher_z_art": 0.050611,
+        "loss_teacher_event": 4.790545,
+        "loss_teacher_event_prior": 4.813685,
+        "loss_teacher_energy_proxy": 0.099791,
+        "loss_teacher_vuv_proxy": 0.654803,
+        "loss_teacher_aper_proxy": 0.016281,
+        "loss_log_f0_correction_l1": 0.095608,
+        "loss_aper_correction_l1": 0.039526,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1965.854248
+      },
+      "grad_norm": 4.571436,
+      "status": "step_completed"
+    },
+    {
+      "step": 32,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.037008,
+      "record_ids": [
+        "target::chapter3_20_firefly_123",
+        "target::chapter3_20_firefly_124",
+        "target::chapter3_20_firefly_125"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.103514,
+        "loss_total_default_reference": 7.297624,
+        "loss_teacher_z_art": 0.030742,
+        "loss_teacher_event": 4.761524,
+        "loss_teacher_event_prior": 4.776438,
+        "loss_teacher_energy_proxy": 0.066673,
+        "loss_teacher_vuv_proxy": 0.64616,
+        "loss_teacher_aper_proxy": 0.019873,
+        "loss_log_f0_correction_l1": 0.119694,
+        "loss_aper_correction_l1": 0.03618,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2915.177246
+      },
+      "grad_norm": 3.427081,
+      "status": "step_completed"
+    },
+    {
+      "step": 33,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.040383,
+      "record_ids": [
+        "target::chapter3_20_firefly_126",
+        "target::chapter3_20_firefly_127",
+        "target::chapter3_20_firefly_128"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.126042,
+        "loss_total_default_reference": 7.323599,
+        "loss_teacher_z_art": 0.032169,
+        "loss_teacher_event": 4.770326,
+        "loss_teacher_event_prior": 4.790229,
+        "loss_teacher_energy_proxy": 0.102442,
+        "loss_teacher_vuv_proxy": 0.647387,
+        "loss_teacher_aper_proxy": 0.015481,
+        "loss_log_f0_correction_l1": 0.13896,
+        "loss_aper_correction_l1": 0.033422,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2346.625977
+      },
+      "grad_norm": 5.417938,
+      "status": "step_completed"
+    },
+    {
+      "step": 34,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.030909,
+      "record_ids": [
+        "target::chapter3_20_firefly_129",
+        "target::chapter3_20_firefly_130",
+        "target::chapter3_20_firefly_132"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.219056,
+        "loss_total_default_reference": 7.395259,
+        "loss_teacher_z_art": 0.044132,
+        "loss_teacher_event": 4.692064,
+        "loss_teacher_event_prior": 4.704814,
+        "loss_teacher_energy_proxy": 0.838263,
+        "loss_teacher_vuv_proxy": 0.629073,
+        "loss_teacher_aper_proxy": 0.010484,
+        "loss_log_f0_correction_l1": 0.129907,
+        "loss_aper_correction_l1": 0.038241,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1709.214111
+      },
+      "grad_norm": 7.842421,
+      "status": "step_completed"
+    },
+    {
+      "step": 35,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.042992,
+      "record_ids": [
+        "target::chapter3_20_firefly_134",
+        "target::chapter3_20_firefly_136",
+        "target::chapter3_20_firefly_137"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.145492,
+        "loss_total_default_reference": 7.3207,
+        "loss_teacher_z_art": 0.043092,
+        "loss_teacher_event": 4.695796,
+        "loss_teacher_event_prior": 4.700832,
+        "loss_teacher_energy_proxy": 0.542119,
+        "loss_teacher_vuv_proxy": 0.624757,
+        "loss_teacher_aper_proxy": 0.004996,
+        "loss_log_f0_correction_l1": 0.128877,
+        "loss_aper_correction_l1": 0.036432,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1340.140381
+      },
+      "grad_norm": 3.14597,
+      "status": "step_completed"
+    },
+    {
+      "step": 36,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:54",
+      "duration_sec": 0.033427,
+      "record_ids": [
+        "target::chapter3_20_firefly_138",
+        "target::chapter3_20_firefly_139",
+        "target::chapter3_20_firefly_140"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.185623,
+        "loss_total_default_reference": 7.360585,
+        "loss_teacher_z_art": 0.064698,
+        "loss_teacher_event": 4.692687,
+        "loss_teacher_event_prior": 4.699851,
+        "loss_teacher_energy_proxy": 0.635829,
+        "loss_teacher_vuv_proxy": 0.617453,
+        "loss_teacher_aper_proxy": 0.001451,
+        "loss_log_f0_correction_l1": 0.117508,
+        "loss_aper_correction_l1": 0.037998,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1713.442749
+      },
+      "grad_norm": 5.250847,
+      "status": "step_completed"
+    },
+    {
+      "step": 37,
+      "started_at": "2026-03-17T16:42:54",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.070258,
+      "record_ids": [
+        "target::chapter3_20_firefly_141",
+        "target::chapter3_20_firefly_142",
+        "target::chapter3_20_firefly_143"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.069664,
+        "loss_total_default_reference": 7.240974,
+        "loss_teacher_z_art": 0.032505,
+        "loss_teacher_event": 4.662861,
+        "loss_teacher_event_prior": 4.685243,
+        "loss_teacher_energy_proxy": 0.436936,
+        "loss_teacher_vuv_proxy": 0.612456,
+        "loss_teacher_aper_proxy": 0.004602,
+        "loss_log_f0_correction_l1": 0.117754,
+        "loss_aper_correction_l1": 0.024712,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1351.5625
+      },
+      "grad_norm": 5.755146,
+      "status": "step_completed"
+    },
+    {
+      "step": 38,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.046463,
+      "record_ids": [
+        "target::chapter3_20_firefly_144",
+        "target::chapter3_20_firefly_146",
+        "target::chapter3_20_firefly_147"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.073952,
+        "loss_total_default_reference": 7.246998,
+        "loss_teacher_z_art": 0.036297,
+        "loss_teacher_event": 4.661028,
+        "loss_teacher_event_prior": 4.692183,
+        "loss_teacher_energy_proxy": 0.436303,
+        "loss_teacher_vuv_proxy": 0.611052,
+        "loss_teacher_aper_proxy": 0.01466,
+        "loss_log_f0_correction_l1": 0.109774,
+        "loss_aper_correction_l1": 0.02841,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1607.649536
+      },
+      "grad_norm": 4.159523,
+      "status": "step_completed"
+    },
+    {
+      "step": 39,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.037997,
+      "record_ids": [
+        "target::chapter3_20_firefly_148",
+        "target::chapter3_20_firefly_149",
+        "target::chapter3_20_firefly_150"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.064163,
+        "loss_total_default_reference": 7.238223,
+        "loss_teacher_z_art": 0.041844,
+        "loss_teacher_event": 4.679327,
+        "loss_teacher_event_prior": 4.696239,
+        "loss_teacher_energy_proxy": 0.29562,
+        "loss_teacher_vuv_proxy": 0.610818,
+        "loss_teacher_aper_proxy": 0.023881,
+        "loss_log_f0_correction_l1": 0.088956,
+        "loss_aper_correction_l1": 0.012566,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1669.312744
+      },
+      "grad_norm": 4.435432,
+      "status": "step_completed"
+    },
+    {
+      "step": 40,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.033978,
+      "record_ids": [
+        "target::chapter3_20_firefly_151",
+        "target::chapter3_20_firefly_152",
+        "target::chapter3_20_firefly_153"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.027367,
+        "loss_total_default_reference": 7.201671,
+        "loss_teacher_z_art": 0.01165,
+        "loss_teacher_event": 4.691147,
+        "loss_teacher_event_prior": 4.697214,
+        "loss_teacher_energy_proxy": 0.221527,
+        "loss_teacher_vuv_proxy": 0.609573,
+        "loss_teacher_aper_proxy": 0.026296,
+        "loss_log_f0_correction_l1": 0.062716,
+        "loss_aper_correction_l1": 0.019177,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1740.451172
+      },
+      "grad_norm": 2.388255,
+      "status": "step_completed"
+    },
+    {
+      "step": 41,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.046353,
+      "record_ids": [
+        "target::chapter3_20_firefly_154",
+        "target::chapter3_20_firefly_155",
+        "target::chapter3_20_firefly_156"
+      ],
+      "loss_metrics": {
+        "loss_total": 5.984322,
+        "loss_total_default_reference": 7.149117,
+        "loss_teacher_z_art": 0.041247,
+        "loss_teacher_event": 4.649482,
+        "loss_teacher_event_prior": 4.659177,
+        "loss_teacher_energy_proxy": 0.147103,
+        "loss_teacher_vuv_proxy": 0.598672,
+        "loss_teacher_aper_proxy": 0.014021,
+        "loss_log_f0_correction_l1": 0.048032,
+        "loss_aper_correction_l1": 0.03402,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1541.662598
+      },
+      "grad_norm": 4.348832,
+      "status": "step_completed"
+    },
+    {
+      "step": 42,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.033411,
+      "record_ids": [
+        "target::chapter3_20_firefly_157",
+        "target::chapter3_20_firefly_158",
+        "target::chapter3_20_firefly_159"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.021104,
+        "loss_total_default_reference": 7.190431,
+        "loss_teacher_z_art": 0.056423,
+        "loss_teacher_event": 4.670848,
+        "loss_teacher_event_prior": 4.677309,
+        "loss_teacher_energy_proxy": 0.130537,
+        "loss_teacher_vuv_proxy": 0.601416,
+        "loss_teacher_aper_proxy": 0.007155,
+        "loss_log_f0_correction_l1": 0.065465,
+        "loss_aper_correction_l1": 0.028923,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1432.293213
+      },
+      "grad_norm": 4.840359,
+      "status": "step_completed"
+    },
+    {
+      "step": 43,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.027099,
+      "record_ids": [
+        "target::chapter3_20_firefly_160",
+        "target::chapter3_20_firefly_161",
+        "target::chapter3_20_firefly_162"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.007395,
+        "loss_total_default_reference": 7.178143,
+        "loss_teacher_z_art": 0.020325,
+        "loss_teacher_event": 4.676877,
+        "loss_teacher_event_prior": 4.682991,
+        "loss_teacher_energy_proxy": 0.192759,
+        "loss_teacher_vuv_proxy": 0.599653,
+        "loss_teacher_aper_proxy": 0.003444,
+        "loss_log_f0_correction_l1": 0.067656,
+        "loss_aper_correction_l1": 0.028673,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1295.418701
+      },
+      "grad_norm": 3.364896,
+      "status": "step_completed"
+    },
+    {
+      "step": 44,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.036684,
+      "record_ids": [
+        "target::chapter3_20_firefly_163",
+        "target::chapter3_20_firefly_164",
+        "target::chapter3_20_firefly_165"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.018965,
+        "loss_total_default_reference": 7.194578,
+        "loss_teacher_z_art": 0.015632,
+        "loss_teacher_event": 4.690389,
+        "loss_teacher_event_prior": 4.702448,
+        "loss_teacher_energy_proxy": 0.183908,
+        "loss_teacher_vuv_proxy": 0.60101,
+        "loss_teacher_aper_proxy": 0.002116,
+        "loss_log_f0_correction_l1": 0.060101,
+        "loss_aper_correction_l1": 0.039118,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1728.291016
+      },
+      "grad_norm": 3.726372,
+      "status": "step_completed"
+    },
+    {
+      "step": 45,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.034853,
+      "record_ids": [
+        "target::chapter3_20_firefly_166",
+        "target::chapter3_20_firefly_167",
+        "target::chapter3_20_firefly_168"
+      ],
+      "loss_metrics": {
+        "loss_total": 6.023231,
+        "loss_total_default_reference": 7.201517,
+        "loss_teacher_z_art": 0.012795,
+        "loss_teacher_event": 4.687507,
+        "loss_teacher_event_prior": 4.713144,
+        "loss_teacher_energy_proxy": 0.213303,
+        "loss_teacher_vuv_proxy": 0.600443,
+        "loss_teacher_aper_proxy": 0.003133,
+        "loss_log_f0_correction_l1": 0.048088,
+        "loss_aper_correction_l1": 0.04565,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1467.050537
+      },
+      "grad_norm": 2.405711,
+      "status": "step_completed"
+    },
+    {
+      "step": 46,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.037745,
+      "record_ids": [
+        "target::chapter3_20_firefly_169",
+        "target::chapter3_20_firefly_170",
+        "target::chapter3_20_firefly_171"
+      ],
+      "loss_metrics": {
+        "loss_total": 5.996385,
+        "loss_total_default_reference": 7.171043,
+        "loss_teacher_z_art": 0.005781,
+        "loss_teacher_event": 4.672752,
+        "loss_teacher_event_prior": 4.698635,
+        "loss_teacher_energy_proxy": 0.209285,
+        "loss_teacher_vuv_proxy": 0.59626,
+        "loss_teacher_aper_proxy": 0.006553,
+        "loss_log_f0_correction_l1": 0.038519,
+        "loss_aper_correction_l1": 0.039228,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2428.62793
+      },
+      "grad_norm": 3.029042,
+      "status": "step_completed"
+    },
+    {
+      "step": 47,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.027831,
+      "record_ids": [
+        "target::chapter3_20_firefly_173",
+        "target::chapter3_20_firefly_174",
+        "target::chapter3_20_firefly_175"
+      ],
+      "loss_metrics": {
+        "loss_total": 5.945515,
+        "loss_total_default_reference": 7.110441,
+        "loss_teacher_z_art": 0.011115,
+        "loss_teacher_event": 4.643472,
+        "loss_teacher_event_prior": 4.659707,
+        "loss_teacher_energy_proxy": 0.144601,
+        "loss_teacher_vuv_proxy": 0.588144,
+        "loss_teacher_aper_proxy": 0.010057,
+        "loss_log_f0_correction_l1": 0.032813,
+        "loss_aper_correction_l1": 0.02945,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1851.09729
+      },
+      "grad_norm": 2.01956,
+      "status": "step_completed"
+    },
+    {
+      "step": 48,
+      "started_at": "2026-03-17T16:42:55",
+      "ended_at": "2026-03-17T16:42:55",
+      "duration_sec": 0.032938,
+      "record_ids": [
+        "target::chapter3_20_firefly_176",
+        "target::chapter3_20_firefly_177",
+        "target::chapter3_20_firefly_178"
+      ],
+      "loss_metrics": {
+        "loss_total": 5.938369,
+        "loss_total_default_reference": 7.103632,
+        "loss_teacher_z_art": 0.015936,
+        "loss_teacher_event": 4.644286,
+        "loss_teacher_event_prior": 4.661056,
+        "loss_teacher_energy_proxy": 0.091325,
+        "loss_teacher_vuv_proxy": 0.591132,
+        "loss_teacher_aper_proxy": 0.008432,
+        "loss_log_f0_correction_l1": 0.030388,
+        "loss_aper_correction_l1": 0.023496,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 2043.97937
+      },
+      "grad_norm": 2.522707,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 12,
+      "validation_mode": "full",
+      "validation_batches": 11,
+      "record_count": 66,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131"
+        ],
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ],
+        [
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145"
+        ],
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ],
+        [
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102"
+        ],
+        [
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106"
+        ],
+        [
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155"
+        ],
+        [
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245"
+        ],
+        [
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107"
+        ],
+        [
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133"
+        ],
+        [
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 6.919654,
+        "loss_total_default_reference": 8.150748,
+        "loss_teacher_z_art": 0.057108,
+        "loss_teacher_event": 4.853921,
+        "loss_teacher_event_prior": 4.924376,
+        "loss_teacher_energy_proxy": 2.650425,
+        "loss_teacher_vuv_proxy": 0.707799,
+        "loss_teacher_aper_proxy": 0.067569,
+        "loss_log_f0_correction_l1": 0.128517,
+        "loss_aper_correction_l1": 0.071296,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4941.934959
+      }
+    },
+    {
+      "step": 24,
+      "validation_mode": "full",
+      "validation_batches": 11,
+      "record_count": 66,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131"
+        ],
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ],
+        [
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145"
+        ],
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ],
+        [
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102"
+        ],
+        [
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106"
+        ],
+        [
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155"
+        ],
+        [
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245"
+        ],
+        [
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107"
+        ],
+        [
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133"
+        ],
+        [
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 6.124982,
+        "loss_total_default_reference": 7.30326,
+        "loss_teacher_z_art": 0.02096,
+        "loss_teacher_event": 4.686789,
+        "loss_teacher_event_prior": 4.713115,
+        "loss_teacher_energy_proxy": 0.537741,
+        "loss_teacher_vuv_proxy": 0.676848,
+        "loss_teacher_aper_proxy": 0.010179,
+        "loss_log_f0_correction_l1": 0.171083,
+        "loss_aper_correction_l1": 0.026196,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4941.934959
+      }
+    },
+    {
+      "step": 36,
+      "validation_mode": "full",
+      "validation_batches": 11,
+      "record_count": 66,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131"
+        ],
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ],
+        [
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145"
+        ],
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ],
+        [
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102"
+        ],
+        [
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106"
+        ],
+        [
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155"
+        ],
+        [
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245"
+        ],
+        [
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107"
+        ],
+        [
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133"
+        ],
+        [
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 6.138614,
+        "loss_total_default_reference": 7.318337,
+        "loss_teacher_z_art": 0.035891,
+        "loss_teacher_event": 4.695785,
+        "loss_teacher_event_prior": 4.718889,
+        "loss_teacher_energy_proxy": 0.529774,
+        "loss_teacher_vuv_proxy": 0.618646,
+        "loss_teacher_aper_proxy": 0.005877,
+        "loss_log_f0_correction_l1": 0.110308,
+        "loss_aper_correction_l1": 0.028409,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4941.934959
+      }
+    },
+    {
+      "step": 48,
+      "validation_mode": "full",
+      "validation_batches": 11,
+      "record_count": 66,
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184",
+          "target::chapter3_21_firefly_116",
+          "target::chapter3_3_firefly_207",
+          "target::chapter3_30_firefly_101",
+          "target::chapter3_2_firefly_131"
+        ],
+        [
+          "target::chapter3_2_firefly_212",
+          "target::chapter3_3_firefly_246",
+          "target::chapter3_20_firefly_145",
+          "target::chapter3_29_firefly_130",
+          "target::chapter3_30_firefly_117",
+          "target::chapter3_3_firefly_115"
+        ],
+        [
+          "target::chapter3_29_firefly_113",
+          "target::chapter3_22_firefly_114",
+          "target::chapter3_2_firefly_137",
+          "target::chapter3_3_firefly_234",
+          "target::chapter3_3_firefly_171",
+          "target::chapter3_30_firefly_145"
+        ],
+        [
+          "target::chapter3_3_firefly_174",
+          "target::chapter3_26_firefly_114",
+          "target::chapter3_30_firefly_147",
+          "target::chapter3_2_firefly_183",
+          "target::chapter3_4_firefly_126",
+          "target::chapter3_3_firefly_199"
+        ],
+        [
+          "target::chapter3_20_firefly_133",
+          "target::chapter3_29_firefly_141",
+          "target::chapter3_3_firefly_213",
+          "target::chapter3_2_firefly_164",
+          "target::chapter3_30_firefly_132",
+          "target::chapter3_5_firefly_102"
+        ],
+        [
+          "target::chapter3_2_firefly_163",
+          "target::chapter3_4_firefly_140",
+          "target::chapter3_3_firefly_138",
+          "target::chapter3_3_firefly_114",
+          "target::chapter3_20_firefly_172",
+          "target::chapter3_6_firefly_106"
+        ],
+        [
+          "target::chapter3_20_firefly_135",
+          "target::chapter3_2_firefly_220",
+          "target::chapter3_6_firefly_103",
+          "target::chapter3_3_firefly_122",
+          "target::chapter3_2_firefly_170",
+          "target::chapter3_2_firefly_155"
+        ],
+        [
+          "target::chapter3_2_firefly_165",
+          "target::chapter3_3_firefly_182",
+          "target::chapter3_4_firefly_112",
+          "target::chapter3_30_firefly_136",
+          "target::chapter4_7_firefly_105",
+          "target::chapter3_3_firefly_245"
+        ],
+        [
+          "target::chapter3_3_firefly_197",
+          "target::chapter3_29_firefly_103",
+          "target::chapter3_30_firefly_137",
+          "target::chapter3_3_firefly_212",
+          "target::chapter3_4_firefly_109",
+          "target::chapter3_26_firefly_107"
+        ],
+        [
+          "target::chapter3_29_firefly_142",
+          "target::chapter3_3_firefly_215",
+          "target::chapter3_3_firefly_210",
+          "target::chapter3_29_firefly_136",
+          "target::chapter3_4_firefly_105",
+          "target::chapter3_17_firefly_133"
+        ],
+        [
+          "target::chapter3_2_firefly_157",
+          "target::chapter3_2_firefly_178",
+          "target::chapter4_7_firefly_119",
+          "target::chapter3_17_firefly_129",
+          "target::chapter3_2_firefly_206",
+          "target::chapter3_4_firefly_106"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 5.978989,
+        "loss_total_default_reference": 7.152429,
+        "loss_teacher_z_art": 0.013478,
+        "loss_teacher_event": 4.677829,
+        "loss_teacher_event_prior": 4.69376,
+        "loss_teacher_energy_proxy": 0.092954,
+        "loss_teacher_vuv_proxy": 0.600527,
+        "loss_teacher_aper_proxy": 0.004687,
+        "loss_log_f0_correction_l1": 0.024589,
+        "loss_aper_correction_l1": 0.020862,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 4941.934959
+      }
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_eventprior025_fullval48_v1.step12.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_eventprior025_fullval48_v1.step24.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_eventprior025_fullval48_v1.step36.pt",
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_eventprior025_fullval48_v1.step48.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_eventprior025_fullval48_v1.step48.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 48,
+      "validation_mode": "full",
+      "loss_total": 5.978989,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_eventprior025_fullval48_v1.step48.pt"
+    }
+  },
+  "notes": [
+    "This is a minimal multi-step Stage3 training loop scaffold built on top of the new teacher-supervised contract.",
+    "Validation now walks the full target_validation slice sequentially inside the training loop.",
+    "The purpose is to expose step-wise loss, grad_norm, validation, and checkpoint behavior before adding richer supervision or r_res."
+  ],
+  "next_steps": [
+    "Use this fuller validation mode to compare future short-horizon runs without relying on a separate checkpoint-eval pass for every checkpoint.",
+    "Tune learning rate, loss weights, and teacher confidence usage based on short-horizon trajectories instead of a single step.",
+    "Keep hidden distillation and r_res disabled until the base multi-step route is stable."
+  ],
+  "status": "training_loop_scaffold_completed"
+}

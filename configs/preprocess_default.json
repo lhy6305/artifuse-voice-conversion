@@ -1,0 +1,108 @@
+{
+  "target_dataset": {
+    "mainstream_sample_rate": 44100,
+    "mainstream_channels": 1,
+    "text_rules": {
+      "keep_punctuation": ["，", "。", "？", "！", "；", "：", "、"],
+      "normalize_map": {
+        "…": "，",
+        "—": "，",
+        "-": "，"
+      },
+      "remove_characters": ["「", "」", "『", "』", "“", "”", "‘", "’", "（", "）", "(", ")", "[", "]", "【", "】", "《", "》", "<", ">", "〈", "〉", "\"", "'"],
+      "compress_whitespace": true,
+      "collapse_repeated_punctuation": true
+    }
+  },
+  "source_audio": {
+    "analysis_window_ms": 30,
+    "noise_floor_estimation": {
+      "min_candidate_dbfs": -90.0,
+      "max_candidate_dbfs": -45.0,
+      "percentile": 20.0,
+      "min_window_count": 200,
+      "noise_present_dbfs": -65.0
+    },
+    "segment_detection": {
+      "absolute_content_threshold_dbfs": -38.0,
+      "relative_content_margin_db": 12.0,
+      "peak_assist_threshold_dbfs": -26.0,
+      "min_segment_ms": 500,
+      "max_gap_ms": 300,
+      "pad_before_ms": 200,
+      "pad_after_ms": 250
+    },
+    "boundary_rules": {
+      "boundary_threshold_dbfs": -38.0,
+      "min_quiet_ms": 500
+    },
+    "noise_gate": {
+      "enabled": true,
+      "window_ms": 20,
+      "gate_margin_db": 6.0,
+      "peak_keep_threshold_dbfs": -24.0
+    },
+    "peak_export": {
+      "top_peak_count": 12,
+      "abrupt_delta_db": 12.0,
+      "min_peak_dbfs": -18.0,
+      "top_abrupt_count": 12,
+      "max_total_clips": 24,
+      "min_separation_ms": 1500,
+      "clip_pre_ms": 600,
+      "clip_post_ms": 800
+    },
+    "manual_review": {
+      "peak_decisions": [
+        {
+          "clip_id": "peak_005_0001221975_top_peak",
+          "review_action": "exclude",
+          "segment_action": "exclude_interval",
+          "start_sec": 1221.375,
+          "end_sec": 1222.775,
+          "reason": "microphone_blow_transient"
+        },
+        {
+          "clip_id": "peak_008_0001665045_abrupt_rise",
+          "review_action": "exclude",
+          "segment_action": "exclude_interval",
+          "start_sec": 1664.445,
+          "end_sec": 1665.845,
+          "reason": "cough_transient"
+        },
+        {
+          "clip_id": "peak_010_0002051985_abrupt_rise",
+          "review_action": "keep",
+          "segment_action": "exclude_interval",
+          "start_sec": 2051.385,
+          "end_sec": 2051.77,
+          "reason": "initial_nonhuman_transient_only"
+        },
+        {
+          "clip_id": "peak_011_0002370615_top_peak",
+          "review_action": "keep",
+          "segment_action": "keep",
+          "start_sec": 2370.015,
+          "end_sec": 2371.415,
+          "reason": "pure_voice_clipping_keep"
+        },
+        {
+          "clip_id": "peak_014_0003049665_top_peak",
+          "review_action": "exclude",
+          "segment_action": "exclude_interval",
+          "start_sec": 3049.065,
+          "end_sec": 3050.465,
+          "reason": "distance_shift_unstable"
+        },
+        {
+          "clip_id": "peak_015_0003614595_abrupt_rise",
+          "review_action": "exclude",
+          "segment_action": "exclude_interval",
+          "start_sec": 3613.995,
+          "end_sec": 3615.395,
+          "reason": "sigh_transient"
+        }
+      ]
+    }
+  }
+}

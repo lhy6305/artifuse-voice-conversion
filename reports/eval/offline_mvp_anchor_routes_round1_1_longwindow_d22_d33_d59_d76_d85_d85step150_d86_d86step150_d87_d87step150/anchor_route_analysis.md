@@ -1,0 +1,69 @@
+# offline MVP anchor route analysis
+
+- anchor_count: 10
+- derived_thresholds: {'budget_to_minimax_anchor': 0.023498, 'budget_to_special_anchor': 0.060055, 'best_e_evt_floor': 2.330918, 'minimax_z_art_floor': 0.484435, 'best_z_art_floor': 0.710849}
+
+## leaders
+- validation: EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration (val=2.107936, special_delta=0.246555, zero_e_evt=1.937766, zero_z_art=0.424651)
+- special: EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor (val=2.167991, special_delta=0.22186, zero_e_evt=2.330918, zero_z_art=0.498314)
+- zero_e_evt: EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor (val=2.167991, special_delta=0.22186, zero_e_evt=2.330918, zero_z_art=0.498314)
+- zero_z_art: EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration (val=2.122699, special_delta=0.239846, zero_e_evt=1.9703, zero_z_art=0.710849)
+- minimax: EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration (val=2.131434, special_delta=0.230457, zero_e_evt=2.069828, zero_z_art=0.484435)
+
+## policies
+### validation_strict
+- description: Use the strongest validation anchor with zero extra validation budget.
+- objective: validation
+- constraints: {'max_validation_budget_over_best': 0.0, 'min_zero_e_evt_delta_target_loss_total': None, 'min_zero_z_art_delta_target_loss_total': None}
+- is_feasible: True
+- eligible_anchor_ids: ['EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration']
+- selected_anchor: EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration (val=2.107936, special_delta=0.246555, zero_e_evt=1.937766, zero_z_art=0.424651)
+
+### default_minimax
+- description: Use the least-worst final anchor without extra route constraints.
+- objective: minimax
+- constraints: {'max_validation_budget_over_best': None, 'min_zero_e_evt_delta_target_loss_total': None, 'min_zero_z_art_delta_target_loss_total': None}
+- is_feasible: True
+- eligible_anchor_ids: ['EXP-20260316-013-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-200step-calibration', 'EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration', 'EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration', 'EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration', 'EXP-20260316-041-offline-mvp-d85-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-200step-calibration', 'EXP-20260316-041-offline-mvp-d85-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-200step-calibration-checkpoint-step150-anchor', 'EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration', 'EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration-checkpoint-step150-anchor', 'EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration', 'EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor']
+- selected_anchor: EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration (val=2.131434, special_delta=0.230457, zero_e_evt=2.069828, zero_z_art=0.484435)
+
+### guarded_default
+- description: Allow just enough validation budget to include the minimax anchor, then keep minimax selection.
+- objective: minimax
+- constraints: {'max_validation_budget_over_best': 0.023498, 'min_zero_e_evt_delta_target_loss_total': None, 'min_zero_z_art_delta_target_loss_total': None}
+- is_feasible: True
+- eligible_anchor_ids: ['EXP-20260316-013-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-200step-calibration', 'EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration', 'EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration', 'EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration', 'EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration']
+- selected_anchor: EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration (val=2.131434, special_delta=0.230457, zero_e_evt=2.069828, zero_z_art=0.484435)
+
+### e_evt_guard
+- description: Require the current best e_evt floor and select the least-worst eligible anchor.
+- objective: minimax
+- constraints: {'max_validation_budget_over_best': None, 'min_zero_e_evt_delta_target_loss_total': 2.330918, 'min_zero_z_art_delta_target_loss_total': 0.484435}
+- is_feasible: True
+- eligible_anchor_ids: ['EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor']
+- selected_anchor: EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor (val=2.167991, special_delta=0.22186, zero_e_evt=2.330918, zero_z_art=0.498314)
+
+### special_push
+- description: Allow enough validation budget to include the special/z_art leader and pick the best special eligible anchor.
+- objective: special
+- constraints: {'max_validation_budget_over_best': 0.060055, 'min_zero_e_evt_delta_target_loss_total': None, 'min_zero_z_art_delta_target_loss_total': None}
+- is_feasible: True
+- eligible_anchor_ids: ['EXP-20260316-013-offline-mvp-d22-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-200step-calibration', 'EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration', 'EXP-20260316-014-offline-mvp-d59-round1-1-d7-init-d57-formal-special-clause2-shortpause-ceiling-sampler-teacher-gate-late-200step-calibration', 'EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration', 'EXP-20260316-041-offline-mvp-d85-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-200step-calibration', 'EXP-20260316-041-offline-mvp-d85-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-200step-calibration-checkpoint-step150-anchor', 'EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration', 'EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration-checkpoint-step150-anchor', 'EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration', 'EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor']
+- selected_anchor: EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor (val=2.167991, special_delta=0.22186, zero_e_evt=2.330918, zero_z_art=0.498314)
+
+### z_art_push
+- description: Require the current best z_art floor and enough validation budget to include that anchor, then pick the best special eligible anchor.
+- objective: special
+- constraints: {'max_validation_budget_over_best': 0.060055, 'min_zero_e_evt_delta_target_loss_total': None, 'min_zero_z_art_delta_target_loss_total': 0.710849}
+- is_feasible: True
+- eligible_anchor_ids: ['EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration']
+- selected_anchor: EXP-20260316-015-offline-mvp-d33-round1-1-d7-init-d10-teacher-consolidation-teacher-consistency-shortpausegate-priority-fused-hidden-200step-calibration (val=2.122699, special_delta=0.239846, zero_e_evt=1.9703, zero_z_art=0.710849)
+
+## recommended policy
+- {'default_policy': 'default_minimax', 'route_switch_rules': [{'when': 'max_validation_budget_over_best < 0.023498', 'use_policy': 'validation_strict', 'selected_anchor_id': 'EXP-20260316-032-offline-mvp-d76-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-late-fusedhidden-boost-200step-calibration'}, {'when': 'max_validation_budget_over_best >= 0.023498 and (special_priority is false and z_art_priority is false)', 'use_policy': 'default_minimax', 'selected_anchor_id': 'EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration'}, {'when': 'max_validation_budget_over_best >= 0.060055 and (special_priority is true or z_art_priority is true)', 'use_policy': 'special_push', 'selected_anchor_id': 'EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration-checkpoint-step150-anchor'}]}
+
+## notes
+- Policies operate on final anchors only and are intended for route/reporting decisions, not new training.
+- validation_strict picks D29-like anchors whenever no extra validation budget is allowed.
+- default_minimax picks D22-like anchors when a single least-worst default is needed.
+- special_push picks D26-like anchors only after enough validation budget is explicitly granted.

@@ -1,0 +1,67 @@
+{
+  "overall_ok": true,
+  "checks": {
+    "special_eval_manifest_nonempty": true,
+    "special_eval_record_ids_unique": true,
+    "special_eval_disjoint_from_main_validation": true,
+    "special_eval_all_from_no_text_voice": true,
+    "special_eval_all_target_role": true
+  },
+  "summary": {
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1/splits/hybrid_stratified_blocked",
+    "split_option_name": "hybrid_stratified_blocked",
+    "target_validation_record_count": 62,
+    "target_special_eval_record_count": 8,
+    "target_special_eval_duration_stats_sec": {
+      "count": 8,
+      "min": 0.470998,
+      "max": 2.114989,
+      "mean": 1.057291,
+      "median": 0.956985,
+      "stdev": 0.464816
+    },
+    "target_special_eval_clean_char_count": {
+      "count": 8,
+      "min": 1,
+      "max": 1,
+      "mean": 1.0,
+      "median": 1.0,
+      "stdev": 0.0
+    },
+    "target_special_eval_punctuation_ratio": {
+      "count": 8,
+      "min": 1.0,
+      "max": 1.0,
+      "mean": 1.0,
+      "median": 1.0,
+      "stdev": 0.0
+    },
+    "target_special_eval_group_counts": {
+      "no_text_voice": 8
+    },
+    "target_special_eval_punctuation_only_count": 8,
+    "target_validation_duration_stats_sec": {
+      "count": 62,
+      "min": 0.757982,
+      "max": 21.104989,
+      "mean": 6.207777,
+      "median": 5.06449,
+      "stdev": 4.25047
+    }
+  },
+  "special_eval_record_ids": [
+    "target::no_text_voice/chapter3_17_firefly_106",
+    "target::no_text_voice/chapter3_18_firefly_101",
+    "target::no_text_voice/chapter3_21_firefly_108",
+    "target::no_text_voice/chapter3_22_firefly_115",
+    "target::no_text_voice/chapter3_29_firefly_139",
+    "target::no_text_voice/chapter3_2_firefly_102",
+    "target::no_text_voice/chapter3_30_firefly_144",
+    "target::no_text_voice/chapter3_3_firefly_110"
+  ],
+  "notes": [
+    "target_special_eval is a challenge-only set and should not be merged back into regular validation.",
+    "current round1 special_eval records are expected to come from no_text_voice only.",
+    "current special_eval clean text is punctuation-only, so this set should be interpreted as a stress slice rather than normal content validation."
+  ]
+}

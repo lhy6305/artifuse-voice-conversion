@@ -1,0 +1,173 @@
+{
+  "experiment_id": "streaming_student_stage_loop_proxytemporal20warm6_smoketest_v1",
+  "generated_at": "2026-03-17T20:37:33",
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "timing": {
+    "started_at": "2026-03-17T20:37:31",
+    "ended_at": "2026-03-17T20:37:33",
+    "duration_sec": 1.476251
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "option_name": "hybrid_stratified_blocked",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 592,
+      "target_validation": 66,
+      "target_special_eval": 8,
+      "source_train": 483,
+      "source_validation": 54
+    }
+  },
+  "conditioning": {
+    "asset_version": "stage3_calibration_asset_v1",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha_value": 1.15,
+    "source": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
+  },
+  "training": {
+    "batch_size": 2,
+    "validation_batch_size": 2,
+    "num_steps": 1,
+    "validation_interval": 1,
+    "checkpoint_interval": 1,
+    "validation_batches": 1,
+    "validation_mode": "sampled",
+    "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
+    "use_teacher_confidence": true,
+    "loss_weights": {
+      "teacher_z_art": 1.0,
+      "teacher_event": 1.0,
+      "teacher_event_prior": 0.5,
+      "teacher_energy_proxy": 0.25,
+      "teacher_vuv_proxy": 0.15,
+      "teacher_aper_proxy": 0.1,
+      "teacher_proxy_acoustic": 0.0,
+      "teacher_proxy_temporal": 20.0,
+      "log_f0_correction_l1": 0.01,
+      "aper_correction_l1": 0.01
+    },
+    "loss_weight_schedule": {
+      "teacher_proxy_temporal": {
+        "type": "linear_warmup_hold",
+        "start_weight": 0.0,
+        "warmup_steps": 6
+      }
+    },
+    "loss_weight_overrides_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_loss_weights_proxytemporal20_warmup6_v1.json"
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-17T20:37:33",
+      "ended_at": "2026-03-17T20:37:33",
+      "duration_sec": 0.08732,
+      "record_ids": [
+        "target::archive_firefly_1",
+        "target::archive_firefly_10"
+      ],
+      "loss_metrics": {
+        "loss_total": 20.617382,
+        "loss_total_default_reference": 20.617382,
+        "loss_teacher_z_art": 8.716184,
+        "loss_teacher_event": 5.721528,
+        "loss_teacher_event_prior": 5.45355,
+        "loss_teacher_energy_proxy": 13.372952,
+        "loss_teacher_vuv_proxy": 0.703334,
+        "loss_teacher_aper_proxy": 0.033912,
+        "loss_teacher_proxy_acoustic": 13.572361,
+        "loss_teacher_proxy_temporal": 0.006295,
+        "loss_log_f0_correction_l1": 0.046193,
+        "loss_aper_correction_l1": 0.030586,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 3605.212158
+      },
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "grad_norm": 64.011513,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 1,
+      "validation_mode": "sampled",
+      "validation_batches": 1,
+      "record_count": 66,
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162",
+          "target::chapter3_20_firefly_184"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 14.102855,
+        "loss_total_default_reference": 14.102855,
+        "loss_teacher_z_art": 4.717854,
+        "loss_teacher_event": 5.531987,
+        "loss_teacher_event_prior": 5.367555,
+        "loss_teacher_energy_proxy": 4.215321,
+        "loss_teacher_vuv_proxy": 0.708185,
+        "loss_teacher_aper_proxy": 0.070912,
+        "loss_teacher_proxy_acoustic": 4.263198,
+        "loss_teacher_proxy_temporal": 0.009405,
+        "loss_log_f0_correction_l1": 0.011917,
+        "loss_aper_correction_l1": 0.196958,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 231.243347
+      }
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal20warm6_smoketest_v1.step1.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal20warm6_smoketest_v1.step1.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 1,
+      "validation_mode": "sampled",
+      "loss_total": 14.102855,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop/checkpoints/streaming_student_stage_loop_proxytemporal20warm6_smoketest_v1.step1.pt"
+    }
+  },
+  "notes": [
+    "This is a minimal multi-step Stage3 training loop scaffold built on top of the new teacher-supervised contract.",
+    "Validation currently averages a small sampled subset of target_validation batches for speed; it is not a full-slice evaluation.",
+    "The purpose is to expose step-wise loss, grad_norm, validation, and checkpoint behavior before adding richer supervision or r_res."
+  ],
+  "next_steps": [
+    "Decide whether sampled validation should remain the default quick-check mode or whether fuller validation should become the default before larger runs.",
+    "Tune learning rate, loss weights, and teacher confidence usage based on short-horizon trajectories instead of a single step.",
+    "Keep hidden distillation and r_res disabled until the base multi-step route is stable."
+  ],
+  "status": "training_loop_scaffold_completed"
+}

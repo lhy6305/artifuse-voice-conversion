@@ -1,0 +1,271 @@
+{
+  "experiment_metrics_paths": [
+    "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration.metrics.json"
+  ],
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_checkpoint_selection_round1_1_d86_late075",
+  "late_step_ratio": 0.75,
+  "validation_guard_ratio": 1.25,
+  "min_positive_control_delta": 0.1,
+  "experiment_count": 1,
+  "experiments": [
+    {
+      "experiment_id": "EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration",
+      "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration.metrics.json",
+      "status": "training_run_completed",
+      "late_min_step": 150,
+      "validation_guard_threshold": 2.668876,
+      "final_checkpoint": {
+        "step": 200,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step200.pt",
+        "target_validation_loss_total": 2.135101,
+        "target_special_eval_loss_total": 2.366671,
+        "delta_loss_total": 0.23157,
+        "zero_e_evt_delta_target_loss_total": 1.816795,
+        "zero_z_art_delta_target_loss_total": 0.395586,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.0,
+          "delta_loss_total": 0.0,
+          "zero_e_evt_delta_target_loss_total": 0.0,
+          "zero_z_art_delta_target_loss_total": 0.0
+        }
+      },
+      "best_validation_checkpoint": {
+        "step": 200,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step200.pt",
+        "target_validation_loss_total": 2.135101,
+        "target_special_eval_loss_total": 2.366671,
+        "delta_loss_total": 0.23157,
+        "zero_e_evt_delta_target_loss_total": 1.816795,
+        "zero_z_art_delta_target_loss_total": 0.395586,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.0,
+          "delta_loss_total": 0.0,
+          "zero_e_evt_delta_target_loss_total": 0.0,
+          "zero_z_art_delta_target_loss_total": 0.0
+        }
+      },
+      "best_special_checkpoint": {
+        "step": 50,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step50.pt",
+        "target_validation_loss_total": 2.310507,
+        "target_special_eval_loss_total": 2.496594,
+        "delta_loss_total": 0.186087,
+        "zero_e_evt_delta_target_loss_total": 2.570719,
+        "zero_z_art_delta_target_loss_total": 0.308605,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.175406,
+          "delta_loss_total": -0.045483,
+          "zero_e_evt_delta_target_loss_total": 0.753924,
+          "zero_z_art_delta_target_loss_total": -0.086981
+        }
+      },
+      "best_e_evt_checkpoint": {
+        "step": 50,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step50.pt",
+        "target_validation_loss_total": 2.310507,
+        "target_special_eval_loss_total": 2.496594,
+        "delta_loss_total": 0.186087,
+        "zero_e_evt_delta_target_loss_total": 2.570719,
+        "zero_z_art_delta_target_loss_total": 0.308605,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.175406,
+          "delta_loss_total": -0.045483,
+          "zero_e_evt_delta_target_loss_total": 0.753924,
+          "zero_z_art_delta_target_loss_total": -0.086981
+        }
+      },
+      "best_late_special_checkpoint": {
+        "step": 150,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+        "target_validation_loss_total": 2.156964,
+        "target_special_eval_loss_total": 2.382414,
+        "delta_loss_total": 0.22545,
+        "zero_e_evt_delta_target_loss_total": 2.186293,
+        "zero_z_art_delta_target_loss_total": 0.50498,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.021863,
+          "delta_loss_total": -0.00612,
+          "zero_e_evt_delta_target_loss_total": 0.369498,
+          "zero_z_art_delta_target_loss_total": 0.109394
+        }
+      },
+      "best_late_e_evt_checkpoint": {
+        "step": 150,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+        "target_validation_loss_total": 2.156964,
+        "target_special_eval_loss_total": 2.382414,
+        "delta_loss_total": 0.22545,
+        "zero_e_evt_delta_target_loss_total": 2.186293,
+        "zero_z_art_delta_target_loss_total": 0.50498,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.021863,
+          "delta_loss_total": -0.00612,
+          "zero_e_evt_delta_target_loss_total": 0.369498,
+          "zero_z_art_delta_target_loss_total": 0.109394
+        }
+      },
+      "best_validation_guarded_checkpoint": {
+        "step": 150,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+        "target_validation_loss_total": 2.156964,
+        "target_special_eval_loss_total": 2.382414,
+        "delta_loss_total": 0.22545,
+        "zero_e_evt_delta_target_loss_total": 2.186293,
+        "zero_z_art_delta_target_loss_total": 0.50498,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.021863,
+          "delta_loss_total": -0.00612,
+          "zero_e_evt_delta_target_loss_total": 0.369498,
+          "zero_z_art_delta_target_loss_total": 0.109394
+        }
+      },
+      "best_positive_control_late_checkpoint": {
+        "step": 150,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+        "target_validation_loss_total": 2.156964,
+        "target_special_eval_loss_total": 2.382414,
+        "delta_loss_total": 0.22545,
+        "zero_e_evt_delta_target_loss_total": 2.186293,
+        "zero_z_art_delta_target_loss_total": 0.50498,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.021863,
+          "delta_loss_total": -0.00612,
+          "zero_e_evt_delta_target_loss_total": 0.369498,
+          "zero_z_art_delta_target_loss_total": 0.109394
+        }
+      },
+      "best_validation_guarded_positive_control_checkpoint": {
+        "step": 150,
+        "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+        "target_validation_loss_total": 2.156964,
+        "target_special_eval_loss_total": 2.382414,
+        "delta_loss_total": 0.22545,
+        "zero_e_evt_delta_target_loss_total": 2.186293,
+        "zero_z_art_delta_target_loss_total": 0.50498,
+        "delta_vs_final": {
+          "target_validation_loss_total": 0.021863,
+          "delta_loss_total": -0.00612,
+          "zero_e_evt_delta_target_loss_total": 0.369498,
+          "zero_z_art_delta_target_loss_total": 0.109394
+        }
+      },
+      "late_window": {
+        "checkpoint_count": 2,
+        "checkpoints": [
+          {
+            "step": 150,
+            "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+            "target_validation_loss_total": 2.156964,
+            "target_special_eval_loss_total": 2.382414,
+            "delta_loss_total": 0.22545,
+            "zero_e_evt_delta_target_loss_total": 2.186293,
+            "zero_z_art_delta_target_loss_total": 0.50498
+          },
+          {
+            "step": 200,
+            "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step200.pt",
+            "target_validation_loss_total": 2.135101,
+            "target_special_eval_loss_total": 2.366671,
+            "delta_loss_total": 0.23157,
+            "zero_e_evt_delta_target_loss_total": 1.816795,
+            "zero_z_art_delta_target_loss_total": 0.395586
+          }
+        ]
+      },
+      "trajectory_flags": {
+        "final_special_positive": true,
+        "late_window_contains_negative_special": false,
+        "late_best_e_evt_has_low_z_art": false,
+        "validation_guard_excludes_positive_control_special": false
+      }
+    }
+  ],
+  "cross_experiment_summary": {
+    "best_final_validation_experiment": {
+      "experiment_id": "EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration",
+      "step": 200,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step200.pt",
+      "target_validation_loss_total": 2.135101,
+      "target_special_eval_loss_total": 2.366671,
+      "delta_loss_total": 0.23157,
+      "zero_e_evt_delta_target_loss_total": 1.816795,
+      "zero_z_art_delta_target_loss_total": 0.395586,
+      "delta_vs_final": {
+        "target_validation_loss_total": 0.0,
+        "delta_loss_total": 0.0,
+        "zero_e_evt_delta_target_loss_total": 0.0,
+        "zero_z_art_delta_target_loss_total": 0.0
+      }
+    },
+    "best_final_special_experiment": {
+      "experiment_id": "EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration",
+      "step": 200,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step200.pt",
+      "target_validation_loss_total": 2.135101,
+      "target_special_eval_loss_total": 2.366671,
+      "delta_loss_total": 0.23157,
+      "zero_e_evt_delta_target_loss_total": 1.816795,
+      "zero_z_art_delta_target_loss_total": 0.395586,
+      "delta_vs_final": {
+        "target_validation_loss_total": 0.0,
+        "delta_loss_total": 0.0,
+        "zero_e_evt_delta_target_loss_total": 0.0,
+        "zero_z_art_delta_target_loss_total": 0.0
+      }
+    },
+    "best_final_e_evt_experiment": {
+      "experiment_id": "EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration",
+      "step": 200,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step200.pt",
+      "target_validation_loss_total": 2.135101,
+      "target_special_eval_loss_total": 2.366671,
+      "delta_loss_total": 0.23157,
+      "zero_e_evt_delta_target_loss_total": 1.816795,
+      "zero_z_art_delta_target_loss_total": 0.395586,
+      "delta_vs_final": {
+        "target_validation_loss_total": 0.0,
+        "delta_loss_total": 0.0,
+        "zero_e_evt_delta_target_loss_total": 0.0,
+        "zero_z_art_delta_target_loss_total": 0.0
+      }
+    },
+    "best_positive_control_late_special_experiment": {
+      "experiment_id": "EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration",
+      "step": 150,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+      "target_validation_loss_total": 2.156964,
+      "target_special_eval_loss_total": 2.382414,
+      "delta_loss_total": 0.22545,
+      "zero_e_evt_delta_target_loss_total": 2.186293,
+      "zero_z_art_delta_target_loss_total": 0.50498,
+      "delta_vs_final": {
+        "target_validation_loss_total": 0.021863,
+        "delta_loss_total": -0.00612,
+        "zero_e_evt_delta_target_loss_total": 0.369498,
+        "zero_z_art_delta_target_loss_total": 0.109394
+      }
+    },
+    "best_validation_guarded_special_experiment": {
+      "experiment_id": "EXP-20260316-042-offline-mvp-d86-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-200step-calibration",
+      "step": 150,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-042.step150.pt",
+      "target_validation_loss_total": 2.156964,
+      "target_special_eval_loss_total": 2.382414,
+      "delta_loss_total": 0.22545,
+      "zero_e_evt_delta_target_loss_total": 2.186293,
+      "zero_z_art_delta_target_loss_total": 0.50498,
+      "delta_vs_final": {
+        "target_validation_loss_total": 0.021863,
+        "delta_loss_total": -0.00612,
+        "zero_e_evt_delta_target_loss_total": 0.369498,
+        "zero_z_art_delta_target_loss_total": 0.109394
+      }
+    }
+  },
+  "notes": [
+    "This report merges special_eval_series and checkpoint_series_eval from existing experiment metrics.",
+    "late_step_ratio defines the checkpoint window considered late enough for checkpoint-selection discussion.",
+    "validation_guard_ratio compares a checkpoint against that experiment's best target validation loss.",
+    "min_positive_control_delta is the minimum zero_z_art / zero_e_evt delta required by the positive-control selector."
+  ]
+}

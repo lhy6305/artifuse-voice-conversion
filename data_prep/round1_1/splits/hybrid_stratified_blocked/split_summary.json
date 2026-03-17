@@ -1,0 +1,13 @@
+{
+  "option_name": "hybrid_stratified_blocked",
+  "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+  "source_option_path": "F:/proj_dev/tmp/workdir4/reports/data/round1_1_split_analysis/options/hybrid_stratified_blocked.json",
+  "source_manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/manifests",
+  "counts": {
+    "target_train": 592,
+    "target_validation": 66,
+    "target_special_eval": 8,
+    "source_train": 483,
+    "source_validation": 54
+  }
+}
