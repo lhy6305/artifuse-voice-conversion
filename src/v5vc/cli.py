@@ -1501,6 +1501,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Random seed used for model initialization and any stochastic training components.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Enable deterministic Torch/CuDNN execution for stricter reproducibility at some runtime cost.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--hidden-dim",
         type=int,
         default=64,
@@ -1592,6 +1597,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=20260317,
         help="Random seed used for model initialization and any stochastic training components.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Enable deterministic Torch/CuDNN execution for stricter reproducibility at some runtime cost.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--num-steps",
@@ -1816,6 +1826,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=20260317,
         help="Random seed used for package shuffling, model initialization, and any stochastic training components.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Enable deterministic Torch/CuDNN execution for stricter reproducibility at some runtime cost.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--hidden-dim",
@@ -2754,6 +2769,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             device=args.device,
             seed=args.seed,
+            deterministic=bool(args.deterministic),
             hidden_dim=args.hidden_dim,
             learning_rate=args.learning_rate,
             max_grad_norm=args.max_grad_norm,
@@ -2773,6 +2789,7 @@ def main(argv: list[str] | None = None) -> int:
             validation_package_path=args.validation_targets,
             device=args.device,
             seed=args.seed,
+            deterministic=bool(args.deterministic),
             num_steps=args.num_steps,
             validation_interval=args.validation_interval,
             checkpoint_interval=args.checkpoint_interval,
@@ -2818,6 +2835,7 @@ def main(argv: list[str] | None = None) -> int:
             checkpoint_interval=args.checkpoint_interval,
             sampler_mode=args.sampler_mode,
             seed=args.seed,
+            deterministic=bool(args.deterministic),
             hidden_dim=args.hidden_dim,
             learning_rate=args.learning_rate,
             max_grad_norm=args.max_grad_norm,

@@ -9630,3 +9630,131 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/191_repository_recoverability_ignore_policy_report.md`
   - `.gitignore` 恢复性评估、修正规则与规范落盘结果
+
+## 2026-03-18 Stage5 waveform `rms_guard=0.2` baseline48 与确定性复现修正更新
+
+### 当前进度补充
+568. 已完成: 跑通
+   Stage5 waveform/STFT
+   `rms_guard = 0.2`
+   的
+   `48-step`
+   baseline
+569. 已完成: 产出
+   baseline48 的
+   checkpoint review，
+   覆盖:
+   - `12 -> 24`
+   - `24 -> 36`
+   - `36 -> 48`
+570. 已完成: 确认
+   `step48`
+   validation:
+   - `loss_total = 0.655545`
+   - `loss_stft = 0.238908`
+   - `decoded_to_target_rms_ratio = 0.994095`
+571. 已完成: 确认
+   baseline48 的
+   三段增益
+   都是:
+   - `66 / 66`
+     validation package
+     全量改善
+572. 已完成: 发现
+   “只设 seed”
+   在 CUDA 上
+   不能直接等同于
+   strict deterministic，
+   新旧 `step24`
+   存在轻微漂移
+573. 已完成: 在
+   `src/v5vc/offline_vocoder_training.py`
+   新增:
+   - deterministic 复现配置
+   - `CUBLAS_WORKSPACE_CONFIG`
+     自动设置
+574. 已完成: 在
+   `src/v5vc/cli.py`
+   为 Stage5 三个训练入口
+   新增:
+   - `--deterministic`
+575. 已完成: 用
+   两次 `2-step`
+   GPU deterministic smoke
+   确认:
+   - `training`
+   - `validation_history`
+     完全一致
+576. 已完成: 新增正式报告
+   - `docs/192_stage5_waveform_rmsguard02_baseline48_and_deterministic_reproducibility_fix_report.md`
+
+### 当前阶段结论补充
+- 现在 Stage5
+  已经不能只写成:
+  - `rms_guard = 0.2`
+    在 `24-step`
+    更平衡
+- 更准确的口径是:
+  - 这条配方
+    到 `48-step`
+    仍持续改善
+  - 且改善不是
+    少数 package
+    拖均值，
+    而是
+    `66 / 66`
+    全量广覆盖
+- 同时也必须补上:
+  - 之前
+    “同 seed”
+    还不等于
+    strict deterministic
+  - 该缺口
+    现在已补
+    `--deterministic`
+    入口
+
+先说人话:
+- 这一步说明
+  当前 waveform 方案
+  还没到头，
+  继续训练
+  仍然在稳定变好。
+- 另外，
+  以前那种
+  “seed 一样
+   就算完全复现”
+  的说法
+  现在也修正了，
+  以后要做严格对照
+  可以直接开
+  `--deterministic`。
+
+### 更新后的下一阶段任务
+1. 若继续沿
+   当前 waveform 配方
+   深挖，
+   默认启用:
+   - `--deterministic`
+   再做:
+   - `72-step`
+     或 `96-step`
+     baseline
+2. 若更看重
+   objective 升级，
+   可开始准备:
+   - 更强的
+     multi-resolution STFT
+   - 或后续
+     adversarial / feature-matching
+     接入
+3. 不建议继续把时间花在:
+   - 更重的
+     RMS guard
+   - 未开启
+     deterministic
+     的严格对照实验
+
+### 文档补充
+- `docs/192_stage5_waveform_rmsguard02_baseline48_and_deterministic_reproducibility_fix_report.md`
+  - baseline48、checkpoint review 与 deterministic 复现修正

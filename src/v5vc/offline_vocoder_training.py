@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import json
+import os
 from pathlib import Path
 import random
 from time import perf_counter
@@ -161,6 +162,7 @@ def run_offline_mvp_nores_vocoder_training_step(
     output_dir: Path,
     device: str,
     seed: int,
+    deterministic: bool,
     hidden_dim: int,
     learning_rate: float,
     max_grad_norm: float,
@@ -176,7 +178,11 @@ def run_offline_mvp_nores_vocoder_training_step(
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     resolved_device = resolve_runtime_device(device)
-    set_training_seed(int(seed), resolved_device)
+    reproducibility = set_training_seed(
+        int(seed),
+        resolved_device,
+        deterministic=bool(deterministic),
+    )
 
     run_started_at = datetime.now()
     run_started_perf = perf_counter()
@@ -256,9 +262,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         "runtime": {
             "device": str(resolved_device),
         },
-        "reproducibility": {
-            "seed": int(seed),
-        },
+        "reproducibility": reproducibility,
         "loss_weights": {
             "harmonic": float(harmonic_weight),
             "noise": float(noise_weight),
@@ -321,6 +325,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
     validation_package_path: Path | None,
     device: str,
     seed: int,
+    deterministic: bool,
     num_steps: int,
     validation_interval: int,
     checkpoint_interval: int,
@@ -339,7 +344,11 @@ def run_offline_mvp_nores_vocoder_training_loop(
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     resolved_device = resolve_runtime_device(device)
-    set_training_seed(int(seed), resolved_device)
+    reproducibility = set_training_seed(
+        int(seed),
+        resolved_device,
+        deterministic=bool(deterministic),
+    )
     checkpoints_dir = output_dir / "checkpoints"
     logs_dir = output_dir / "logs"
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
@@ -510,11 +519,10 @@ def run_offline_mvp_nores_vocoder_training_loop(
         "runtime": {
             "device": str(resolved_device),
         },
-        "reproducibility": {
-            "seed": int(seed),
-        },
+        "reproducibility": reproducibility,
         "training": {
             "seed": int(seed),
+            "deterministic": bool(reproducibility["deterministic_algorithms"]),
             "num_steps": effective_num_steps,
             "validation_interval": effective_validation_interval,
             "checkpoint_interval": effective_checkpoint_interval,
@@ -704,6 +712,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     checkpoint_interval: int,
     sampler_mode: str,
     seed: int,
+    deterministic: bool,
     hidden_dim: int,
     learning_rate: float,
     max_grad_norm: float,
@@ -719,7 +728,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     resolved_device = resolve_runtime_device(device)
-    set_training_seed(int(seed), resolved_device)
+    reproducibility = set_training_seed(
+        int(seed),
+        resolved_device,
+        deterministic=bool(deterministic),
+    )
     checkpoints_dir = output_dir / "checkpoints"
     logs_dir = output_dir / "logs"
     checkpoints_dir.mkdir(parents=True, exist_ok=True)
@@ -944,6 +957,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "checkpoint_interval": effective_checkpoint_interval,
             "sampler_mode": normalized_sampler_mode,
             "seed": int(seed),
+            "deterministic": bool(reproducibility["deterministic_algorithms"]),
             "learning_rate": float(learning_rate),
             "max_grad_norm": float(max_grad_norm),
             "loss_weights": {
@@ -1058,10 +1072,29 @@ def move_batch_to_device(
     }
 
 
-def set_training_seed(seed: int, device: torch.device) -> None:
+def set_training_seed(
+    seed: int,
+    device: torch.device,
+    deterministic: bool = False,
+) -> dict[str, object]:
+    deterministic_enabled = bool(deterministic)
+    if deterministic_enabled and device.type == "cuda":
+        # CuBLAS needs an explicit workspace mode before the first matmul call
+        # or PyTorch will only warn about non-deterministic GPU kernels.
+        os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
     torch.manual_seed(int(seed))
     if device.type == "cuda":
         torch.cuda.manual_seed_all(int(seed))
+    torch.use_deterministic_algorithms(deterministic_enabled, warn_only=deterministic_enabled)
+    if hasattr(torch.backends, "cudnn"):
+        torch.backends.cudnn.benchmark = not deterministic_enabled
+        torch.backends.cudnn.deterministic = deterministic_enabled
+    return {
+        "seed": int(seed),
+        "deterministic_algorithms": deterministic_enabled,
+        "cudnn_deterministic": bool(deterministic_enabled and device.type == "cuda"),
+        "cudnn_benchmark": bool((not deterministic_enabled) and device.type == "cuda"),
+    }
 
 
 def select_dataset_records(

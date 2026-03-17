@@ -5838,3 +5838,96 @@
     - 原始音频
     - 本地环境
     - 批量可重建 package payload
+### 238. Stage5 在 CUDA 上若只设置随机 seed 而不显式开启 deterministic 配置，不能把“同 seed”误写成“严格可复现”
+- 现象:
+  - 本轮新增
+    waveform
+    `rms_guard = 0.2`
+    `48-step`
+    baseline 后，
+    其 `step24`
+    validation
+    为:
+    - `0.750610`
+  - 而旧的
+    standalone
+    `24-step`
+    报告记录为:
+    - `0.749254`
+  - 差异虽小，
+    但说明:
+    - 仅设置
+      `torch.manual_seed`
+      与
+      `torch.cuda.manual_seed_all`
+      还不足以保证
+      strict deterministic
+- 风险:
+  - 若以后把
+    “同 seed”
+    直接写成
+    “严格可复现”，
+    会把 CUDA
+    内核层面的
+    微小漂移
+    误判成:
+    - 训练配方变化
+    - 数据顺序变化
+    - 或模型真实收益
+- 处理要求:
+  - 以后凡是
+    Stage5 需要做
+    严格对照、
+    checkpoint 复盘、
+    回归验证时，
+    默认开启:
+    - `--deterministic`
+  - summary 中
+    必须同时记录:
+    - `training.deterministic`
+    - `reproducibility.deterministic_algorithms`
+  - 不再把
+    “同 seed”
+    单独当作
+    strict reproducibility
+    口径
+### 239. Stage5 在 CUDA 上即使开启 deterministic algorithms，若没同时设置 `CUBLAS_WORKSPACE_CONFIG`，PyTorch 也可能只给 warning 而不真正满足严格确定性
+- 现象:
+  - 本轮第一次
+    GPU deterministic smoke
+    时，
+    PyTorch 明确警告:
+    - CUDA `>= 10.2`
+      下需要
+      `CUBLAS_WORKSPACE_CONFIG`
+      才能为
+      CuBLAS 相关算子
+      提供确定性
+- 风险:
+  - 如果只调用:
+    - `torch.use_deterministic_algorithms(True)`
+  - 但漏掉
+    CuBLAS workspace
+    配置，
+    很容易出现:
+    - 代码里看起来
+      已经 deterministic
+    - 实际运行仍带 warning
+      或仍有漂移
+- 处理要求:
+  - 以后只要
+    Stage5 在 CUDA 上
+    开启 deterministic，
+    必须同时确保:
+    - `CUBLAS_WORKSPACE_CONFIG=:4096:8`
+      或等价值
+  - 最好由代码在
+    训练入口内
+    自动补齐，
+    不依赖手工命令记忆
+  - 跑完后
+    若仍出现
+    deterministic warning，
+    不得直接把该 run
+    归类为
+    strict reproducibility
