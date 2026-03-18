@@ -10529,3 +10529,222 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/200_stage5_activity_gate_dynamic_follow_and_silence_control_probe_report.md`
   - 新控制机制、`24/48-step` 结果、前两条样本量化复核与当前主线判断
+
+## 2026-03-18 Stage5 `activitygate72` continuation 更新
+
+### 当前进度补充
+636. 已完成: 按与
+   `activitygate48`
+   完全相同口径，
+   跑出
+   `72-step`
+   deterministic continuation:
+   - `reports/runtime/offline_mvp_nores_vocoder_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_round1_1`
+637. 已完成: 确认
+   `activitygate72`
+   validation history
+   继续下降至:
+   - `step60 = 0.584654`
+   - `step72 = 0.564671`
+638. 已完成: 确认
+   `activitygate72`
+   validation `loss_total`
+   已低于旧
+   `baseline96 = 0.616506`
+639. 已完成: 导出
+   前两条已听样本的
+   `activitygate72`
+   bundle:
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate72_front2_round1_1`
+640. 已完成: 复核
+   `activitygate72`
+   前两条样本上的
+   raw `decoded.wav`
+   aggregate:
+   - `decoded_env_corr = 0.805906`
+   - `decoded_env_mae = 0.041770`
+   - `decoded_dynamic_std_ratio = 0.697361`
+   - `decoded_silent_rms = 0.007221`
+   相比
+   `activitygate48`
+   继续改善
+641. 已完成: 确认
+   `activitygate72`
+   的
+   `audit_proxy.wav`
+   aggregate
+   也同步改善:
+   - `audit_env_corr = 0.803721`
+   - `audit_silent_rms = 0.000896`
+642. 已完成: 新增正式报告
+   - `docs/201_stage5_activitygate72_continuation_report.md`
+
+### 当前阶段结论补充
+- 当前 activity-gate route
+  已经不只是
+  “有希望的修正线”
+- 更准确的状态是:
+  - 到 `72-step`
+    仍保持
+    validation /
+    decoded dynamic /
+    decoded silence
+    三边同时改善
+- 这意味着
+  Stage5
+  当前默认主线
+  应正式切到:
+  - activity-gate family
+
+先说人话:
+- 这条新线
+  不是只在
+  `48-step`
+  偶然有效，
+  拉到 `72-step`
+  以后
+  反而更像
+  真正能接班的主线了。
+
+### 更新后的下一阶段任务
+1. 以
+   `activitygate72`
+   作为当前默认 continuation 点，
+   开始准备:
+   - 更大 validation 样本导出
+   - 新一轮人工听审
+2. 开始为
+   activity-gate family
+   建立自己的
+   checkpoint governance:
+   - best validation
+   - best loudness / RMS
+   - stable late-stop
+3. 后续若继续拉长 horizon，
+   不能只看
+   validation loss，
+   还要继续盯:
+   - dynamic-follow
+   - silence-control
+   - loudness ratio
+
+### 文档补充
+- `docs/201_stage5_activitygate72_continuation_report.md`
+  - `72-step` continuation 结果、front2 复核与当前主线切换判断
+
+## 2026-03-18 Stage5 activity-gate checkpoint governance 与 audio audit kickoff 更新
+
+### 当前进度补充
+643. 已完成: 在
+   `activitygate72`
+   summary 上
+   跑新 family 的
+   checkpoint selection:
+   - `reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_rmsguard02_activitygate02_gate72_deterministic_round1_1`
+644. 已完成: 确认
+   旧 selector 政策下，
+   新 family 的三分结果为:
+   - `best_validation = step72`
+   - `best_rms = step24`
+   - `selected_stable_late_stop = null`
+645. 已完成: 确认
+   `stable late-stop`
+   为空的主因
+   不是 pairwise 崩坏，
+   而是:
+   - `step60`
+     只比
+     `1.03x` validation guard
+     高
+     `0.003043`
+   - `step72`
+     则被 loudness
+     偏移卡住
+646. 已完成: 重导
+   同一批
+   `6`
+   条 validation 样本的
+   `activitygate60`
+   与
+   `activitygate72`
+   bundle
+647. 已完成: 对这
+   `6`
+   条样本补做 aggregate 复核，
+   确认:
+   - `step72`
+     objective 更强
+   - `step60`
+     loudness 更稳
+648. 已完成: 产出新的
+   GUI 听审入口:
+   - `scripts/launch_stage5_audio_audit_activitygate60_vs_72.ps1`
+649. 已完成: `step60 vs step72`
+   GUI 组合 session
+   smoke 通过，
+   输出目录为:
+   - `reports/audio/audio_audit_gui_stage5_activitygate60_vs_72_session/`
+650. 已完成: 新增正式报告
+   - `docs/202_stage5_activitygate_checkpoint_governance_and_audio_audit_kickoff_report.md`
+
+### 当前阶段结论补充
+- 当前 activity-gate family
+  的真实治理状态
+  不是:
+  - 已经有一个
+    完全制度化的
+    stable late-stop
+- 更准确的状态是:
+  - `step72`
+    是 best validation
+  - `step60`
+    是当前更值得听的
+    loudness-balanced
+    late candidate
+- 因此当前最有信息量的
+  听审问题，
+  已经收束为:
+  - `60 vs 72`
+
+先说人话:
+- 现在不是
+  “选不出 stable late-stop
+   所以停住”
+- 而是
+  “新主线已经强到
+   把取舍点
+   明确暴露出来了”，
+  所以更该直接去听
+  `60`
+  和
+  `72`。
+
+### 更新后的下一阶段任务
+1. 按正式命令
+   或脚本入口，
+   启动:
+   - `activitygate60`
+     对
+     `activitygate72`
+     的人工听审
+2. 听审重点不再是
+   旧 route 的
+   “有没有明显持续噪声”，
+   而是:
+   - loudness 是否自然
+   - 是否静过头
+   - 边界和整体起伏
+3. 听审结束后，
+   再决定是否:
+   - 放宽 selector guard
+     给
+     `step60`
+     正式 stable-late-stop
+     身份
+   - 或继续让
+     `step72`
+     作为默认主点
+
+### 文档补充
+- `docs/202_stage5_activitygate_checkpoint_governance_and_audio_audit_kickoff_report.md`
+  - 新 family 的治理结果、`60 vs 72` 听审契约与当前取舍说明

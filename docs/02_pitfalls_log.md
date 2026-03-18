@@ -6314,3 +6314,96 @@
     “同一个 checkpoint 文件”
     自动视为
     “同一可听结果”
+### 250. Stage5 activity-gate route 即使已经显著修复 dynamic / silence，也不能只看 validation loss_total 就宣布收口；必须继续同时盯住 loudness ratio，避免把“更安静了”误判成“整体都更好了”
+- 现象:
+  - 本轮
+    `activitygate72`
+    的 validation
+    `loss_total`
+    已降到:
+    - `0.564671`
+  - 且前两条样本上的
+    dynamic-follow /
+    silence-control
+    继续明显改善
+  - 但 validation aggregate
+    的
+    `decoded_to_target_rms_ratio`
+    仍约为:
+    - `0.917435`
+- 风险:
+  - 如果这时只看:
+    - validation loss
+    - 或局部前两条样本
+      的 dynamic 指标
+  - 很容易忽略:
+    - 全量平均 loudness
+      仍可能偏低
+    - 后续更长 horizon
+      可能把
+      “更会静音”
+      继续推成
+      “整体偏小声”
+- 处理要求:
+  - 以后只要
+    activity-gate route
+    继续拉长 horizon，
+    默认同时汇报:
+    - validation loss_total
+    - decoded_to_target_rms_ratio
+    - dynamic-follow 指标
+    - silence-control 指标
+  - 不再把
+    单一 loss
+    或单一 front-sample
+    指标
+    当成足够收口证据
+### 251. 当新 family 在 validation 上持续更强、但旧 stable-late-stop 规则因为 loudness/guard tradeoff 选不出结果时，不要为了“必须有一个 formal stable 点”强行改政策或硬选最早 best-RMS；应先把真正有信息量的候选收束出来做听审
+- 现象:
+  - 本轮
+    activity-gate family
+    在旧 selector 下得到:
+    - `best_validation = step72`
+    - `best_rms = step24`
+    - `stable_late_stop = null`
+  - 其中:
+    - `step24`
+      虽然 RMS 最贴近 1
+      但 validation 太弱
+    - `step60`
+      虽未过
+      `1.03x` guard，
+      却只差
+      `0.003043`
+      且 loudness 更稳
+- 风险:
+  - 如果这时为了
+    “文档里必须有个
+     stable late-stop”
+    直接私自改 policy，
+    很容易把治理口径
+    写死得过早
+  - 如果反过来
+    机械地把
+    `best_rms = step24`
+    当成人工听审主对象，
+    又会把用户注意力
+    浪费在
+    已明显落后的早期点上
+- 处理要求:
+  - 遇到这种情况时，
+    默认先做三件事:
+    - 保留 selector 原始输出
+    - 明确写出
+      哪个候选是
+      best validation
+      哪个候选是
+      loudness-balanced late candidate
+    - 让人工听审
+      直接比较
+      真正有信息量的
+      tradeoff 对
+  - 不把
+    “治理结果暂时为 null”
+    误当成
+    “不能继续推进”
