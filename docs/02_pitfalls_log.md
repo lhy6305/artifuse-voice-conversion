@@ -6235,3 +6235,82 @@
   - 尽量避免
     大段口语解释
     占满主要空间
+### 248. 当局部人工听审已经暴露出更大的模型级缺陷时，不必为了 checkpoint 排名强行补完整轮试听；应先把听感信号转成可量化工程问题，再继续推进
+- 现象:
+  - 本轮用户只听了
+    前两条样本，
+    并对
+    `step48`
+    给出更自然的
+    局部偏好
+  - 但对这两条样本的
+    量化复核又显示:
+    - `audit_proxy`
+      三者差距很小
+    - raw `decoded.wav`
+      三者都明显缺乏
+      动态跟随和静音控制
+- 风险:
+  - 如果此时继续把精力
+    放在:
+    - “48 / 72 / 96
+       谁排名第一”
+  - 很容易忽略
+    当前真正更大的 blocker:
+    - 模型级动态 / 静音控制缺陷
+- 处理要求:
+  - 以后若出现这种情况，
+    默认先把局部听感
+    转成:
+    - 可量化诊断
+    - 工程修正目标
+  - 不强行要求
+    用户先补完整轮试听
+    才允许继续推进
+### 249. Stage5 一旦把 predicted activity gate 接进 waveform 重建，后续训练验证、音频导出和人工听审都必须显式记录同一 decode 口径；否则新旧 route 的改善会被“配置不同”掩盖或夸大
+- 现象:
+  - 本轮
+    activity-gate
+    收益不只来自
+    多一个 supervision
+  - 还来自:
+    - predicted activity
+      参与 waveform-frame
+      重建
+  - 同样的 checkpoint，
+    如果导出时
+    没有把这层 decode
+    设置写明，
+    看起来就像
+    “一会儿明显更安静，
+     一会儿又没改善”
+- 风险:
+  - 很容易出现:
+    - validation summary
+      看到一套口径
+    - 导出 bundle
+      又是另一套口径
+    - 人工听审时
+      误把 decode 配置差异
+      当成模型能力差异
+  - 接班时也会说不清:
+    - 这份 `decoded.wav`
+      到底是不是
+      activity-gated
+- 处理要求:
+  - 以后只要
+    Stage5
+    使用 predicted activity gate，
+    默认同时落盘:
+    - 训练 loss 配置
+    - validation 口径
+    - export / bundle
+      的 decode 设置
+  - manifest 和正式报告里
+    必须明确写出:
+    - `use_predicted_activity_gate`
+    - 相关权重
+  - 不再把
+    “同一个 checkpoint 文件”
+    自动视为
+    “同一可听结果”

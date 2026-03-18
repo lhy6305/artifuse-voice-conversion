@@ -30,6 +30,8 @@ def export_offline_mvp_nores_vocoder_audio(
     sample_count: int,
     target_record_ids: list[str] | None,
     audit_carrier_frequency: float,
+    activity_gate_weight: float,
+    use_predicted_activity_gate: bool,
 ) -> None:
     output_dir = output_dir.resolve()
     reset_managed_directory(output_dir)
@@ -90,14 +92,18 @@ def export_offline_mvp_nores_vocoder_audio(
                 noise_weight=1.0,
                 periodic_gate_weight=0.2,
                 noise_gate_weight=0.2,
+                activity_gate_weight=float(activity_gate_weight),
                 waveform_weight=0.5,
                 stft_weight=0.5,
                 rms_guard_weight=0.2,
+                use_predicted_activity_gate=bool(use_predicted_activity_gate),
             )
+            predicted_activity = torch.maximum(outputs["periodic_gate"], outputs["noise_gate"])
             decoded_waveform = reconstruct_waveform_from_frames(
                 waveform_frames=outputs["waveform_frames"],
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
+                frame_gains=predicted_activity if bool(use_predicted_activity_gate) else None,
             ).cpu()
             aligned_target = batch["aligned_waveform"][: decoded_waveform.shape[0]].cpu()
             audit_proxy = synthesize_nores_vocoder_audit_proxy(
@@ -139,6 +145,10 @@ def export_offline_mvp_nores_vocoder_audio(
             "carrier_frequency_hz": float(audit_carrier_frequency),
             "silence_gate_reference": "aligned_target",
         },
+        "waveform_decode": {
+            "use_predicted_activity_gate": bool(use_predicted_activity_gate),
+            "activity_gate_weight_for_metrics": float(activity_gate_weight),
+        },
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "checkpoint_selection_path": None if selection_summary is None else checkpoint_selection_path.resolve().as_posix(),
         "selection_target": None if selection_summary is None else str(selection_target),
@@ -149,7 +159,7 @@ def export_offline_mvp_nores_vocoder_audio(
         "records": exported_records,
         "notes": [
             "aligned_target.wav is the frame-aligned target waveform used by the current Stage5 bootstrap objective.",
-            "decoded.wav is reconstructed from the checkpoint's waveform_frames head via overlap-add with the training-time frame and hop settings.",
+            "decoded.wav is reconstructed from the checkpoint's waveform_frames head via overlap-add with the current export-side gate settings.",
             "audit_proxy.wav is a low-frequency audit render derived from decoded.wav and gated by aligned_target activity so current GUI listening is less fatiguing and target silence remains silent.",
             "proxy_audio_path in the GUI-compatible manifest points to audit_proxy.wav by default; decoded.wav is retained for raw technical inspection.",
             "This export is for human listening and checkpoint comparison; it is still not the final multi-resolution or adversarial vocoder route from the design doc.",
@@ -441,6 +451,7 @@ def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, ob
         "selection_target": summary["selection_target"],
         "selected_checkpoint_summary": summary["selected_checkpoint_summary"],
         "audit_render": summary.get("audit_render"),
+        "waveform_decode": summary.get("waveform_decode"),
         "dataset_index_path": summary["dataset_index_path"],
         "split_name": summary["split_name"],
         "sample_count": summary["sample_count"],
@@ -459,6 +470,7 @@ def build_proxy_audio_export_markdown(summary: dict[str, object]) -> str:
         f"- checkpoint_selection_path: {summary['checkpoint_selection_path']}",
         f"- selection_target: {summary['selection_target']}",
         f"- audit_render: {json.dumps(summary.get('audit_render'), ensure_ascii=False)}",
+        f"- waveform_decode: {json.dumps(summary.get('waveform_decode'), ensure_ascii=False)}",
         f"- sample_count: {summary['sample_count']}",
         "",
         "## Records",
@@ -485,6 +497,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- selection_target: {summary['selection_target']}",
         f"- selected_checkpoint_summary: {json.dumps(summary['selected_checkpoint_summary'], ensure_ascii=False)}",
         f"- audit_render: {json.dumps(summary.get('audit_render'), ensure_ascii=False)}",
+        f"- waveform_decode: {json.dumps(summary.get('waveform_decode'), ensure_ascii=False)}",
         f"- dataset_index_path: {summary['dataset_index_path']}",
         f"- split_name: {summary['split_name']}",
         f"- sample_count: {summary['sample_count']}",

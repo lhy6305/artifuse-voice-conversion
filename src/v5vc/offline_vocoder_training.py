@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import json
+import math
 import os
 from pathlib import Path
 import random
@@ -170,9 +171,11 @@ def run_offline_mvp_nores_vocoder_training_step(
     noise_weight: float,
     periodic_gate_weight: float,
     noise_gate_weight: float,
+    activity_gate_weight: float,
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    use_predicted_activity_gate: bool,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -233,9 +236,11 @@ def run_offline_mvp_nores_vocoder_training_step(
         noise_weight=noise_weight,
         periodic_gate_weight=periodic_gate_weight,
         noise_gate_weight=noise_gate_weight,
+        activity_gate_weight=activity_gate_weight,
         waveform_weight=waveform_weight,
         stft_weight=stft_weight,
         rms_guard_weight=rms_guard_weight,
+        use_predicted_activity_gate=use_predicted_activity_gate,
     )
     optimizer.zero_grad(set_to_none=True)
     total_loss.backward()
@@ -268,9 +273,11 @@ def run_offline_mvp_nores_vocoder_training_step(
             "noise": float(noise_weight),
             "periodic_gate": float(periodic_gate_weight),
             "noise_gate": float(noise_gate_weight),
+            "activity_gate": float(activity_gate_weight),
             "waveform": float(waveform_weight),
             "stft": float(stft_weight),
             "rms_guard": float(rms_guard_weight),
+            "use_predicted_activity_gate": bool(use_predicted_activity_gate),
         },
         "train_step": {
             "started_at": run_started_at.isoformat(timespec="seconds"),
@@ -336,9 +343,11 @@ def run_offline_mvp_nores_vocoder_training_loop(
     noise_weight: float,
     periodic_gate_weight: float,
     noise_gate_weight: float,
+    activity_gate_weight: float,
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    use_predicted_activity_gate: bool,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -420,9 +429,11 @@ def run_offline_mvp_nores_vocoder_training_loop(
             noise_weight=noise_weight,
             periodic_gate_weight=periodic_gate_weight,
             noise_gate_weight=noise_gate_weight,
+            activity_gate_weight=activity_gate_weight,
             waveform_weight=waveform_weight,
             stft_weight=stft_weight,
             rms_guard_weight=rms_guard_weight,
+            use_predicted_activity_gate=use_predicted_activity_gate,
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
@@ -462,9 +473,11 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 noise_weight=noise_weight,
                 periodic_gate_weight=periodic_gate_weight,
                 noise_gate_weight=noise_gate_weight,
+                activity_gate_weight=activity_gate_weight,
                 waveform_weight=waveform_weight,
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
+                use_predicted_activity_gate=use_predicted_activity_gate,
                 frame_length=int(validation_runtime["frame_length"]),
                 hop_length=int(validation_runtime["hop_length"]),
                 validation_source=(
@@ -533,9 +546,11 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "noise": float(noise_weight),
                 "periodic_gate": float(periodic_gate_weight),
                 "noise_gate": float(noise_gate_weight),
+                "activity_gate": float(activity_gate_weight),
                 "waveform": float(waveform_weight),
                 "stft": float(stft_weight),
                 "rms_guard": float(rms_guard_weight),
+                "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             },
         },
         "train_frame_count": int(training_payload["frame_count"]),
@@ -720,9 +735,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     noise_weight: float,
     periodic_gate_weight: float,
     noise_gate_weight: float,
+    activity_gate_weight: float,
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    use_predicted_activity_gate: bool,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -830,9 +847,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 noise_weight=noise_weight,
                 periodic_gate_weight=periodic_gate_weight,
                 noise_gate_weight=noise_gate_weight,
+                activity_gate_weight=activity_gate_weight,
                 waveform_weight=waveform_weight,
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
+                use_predicted_activity_gate=use_predicted_activity_gate,
             )
             accumulated_loss = total_loss if accumulated_loss is None else accumulated_loss + total_loss
             package_metrics.append(
@@ -888,9 +907,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     noise_weight=noise_weight,
                     periodic_gate_weight=periodic_gate_weight,
                     noise_gate_weight=noise_gate_weight,
+                    activity_gate_weight=activity_gate_weight,
                     waveform_weight=waveform_weight,
                     stft_weight=stft_weight,
                     rms_guard_weight=rms_guard_weight,
+                    use_predicted_activity_gate=use_predicted_activity_gate,
                     validation_source="validation_packages",
                 )
             else:
@@ -903,9 +924,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     noise_weight=noise_weight,
                     periodic_gate_weight=periodic_gate_weight,
                     noise_gate_weight=noise_gate_weight,
+                    activity_gate_weight=activity_gate_weight,
                     waveform_weight=waveform_weight,
                     stft_weight=stft_weight,
                     rms_guard_weight=rms_guard_weight,
+                    use_predicted_activity_gate=use_predicted_activity_gate,
                     validation_source="train_packages_reused",
                 )
             validation_history.append(validation_payload_summary)
@@ -965,9 +988,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "noise": float(noise_weight),
                 "periodic_gate": float(periodic_gate_weight),
                 "noise_gate": float(noise_gate_weight),
+                "activity_gate": float(activity_gate_weight),
                 "waveform": float(waveform_weight),
                 "stft": float(stft_weight),
                 "rms_guard": float(rms_guard_weight),
+                "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             },
         },
         "step_history": step_history,
@@ -1308,6 +1333,7 @@ def reconstruct_waveform_from_frames(
     waveform_frames: torch.Tensor,
     frame_length: int,
     hop_length: int,
+    frame_gains: torch.Tensor | None = None,
 ) -> torch.Tensor:
     if waveform_frames.ndim != 2:
         raise ValueError(f"Expected waveform_frames shape [frames, samples], got {tuple(waveform_frames.shape)}")
@@ -1326,12 +1352,49 @@ def reconstruct_waveform_from_frames(
         dtype=waveform_frames.dtype,
         device=waveform_frames.device,
     )
+    resolved_frame_gains = None
+    if frame_gains is not None:
+        resolved_frame_gains = frame_gains.to(dtype=waveform_frames.dtype, device=waveform_frames.device)
+        if resolved_frame_gains.ndim == 2 and int(resolved_frame_gains.shape[-1]) == 1:
+            resolved_frame_gains = resolved_frame_gains.squeeze(-1)
+        if resolved_frame_gains.ndim != 1 or int(resolved_frame_gains.shape[0]) != frame_count:
+            raise ValueError(
+                "frame_gains must match waveform frame count: "
+                f"frame_gains={tuple(resolved_frame_gains.shape)} frame_count={frame_count}"
+            )
     for frame_index in range(frame_count):
         start = int(frame_index * hop_length)
         end = start + int(frame_length)
-        output[start:end] += waveform_frames[frame_index] * window
+        frame = waveform_frames[frame_index]
+        if resolved_frame_gains is not None:
+            frame = frame * resolved_frame_gains[frame_index].clamp(0.0, 1.0)
+        output[start:end] += frame * window
         weights[start:end] += window
     return output / weights.clamp_min(1.0e-6)
+
+
+def compute_frame_activity_target(
+    aligned_waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    silence_floor: float = 0.002,
+    active_floor: float = 0.012,
+) -> torch.Tensor:
+    total_length = int(aligned_waveform.shape[0])
+    frame_count = max(1, math.ceil(max(1, total_length - int(frame_length)) / int(hop_length)) + 1)
+    activities: list[torch.Tensor] = []
+    for frame_index in range(frame_count):
+        start = int(frame_index * hop_length)
+        end = start + int(frame_length)
+        frame = aligned_waveform[start:end]
+        if int(frame.shape[0]) < int(frame_length):
+            frame = F.pad(frame, (0, int(frame_length) - int(frame.shape[0])))
+        frame_rms = frame.pow(2).mean().sqrt()
+        frame_abs = frame.abs().mean()
+        frame_level = torch.maximum(frame_rms, frame_abs)
+        frame_activity = ((frame_level - float(silence_floor)) / float(active_floor - silence_floor)).clamp(0.0, 1.0)
+        activities.append(frame_activity)
+    return torch.stack(activities, dim=0).unsqueeze(-1)
 
 
 def compute_stft_reconstruction_loss(
@@ -1390,19 +1453,35 @@ def compute_nores_vocoder_losses(
     noise_weight: float,
     periodic_gate_weight: float,
     noise_gate_weight: float,
+    activity_gate_weight: float,
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    use_predicted_activity_gate: bool,
 ) -> tuple[torch.Tensor, dict[str, float]]:
+    frame_activity_target = harmonic_target.new_ones(periodic_gate_target.shape)
+    if aligned_waveform is not None and frame_length is not None and hop_length is not None:
+        frame_activity_target = compute_frame_activity_target(
+            aligned_waveform=aligned_waveform.to(periodic_gate_target.device),
+            frame_length=int(frame_length),
+            hop_length=int(hop_length),
+        ).to(dtype=periodic_gate_target.dtype, device=periodic_gate_target.device)
+    periodic_gate_supervision = periodic_gate_target * frame_activity_target
+    noise_gate_supervision = noise_gate_target * frame_activity_target
     harmonic_loss = F.l1_loss(outputs["harmonic_envelope"], harmonic_target)
     noise_loss = F.l1_loss(outputs["noise_envelope"], noise_target)
     periodic_gate_loss = F.binary_cross_entropy(
         outputs["periodic_gate"].clamp(1e-6, 1.0 - 1e-6),
-        periodic_gate_target,
+        periodic_gate_supervision,
     )
     noise_gate_loss = F.binary_cross_entropy(
         outputs["noise_gate"].clamp(1e-6, 1.0 - 1e-6),
-        noise_gate_target,
+        noise_gate_supervision,
+    )
+    predicted_activity = torch.maximum(outputs["periodic_gate"], outputs["noise_gate"])
+    activity_gate_loss = F.binary_cross_entropy(
+        predicted_activity.clamp(1e-6, 1.0 - 1e-6),
+        frame_activity_target,
     )
     waveform_loss = harmonic_loss.new_zeros(())
     stft_loss = harmonic_loss.new_zeros(())
@@ -1421,6 +1500,7 @@ def compute_nores_vocoder_losses(
             waveform_frames=waveform_frames,
             frame_length=int(frame_length),
             hop_length=int(hop_length),
+            frame_gains=predicted_activity if bool(use_predicted_activity_gate) else None,
         )
         target_waveform = aligned_waveform[: decoded_waveform.shape[0]]
         waveform_loss = F.l1_loss(decoded_waveform, target_waveform)
@@ -1441,6 +1521,7 @@ def compute_nores_vocoder_losses(
         + noise_loss * float(noise_weight)
         + periodic_gate_loss * float(periodic_gate_weight)
         + noise_gate_loss * float(noise_gate_weight)
+        + activity_gate_loss * float(activity_gate_weight)
         + waveform_loss * float(waveform_weight)
         + stft_loss * float(stft_weight)
         + rms_guard_loss * float(rms_guard_weight)
@@ -1451,13 +1532,16 @@ def compute_nores_vocoder_losses(
         "loss_noise_envelope": round(float(noise_loss.detach().cpu().item()), 6),
         "loss_periodic_gate": round(float(periodic_gate_loss.detach().cpu().item()), 6),
         "loss_noise_gate": round(float(noise_gate_loss.detach().cpu().item()), 6),
+        "loss_activity_gate": round(float(activity_gate_loss.detach().cpu().item()), 6),
         "loss_waveform": round(float(waveform_loss.detach().cpu().item()), 6),
         "loss_stft": round(float(stft_loss.detach().cpu().item()), 6),
         "loss_rms_guard": round(float(rms_guard_loss.detach().cpu().item()), 6),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
         "noise_gate_pred_mean": round(float(outputs["noise_gate"].detach().mean().cpu().item()), 6),
-        "periodic_gate_target_mean": round(float(periodic_gate_target.detach().mean().cpu().item()), 6),
-        "noise_gate_target_mean": round(float(noise_gate_target.detach().mean().cpu().item()), 6),
+        "activity_gate_pred_mean": round(float(predicted_activity.detach().mean().cpu().item()), 6),
+        "periodic_gate_target_mean": round(float(periodic_gate_supervision.detach().mean().cpu().item()), 6),
+        "noise_gate_target_mean": round(float(noise_gate_supervision.detach().mean().cpu().item()), 6),
+        "activity_gate_target_mean": round(float(frame_activity_target.detach().mean().cpu().item()), 6),
         "decoded_waveform_rms": round(decoded_waveform_rms, 6),
         "target_waveform_rms": round(target_waveform_rms, 6),
         "decoded_to_target_rms_ratio": round(
@@ -1476,9 +1560,11 @@ def run_nores_vocoder_validation_pass(
     noise_weight: float,
     periodic_gate_weight: float,
     noise_gate_weight: float,
+    activity_gate_weight: float,
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    use_predicted_activity_gate: bool,
     frame_length: int,
     hop_length: int,
     validation_source: str,
@@ -1502,9 +1588,11 @@ def run_nores_vocoder_validation_pass(
             noise_weight=noise_weight,
             periodic_gate_weight=periodic_gate_weight,
             noise_gate_weight=noise_gate_weight,
+            activity_gate_weight=activity_gate_weight,
             waveform_weight=waveform_weight,
             stft_weight=stft_weight,
             rms_guard_weight=rms_guard_weight,
+            use_predicted_activity_gate=use_predicted_activity_gate,
         )
     return {
         "step": int(step),
@@ -1547,9 +1635,11 @@ def run_nores_vocoder_dataset_validation_pass(
     noise_weight: float,
     periodic_gate_weight: float,
     noise_gate_weight: float,
+    activity_gate_weight: float,
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    use_predicted_activity_gate: bool,
     validation_source: str,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
@@ -1579,9 +1669,11 @@ def run_nores_vocoder_dataset_validation_pass(
                 noise_weight=noise_weight,
                 periodic_gate_weight=periodic_gate_weight,
                 noise_gate_weight=noise_gate_weight,
+                activity_gate_weight=activity_gate_weight,
                 waveform_weight=waveform_weight,
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
+                use_predicted_activity_gate=use_predicted_activity_gate,
             )
             package_metrics.append(
                 {

@@ -1567,6 +1567,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Optional loss weight for keeping decoded waveform RMS close to target RMS.",
     )
+    nores_vocoder_train_step_parser.add_argument(
+        "--activity-gate-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for frame-activity supervision derived from aligned target waveform energy.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--use-predicted-activity-gate",
+        action="store_true",
+        help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
+    )
     nores_vocoder_train_loop_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-training-loop",
         help="Run a minimal multi-step training loop on the no-residual vocoder target package.",
@@ -1682,6 +1693,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for keeping decoded waveform RMS close to target RMS.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--activity-gate-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for frame-activity supervision derived from aligned target waveform energy.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--use-predicted-activity-gate",
+        action="store_true",
+        help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
     )
     nores_vocoder_dataset_packages_parser = subparsers.add_parser(
         "build-offline-mvp-nores-vocoder-dataset-packages",
@@ -1894,6 +1916,17 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Optional loss weight for keeping decoded waveform RMS close to target RMS.",
     )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--activity-gate-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for frame-activity supervision derived from aligned target waveform energy.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--use-predicted-activity-gate",
+        action="store_true",
+        help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
+    )
     nores_vocoder_review_parser = subparsers.add_parser(
         "review-offline-mvp-nores-vocoder-checkpoints",
         help="Review validation checkpoint trajectories for the no-residual vocoder dataset loop summary.",
@@ -2005,6 +2038,17 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=185.0,
         help="Carrier frequency in Hz for the low-frequency audit proxy written for GUI listening.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--activity-gate-weight",
+        type=float,
+        default=0.0,
+        help="Optional activity-gate loss weight used when recomputing export metrics for newer Stage5 checkpoints.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--use-predicted-activity-gate",
+        action="store_true",
+        help="Apply predicted frame activity during export-side waveform reconstruction for newer Stage5 checkpoints.",
     )
 
     checkpoint_selection_parser = subparsers.add_parser(
@@ -2869,9 +2913,11 @@ def main(argv: list[str] | None = None) -> int:
             noise_weight=args.noise_weight,
             periodic_gate_weight=args.periodic_gate_weight,
             noise_gate_weight=args.noise_gate_weight,
+            activity_gate_weight=args.activity_gate_weight,
             waveform_weight=args.waveform_weight,
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
+            use_predicted_activity_gate=args.use_predicted_activity_gate,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -2892,9 +2938,11 @@ def main(argv: list[str] | None = None) -> int:
             noise_weight=args.noise_weight,
             periodic_gate_weight=args.periodic_gate_weight,
             noise_gate_weight=args.noise_gate_weight,
+            activity_gate_weight=args.activity_gate_weight,
             waveform_weight=args.waveform_weight,
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
+            use_predicted_activity_gate=args.use_predicted_activity_gate,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -2935,9 +2983,11 @@ def main(argv: list[str] | None = None) -> int:
             noise_weight=args.noise_weight,
             periodic_gate_weight=args.periodic_gate_weight,
             noise_gate_weight=args.noise_gate_weight,
+            activity_gate_weight=args.activity_gate_weight,
             waveform_weight=args.waveform_weight,
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
+            use_predicted_activity_gate=args.use_predicted_activity_gate,
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":
@@ -2967,6 +3017,8 @@ def main(argv: list[str] | None = None) -> int:
             sample_count=args.sample_count,
             target_record_ids=args.target_record_ids,
             audit_carrier_frequency=args.audit_carrier_frequency,
+            activity_gate_weight=args.activity_gate_weight,
+            use_predicted_activity_gate=args.use_predicted_activity_gate,
         )
         return 0
     if args.command == "analyze-offline-mvp-checkpoint-selection":

@@ -10321,3 +10321,211 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
   是把 GUI 里的判定标准
   说得更短、更硬，
   减少听审时的理解负担。
+
+## 2026-03-18 Stage5 partial human audit signal 与推进决策更新
+
+### 当前进度补充
+621. 已完成: 记录用户补充说明，
+   当前只听了前两条样本，
+   后续 special / 无音节内容
+   暂未试听
+622. 已完成: 从当前 session
+   恢复出一条已明确落盘的人工偏好:
+   - `target::chapter3_22_firefly_114`
+     的
+     `best_rhythm / overall_pick`
+     都选
+     `step48`
+623. 已完成: 仅针对用户已听过的两条记录，
+   对
+   `step72 / step96 / step48`
+   补做
+   `audit_proxy` 与 raw `decoded`
+   的动态跟随量化
+624. 已完成: 确认
+   `audit_proxy`
+   层面的三者差异
+   当前并不大，
+   不足以只凭这两条样本
+   就正式改写默认 checkpoint
+625. 已完成: 但同时确认
+   raw `decoded.wav`
+   在三者上都存在
+   明显的动态跟随不足
+   与静音控制不足，
+   当前主 blocker
+   更像模型级问题
+626. 已完成: 新增正式报告
+   - `docs/199_stage5_partial_human_audit_signal_and_progress_decision_report.md`
+
+### 当前阶段结论补充
+- 当前不需要
+  为了继续推进
+  强行补完全部听审
+- 更准确的口径是:
+  - 局部听感信号
+    已经有价值，
+    但仍是 provisional
+  - 当前更明确的工程结论
+    是:
+    raw decoded
+    的动态 / 静音控制
+    才是主 blocker
+
+先说人话:
+- 现在卡住主线的，
+  不是
+  “48 和 72 到底谁更好”
+- 而是
+  “这条 waveform 头
+   还没有真正学会
+   该响的时候响、
+   该静的时候静”。
+
+### 更新后的下一阶段任务
+1. 保留
+   `step72`
+   作为当前工程默认晚停点，
+   不因局部两条样本
+   立即改写
+2. 把用户当前
+   对 `step48`
+   的局部自然度偏好
+   记为:
+   - 后续 dynamic-follow
+     修正的参考信号
+3. 下一棒主线
+   转为:
+   - Stage5 dynamic-follow /
+     silence-control
+     诊断与修正
+
+### 文档补充
+- `docs/199_stage5_partial_human_audit_signal_and_progress_decision_report.md`
+  - 局部听审信号、量化复核与当前推进决策
+
+## 2026-03-18 Stage5 activity-gate dynamic-follow 与 silence-control probe 更新
+
+### 当前进度补充
+627. 已完成: 在
+   `src/v5vc/offline_vocoder_training.py`
+   新增
+   `compute_frame_activity_target(...)`
+   与
+   predicted activity gate
+   监督 / 重建接线
+628. 已完成: 在
+   `src/v5vc/cli.py`
+   为 Stage5
+   train-step / loop /
+   dataset-loop / audio-export
+   统一补入:
+   - `--activity-gate-weight`
+   - `--use-predicted-activity-gate`
+629. 已完成: 跑通
+   Stage5 activity-gate
+   单步 smoke，
+   证明:
+   - forward
+   - backward
+   - checkpoint
+   全部正常
+630. 已完成: 跑出
+   `24-step`
+   dataset probe:
+   - `reports/runtime/offline_mvp_nores_vocoder_waveform_stft_rmsguard02_activitygate02_gate24_probe_round1_1`
+631. 已完成: 跑出
+   `48-step`
+   deterministic run:
+   - `reports/runtime/offline_mvp_nores_vocoder_waveform_stft_rmsguard02_activitygate02_gate48_deterministic_round1_1`
+632. 已完成: 确认
+   `activitygate48`
+   validation `loss_total`
+   为:
+   - `0.627330`
+   相比旧
+   `baseline48 = 0.655545`
+   明显改善，
+   且已逼近旧
+   `baseline96 = 0.616506`
+633. 已完成: 对用户已听过的前两条样本
+   重导
+   `activitygate24 / activitygate48`
+   bundle，
+   并复核
+   raw `decoded.wav`
+   的 dynamic /
+   silence 指标
+634. 已完成: 确认
+   `activitygate48`
+   在前两条样本上的
+   raw `decoded.wav`
+   aggregate:
+   - `decoded_env_corr = 0.804235`
+   - `decoded_dynamic_std_ratio = 0.640837`
+   - `decoded_silent_rms = 0.032658`
+   相比旧
+   `step48 / 72 / 96`
+   的
+   `decoded_env_corr ≈ 0.05 ~ 0.14`
+   `decoded_dynamic_std_ratio ≈ 0.10`
+   `decoded_silent_rms ≈ 0.12`
+   属于结构性改善
+635. 已完成: 新增正式报告
+   - `docs/200_stage5_activity_gate_dynamic_follow_and_silence_control_probe_report.md`
+
+### 当前阶段结论补充
+- 当前 Stage5
+  已经不只是
+  “确认 dynamic /
+   silence 是 blocker”
+- 更准确的状态是:
+  - activity-gate
+    已给出
+    明确有效的
+    修正抓手
+- 当前更合理的主线
+  不再是:
+  - 回去继续讨论
+    旧 `48 / 72 / 96`
+    checkpoint 排名
+- 而是:
+  - 沿
+    `activitygate48`
+    继续扩展
+
+先说人话:
+- 这一步的意义不是
+  “又多了一个 loss 项”
+- 而是
+  Stage5
+  那个
+  “一直在响、
+   不会跟着目标起伏”
+  的核心毛病，
+  终于被一条新机制
+  真正撬动了。
+
+### 更新后的下一阶段任务
+1. 以
+   `activitygate48`
+   作为当前新起点，
+   优先继续做:
+   - 更长 deterministic continuation
+   - 或同 family
+     checkpoint 扩展
+2. 若继续导出或听审，
+   必须固定记录:
+   - `use_predicted_activity_gate = true`
+   的 decode 口径，
+   禁止和旧 bundle
+   混看
+3. 在 activity-gate
+   收益稳定前，
+   不再优先回到
+   旧 route 的
+   checkpoint 争论
+
+### 文档补充
+- `docs/200_stage5_activity_gate_dynamic_follow_and_silence_control_probe_report.md`
+  - 新控制机制、`24/48-step` 结果、前两条样本量化复核与当前主线判断
