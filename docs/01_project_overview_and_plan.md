@@ -9758,3 +9758,178 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/192_stage5_waveform_rmsguard02_baseline48_and_deterministic_reproducibility_fix_report.md`
   - baseline48、checkpoint review 与 deterministic 复现修正
+
+## 2026-03-18 Stage5 waveform `rms_guard=0.2` baseline96 deterministic 尾段复核更新
+
+### 当前进度补充
+577. 已完成: 跑通
+   Stage5 waveform/STFT
+   `rms_guard = 0.2`
+   deterministic
+   `96-step`
+   baseline
+578. 已完成: 产出
+   `24 / 48 / 72 / 96`
+   checkpoint review
+579. 已完成: 确认
+   `step96`
+   validation:
+   - `loss_total = 0.616506`
+   - `loss_stft = 0.179105`
+   - `decoded_to_target_rms_ratio = 1.051881`
+580. 已完成: 确认
+   `48 -> 72`
+   仍是:
+   - `66 / 66`
+     validation package
+     全量改善
+581. 已完成: 确认
+   `72 -> 96`
+   已变为:
+   - `42 / 66` improved
+   - `24 / 66` worsened
+582. 已完成: 新增正式报告
+   - `docs/193_stage5_waveform_rmsguard02_baseline96_deterministic_tail_review_report.md`
+
+### 当前阶段结论补充
+- 现在 Stage5
+  waveform 路线
+  已经不能只写成:
+  - `48-step`
+    仍广覆盖改善
+- 更准确的口径是:
+  - `96-step`
+    继续拿到了
+    更低平均 loss
+  - 但真正稳定广覆盖的
+    尾段
+    只明确持续到
+    `72-step`
+- 所以当前要把
+  两类“最好”区分开:
+  - best-by-loss:
+    `step96`
+  - 更稳妥 late-stop:
+    `step72`
+
+先说人话:
+- 这一步说明
+  继续训练
+  不是完全没收益，
+  但收益已经明显变小，
+  而且开始有一批样本
+  轻微回退。
+- 所以从工程角度看，
+  现在最该做的
+  不是继续无脑加步数，
+  而是开始认真处理
+  晚停和目标升级。
+
+### 更新后的下一阶段任务
+1. 优先进入:
+   - waveform route
+     late-stop / checkpoint selection
+     复核
+2. 同步准备:
+   - multi-resolution STFT
+   - adversarial / feature-matching
+     objective
+3. 默认不再把:
+   - `144-step`
+   - `192-step`
+   - 更长 deterministic baseline
+   直接升格为主线
+
+### 文档补充
+- `docs/193_stage5_waveform_rmsguard02_baseline96_deterministic_tail_review_report.md`
+  - baseline96 deterministic、尾段 review 与 `72` / `96` 角色区分
+
+## 2026-03-18 Stage5 waveform checkpoint selection 与 late-stop 制度化更新
+
+### 当前进度补充
+583. 已完成: 新增
+   `src/v5vc/nores_vocoder_checkpoint_selection.py`
+   作为 Stage5
+   waveform route
+   专用 selector
+584. 已完成: 在
+   `src/v5vc/cli.py`
+   新增命令:
+   - `select-offline-mvp-nores-vocoder-checkpoint`
+585. 已完成: 把
+   Stage5 checkpoint
+   角色拆成:
+   - best validation
+   - best RMS
+   - stable late-stop
+586. 已完成: 在
+   deterministic `96-step`
+   结果上
+   跑通 selector
+587. 已完成: 确认
+   当前 selector 输出:
+   - `step96 = best validation`
+   - `step48 = best RMS`
+   - `step72 = stable late-stop`
+588. 已完成: 新增正式报告
+   - `docs/194_stage5_waveform_checkpoint_selection_and_late_stop_policy_report.md`
+
+### 当前阶段结论补充
+- 现在 Stage5
+  waveform 路线
+  已不再只有:
+  - “哪个 checkpoint
+     平均 loss 最低”
+    这一种口径
+- 更准确的制度是:
+  - `step96`
+    代表
+    best-by-loss
+  - `step48`
+    代表
+    best-by-RMS
+  - `step72`
+    代表
+    stable late-stop
+- 当前若要选
+  默认工程 checkpoint，
+  更合理的是:
+  - 先用
+    `step72`
+  - 而不是直接用
+    `step96`
+
+先说人话:
+- 这一步就是把
+  “怎么选 checkpoint”
+  这件事
+  说清楚并写死成工具。
+- 以后接班时，
+  不用再靠人脑
+  临场解释
+  为什么
+  `96`
+  不是默认晚停点。
+
+### 更新后的下一阶段任务
+1. 若当前要收束
+   waveform route，
+   优先以:
+   - `step72`
+   作为默认晚停点
+   进入后续音频导出
+   或下一阶段验证
+2. 若继续升级
+   objective，
+   默认保留
+   这套 selector
+   作为后续新路线的
+   checkpoint 治理基线
+3. 暂不建议继续做
+   更长 horizon
+   来替代
+   selection 制度
+
+### 文档补充
+- `docs/194_stage5_waveform_checkpoint_selection_and_late_stop_policy_report.md`
+  - Stage5 selector、`96/72/48` 角色拆分与当前默认口径

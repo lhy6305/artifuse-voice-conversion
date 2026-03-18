@@ -5931,3 +5931,135 @@
     不得直接把该 run
     归类为
     strict reproducibility
+### 240. Stage5 waveform route 若只看 `96-step` 平均 loss 继续下降而不看 `72 -> 96` 的 package 级回退，容易把尾段 mixed gain 误写成仍然稳定广覆盖
+- 现象:
+  - 本轮
+    deterministic
+    waveform baseline
+    到 `96-step`
+    时，
+    validation
+    `loss_total`
+    从:
+    - `0.625926`
+      继续降到
+      `0.616506`
+  - 但 checkpoint review
+    同时显示:
+    - `72 -> 96`
+      仅
+      `42 / 66`
+      improved
+    - `24 / 66`
+      worsened
+- 风险:
+  - 如果以后只看
+    平均 validation loss，
+    很容易误判:
+    - `96`
+      仍像
+      `48 -> 72`
+      一样稳健
+    - 或继续把更长 horizon
+      自动当作主线
+- 处理要求:
+  - 以后只要
+    waveform route
+    进入长程尾段，
+    正式汇报里必须同时给出:
+    - checkpoint 级平均轨迹
+    - improved / worsened
+      package count
+  - 当均值仍在改善、
+    但局部回退显著增多时，
+    默认把它视为:
+    - mixed tail gain
+  - 不再把这种阶段
+    直接写成
+    stable broad-based gain
+### 241. Stage5 waveform route 的 RMS guard 即使前段有效，后段也可能出现过冲；不能只因为 `72-step` 附近贴近 1.0，就默认更长 horizon 仍会维持同样幅度平衡
+- 现象:
+  - 本轮
+    deterministic
+    waveform baseline
+    中:
+    - step72
+      `decoded_to_target_rms_ratio = 0.979730`
+    - step96
+      `decoded_to_target_rms_ratio = 1.051881`
+  - 这说明:
+    - 同一 guard 权重
+      在更长 horizon
+      下也可能从
+      “接近目标”
+      变成
+      “轻微过冲”
+- 风险:
+  - 如果以后只看到
+    前段 RMS
+    已经贴近目标，
+    就默认:
+    - 后段无需再看
+      RMS ratio
+  - 很容易错过:
+    - 振幅重新偏离
+    - late-stop 更合适
+      的信号
+- 处理要求:
+  - 以后只要
+    waveform route
+    继续拉长 horizon，
+    每个 checkpoint
+    都必须继续记录:
+    - `loss_total`
+    - `loss_stft`
+    - `loss_rms_guard`
+    - `decoded_to_target_rms_ratio`
+  - 当 tail 段开始出现
+    RMS 过冲
+    与局部回退一起增加时，
+    默认优先考虑:
+    - late-stop
+    - 或 objective 升级
+  - 不把
+    “前段 guard 有效”
+    直接等同于
+    “后段一定持续平衡”
+### 242. Stage5 waveform route 不能把 `best_validation_checkpoint` 直接等同于默认工程 checkpoint；best-by-loss、best-by-RMS、stable late-stop 可能落在不同 step
+- 现象:
+  - 本轮
+    deterministic
+    `96-step`
+    waveform route
+    selector 明确给出:
+    - `step96 = best validation`
+    - `step48 = best RMS`
+    - `step72 = stable late-stop`
+- 风险:
+  - 如果以后只保留
+    一个
+    `best_checkpoint`
+    概念，
+    很容易把:
+    - 最低平均 loss
+    - 最稳妥晚停
+    - 幅度最平衡
+    混成一件事
+  - 结果会导致:
+    - 选点口径混乱
+    - 报告复盘困难
+    - 后续路线难以比较
+- 处理要求:
+  - 以后凡是
+    Stage5 waveform
+    做 checkpoint 汇报，
+    默认至少同时给出:
+    - best validation checkpoint
+    - stable late-stop
+  - 当 RMS 也是核心风险时，
+    额外给出:
+    - best RMS checkpoint
+  - 不再把
+    单个 `best_checkpoint`
+    直接当成
+    唯一正式口径

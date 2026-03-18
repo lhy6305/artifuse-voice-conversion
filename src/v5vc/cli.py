@@ -26,6 +26,8 @@ from v5vc.horizon_policy_shadow import build_offline_mvp_matched_horizon_shadow
 from v5vc.integrity_check import check_round1_data
 from v5vc.manifest_builder import build_round1_manifests
 from v5vc.nores_vocoder_checkpoint_review import review_offline_mvp_nores_vocoder_checkpoints
+from v5vc.nores_vocoder_checkpoint_selection import select_offline_mvp_nores_vocoder_checkpoint
+from v5vc.nores_vocoder_audio_export import export_offline_mvp_nores_vocoder_audio
 from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_downstream_contract
 from v5vc.offline_teacher_runtime import run_offline_mvp_teacher_runtime
 from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
@@ -1914,6 +1916,90 @@ def build_parser() -> argparse.ArgumentParser:
         default=8,
         help="Number of most-improved and most-worsened validation records to list per review window.",
     )
+    nores_vocoder_selection_parser = subparsers.add_parser(
+        "select-offline-mvp-nores-vocoder-checkpoint",
+        help="Select best-by-loss and stable late-stop checkpoints from a Stage5 no-residual vocoder dataset-loop summary.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--summary",
+        type=Path,
+        required=True,
+        help="Path to offline_mvp_nores_vocoder_dataset_loop.summary.json.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection"),
+        help="Directory for Stage5 checkpoint-selection outputs.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--late-step-ratio",
+        type=float,
+        default=0.5,
+        help="Fraction of max step used to define the late-window checkpoint range.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--validation-guard-ratio",
+        type=float,
+        default=1.03,
+        help="Maximum validation-loss ratio relative to the best checkpoint allowed for stable late-stop selection.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--max-pairwise-worsened-ratio",
+        type=float,
+        default=0.2,
+        help="Maximum allowed worsened package ratio between the previous checkpoint and the candidate late-stop checkpoint.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--max-rms-ratio-deviation",
+        type=float,
+        default=0.03,
+        help="Maximum allowed absolute deviation of decoded_to_target_rms_ratio from 1.0 for stable late-stop selection.",
+    )
+    nores_vocoder_audio_export_parser = subparsers.add_parser(
+        "export-offline-mvp-nores-vocoder-audio",
+        help="Export aligned target and decoded audio for selected Stage5 no-residual vocoder packages.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/offline_mvp_nores_vocoder_audio_export"),
+        help="Directory for Stage5 no-residual vocoder audio export outputs.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path. When omitted, --checkpoint-selection must be provided.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used to resolve the export checkpoint.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--selection-target",
+        default="stable_late_stop",
+        help="Checkpoint role to export from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to export from: validation or train.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=6,
+        help="How many packages to export when --target-record-ids is omitted.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to export.",
+    )
 
     checkpoint_selection_parser = subparsers.add_parser(
         "analyze-offline-mvp-checkpoint-selection",
@@ -2853,6 +2939,27 @@ def main(argv: list[str] | None = None) -> int:
             summary_path=args.summary,
             output_dir=args.output_dir,
             top_k=args.top_k,
+        )
+        return 0
+    if args.command == "select-offline-mvp-nores-vocoder-checkpoint":
+        select_offline_mvp_nores_vocoder_checkpoint(
+            summary_path=args.summary,
+            output_dir=args.output_dir,
+            late_step_ratio=args.late_step_ratio,
+            validation_guard_ratio=args.validation_guard_ratio,
+            max_pairwise_worsened_ratio=args.max_pairwise_worsened_ratio,
+            max_rms_ratio_deviation=args.max_rms_ratio_deviation,
+        )
+        return 0
+    if args.command == "export-offline-mvp-nores-vocoder-audio":
+        export_offline_mvp_nores_vocoder_audio(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
         )
         return 0
     if args.command == "analyze-offline-mvp-checkpoint-selection":
