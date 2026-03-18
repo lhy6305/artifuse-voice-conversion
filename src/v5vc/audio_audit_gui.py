@@ -273,7 +273,7 @@ class AudioAuditApp:
 
     def open_bundle_dialog(self) -> None:
         selected = filedialog.askopenfilenames(
-            title="选择 proxy_audio_export.json 文件",
+            title="选择试听包清单文件",
             filetypes=[("JSON 文件", "*.json"), ("所有文件", "*.*")],
         )
         if not selected:
@@ -307,7 +307,7 @@ class AudioAuditApp:
         for manifest_path in manifest_paths:
             resolved_manifest = resolve_manifest_path(manifest_path)
             payload = json.loads(resolved_manifest.read_text(encoding="utf-8"))
-            branch_label = str(payload.get("branch_label", resolved_manifest.parent.name))
+            branch_label = infer_manifest_branch_label(payload=payload, resolved_manifest=resolved_manifest)
             for record_payload in payload.get("records", []):
                 record_id = str(record_payload["record_id"])
                 record = record_accumulator.get(record_id)
@@ -315,10 +315,18 @@ class AudioAuditApp:
                     record = AuditRecord(record_id=record_id)
                     record_accumulator[record_id] = record
                 record.source_manifests.append(resolved_manifest)
-                record.audio_path = coalesce_path(record.audio_path, record_payload.get("audio_path"))
+                record.audio_path = coalesce_path(
+                    record.audio_path,
+                    record_payload.get("audio_path"),
+                    record_payload.get("target_audio_path"),
+                )
                 if record_payload.get("sample_rate") is not None:
                     record.sample_rate = int(record_payload["sample_rate"])
-                record.input_audio_path = coalesce_path(record.input_audio_path, record_payload.get("input_audio_path"))
+                record.input_audio_path = coalesce_path(
+                    record.input_audio_path,
+                    record_payload.get("input_audio_path"),
+                    record_payload.get("aligned_target_audio_path"),
+                )
 
                 candidate_map = build_candidate_map(branch_label=branch_label, record_payload=record_payload)
                 for label, path in candidate_map.items():
@@ -588,18 +596,38 @@ class AudioAuditApp:
 def resolve_manifest_path(path: Path) -> Path:
     candidate = path.resolve()
     if candidate.is_dir():
+        for filename in ("proxy_audio_export.json", "nores_vocoder_audio_export.json"):
+            candidate_path = candidate / filename
+            if candidate_path.exists():
+                return candidate_path
         candidate = candidate / "proxy_audio_export.json"
     if not candidate.exists():
-        raise FileNotFoundError(f"找不到 proxy_audio_export 清单文件：{candidate}")
+        raise FileNotFoundError(f"找不到试听包清单文件：{candidate}")
     return candidate
 
 
-def coalesce_path(current: Path | None, raw_path: object) -> Path | None:
+def coalesce_path(current: Path | None, *raw_paths: object) -> Path | None:
     if current is not None:
         return current
-    if raw_path in {None, ""}:
-        return None
-    return Path(str(raw_path)).resolve()
+    for raw_path in raw_paths:
+        if raw_path in {None, ""}:
+            continue
+        return Path(str(raw_path)).resolve()
+    return None
+
+
+def infer_manifest_branch_label(payload: dict[str, Any], resolved_manifest: Path) -> str:
+    branch_label = payload.get("branch_label")
+    if isinstance(branch_label, str) and branch_label.strip():
+        return branch_label.strip()
+    selected_summary = payload.get("selected_checkpoint_summary")
+    if isinstance(selected_summary, dict) and selected_summary.get("step") is not None:
+        selection_target = str(payload.get("selection_target", "checkpoint")).strip() or "checkpoint"
+        return f"{selection_target}:step{int(selected_summary['step'])}"
+    checkpoint_path = payload.get("checkpoint_path")
+    if isinstance(checkpoint_path, str) and checkpoint_path.strip():
+        return Path(checkpoint_path).stem
+    return resolved_manifest.parent.name
 
 
 def build_candidate_map(branch_label: str, record_payload: dict[str, Any]) -> dict[str, str | None]:
@@ -607,6 +635,10 @@ def build_candidate_map(branch_label: str, record_payload: dict[str, Any]) -> di
         return {
             f"{branch_label}:teacher_proxy": record_payload.get("teacher_proxy_audio_path"),
             f"{branch_label}:student_proxy": record_payload.get("student_proxy_audio_path"),
+        }
+    if "decoded_audio_path" in record_payload:
+        return {
+            branch_label: record_payload.get("decoded_audio_path"),
         }
     return {
         branch_label: record_payload.get("proxy_audio_path"),

@@ -9933,3 +9933,351 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/194_stage5_waveform_checkpoint_selection_and_late_stop_policy_report.md`
   - Stage5 selector、`96/72/48` 角色拆分与当前默认口径
+
+## 2026-03-18 Stage5 waveform `step72` 音频导出 bootstrap 更新
+
+### 当前进度补充
+589. 已完成: 新增
+   `src/v5vc/nores_vocoder_audio_export.py`
+   作为 Stage5
+   no-res vocoder
+   最小音频导出器
+590. 已完成: 在
+   `src/v5vc/cli.py`
+   新增命令:
+   - `export-offline-mvp-nores-vocoder-audio`
+591. 已完成: 支持
+   从 selector payload
+   直接解析:
+   - `stable_late_stop`
+   - `best_validation`
+   - `best_rms`
+592. 已完成: 用
+   `stable_late_stop = step72`
+   导出
+   `6`
+   条 validation 样本
+593. 已完成: 确认
+   当前导出目录:
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_step72_validation_round1_1`
+594. 已完成: 确认
+   导出样本的
+   单样本 RMS ratio
+   仍存在明显波动，
+   本轮 6 条样本约为:
+   - `0.782090`
+     到
+     `1.283669`
+595. 已完成: 新增正式报告
+   - `docs/195_stage5_waveform_step72_audio_export_bootstrap_report.md`
+
+### 当前阶段结论补充
+- 现在 Stage5
+  waveform 路线
+  已经不只是:
+  - 选出了
+    `step72`
+    作为默认晚停点
+- 更准确的口径是:
+  - `step72`
+    已能直接导出
+    可听样本
+  - 可以正式进入
+    人工听审阶段
+- 同时也必须补上:
+  - 虽然全局平均 RMS
+    接近 1，
+  - 但单样本层面
+    仍有明显幅度波动
+
+先说人话:
+- 这一步把
+  “选 checkpoint”
+  继续推进成了
+  “拿 checkpoint 出音频”。
+- 现在最有价值的
+  已经不是继续训练，
+  而是先去听，
+  看问题到底长什么样。
+
+### 更新后的下一阶段任务
+1. 优先对
+   `step72`
+   导出的 validation 样本
+   做人工听审
+2. 若主要问题是
+   幅度波动，
+   先补:
+   - per-record loudness
+     侧分析
+3. 若主要问题是
+   细节 / 自然度 / 瞬态，
+   主线转向:
+   - multi-resolution STFT
+   - adversarial / feature-matching
+
+### 文档补充
+- `docs/195_stage5_waveform_step72_audio_export_bootstrap_report.md`
+  - `step72` 音频导出、样本清单与听审启动入口
+
+## 2026-03-18 Stage5 audio audit GUI bundle integration 更新
+
+### 当前进度补充
+596. 已完成: 让
+   `src/v5vc/nores_vocoder_audio_export.py`
+   在保留
+   `nores_vocoder_audio_export.json/.md`
+   的同时，
+   同步输出:
+   - `proxy_audio_export.json`
+   - `proxy_audio_export.md`
+597. 已完成: 为 Stage5
+   导出清单补上:
+   - `branch_label`
+   - `audio_path`
+   - `input_audio_path`
+   - `proxy_audio_path`
+   这组 GUI 兼容字段
+598. 已完成: 扩展
+   `src/v5vc/audio_audit_gui.py`
+   目录解析逻辑，
+   让它对旧 Stage5
+   导出目录也能回退识别:
+   - `nores_vocoder_audio_export.json`
+599. 已完成: 重跑
+   `step72`
+   validation 导出，
+   当前目录:
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_step72_validation_round1_1`
+   已同时包含:
+   - `nores_vocoder_audio_export.json`
+   - `proxy_audio_export.json`
+600. 已完成: 用
+   `launch-audio-audit-gui --auto-close-ms`
+   做新旧两种入口 smoke，
+   均返回:
+   - `exit code 0`
+601. 已完成: 产出 Stage5
+   GUI session 目录:
+   - `reports/audio/audio_audit_gui_stage5_step72_session/`
+   - `reports/audio/audio_audit_gui_stage5_step72_legacy_manifest_session/`
+602. 已完成: 新增正式报告
+   - `docs/196_stage5_audio_audit_gui_bundle_integration_report.md`
+
+### 当前阶段结论补充
+- 现在 Stage5
+  不再只是:
+  - 能选点
+  - 能导 wav
+- 更准确的口径是:
+  - `step72`
+    已可直接接入
+    现有 audio audit GUI
+  - 新旧 Stage5 manifest
+    都有可用入口
+  - 人工听审链路
+    已经闭环
+
+先说人话:
+- 这一步补的是
+  “最后一厘米”。
+- 现在不用再手工改文件名，
+  也不用单独写一个新 GUI；
+  现有听审工具
+  已经能直接吃
+  Stage5 bundle。
+
+### 更新后的下一阶段任务
+1. 直接启动
+   Stage5 `step72`
+   人工听审会话，
+   优先收集:
+   - 幅度稳定性
+   - 边界
+   - 整体可接受度
+2. 若要比较多个
+   Stage5 checkpoint
+   或新 objective，
+   默认继续复用:
+   - `proxy_audio_export.json`
+   契约
+3. 听审发现若主要问题
+   仍集中在:
+   - 幅度不稳，
+   再决定是否进入
+   loudness / RMS
+   更细的 per-record 治理
+
+### 文档补充
+- `docs/196_stage5_audio_audit_gui_bundle_integration_report.md`
+  - Stage5 exporter / GUI 双边兼容接通与 smoke 结果
+
+## 2026-03-18 Stage5 manual audio audit kickoff 更新
+
+### 当前进度补充
+603. 已完成: 以
+   `step72`
+   导出的
+   `6`
+   条 validation 记录为基线，
+   补导出:
+   - `step96 best_validation`
+   - `step48 best_rms`
+   两组同 record-id 对比 bundle
+604. 已完成: 产出新的对比目录:
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_step96_validation_round1_1`
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_step48_validation_round1_1`
+605. 已完成: 固定本轮人工听审主问题为:
+   - `step72 stable_late_stop`
+     对
+     `step96 best_validation`
+   - 辅助参照:
+     `step48 best_rms`
+606. 已完成: 生成正式 session 目录:
+   - `reports/audio/audio_audit_gui_stage5_step72_vs_step96_vs_step48_session/`
+607. 已完成: 新增一键启动脚本:
+   - `scripts/launch_stage5_audio_audit_step72_vs_step96_vs_step48.ps1`
+608. 已完成: 在规范中补充
+   “人工听审交付契约”，
+   明确以后不能只说
+   “进入听审阶段”
+   而不写命令和目标
+609. 已完成: 新增正式报告
+   - `docs/197_stage5_manual_audio_audit_kickoff_and_operator_contract.md`
+
+### 当前阶段结论补充
+- 现在这条 Stage5 主线
+  已经具备:
+  - 三路可比较 bundle
+  - 固定 session 输出目录
+  - 固定 CLI 命令
+  - 固定脚本入口
+- 也就是说:
+  - 下一步真正缺的
+    已经只剩
+    人工听感判断
+
+先说人话:
+- 这一步把
+  “你可以去听”
+  收成了
+  “你运行这条命令，
+  就会打开这三个 checkpoint
+  的对比界面”。
+
+### 更新后的下一阶段任务
+1. 用户运行
+   Stage5 三路听审命令
+   或脚本，
+   填写本轮 GUI 评审结果
+2. 听审后优先回答:
+   - `step96`
+     是否虽然 loss 更低，
+     但听感更容易过冲或回退
+   - `step72`
+     是否是更稳妥默认点
+   - `step48`
+     是否只是在幅度上更稳，
+     但结构上偏早停
+3. 根据听审结论，
+   再决定下一棒是:
+   - 收束当前 waveform route
+   - 还是转入更强 objective
+
+### 文档补充
+- `docs/197_stage5_manual_audio_audit_kickoff_and_operator_contract.md`
+  - 听审命令、bundle、对比目标与执行契约
+
+## 2026-03-18 Stage5 audio audit proxy retuning 与 silence-gate 修正更新
+
+### 当前进度补充
+610. 已完成: 根据用户人工试听反馈，
+   确认当前 Stage5
+   raw `decoded.wav`
+   不适合作为 GUI 默认播放目标
+611. 已完成: 在
+   `src/v5vc/nores_vocoder_audio_export.py`
+   新增
+   `audit_proxy.wav`
+   导出
+612. 已完成: 当前 Stage5
+   audit proxy
+   固定载波频率设为:
+   - `185.0 Hz`
+   对齐 Stage3
+   已验证可接受的低频听审风格
+613. 已完成: audit proxy
+   的静音 gate
+   改为由:
+   - `aligned_target.wav`
+   驱动
+614. 已完成: `proxy_audio_export.json`
+   现在默认把:
+   - `proxy_audio_path`
+   指向:
+   - `audit_proxy.wav`
+   而不是 raw `decoded.wav`
+615. 已完成: 对
+   `step72`
+   的 `6`
+   条 validation 样本做静音帧量化，
+   在目标静音帧上:
+   - raw `decoded.wav`
+     平均 RMS 约为
+     `0.121756`
+   - `audit_proxy.wav`
+     平均 RMS 约为
+     `0.002147`
+616. 已完成: 重导
+   `step72 / step96 / step48`
+   三组对比 bundle，
+   并重做 GUI script smoke
+617. 已完成: 新增正式报告
+   - `docs/198_stage5_audio_audit_proxy_retuning_and_silence_gate_fix_report.md`
+
+### 当前阶段结论补充
+- 现在 Stage5
+  人工听审的默认口径
+  不再是:
+  - 直接听 raw `decoded.wav`
+- 而是:
+  - GUI 默认听
+    `audit_proxy.wav`
+  - raw `decoded.wav`
+    只保留为技术排查入口
+- 更准确地说，
+  当前解决的是:
+  - 听审可执行性
+  不是:
+  - 模型已经学会真实静音控制
+
+先说人话:
+- 用户这次反馈是对的，
+  而且足够关键，
+  不能硬顶着继续听。
+- 现在先把试听音频
+  修成不那么刺激、
+  静音段真的能安静下来，
+  否则后面听出来的结论
+  都不可信。
+
+### 更新后的下一阶段任务
+1. 若用户愿意恢复试听，
+   继续使用同一条 GUI 命令，
+   但此时默认实际播放的
+   已经是:
+   - `audit_proxy.wav`
+2. 听审后需明确区分:
+   - 听审导出链是否可用
+   - raw `decoded.wav`
+     是否仍存在模型级静音问题
+3. 若 raw decoded
+   后续仍显示持续活动，
+   主线需要转向:
+   - silence-aware objective
+   - 或 gate / waveform
+     更强耦合
+
+### 文档补充
+- `docs/198_stage5_audio_audit_proxy_retuning_and_silence_gate_fix_report.md`
+  - 用户试听中止后的问题定位、导出修正与量化结果

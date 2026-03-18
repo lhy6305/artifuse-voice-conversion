@@ -2000,6 +2000,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional explicit target record ids to export.",
     )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--audit-carrier-frequency",
+        type=float,
+        default=185.0,
+        help="Carrier frequency in Hz for the low-frequency audit proxy written for GUI listening.",
+    )
 
     checkpoint_selection_parser = subparsers.add_parser(
         "analyze-offline-mvp-checkpoint-selection",
@@ -2960,6 +2966,7 @@ def main(argv: list[str] | None = None) -> int:
             split_name=args.split_name,
             sample_count=args.sample_count,
             target_record_ids=args.target_record_ids,
+            audit_carrier_frequency=args.audit_carrier_frequency,
         )
         return 0
     if args.command == "analyze-offline-mvp-checkpoint-selection":
