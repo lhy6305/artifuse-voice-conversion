@@ -33,47 +33,44 @@ VALIDITY_CODE_TO_LABEL = {code: label for code, label in VALIDITY_OPTIONS}
 VALIDITY_LABEL_TO_CODE = {label: code for code, label in VALIDITY_OPTIONS}
 
 GUI_HELP_TEXT = """\
-这些维度到底在听什么：
+判断词：
 
-1. 节奏最好
-就是听哪条更像正常人在说话。
-重点不是“好不好听”，而是停顿顺不顺、快慢自然不自然。
+节奏最好：
+- 停连自然
+- 速度顺
 
-2. 边界最好
-就是听一句话该停的地方有没有停住，该收的时候有没有收住。
-如果句尾拖着不收，或者中间断句很硬，这项一般就不会高。
+边界最好：
+- 断句清楚
+- 句尾收住
 
-3. 最稳定
-就是听整段有没有突然发飘、忽大忽小、毛刺、抖动、结构突然塌掉。
-稳定不等于平淡，而是不要失控。
+最稳定：
+- 不乱跳
+- 不忽大忽小
+- 不持续冒噪声
 
-4. 综合首选
-如果只能留一个继续往下看，就选它。
-它不一定每一项都第一，但整体最顺、最靠谱。
+综合首选：
+- 如果只留一个，就选它
 
-5. 是否适合比较
-如果这一条三者差异几乎听不出来，或者全都失真得厉害，
-就不要硬判胜负，可以记成“部分可比较”或“不建议比较”。
+是否适合比较：
+- 可比较：差异清楚，可判
+- 部分可比较：能听，但受伪影影响
+- 不建议比较：整体失真重，不强判
 
-这次最该关注：
-- 停顿对不对
-- 断句自然不自然
-- 能量起伏乱不乱
-- student_proxy 有没有跟上 teacher_proxy 的结构
+当前优先看：
+- 静音控制
+- 边界收束
+- 能量起伏
+- 持续噪声
+- 刺耳感
 
-这次先别太关注：
-- 最终音色像不像
-- 谁更“好听”
-- 绝对音高高一点还是低一点
-- 高频细节漂不漂亮
+当前先不看：
+- 最终音色
+- 绝对音高
+- 高频质感
 
-当前这版 Stage3 proxy 还有一个很重要的边界：
-- 载频基本是固定的，teacher 和 student 会听起来都接近单调嗡声
-- 所以不要把“有没有音节感、有没有真实旋律起伏”当成这版 proxy 的主要判断依据
-- 它更适合听：
-  - 停顿有没有出来
-  - 整体能量包络是不是跟上了
-  - 有没有明显发飘、塌陷、忽大忽小
+当前默认播放的是 audit proxy / proxy 音频：
+- 用来听结构和稳定性
+- 不是最终成品音色
 """
 
 
@@ -237,7 +234,7 @@ class AudioAuditApp:
             row=row_index, column=0, columnspan=2, sticky="w"
         )
 
-        help_frame = ttk.LabelFrame(right, text="这些维度怎么听", padding=10)
+        help_frame = ttk.LabelFrame(right, text="判断词", padding=10)
         help_frame.grid(row=4, column=0, sticky="nsew", pady=(10, 0))
         help_frame.columnconfigure(0, weight=1)
         help_frame.rowconfigure(0, weight=1)
