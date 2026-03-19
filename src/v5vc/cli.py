@@ -47,6 +47,13 @@ from v5vc.split_materialization import materialize_round1_split
 from v5vc.special_eval import evaluate_offline_mvp_special_eval, evaluate_round1_special_eval
 from v5vc.special_eval_series import evaluate_offline_mvp_special_eval_series
 from v5vc.special_slice_alignment import analyze_offline_mvp_special_slice_alignment
+from v5vc.stage5_low_activity_probe import (
+    DEFAULT_CANDIDATE_ACTIVITY_THRESHOLD,
+    DEFAULT_MIN_LOW_ACTIVITY_FRAMES,
+    DEFAULT_TARGET_ACTIVITY_THRESHOLD,
+    DEFAULT_WINDOW_PADDING_SEC,
+    analyze_stage5_low_activity_fragments,
+)
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
     build_streaming_student_calibration_assets,
@@ -960,6 +967,60 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Optional smoke-test mode: auto-close the GUI after the given number of milliseconds.",
+    )
+    stage5_low_activity_probe_parser = subparsers.add_parser(
+        "analyze-stage5-low-activity-fragments",
+        help="Compare Stage5 bundles on target low-activity segments and export fragmentation diagnostics.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--bundle",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="Stage5 bundle directories or bundle manifest files to compare.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/audio/stage5_low_activity_fragmentation_probe"),
+        help="Directory for low-activity probe summaries and exported segment clips.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--analysis-audio-sources",
+        nargs="+",
+        default=["decoded_pitch_matched"],
+        choices=["listening", "decoded", "decoded_pitch_matched", "audit_proxy"],
+        help="One or more Stage5 bundle audio sources to analyze.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--target-activity-threshold",
+        type=float,
+        default=DEFAULT_TARGET_ACTIVITY_THRESHOLD,
+        help="Threshold used to identify low-activity windows on aligned_target.wav.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--candidate-activity-threshold",
+        type=float,
+        default=DEFAULT_CANDIDATE_ACTIVITY_THRESHOLD,
+        help="Threshold used to count candidate bursts inside target low-activity windows.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--min-low-activity-frames",
+        type=int,
+        default=DEFAULT_MIN_LOW_ACTIVITY_FRAMES,
+        help="Minimum number of consecutive low-activity frames required to keep a segment.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--top-k-windows",
+        type=int,
+        default=12,
+        help="Maximum suspicious windows to keep per audio source in the summary output.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--window-padding-sec",
+        type=float,
+        default=DEFAULT_WINDOW_PADDING_SEC,
+        help="Context padding applied when exporting suspicious segment clips.",
     )
     streaming_student_checkpoint_select_parser.add_argument(
         "--skip-special-eval",
@@ -2795,6 +2856,18 @@ def main(argv: list[str] | None = None) -> int:
             bundle_paths=list(args.bundle),
             output_dir=args.output_dir,
             auto_close_ms=args.auto_close_ms,
+        )
+        return 0
+    if args.command == "analyze-stage5-low-activity-fragments":
+        analyze_stage5_low_activity_fragments(
+            bundle_paths=list(args.bundle),
+            output_dir=args.output_dir,
+            analysis_audio_sources=list(args.analysis_audio_sources),
+            target_activity_threshold=args.target_activity_threshold,
+            candidate_activity_threshold=args.candidate_activity_threshold,
+            min_low_activity_frames=args.min_low_activity_frames,
+            top_k_windows=args.top_k_windows,
+            window_padding_sec=args.window_padding_sec,
         )
         return 0
     if args.command == "average-offline-mvp-checkpoints":

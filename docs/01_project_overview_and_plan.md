@@ -11231,3 +11231,457 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/206_stage5_decoded_pitchmatch_listening_contract_report.md`
   - 当前听评契约为何改成 `decoded_pitch_matched.wav`、代码实现与 smoke 验证
+
+## 2026-03-19 Stage5 decoded-pitchmatch human audit 与 GUI segmentation follow-up 更新
+
+### 当前进度补充
+679. 已完成: 接收并确认本轮
+   `activitygate60`
+   对
+   `activitygate72`
+   的 pitch-matched
+   人工听审结果，
+   当前 session 为:
+   - `reports/audio/audio_audit_gui_stage5_activitygate60_vs_72_decodedpitchmatch_session/`
+680. 已完成: 明确本轮听审解释口径:
+   - 对
+     `completed = true`
+     且
+     `valid_for_comparison = yes`
+     的记录，
+     留空评分项
+     解释为:
+     - `打平`
+681. 已完成: 按该口径
+   重写本轮
+   `audio_audit_review.json`
+   与
+   `audio_audit_review.md`
+682. 已完成: 记录当前人工结论:
+   - `step60`
+     静音段底噪
+     较
+     `step72`
+     更明显
+   - 因而边界相关判断
+     当前更偏向
+     `step72`
+683. 已完成: 同时记录新的
+   局部风险信号:
+   - 在部分
+     非音节段 /
+     叹气样式片段，
+     `step72`
+     比
+     `step60`
+     更容易出现
+     毛刺 / 断续 / 跳变
+684. 已完成: 在
+   `src/v5vc/audio_audit_gui.py`
+   去掉方向键切条目能力，
+   避免备注输入时
+   误切换记录
+685. 已完成: 在
+   `src/v5vc/audio_audit_gui.py`
+   新增长音频自动分段试听:
+   - 长于 `8s`
+     自动切段
+   - 默认提供
+     `4s`
+     片段与
+     `0.5s`
+     overlap
+   - 同时保留
+     `整段`
+     回退项
+686. 已完成: 用新 GUI
+   跑通 smoke:
+   - `tmp/stage5_audio_audit_gui_segmented_smoke/`
+687. 已完成: 新增正式报告
+   - `docs/207_stage5_decodedpitchmatch_human_audit_and_gui_segmentation_followup_report.md`
+
+### 当前阶段结论补充
+- 本轮人耳结果
+  不支持:
+  - 把默认点
+    从
+    `step72`
+    改成
+    `step60`
+- 但同样不支持:
+  - 把
+    `step72`
+    写成
+    综合明确胜出
+- 当前更准确的口径是:
+  - `step72`
+    继续保留为
+    默认主点，
+    因为它在:
+    - 静音段底噪
+    - 边界收束
+    上更稳
+  - `step60`
+    保留为
+    低活动 /
+    非音节段稳定性
+    的对照点
+- 当前更值钱的后续推进
+  不再是:
+  - 反复扩大
+    普通样本上的
+    `60 vs 72`
+    打平听审
+- 而是:
+  - 针对
+    非音节段 /
+    breath-like
+    区间，
+    补
+    毛刺 / 断续 /
+    fragmentation
+    治理口径
+
+先说人话:
+- 这轮听下来，
+  `72`
+  在
+  “该安静的时候
+   能不能真安静”
+  这件事上
+  还是更像主点。
+- 但它在一些
+  叹气、
+  非音节、
+  低活动的地方
+  又有更容易跳一下的风险，
+  所以现在更该补
+  这条专项治理，
+  而不是急着宣布
+  谁已经全面赢了。
+
+### 更新后的下一阶段任务
+1. 以
+   `target::chapter3_3_firefly_213`
+   这类样本为起点，
+   补做
+   非音节段 /
+   breath-like
+   片段的专项复核
+2. 为后续
+   checkpoint governance
+   增加:
+   - transient glitch
+   - fragmentation
+   - 低活动段断续
+   的监控口径
+3. 后续人工听审
+   默认使用
+   新版 GUI
+   的分段试听能力，
+   不再把长记录
+   整段硬听
+
+### 文档补充
+- `docs/207_stage5_decodedpitchmatch_human_audit_and_gui_segmentation_followup_report.md`
+  - 本轮听审结论、`空项 = 打平` 解释、GUI 分段试听修复与下一步路线
+
+## 2026-03-19 Stage5 低活动段 fragmentation probe CLI 接入更新
+
+### 当前进度补充
+688. 已完成: 核对当前接班点，
+   确认
+   `src/v5vc/stage5_low_activity_probe.py`
+   已有主体实现，
+   但此前仍缺:
+   - 正式 CLI 入口
+   - smoke 验证
+   - 文档落盘
+689. 已完成: 在
+   `src/v5vc/cli.py`
+   新增正式命令:
+   - `analyze-stage5-low-activity-fragments`
+690. 已完成: 为该命令补齐最小参数契约:
+   - `--bundle`
+   - `--output-dir`
+   - `--analysis-audio-sources`
+   - `--target-activity-threshold`
+   - `--candidate-activity-threshold`
+   - `--min-low-activity-frames`
+   - `--top-k-windows`
+   - `--window-padding-sec`
+691. 已完成: 修复
+   `src/v5vc/stage5_low_activity_probe.py`
+   的
+   WAV 读取 warning，
+   避免
+   `torch.frombuffer(bytes, ...)`
+   在批量诊断时污染 stderr
+692. 已完成: 用现有
+   Stage5 bundle
+   跑通真实 smoke:
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate60_decodedpitchmatch_validation_round1_1`
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate72_decodedpitchmatch_validation_round1_1`
+   - 输出目录:
+     `tmp/stage5_low_activity_fragmentation_probe_smoke/`
+693. 已完成: 新增正式报告
+   - `docs/208_stage5_low_activity_fragmentation_probe_cli_bootstrap_report.md`
+
+### 当前阶段结论补充
+- 现在
+  Stage5
+  低活动段专项复核
+  已经不再停留在:
+  - “只有想法”
+  - 或“只有单文件草稿”
+- 而是已经具备:
+  - 正式 CLI 入口
+  - 结构化 json / md 输出
+  - 自动导出可疑片段 wav
+- 本轮 smoke
+  在
+  `decoded_pitch_matched`
+  上看到:
+  - `step72`
+    的总体
+    `mean_fragmentation_score`
+    高于
+    `step60`
+  - 但局部片段
+    仍有
+    `step60`
+    更差的窗口
+- 这与上一轮人耳结论一致:
+  - 当前更该推进
+    低活动段 /
+    非音节段 /
+    breath-like
+    的专项治理与定点复核
+  - 还不该把当前结果
+    写成
+    “某一 checkpoint
+     已全面稳赢”
+
+先说人话:
+- 现在这条线已经从
+  “听出来有问题”
+  变成
+  “能自动把可疑片段
+   找出来并导出”
+  了。
+- 后面不需要再靠整段反复盲听去猜，
+  可以直接对着
+  probe
+  给出的片段做复核。
+
+### 更新后的下一阶段任务
+1. 用同一 probe
+   继续补跑:
+   - `listening`
+   - `audit_proxy`
+   音源，
+   判断问题是否跨音源稳定存在
+2. 从
+   `top_windows`
+   中挑
+   最典型片段，
+   回到 GUI
+   做定点听审
+3. 后续若推进
+   checkpoint governance，
+   先把该 probe
+   作为:
+   - 辅助诊断口径
+   接入，
+   不直接把它写成
+   唯一决策器
+
+### 文档补充
+- `docs/208_stage5_low_activity_fragmentation_probe_cli_bootstrap_report.md`
+  - 新命令入口、smoke 命令、当前 probe 输出与下一步建议
+
+## 2026-03-19 Stage5 低活动段 probe 跨音源跟进与 GUI bundle 更新
+
+### 当前进度补充
+694. 已完成: 核对当前
+   Stage5 bundle
+   的
+   `listening`
+   字段，
+   确认:
+   - `listening_audio_source = decoded_pitch_matched`
+   - `listening_audio_path`
+     当前就是
+     `decoded_pitch_matched.wav`
+695. 已完成: 因而本轮不再把
+   `listening`
+   误当作新的独立音源，
+   而是改补:
+   - `decoded`
+   - `audit_proxy`
+   两种更有信息量的口径
+696. 已完成: 用正式 CLI
+   跑通跨音源 probe:
+   - `tmp/stage5_low_activity_fragmentation_probe_multisource/`
+697. 已完成: 在
+   `src/v5vc/stage5_low_activity_probe.py`
+   新增
+   segmented
+   GUI bundle manifest
+   自动导出，
+   输出目录为:
+   - `audio_audit_bundles/<source>/<branch>/proxy_audio_export.json`
+698. 已完成: 用新生成的
+   decoded segmented bundle
+   跑通 GUI smoke:
+   - `tmp/stage5_low_activity_fragmentation_gui_smoke_decoded/`
+699. 已完成: 新增正式报告
+   - `docs/209_stage5_low_activity_probe_multisource_followup_and_gui_bundle_report.md`
+
+### 当前阶段结论补充
+- 当前
+  `decoded`
+  口径下，
+  低活动段 fragmentation
+  更明显地指向:
+  - `step72`
+    存在更强的
+    毛刺 / 断续
+    可疑窗口
+- 当前
+  `audit_proxy`
+  口径下，
+  aggregate
+  反而更偏:
+  - `step60`
+    更差
+- 这说明:
+  - low-frequency
+    audit proxy
+    仍然只能作为
+    技术排查辅助
+  - 不能替代
+    `decoded`
+    或
+    `decoded_pitch_matched`
+    的主判断
+- 现在这条线已经进一步具备:
+  - 自动找可疑窗口
+  - 自动导出同片段对照 wav
+  - 自动生成
+    GUI
+    可直接读取的 segmented audit bundle
+
+先说人话:
+- 现在不只是
+  “工具能把问题片段找出来”，
+  而是已经能
+  “找出来以后直接点开听”。
+- 同时这轮也说明，
+  低频代理听感
+  和真实 decoded
+  不是一回事，
+  后面别再拿
+  `audit_proxy`
+  直接当最后裁判。
+
+### 更新后的下一阶段任务
+1. 默认先对
+   `decoded`
+   segmented bundle
+   做定点听审，
+   优先复核:
+   - `target::chapter3_22_firefly_114`
+   - `target::chapter3_3_firefly_213`
+   - `target::chapter3_4_firefly_106`
+2. `audit_proxy`
+   继续保留为:
+   - 技术排查对照口径
+   不作为主听结论
+3. 若后续把
+   low-activity probe
+   接到
+   checkpoint governance，
+   默认优先接:
+   - `decoded`
+   - `decoded_pitch_matched`
+   侧结果
+
+### 文档补充
+- `docs/209_stage5_low_activity_probe_multisource_followup_and_gui_bundle_report.md`
+  - 跨音源结果、GUI segmented bundle 生成与当前默认复核入口
+
+## 2026-03-19 Stage5 低活动段 decoded 听审启动更新
+
+### 当前进度补充
+700. 已完成: 将
+   `activitygate60 vs 72`
+   的
+   low-activity probe
+   正式物化到:
+   - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/`
+701. 已完成: 为
+   decoded
+   主听口径
+   新增固定脚本入口:
+   - `scripts/launch_stage5_low_activity_fragmentation_decoded_audit.ps1`
+702. 已完成: 固定当前正式 session 输出目录:
+   - `reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session/`
+703. 已完成: 用正式命令
+   跑通 GUI smoke，
+   当前 session 目录已生成:
+   - `audio_audit_progress.json`
+704. 已完成: 用固定脚本入口
+   跑通 smoke
+705. 已完成: 新增 operator contract
+   - `docs/210_stage5_low_activity_fragmentation_decoded_audio_audit_kickoff_and_operator_contract.md`
+
+### 当前阶段结论补充
+- 现在这条
+  Stage5
+  低活动段专项复核
+  已经不是:
+  - `tmp/`
+    里的临时 smoke
+- 而是已经具备:
+  - 正式 probe 产物目录
+  - 正式 GUI session 目录
+  - 固定 CLI 命令
+  - 固定脚本入口
+  - 固定 operator contract
+- 当前默认听审入口应是:
+  - decoded segmented bundle
+- `audit_proxy`
+  继续只保留为:
+  - 技术对照补听入口
+
+先说人话:
+- 这一步已经收成
+  “你现在就能开听”
+  的状态了。
+- 不需要再去
+  `tmp`
+  里找 smoke 目录，
+  也不需要手工拼 bundle 路径。
+
+### 更新后的下一阶段任务
+1. 由用户直接运行
+   decoded 听审命令，
+   完成当前定点复核
+2. 听审完成后，
+   回看:
+   - `audio_audit_review.json`
+   - `audio_audit_review.md`
+   判断
+   `step72`
+   的低活动段问题
+   是否足以影响当前默认点
+3. 若需要补技术对照，
+   再单独打开
+   `audit_proxy`
+   segmented bundle，
+   但不覆盖 decoded 主结论
+
+### 文档补充
+- `docs/210_stage5_low_activity_fragmentation_decoded_audio_audit_kickoff_and_operator_contract.md`
+  - 当前正式听审命令、脚本入口、session 目录与试听重点

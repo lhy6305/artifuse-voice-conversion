@@ -3,9 +3,12 @@ from __future__ import annotations
 import argparse
 from collections import Counter
 from dataclasses import dataclass, field
+import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
+import wave
 
 import tkinter as tk
 from tkinter import filedialog, messagebox, ttk
@@ -50,6 +53,7 @@ GUI_HELP_TEXT = """\
 
 综合首选：
 - 如果只留一个，就选它
+- 留空视为打平
 
 是否适合比较：
 - 可比较：差异清楚，可判
@@ -73,6 +77,12 @@ GUI_HELP_TEXT = """\
 - 不是最终成品音色
 """
 
+TIE_LABEL = "打平"
+FULL_AUDIO_SEGMENT_LABEL = "整段"
+AUTO_SEGMENT_MIN_SECONDS = 8.0
+SEGMENT_LENGTH_SECONDS = 4.0
+SEGMENT_OVERLAP_SECONDS = 0.5
+
 
 @dataclass
 class CandidateTrack:
@@ -91,6 +101,19 @@ class AuditRecord:
     source_manifests: list[Path] = field(default_factory=list)
 
 
+@dataclass(frozen=True)
+class ListeningSegment:
+    label: str
+    start_frame: int | None
+    end_frame: int | None
+    start_sec: float
+    end_sec: float
+
+    @property
+    def is_full_audio(self) -> bool:
+        return self.start_frame is None or self.end_frame is None
+
+
 class AudioAuditApp:
     def __init__(
         self,
@@ -104,6 +127,8 @@ class AudioAuditApp:
         self.export_json_path = self.output_dir / "audio_audit_review.json"
         self.export_md_path = self.output_dir / "audio_audit_review.md"
         self.progress_json_path = self.output_dir / "audio_audit_progress.json"
+        self.segment_cache_dir = self.output_dir / "_segment_cache"
+        self.segment_cache_dir.mkdir(parents=True, exist_ok=True)
 
         self.records_by_id: dict[str, AuditRecord] = {}
         self.record_order: list[str] = []
@@ -123,8 +148,11 @@ class AudioAuditApp:
         self.current_record_var = tk.StringVar(value="")
         self.input_path_var = tk.StringVar(value="")
         self.audio_path_var = tk.StringVar(value="")
+        self.segment_var = tk.StringVar(value=FULL_AUDIO_SEGMENT_LABEL)
+        self.segment_summary_var = tk.StringVar(value="当前播放整段。")
         self.session_notes_text: tk.Text | None = None
         self.notes_text: tk.Text | None = None
+        self.segment_combo: ttk.Combobox | None = None
         self.valid_var = tk.StringVar(value=VALIDITY_CODE_TO_LABEL["yes"])
         self.completed_var = tk.BooleanVar(value=False)
         self.field_vars: dict[str, tk.StringVar] = {
@@ -132,6 +160,7 @@ class AudioAuditApp:
         }
         self.score_widgets: dict[str, ttk.Combobox] = {}
         self.candidate_frames: list[ttk.Frame] = []
+        self.current_segments: list[ListeningSegment] = [ListeningSegment(FULL_AUDIO_SEGMENT_LABEL, None, None, 0.0, 0.0)]
 
         self.build_layout()
         self.bind_shortcuts()
@@ -166,6 +195,10 @@ class AudioAuditApp:
         self.record_listbox = tk.Listbox(left, width=46, height=36, exportselection=False)
         self.record_listbox.grid(row=4, column=0, sticky="nsew")
         self.record_listbox.bind("<<ListboxSelect>>", self.on_record_selected)
+        self.record_listbox.bind("<Up>", lambda _event: "break")
+        self.record_listbox.bind("<Down>", lambda _event: "break")
+        self.record_listbox.bind("<Left>", lambda _event: "break")
+        self.record_listbox.bind("<Right>", lambda _event: "break")
 
         left_actions = ttk.Frame(left)
         left_actions.grid(row=5, column=0, sticky="ew", pady=(8, 0))
@@ -199,10 +232,29 @@ class AudioAuditApp:
         playback_frame = ttk.LabelFrame(right, text="播放", padding=10)
         playback_frame.grid(row=2, column=0, sticky="ew")
         playback_frame.columnconfigure(1, weight=1)
+        playback_frame.columnconfigure(2, weight=0)
+        playback_frame.columnconfigure(3, weight=0)
         ttk.Button(playback_frame, text="播放输入", command=self.play_input).grid(row=0, column=0, sticky="w")
         ttk.Button(playback_frame, text="停止播放", command=self.stop_audio).grid(row=0, column=1, sticky="w", padx=(8, 0))
+        ttk.Label(playback_frame, text="试听片段").grid(row=1, column=0, sticky="w", pady=(10, 0))
+        self.segment_combo = ttk.Combobox(
+            playback_frame,
+            textvariable=self.segment_var,
+            state="readonly",
+        )
+        self.segment_combo.grid(row=1, column=1, sticky="ew", padx=(8, 0), pady=(10, 0))
+        self.segment_combo.bind("<<ComboboxSelected>>", self.on_segment_changed)
+        ttk.Button(playback_frame, text="上一段", command=self.go_prev_segment).grid(row=1, column=2, sticky="w", padx=(8, 0), pady=(10, 0))
+        ttk.Button(playback_frame, text="下一段", command=self.go_next_segment).grid(row=1, column=3, sticky="w", padx=(8, 0), pady=(10, 0))
+        ttk.Label(playback_frame, textvariable=self.segment_summary_var, wraplength=900, justify="left").grid(
+            row=2,
+            column=0,
+            columnspan=4,
+            sticky="w",
+            pady=(8, 0),
+        )
         self.candidates_container = ttk.Frame(playback_frame)
-        self.candidates_container.grid(row=1, column=0, columnspan=2, sticky="ew", pady=(10, 0))
+        self.candidates_container.grid(row=3, column=0, columnspan=4, sticky="ew", pady=(10, 0))
         self.candidates_container.columnconfigure(0, weight=1)
 
         scoring_frame = ttk.LabelFrame(right, text="结构评分", padding=10)
@@ -265,8 +317,6 @@ class AudioAuditApp:
     def bind_shortcuts(self) -> None:
         self.root.bind("<Control-s>", lambda _event: self.save_progress())
         self.root.bind("<Control-e>", lambda _event: self.export_review())
-        self.root.bind("<Left>", lambda _event: self.go_prev())
-        self.root.bind("<Right>", lambda _event: self.go_next())
 
     def open_bundle_dialog(self) -> None:
         selected = filedialog.askopenfilenames(
@@ -432,6 +482,7 @@ class AudioAuditApp:
             self.current_record_var.set("当前没有可显示记录")
             self.input_path_var.set("")
             self.audio_path_var.set("")
+            self.refresh_segments(None)
             self.clear_candidate_widgets()
             self.status_var.set("当前筛选条件下没有记录。")
             return
@@ -440,6 +491,7 @@ class AudioAuditApp:
         self.current_record_var.set(record.record_id)
         self.input_path_var.set("" if record.input_audio_path is None else record.input_audio_path.as_posix())
         self.audio_path_var.set("" if record.audio_path is None else record.audio_path.as_posix())
+        self.refresh_segments(record)
         self.render_candidates(record)
         self.load_review_state(record_id)
         self.status_var.set(f"正在查看 {self.current_index + 1}/{len(self.filtered_record_ids)}：{record_id}")
@@ -455,7 +507,7 @@ class AudioAuditApp:
             entry.grid(row=0, column=1, sticky="ew", padx=(8, 8))
             entry.insert(0, candidate.path.as_posix())
             entry.configure(state="readonly")
-            ttk.Button(frame, text="播放", command=lambda path=candidate.path: self.play_audio(path)).grid(row=0, column=2, sticky="e")
+            ttk.Button(frame, text="播放", command=lambda path=candidate.path: self.play_track(path)).grid(row=0, column=2, sticky="e")
             self.candidate_frames.append(frame)
 
         options = [""] + [candidate.label for candidate in record.candidates]
@@ -498,7 +550,21 @@ class AudioAuditApp:
         if record.input_audio_path is None:
             messagebox.showwarning("音频听审工具", "这一条没有可播放的 input.wav。")
             return
-        self.play_audio(record.input_audio_path)
+        self.play_track(record.input_audio_path)
+
+    def play_track(self, path: Path) -> None:
+        segment = self.get_selected_segment()
+        playback_path = path
+        if not segment.is_full_audio:
+            playback_path = self.materialize_segment_audio(path=path, segment=segment)
+        self.play_audio(playback_path)
+        if segment.is_full_audio:
+            self.status_var.set(f"正在播放整段：{path.name}")
+            return
+        self.status_var.set(
+            f"正在播放 {segment.label}：{path.name} "
+            f"({segment.start_sec:.1f}s - {segment.end_sec:.1f}s)"
+        )
 
     def play_audio(self, path: Path) -> None:
         if winsound is None:
@@ -508,7 +574,6 @@ class AudioAuditApp:
             messagebox.showerror("音频听审工具", f"音频文件不存在：\n{path}")
             return
         winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC)
-        self.status_var.set(f"正在播放：{path.name}")
 
     def stop_audio(self) -> None:
         if winsound is None:
@@ -588,6 +653,92 @@ class AudioAuditApp:
         )
         self.status_var.set(f"评审结果已导出：{self.export_json_path} / {self.export_md_path}")
         messagebox.showinfo("音频听审工具", f"评审结果已导出到：\n{self.export_json_path}\n{self.export_md_path}")
+
+    def refresh_segments(self, record: AuditRecord | None) -> None:
+        if self.segment_combo is None:
+            return
+        self.current_segments = build_segments_for_record(record)
+        segment_labels = [segment.label for segment in self.current_segments]
+        self.segment_combo.configure(values=segment_labels)
+        default_label = segment_labels[0] if segment_labels else FULL_AUDIO_SEGMENT_LABEL
+        self.segment_var.set(default_label)
+        self.update_segment_summary()
+
+    def on_segment_changed(self, _event: object | None = None) -> None:
+        self.update_segment_summary()
+
+    def update_segment_summary(self) -> None:
+        segment = self.get_selected_segment()
+        if segment.is_full_audio:
+            if len(self.current_segments) <= 1:
+                self.segment_summary_var.set("当前播放整段。当前记录较短，无需自动切段。")
+            else:
+                self.segment_summary_var.set(
+                    f"当前播放整段。当前记录也支持分段试听，共 {len(self.current_segments) - 1} 段。"
+                )
+            return
+        self.segment_summary_var.set(
+            f"当前片段：{segment.label}，范围 {segment.start_sec:.1f}s - {segment.end_sec:.1f}s。"
+        )
+
+    def get_selected_segment(self) -> ListeningSegment:
+        selected_label = self.segment_var.get().strip()
+        for segment in self.current_segments:
+            if segment.label == selected_label:
+                return segment
+        return self.current_segments[0]
+
+    def go_prev_segment(self) -> None:
+        if len(self.current_segments) <= 1:
+            return
+        current_label = self.segment_var.get().strip()
+        labels = [segment.label for segment in self.current_segments]
+        if current_label not in labels:
+            self.segment_var.set(labels[0])
+            self.update_segment_summary()
+            return
+        current_index = labels.index(current_label)
+        if current_index <= 0:
+            return
+        self.segment_var.set(labels[current_index - 1])
+        self.update_segment_summary()
+
+    def go_next_segment(self) -> None:
+        if len(self.current_segments) <= 1:
+            return
+        current_label = self.segment_var.get().strip()
+        labels = [segment.label for segment in self.current_segments]
+        if current_label not in labels:
+            self.segment_var.set(labels[0])
+            self.update_segment_summary()
+            return
+        current_index = labels.index(current_label)
+        if current_index >= len(labels) - 1:
+            return
+        self.segment_var.set(labels[current_index + 1])
+        self.update_segment_summary()
+
+    def materialize_segment_audio(self, path: Path, segment: ListeningSegment) -> Path:
+        if segment.is_full_audio or path.suffix.lower() != ".wav":
+            return path
+        cache_key = hashlib.sha1(
+            f"{path.resolve().as_posix()}::{segment.start_frame}::{segment.end_frame}".encode("utf-8")
+        ).hexdigest()[:16]
+        cache_path = self.segment_cache_dir / f"{path.stem}__{cache_key}__segment.wav"
+        if cache_path.exists():
+            return cache_path
+        with wave.open(str(path), "rb") as reader:
+            start_frame = max(0, int(segment.start_frame or 0))
+            end_frame = max(start_frame, min(reader.getnframes(), int(segment.end_frame or reader.getnframes())))
+            reader.setpos(start_frame)
+            frames = reader.readframes(end_frame - start_frame)
+            with wave.open(str(cache_path), "wb") as writer:
+                writer.setnchannels(reader.getnchannels())
+                writer.setsampwidth(reader.getsampwidth())
+                writer.setframerate(reader.getframerate())
+                writer.setcomptype(reader.getcomptype(), reader.getcompname())
+                writer.writeframes(frames)
+        return cache_path
 
 
 def resolve_manifest_path(path: Path) -> Path:
@@ -677,7 +828,8 @@ def build_review_summary(
     for field_id, _field_label in SCORING_FIELDS:
         counter = Counter()
         for record_id in records_by_id:
-            selected = str(review_state.get(record_id, {}).get(field_id, "")).strip()
+            review = dict(review_state.get(record_id, {}))
+            selected = normalize_review_choice(field_id=field_id, review=review)
             if selected:
                 counter[selected] += 1
         aggregate[field_id] = dict(sorted(counter.items()))
@@ -690,6 +842,10 @@ def build_review_summary(
     records_payload: list[dict[str, Any]] = []
     for record_id, record in records_by_id.items():
         review = dict(review_state.get(record_id, {}))
+        interpreted_review = {
+            field_id: normalize_review_choice(field_id=field_id, review=review)
+            for field_id, _field_label in SCORING_FIELDS
+        }
         records_payload.append(
             {
                 "record_id": record_id,
@@ -697,6 +853,7 @@ def build_review_summary(
                 "audio_path": None if record.audio_path is None else record.audio_path.as_posix(),
                 "candidate_labels": [candidate.label for candidate in record.candidates],
                 "review": review,
+                "interpreted_review": interpreted_review,
             }
         )
 
@@ -705,6 +862,7 @@ def build_review_summary(
         "record_count": len(records_by_id),
         "completed_count": completed_count,
         "session_notes": session_notes,
+        "tie_policy": "已完成且可比较的记录中，留空评分字段按“打平”解释。",
         "aggregate": {
             "by_field": aggregate,
             "valid_for_comparison": dict(sorted(validity_counter.items())),
@@ -722,6 +880,7 @@ def build_review_markdown(summary: dict[str, Any]) -> str:
         f"- 总记录数: {summary['record_count']}",
         f"- 已完成数: {summary['completed_count']}",
         f"- 清单文件: {summary['manifest_paths']}",
+        f"- 留空解释: {summary.get('tie_policy', '（未声明）')}",
         "",
         "## 汇总统计",
     ]
@@ -740,13 +899,76 @@ def build_review_markdown(summary: dict[str, Any]) -> str:
         lines.append(f"### {record['record_id']}")
         lines.append(f"- 候选音频: {record['candidate_labels']}")
         review = record["review"]
+        interpreted_review = record.get("interpreted_review", {})
         for field_id, _field_label in SCORING_FIELDS:
-            lines.append(f"- {field_label_map[field_id]}: {review.get(field_id, '')}")
+            lines.append(f"- {field_label_map[field_id]}: {interpreted_review.get(field_id, review.get(field_id, ''))}")
         lines.append(f"- 是否适合比较: {validity_label_from_value(str(review.get('valid_for_comparison', 'yes')))}")
         lines.append(f"- 是否完成: {review.get('completed', False)}")
         lines.append(f"- 备注: {review.get('notes', '')}")
         lines.append("")
     return "\n".join(lines)
+
+
+def normalize_review_choice(field_id: str, review: dict[str, Any]) -> str:
+    selected = str(review.get(field_id, "")).strip()
+    if selected:
+        return selected
+    is_completed = bool(review.get("completed", False))
+    validity_code = validity_code_from_value(str(review.get("valid_for_comparison", "yes")).strip())
+    if is_completed and validity_code != "no":
+        return TIE_LABEL
+    return ""
+
+
+def build_segments_for_record(record: AuditRecord | None) -> list[ListeningSegment]:
+    full_audio_segment = [ListeningSegment(FULL_AUDIO_SEGMENT_LABEL, None, None, 0.0, 0.0)]
+    if record is None:
+        return full_audio_segment
+    duration_source = record.input_audio_path
+    if duration_source is None and record.candidates:
+        duration_source = record.candidates[0].path
+    if duration_source is None or duration_source.suffix.lower() != ".wav":
+        return full_audio_segment
+    duration_seconds, sample_rate, frame_count = read_wav_duration(duration_source)
+    if duration_seconds < AUTO_SEGMENT_MIN_SECONDS or sample_rate <= 0 or frame_count <= 0:
+        return full_audio_segment
+    segments: list[ListeningSegment] = []
+    step_seconds = max(0.5, SEGMENT_LENGTH_SECONDS - SEGMENT_OVERLAP_SECONDS)
+    segment_count = max(1, int(math.ceil(max(0.0, duration_seconds - SEGMENT_OVERLAP_SECONDS) / step_seconds)))
+    for index in range(segment_count):
+        start_sec = min(duration_seconds, index * step_seconds)
+        end_sec = min(duration_seconds, start_sec + SEGMENT_LENGTH_SECONDS)
+        start_frame = int(round(start_sec * sample_rate))
+        end_frame = int(round(end_sec * sample_rate))
+        if end_frame <= start_frame:
+            continue
+        segments.append(
+            ListeningSegment(
+                label=f"片段 {index + 1}",
+                start_frame=start_frame,
+                end_frame=end_frame,
+                start_sec=start_sec,
+                end_sec=end_sec,
+            )
+        )
+        if end_sec >= duration_seconds:
+            break
+    if not segments:
+        return full_audio_segment
+    segments.append(ListeningSegment(FULL_AUDIO_SEGMENT_LABEL, None, None, 0.0, duration_seconds))
+    return segments
+
+
+def read_wav_duration(path: Path) -> tuple[float, int, int]:
+    try:
+        with wave.open(str(path), "rb") as reader:
+            sample_rate = int(reader.getframerate())
+            frame_count = int(reader.getnframes())
+    except (wave.Error, FileNotFoundError, EOFError, OSError):
+        return 0.0, 0, 0
+    if sample_rate <= 0 or frame_count <= 0:
+        return 0.0, sample_rate, frame_count
+    return frame_count / float(sample_rate), sample_rate, frame_count
 
 
 def validity_label_from_value(value: str) -> str:
