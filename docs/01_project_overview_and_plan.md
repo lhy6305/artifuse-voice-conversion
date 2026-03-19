@@ -11900,3 +11900,300 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/213_subjective_conclusion_quant_validation_protocol.md`
   - 主观结论分级、最低量化回查要求与冲突处理规则
+
+## 2026-03-19 Stage5 low-activity 主观结论量化回查更新
+
+### 当前进度补充
+716. 已完成: 为
+   `stage5_low_activity_probe`
+   补充:
+   - `activity_alignment_mae`
+   - `activity_excess_mean`
+   - `target_context_toggle_mean`
+   - `target_boundary_jump_max`
+717. 已完成: 重跑正式
+   `reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/`
+   产物
+718. 已完成: 新增量化回查报告
+   - `docs/214_stage5_low_activity_subjective_claims_quant_backcheck.md`
+
+### 当前阶段结论补充
+- 当前已经有量化支持的两条结论:
+  - `step72`
+    更贴近
+    target
+    的低活动能量轨迹
+  - `step60`
+    的低活动底音泄漏更重
+- 具体表现为 decoded aggregate 上:
+  - `step60 mean_active_fraction = 1.0`
+  - `step72 mean_active_fraction = 0.521389`
+  - `step60 mean_activity_alignment_mae = 0.975229`
+  - `step72 mean_activity_alignment_mae = 0.546807`
+- 同时也更明确地证实:
+  - `fragmentation`
+    只能当局部风险提示，
+    不能单独当作
+    “人耳系统性更差”
+    的裁决器
+
+先说人话:
+- 现在这条线终于不是
+  “听起来像” 了，
+  而是已经能用指标把两种问题拆开。
+- `step60`
+  更像是
+  “收不干净”，
+  `step72`
+  更像是
+  “偶尔会抖一下”。
+
+### 更新后的下一阶段任务
+1. 后续 low-activity
+   结论默认至少同时看:
+   - `fragmentation_score`
+   - `mean_active_fraction`
+   - `mean_activity_alignment_mae`
+   - `mean_activity_excess_mean`
+2. `target_context_toggle_mean`
+   和
+   `target_boundary_jump_max`
+   继续保留为:
+   - 混淆提示字段
+   暂不直接拿来做自动排除判案
+3. 下一步若继续治理，
+   应优先针对:
+   - `step72`
+     的局部偶发瞬态毛刺
+   同时保留
+   `step72`
+   当前在低活动段上的
+   动态跟随优势
+
+### 文档补充
+- `docs/214_stage5_low_activity_subjective_claims_quant_backcheck.md`
+  - 本轮主观判断的量化回查结果与当前结论分级
+
+## 2026-03-19 Stage5 low-activity governance sidecar 接入更新
+
+### 当前进度补充
+719. 已完成: 为
+   `select-offline-mvp-nores-vocoder-checkpoint`
+   新增:
+   - `--low-activity-probe`
+   - `--low-activity-audio-source`
+720. 已完成: 将
+   low-activity
+   量化结果
+   作为 governance sidecar
+   接入 selection payload
+721. 已完成: 在
+   `activitygate72`
+   family 上
+   重跑 selection，
+   并验证下游
+   `export-offline-mvp-nores-vocoder-audio`
+   兼容新 payload
+722. 已完成: 新增接入报告
+   - `docs/215_stage5_low_activity_governance_sidecar_integration_report.md`
+
+### 当前阶段结论补充
+- 现在 checkpoint governance
+  不再只能看:
+  - validation
+  - RMS
+  - pairwise
+- 同一个 selection payload
+  里已经能直接看到:
+  - `mean_fragmentation_score`
+  - `mean_active_fraction`
+  - `mean_activity_alignment_mae`
+  - `mean_activity_excess_mean`
+- 当前在
+  `activitygate60 vs 72`
+  上，
+  governance sidecar
+  明确写出了 tradeoff:
+  - `step72`
+    best_alignment
+    / best_quietness
+  - `step60`
+    best_fragmentation
+    / worst_floor_leakage
+- 但这仍然是:
+  - governance sidecar
+  不是:
+  - selector policy rewrite
+
+先说人话:
+- 现在再看 checkpoint selection，
+  不会只剩
+  “谁 validation 更低”
+  这种单视角结论了。
+- 但我还没有擅自让这些指标
+  直接改写自动选点，
+  先把治理解释链补完整。
+
+### 更新后的下一阶段任务
+1. 后续所有关键
+   Stage5 selection
+   若存在对应 bundle 和 probe，
+   默认补跑
+   `--low-activity-probe`
+   sidecar
+2. 若后续要真正把
+   low-activity
+   指标纳入自动选点，
+   应先单独讨论:
+   - 它是 guardrail
+   - 还是 hard constraint
+   - 还是 rerank side objective
+
+### 文档补充
+- `docs/215_stage5_low_activity_governance_sidecar_integration_report.md`
+  - selection payload 接线方式、验证结果与当前策略边界
+
+## 2026-03-19 Stage5 low-activity soft rerank 接入更新
+
+### 当前进度补充
+723. 已完成: 为
+   `select-offline-mvp-nores-vocoder-checkpoint`
+   新增:
+   - `--low-activity-soft-validation-ratio`
+724. 已完成: 在 late candidates 内部新增
+   low-activity soft rerank
+   推荐层
+725. 已完成: 在
+   `activitygate72`
+   family 上
+   重跑 selection，
+   并验证下游导出兼容
+726. 已完成: 新增接入报告
+   - `docs/216_stage5_low_activity_soft_rerank_integration_report.md`
+
+### 当前阶段结论补充
+- 现在 selection payload
+  已经不只是:
+  - 展示 low-activity tradeoff
+- 还会在
+  near-best late candidates
+  内部给出:
+  - `selected low-activity balanced candidate`
+    级别的 soft recommendation
+- 当前默认门槛:
+  - `loss_total <= best_validation * 1.05`
+- 当前在
+  `activitygate60 vs 72`
+  上，
+  soft rerank
+  只纳入:
+  - `step60`
+  - `step72`
+  并推荐:
+  - `step72`
+
+先说人话:
+- 这一步已经不是
+  “只提醒你有 tradeoff”，
+  而是开始给出
+  一个受控的二级建议。
+- 但它仍然没有越权去改
+  主 selector。
+
+### 更新后的下一阶段任务
+1. 后续若再出现
+   `best_validation`
+   与
+   low-activity
+   tradeoff
+   拉扯，
+   默认同时查看:
+   - 主 selector 结果
+   - soft rerank 推荐
+2. 若后续要继续升级，
+   应优先讨论:
+   - 当前 `1.05`
+     near-best 门槛是否合适
+   - 当前权重是否需要按 family
+     或任务阶段调整
+
+### 文档补充
+- `docs/216_stage5_low_activity_soft_rerank_integration_report.md`
+  - soft rerank 规则、当前推荐结果与策略层级
+
+## 2026-03-20 Stage5 low-activity soft rerank 敏感性分析更新
+
+### 当前进度补充
+727. 已完成: 运行
+   `analyze-offline-mvp-nores-vocoder-low-activity-sensitivity`
+   对当前
+   `activitygate72`
+   selection payload
+   做:
+   - ratio sweep
+   - fragmentation emphasis sweep
+   - weight grid sweep
+728. 已完成: 新增敏感性分析报告
+   - `docs/217_stage5_low_activity_soft_rerank_sensitivity_report.md`
+
+### 当前阶段结论补充
+- 当前
+  `soft_validation_ratio = 1.05`
+  在
+  `step60 vs step72`
+  这组候选上
+  没有改写推荐结果
+- 当前默认权重下:
+  - `step72`
+    仍是
+    soft rerank
+    推荐
+- `fragmentation`
+  权重需要提升到
+  `0.55`
+  以上，
+  推荐才会翻到
+  `step60`
+- 但这轮稳健性
+  仍然只覆盖:
+  - 当前 probe
+    已覆盖的
+    `step60`
+    与
+    `step72`
+
+先说人话:
+- 现在可以确定，
+  当前这套 soft rerank
+  不是一碰就翻。
+- 但它也还远远不是
+  “以后都这么配”
+  的全局政策，
+  只是先把
+  这组候选的边界摸清了。
+
+### 更新后的下一阶段任务
+1. 后续若新增
+   Stage5 family
+   的 selection payload，
+   默认同步补跑:
+   - `analyze-offline-mvp-nores-vocoder-low-activity-sensitivity`
+2. 若后续要继续升级 soft rerank，
+   优先补:
+   - 更多 checkpoint
+     的 low-activity probe
+   - 避免当前只在
+     `step60 vs step72`
+     的局部二选一上调参
+3. 当前文档口径保持克制:
+   - `1.05`
+     与当前权重
+     只能写成:
+     - 暂行默认值
+     - 当前候选对上相对稳健
+   - 不能写成:
+     - 已系统性最优
+
+### 文档补充
+- `docs/217_stage5_low_activity_soft_rerank_sensitivity_report.md`
+  - 当前 soft rerank 的门槛/权重敏感性、翻盘边界与适用范围

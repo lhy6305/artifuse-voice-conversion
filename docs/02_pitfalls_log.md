@@ -6980,3 +6980,207 @@
     - 听感趋势
   - 具体执行规范见:
     - `docs/213_subjective_conclusion_quant_validation_protocol.md`
+### 269. “更毛刺”与“更不尊重原音量变化”不是同一类问题；如果只用一个指标，会把 tradeoff 混成单边输赢
+- 现象:
+  - 本轮 low-activity
+    量化回查显示:
+    - `step72`
+      的
+      `fragmentation_score`
+      更高
+    - 但
+      `step72`
+      的
+      `mean_activity_alignment_mae`
+      和
+      `mean_activity_excess_mean`
+      更低
+    - 同时
+      `step60`
+      的
+      `mean_active_fraction = 1.0`
+- 风险:
+  - 如果只看
+    `fragmentation`
+    会错把
+    `step72`
+    写成全面更差
+  - 如果只看
+    activity 对齐类指标，
+    又会忽略
+    `step72`
+    的局部偶发毛刺风险
+- 处理要求:
+  - 后续 low-activity
+    结论默认至少拆成两条:
+    - 局部毛刺 / 断续风险
+    - 低活动底音泄漏 / 动态跟随能力
+  - 默认至少同时看:
+    - `fragmentation_score`
+    - `mean_active_fraction`
+    - `mean_activity_alignment_mae`
+    - `mean_activity_excess_mean`
+### 270. target 上下文瞬态指标当前只能作“混淆提示”，还不能直接自动判定某窗口一定是 target-correlated
+- 现象:
+  - 本轮新增:
+    - `target_context_toggle_mean`
+    - `target_boundary_jump_max`
+  - 它们确实能提示
+    某窗口周围
+    target
+    自身存在较强边界变化
+  - 但还没形成
+    能稳定覆盖全部人耳判断的单一阈值
+- 风险:
+  - 如果过早把它们硬编码成
+    自动排除规则，
+    会把真实的模型问题窗口
+    一起排掉
+- 处理要求:
+  - 当前阶段把它们保留为:
+    - 风险提示字段
+  - 暂不直接作为:
+    - 自动排除
+    - 自动定罪
+    规则
+### 271. 把 low-activity 指标接进 checkpoint governance 时，先做 sidecar，再决定是否改 selector 主策略；不要一上来把专项指标直接硬编码进自动选点
+- 现象:
+  - 本轮已经证明
+    low-activity
+    指标能稳定表达:
+    - `step72`
+      更贴 target
+      能量轨迹
+    - `step60`
+      底音泄漏更重
+  - 但它们表达的是
+    tradeoff，
+    不是单边绝对胜负
+- 风险:
+  - 如果直接把这类专项指标
+    硬塞进 selector
+    主排序，
+    很容易:
+    - 覆盖掉原本更稳定的 validation 约束
+    - 把局部专项偏好
+      误升格成全局主目标
+- 处理要求:
+  - 这类新指标
+    默认先以:
+    - governance sidecar
+    - guardrail
+    - rerank 候选解释
+    的形式接入
+  - 只有在样本覆盖、阈值和 tradeoff
+    都更清楚后，
+    才讨论是否升格为:
+    - hard constraint
+    - selector 主规则
+### 272. 从 sidecar 升到 soft rerank 时，必须先把候选范围限定在 near-best late candidates；否则专项指标会把早期 checkpoint 重新拉回桌面
+- 现象:
+  - 本轮如果不加
+    near-best validation
+    门槛，
+    那么 low-activity
+    指标可能会把
+    早期 checkpoint
+    重新带回比较集合
+- 风险:
+  - 会把
+    “在主候选之间做 tradeoff”
+    变成
+    “专项指标反向重开全量选点”
+- 处理要求:
+  - soft rerank
+    默认只在:
+    - late candidates
+    - 且接近 best validation
+      的候选
+    内部生效
+  - 当前默认门槛保留为:
+    - `loss_total <= best_validation * 1.05`
+  - 这条门槛
+    若要调整，
+    应单独记录
+    调整理由和影响
+### 273. 在只有两个候选的 low-activity soft rerank 里，min-max 归一化分数更像“权重投票”，不能把绝对分值当成可跨 family 复用的刻度
+- 现象:
+  - 当前
+    `step60 vs step72`
+    的 soft rerank
+    只有两个候选
+  - 并且四个核心指标上，
+    两边几乎是一边倒:
+    - `step72`
+      赢
+      alignment / excess / active_fraction
+    - `step60`
+      赢
+      fragmentation
+  - 因而当前
+    `0.1`
+    对
+    `0.9`
+    的分差，
+    本质上主要来自:
+    - 权重如何在
+      三个“低活动跟随/泄漏”指标
+      与
+      一个
+      `fragmentation`
+      指标之间分配
+- 风险:
+  - 如果把这类分数
+    误写成
+    “跨 family
+    可直接比较的绝对质量刻度”，
+    很容易过度解读
+- 处理要求:
+  - 当前阶段默认把
+    low-activity governance score
+    解释为:
+    - 当前候选集合内部的相对排序分数
+  - 不直接拿
+    `0.1`
+    `0.9`
+    这类数值
+    做跨 family
+    的强比较
+### 274. 当前 `soft_validation_ratio = 1.05` 的稳定性证据，只能说明“没把当前推荐改坏”，不能说明“1.05 已经被系统性调优完成”
+- 现象:
+  - 本轮 ratio sweep
+    显示:
+    - `step60`
+      的进入门槛
+      实际是
+      `1.035389`
+    - 在
+      `1.035389`
+      和
+      `1.05`
+      下，
+      推荐都仍是
+      `step72`
+- 风险:
+  - 如果把这个结果
+    直接写成
+    “1.05 最优”，
+    会把
+    “当前没有翻车”
+    误写成
+    “已经完成调参”
+- 处理要求:
+  - 当前对
+    `1.05`
+    的正式口径，
+    默认只能写成:
+    - 暂行默认值
+    - 当前候选对上相对稳健
+  - 真正要讨论
+    `1.05`
+    是否合理，
+    仍需:
+    - 更多 family
+    - 更多 checkpoint
+    - 更多 low-activity probe
+    共同回查

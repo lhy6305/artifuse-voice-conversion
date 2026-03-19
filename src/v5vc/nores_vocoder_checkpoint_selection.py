@@ -2,11 +2,19 @@ from __future__ import annotations
 
 import json
 import math
+import re
 import shutil
 from pathlib import Path
 
 from v5vc.data_scan import write_json
 from v5vc.nores_vocoder_checkpoint_review import build_checkpoint_rows, build_pairwise_reviews
+
+DEFAULT_LOW_ACTIVITY_METRIC_WEIGHTS = {
+    "mean_activity_alignment_mae": 0.35,
+    "mean_activity_excess_mean": 0.35,
+    "mean_active_fraction": 0.2,
+    "mean_fragmentation_score": 0.1,
+}
 
 
 def select_offline_mvp_nores_vocoder_checkpoint(
@@ -16,6 +24,9 @@ def select_offline_mvp_nores_vocoder_checkpoint(
     validation_guard_ratio: float,
     max_pairwise_worsened_ratio: float,
     max_rms_ratio_deviation: float,
+    low_activity_probe_path: Path | None = None,
+    low_activity_audio_source: str = "decoded",
+    low_activity_soft_validation_ratio: float = 1.05,
 ) -> None:
     if late_step_ratio <= 0.0 or late_step_ratio > 1.0:
         raise ValueError("late_step_ratio must be within (0.0, 1.0].")
@@ -25,6 +36,8 @@ def select_offline_mvp_nores_vocoder_checkpoint(
         raise ValueError("max_pairwise_worsened_ratio must be within [0.0, 1.0].")
     if max_rms_ratio_deviation < 0.0:
         raise ValueError("max_rms_ratio_deviation must be >= 0.0.")
+    if low_activity_soft_validation_ratio < 1.0:
+        raise ValueError("low_activity_soft_validation_ratio must be >= 1.0.")
 
     summary_path = summary_path.resolve()
     output_dir = output_dir.resolve()
@@ -41,6 +54,13 @@ def select_offline_mvp_nores_vocoder_checkpoint(
         int(item["to_step"]): item
         for item in pairwise_reviews
     }
+    low_activity_probe_analysis = load_low_activity_probe_analysis(
+        low_activity_probe_path=low_activity_probe_path,
+        audio_source=low_activity_audio_source,
+    )
+    low_activity_metrics_by_step = {}
+    if low_activity_probe_analysis is not None:
+        low_activity_metrics_by_step = dict(low_activity_probe_analysis["checkpoint_metrics_by_step"])
 
     max_step = max(int(item["step"]) for item in checkpoints)
     late_min_step = max(
@@ -95,6 +115,10 @@ def select_offline_mvp_nores_vocoder_checkpoint(
                     "average_delta_loss_total": round(float(pairwise_review["average_delta_loss_total"]), 6),
                 }
             ),
+            "low_activity_metrics": build_low_activity_candidate_metrics(
+                low_activity_metrics_by_step=low_activity_metrics_by_step,
+                step=step,
+            ),
         }
         pairwise_worsened_ratio = (
             0.0 if pairwise_review is None else float(pairwise_review["worsened_ratio"])
@@ -118,6 +142,24 @@ def select_offline_mvp_nores_vocoder_checkpoint(
             ),
         )
     )
+    low_activity_soft_rerank = build_low_activity_soft_rerank(
+        late_candidates=late_candidates,
+        best_validation_loss_total=float(best_validation_checkpoint["loss_metrics"]["loss_total"]),
+        max_pairwise_worsened_ratio=float(max_pairwise_worsened_ratio),
+        soft_validation_ratio=float(low_activity_soft_validation_ratio),
+    )
+    if isinstance(low_activity_soft_rerank, dict):
+        rerank_candidates = low_activity_soft_rerank.get("all_candidates", [])
+        if isinstance(rerank_candidates, list):
+            rerank_by_step = {
+                int(item["step"]): item
+                for item in rerank_candidates
+                if isinstance(item, dict) and item.get("step") is not None
+            }
+            late_candidates = [
+                rerank_by_step.get(int(candidate["step"]), candidate)
+                for candidate in late_candidates
+            ]
 
     summary = {
         "summary_path": summary_path.as_posix(),
@@ -132,15 +174,29 @@ def select_offline_mvp_nores_vocoder_checkpoint(
             "validation_guard_threshold": round(validation_guard_threshold, 6),
             "max_pairwise_worsened_ratio": float(max_pairwise_worsened_ratio),
             "max_rms_ratio_deviation": float(max_rms_ratio_deviation),
+            "low_activity_soft_validation_ratio": float(low_activity_soft_validation_ratio),
         },
-        "best_validation_checkpoint": build_checkpoint_selection_row(best_validation_checkpoint),
-        "best_rms_checkpoint": build_checkpoint_selection_row(best_rms_checkpoint),
+        "best_validation_checkpoint": build_checkpoint_selection_row(
+            best_validation_checkpoint,
+            low_activity_metrics_by_step=low_activity_metrics_by_step,
+        ),
+        "best_rms_checkpoint": build_checkpoint_selection_row(
+            best_rms_checkpoint,
+            low_activity_metrics_by_step=low_activity_metrics_by_step,
+        ),
         "late_candidates": late_candidates,
-        "selected_stable_late_stop": selected_stable_late_stop,
+        "selected_stable_late_stop": annotate_selected_candidate_with_low_activity(
+            selected_stable_late_stop,
+            low_activity_metrics_by_step=low_activity_metrics_by_step,
+        ),
+        "low_activity_probe_analysis": low_activity_probe_analysis,
+        "low_activity_soft_rerank": low_activity_soft_rerank,
         "notes": [
             "best_validation_checkpoint is the recorded checkpoint with minimum validation loss_total.",
             "best_rms_checkpoint prefers decoded_to_target_rms_ratio closest to 1.0, then lower validation loss_total.",
             "selected_stable_late_stop keeps only late-window checkpoints that stay within the validation guard, keep pairwise worsened_ratio under the configured cap, and keep RMS ratio deviation under the configured cap.",
+            "When low_activity_probe_analysis is present, it is a governance sidecar only: it annotates local low-activity tradeoffs but does not override the selector's hard policy.",
+            "low_activity_soft_rerank is a secondary governance recommendation among near-best late candidates only; it does not override best_validation_checkpoint or selected_stable_late_stop.",
         ],
     }
     write_json(output_dir / "nores_vocoder_checkpoint_selection.json", summary)
@@ -157,10 +213,302 @@ def reset_managed_directory(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
 
 
-def build_checkpoint_selection_row(checkpoint: dict[str, object]) -> dict[str, object]:
+def load_low_activity_probe_analysis(
+    low_activity_probe_path: Path | None,
+    audio_source: str,
+) -> dict[str, object] | None:
+    if low_activity_probe_path is None:
+        return None
+    payload = json.loads(low_activity_probe_path.resolve().read_text(encoding="utf-8"))
+    analysis_sources = payload.get("analysis_sources", {})
+    if not isinstance(analysis_sources, dict):
+        raise ValueError("low_activity_probe json does not contain analysis_sources.")
+    source_payload = analysis_sources.get(str(audio_source))
+    if not isinstance(source_payload, dict):
+        raise ValueError(f"low_activity_probe json does not contain audio source {audio_source!r}.")
+    branch_aggregates = source_payload.get("branch_aggregates", {})
+    if not isinstance(branch_aggregates, dict) or not branch_aggregates:
+        raise ValueError("low_activity_probe json does not contain branch_aggregates for the selected source.")
+
+    checkpoint_metrics_by_step: dict[int, dict[str, object]] = {}
+    compact_aggregates: dict[str, dict[str, object]] = {}
+    for branch_label, aggregate in branch_aggregates.items():
+        if not isinstance(aggregate, dict):
+            continue
+        compact_aggregate = {
+            "record_count": int(aggregate.get("record_count", 0)),
+            "mean_segment_count": round(float(aggregate.get("mean_segment_count", 0.0)), 6),
+            "mean_fragmentation_score": round(float(aggregate.get("mean_fragmentation_score", 0.0)), 6),
+            "mean_active_fraction": round(float(aggregate.get("mean_active_fraction", 0.0)), 6),
+            "mean_activity_alignment_mae": round(float(aggregate.get("mean_activity_alignment_mae", 0.0)), 6),
+            "mean_activity_excess_mean": round(float(aggregate.get("mean_activity_excess_mean", 0.0)), 6),
+            "mean_sample_delta_peak": round(float(aggregate.get("mean_sample_delta_peak", 0.0)), 6),
+        }
+        compact_aggregates[str(branch_label)] = compact_aggregate
+        step = infer_step_from_branch_label(str(branch_label))
+        if step is not None:
+            checkpoint_metrics_by_step[step] = {
+                "branch_label": str(branch_label),
+                **compact_aggregate,
+            }
+
+    if not compact_aggregates:
+        return None
+
+    ranking = {
+        "best_fragmentation_score_branch": min(
+            compact_aggregates.items(),
+            key=lambda item: (float(item[1]["mean_fragmentation_score"]), str(item[0])),
+        )[0],
+        "best_alignment_branch": min(
+            compact_aggregates.items(),
+            key=lambda item: (float(item[1]["mean_activity_alignment_mae"]), str(item[0])),
+        )[0],
+        "best_low_activity_quietness_branch": min(
+            compact_aggregates.items(),
+            key=lambda item: (float(item[1]["mean_activity_excess_mean"]), str(item[0])),
+        )[0],
+        "worst_floor_leakage_branch": max(
+            compact_aggregates.items(),
+            key=lambda item: (float(item[1]["mean_active_fraction"]), str(item[0])),
+        )[0],
+    }
+    top_windows = []
+    source_top_windows = source_payload.get("top_windows", [])
+    if isinstance(source_top_windows, list):
+        for item in source_top_windows[:3]:
+            if not isinstance(item, dict):
+                continue
+            top_windows.append(
+                {
+                    "record_id": str(item.get("record_id", "")),
+                    "segment_index": int(item.get("segment_index", 0)),
+                    "delta_fragmentation_score": round(float(item.get("delta_fragmentation_score", 0.0)), 6),
+                    "worst_branch": str(dict(item.get("worst_branch", {})).get("branch_label", "")),
+                    "best_branch": str(dict(item.get("best_branch", {})).get("branch_label", "")),
+                    "target_context_toggle_mean": round(
+                        float(dict(item.get("worst_branch", {})).get("target_context_toggle_mean", 0.0)),
+                        6,
+                    ),
+                    "target_boundary_jump_max": round(
+                        float(dict(item.get("worst_branch", {})).get("target_boundary_jump_max", 0.0)),
+                        6,
+                    ),
+                }
+            )
+
+    summary_lines = [
+        (
+            f"low_activity/{audio_source}: best_alignment={ranking['best_alignment_branch']}, "
+            f"best_quietness={ranking['best_low_activity_quietness_branch']}, "
+            f"best_fragmentation={ranking['best_fragmentation_score_branch']}, "
+            f"worst_floor_leakage={ranking['worst_floor_leakage_branch']}"
+        ),
+        (
+            "Guardrail: low-activity fragmentation is a local-risk indicator only; "
+            "interpret it together with activity_alignment_mae and activity_excess_mean before treating a checkpoint as globally worse."
+        ),
+    ]
+    return {
+        "probe_path": low_activity_probe_path.resolve().as_posix(),
+        "audio_source": str(audio_source),
+        "branch_aggregates": compact_aggregates,
+        "checkpoint_metrics_by_step": checkpoint_metrics_by_step,
+        "ranking": ranking,
+        "top_windows": top_windows,
+        "summary_lines": summary_lines,
+    }
+
+
+def infer_step_from_branch_label(branch_label: str) -> int | None:
+    match = re.search(r"step(\d+)\s*$", str(branch_label))
+    if match is None:
+        return None
+    return int(match.group(1))
+
+
+def build_low_activity_candidate_metrics(
+    low_activity_metrics_by_step: dict[int, dict[str, object]],
+    step: int,
+) -> dict[str, object] | None:
+    metrics = low_activity_metrics_by_step.get(int(step))
+    if metrics is None:
+        return None
+    return dict(metrics)
+
+
+def annotate_selected_candidate_with_low_activity(
+    candidate: dict[str, object] | None,
+    low_activity_metrics_by_step: dict[int, dict[str, object]],
+) -> dict[str, object] | None:
+    if candidate is None:
+        return None
+    annotated = dict(candidate)
+    annotated["low_activity_metrics"] = build_low_activity_candidate_metrics(
+        low_activity_metrics_by_step=low_activity_metrics_by_step,
+        step=int(candidate["step"]),
+    )
+    return annotated
+
+
+def build_low_activity_soft_rerank(
+    late_candidates: list[dict[str, object]],
+    best_validation_loss_total: float,
+    max_pairwise_worsened_ratio: float,
+    soft_validation_ratio: float,
+    metric_weights: dict[str, float] | None = None,
+) -> dict[str, object] | None:
+    scored_candidates: list[dict[str, object]] = []
+    eligible_candidates: list[dict[str, object]] = []
+    soft_validation_threshold = float(best_validation_loss_total) * float(soft_validation_ratio)
+    normalized_metric_weights = normalize_low_activity_metric_weights(metric_weights)
+
+    for candidate in late_candidates:
+        low_activity_metrics = candidate.get("low_activity_metrics")
+        pairwise_review = candidate.get("pairwise_review")
+        worsened_ratio = 0.0 if not isinstance(pairwise_review, dict) else float(pairwise_review["worsened_ratio"])
+        is_eligible = bool(
+            isinstance(low_activity_metrics, dict)
+            and float(candidate["loss_total"]) <= soft_validation_threshold + 1e-9
+            and worsened_ratio <= float(max_pairwise_worsened_ratio) + 1e-9
+        )
+        if is_eligible:
+            eligible_candidates.append(candidate)
+
+    if not eligible_candidates:
+        return {
+            "enabled": False,
+            "selection_mode": "late_candidate_soft_rerank",
+            "soft_validation_ratio": round(float(soft_validation_ratio), 6),
+            "soft_validation_threshold": round(float(soft_validation_threshold), 6),
+            "eligible_candidate_count": 0,
+            "selected_candidate": None,
+            "notes": [
+                "No late candidates satisfied the near-best validation budget and pairwise cap while also carrying low-activity metrics.",
+            ],
+        }
+
+    normalization_ranges = {}
+    for field_name, _weight in normalized_metric_weights:
+        values = [
+            float(dict(candidate["low_activity_metrics"])[field_name])
+            for candidate in eligible_candidates
+        ]
+        normalization_ranges[field_name] = {
+            "min": min(values),
+            "max": max(values),
+        }
+
+    for candidate in late_candidates:
+        annotated = dict(candidate)
+        low_activity_metrics = annotated.get("low_activity_metrics")
+        if candidate not in eligible_candidates or not isinstance(low_activity_metrics, dict):
+            annotated["qualifies_for_low_activity_soft_rerank"] = False
+            annotated["low_activity_governance_score"] = None
+            annotated["low_activity_governance_breakdown"] = None
+            scored_candidates.append(annotated)
+            continue
+
+        breakdown: dict[str, dict[str, float]] = {}
+        total_score = 0.0
+        for field_name, weight in normalized_metric_weights:
+            field_value = float(low_activity_metrics[field_name])
+            field_range = normalization_ranges[field_name]
+            denominator = float(field_range["max"]) - float(field_range["min"])
+            normalized_penalty = 0.0 if abs(denominator) <= 1e-9 else (field_value - float(field_range["min"])) / denominator
+            weighted_penalty = normalized_penalty * float(weight)
+            total_score += weighted_penalty
+            breakdown[field_name] = {
+                "raw_value": round(field_value, 6),
+                "normalized_penalty": round(normalized_penalty, 6),
+                "weight": round(float(weight), 6),
+                "weighted_penalty": round(weighted_penalty, 6),
+            }
+        annotated["qualifies_for_low_activity_soft_rerank"] = True
+        annotated["low_activity_governance_score"] = round(total_score, 6)
+        annotated["low_activity_governance_breakdown"] = breakdown
+        scored_candidates.append(annotated)
+
+    eligible_scored_candidates = [
+        item for item in scored_candidates
+        if bool(item.get("qualifies_for_low_activity_soft_rerank"))
+    ]
+    eligible_scored_candidates.sort(
+        key=lambda item: (
+            float(item["low_activity_governance_score"]),
+            float(item["loss_total"]),
+            float(item["rms_ratio_deviation"]),
+            -int(item["step"]),
+        )
+    )
+    for rank, candidate in enumerate(eligible_scored_candidates, start=1):
+        candidate["low_activity_soft_rerank_rank"] = int(rank)
+    step_to_rank = {
+        int(candidate["step"]): int(candidate["low_activity_soft_rerank_rank"])
+        for candidate in eligible_scored_candidates
+    }
+    for candidate in scored_candidates:
+        if bool(candidate.get("qualifies_for_low_activity_soft_rerank")):
+            candidate["low_activity_soft_rerank_rank"] = int(step_to_rank[int(candidate["step"])])
+        else:
+            candidate["low_activity_soft_rerank_rank"] = None
+
+    selected_candidate = dict(eligible_scored_candidates[0])
+    return {
+        "enabled": True,
+        "selection_mode": "late_candidate_soft_rerank",
+        "soft_validation_ratio": round(float(soft_validation_ratio), 6),
+        "soft_validation_threshold": round(float(soft_validation_threshold), 6),
+        "eligible_candidate_count": len(eligible_scored_candidates),
+        "metric_weights": {
+            field_name: round(float(weight), 6)
+            for field_name, weight in normalized_metric_weights
+        },
+        "selected_candidate": selected_candidate,
+        "all_candidates": scored_candidates,
+        "ranked_candidates": eligible_scored_candidates,
+        "notes": [
+            "Only late candidates within the near-best validation budget and pairwise cap are eligible for low-activity soft rerank.",
+            "Lower low_activity_governance_score is better.",
+            "This is a governance recommendation only; it does not replace best_validation_checkpoint or selected_stable_late_stop.",
+        ],
+    }
+
+
+def normalize_low_activity_metric_weights(
+    metric_weights: dict[str, float] | None,
+) -> tuple[tuple[str, float], ...]:
+    weights = dict(DEFAULT_LOW_ACTIVITY_METRIC_WEIGHTS if metric_weights is None else metric_weights)
+    expected_fields = tuple(DEFAULT_LOW_ACTIVITY_METRIC_WEIGHTS.keys())
+    unknown_fields = sorted(set(weights.keys()) - set(expected_fields))
+    missing_fields = [field_name for field_name in expected_fields if field_name not in weights]
+    if unknown_fields:
+        raise ValueError(f"Unknown low-activity metric weights: {unknown_fields}")
+    if missing_fields:
+        raise ValueError(f"Missing low-activity metric weights: {missing_fields}")
+    total_weight = 0.0
+    normalized_fields: list[tuple[str, float]] = []
+    for field_name in expected_fields:
+        value = float(weights[field_name])
+        if value < 0.0:
+            raise ValueError("low-activity metric weights must be >= 0.0.")
+        total_weight += value
+        normalized_fields.append((field_name, value))
+    if total_weight <= 0.0:
+        raise ValueError("At least one low-activity metric weight must be > 0.0.")
+    return tuple(
+        (field_name, float(weight) / total_weight)
+        for field_name, weight in normalized_fields
+    )
+
+
+def build_checkpoint_selection_row(
+    checkpoint: dict[str, object],
+    low_activity_metrics_by_step: dict[int, dict[str, object]] | None = None,
+) -> dict[str, object]:
     loss_metrics = dict(checkpoint["loss_metrics"])
     rms_ratio = float(loss_metrics.get("decoded_to_target_rms_ratio", 0.0))
-    return {
+    row = {
         "step": int(checkpoint["step"]),
         "loss_total": round(float(loss_metrics["loss_total"]), 6),
         "loss_waveform": round(float(loss_metrics.get("loss_waveform", 0.0)), 6),
@@ -169,6 +517,12 @@ def build_checkpoint_selection_row(checkpoint: dict[str, object]) -> dict[str, o
         "decoded_to_target_rms_ratio": round(rms_ratio, 6),
         "rms_ratio_deviation": round(abs(rms_ratio - 1.0), 6),
     }
+    if low_activity_metrics_by_step is not None:
+        row["low_activity_metrics"] = build_low_activity_candidate_metrics(
+            low_activity_metrics_by_step=low_activity_metrics_by_step,
+            step=int(checkpoint["step"]),
+        )
+    return row
 
 
 def build_markdown(summary: dict[str, object]) -> str:
@@ -184,8 +538,78 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- best_rms_checkpoint: {json.dumps(summary['best_rms_checkpoint'], ensure_ascii=False)}",
         f"- selected_stable_late_stop: {json.dumps(summary['selected_stable_late_stop'], ensure_ascii=False)}",
         "",
-        "## Late Candidates",
     ]
+    low_activity_probe_analysis = summary.get("low_activity_probe_analysis")
+    if isinstance(low_activity_probe_analysis, dict):
+        lines.extend(
+            [
+                "## Low-Activity Governance",
+                f"- probe_path: {low_activity_probe_analysis['probe_path']}",
+                f"- audio_source: {low_activity_probe_analysis['audio_source']}",
+            ]
+        )
+        for item in low_activity_probe_analysis.get("summary_lines", []):
+            lines.append(f"- {item}")
+        lines.append("### Branch Aggregates")
+        for branch_label, aggregate in low_activity_probe_analysis.get("branch_aggregates", {}).items():
+            lines.append(
+                f"- {branch_label}: "
+                f"fragmentation={aggregate['mean_fragmentation_score']} "
+                f"active_fraction={aggregate['mean_active_fraction']} "
+                f"alignment_mae={aggregate['mean_activity_alignment_mae']} "
+                f"activity_excess={aggregate['mean_activity_excess_mean']}"
+            )
+        lines.append("### Top Windows")
+        for item in low_activity_probe_analysis.get("top_windows", []):
+            lines.append(
+                f"- record_id={item['record_id']} segment_index={item['segment_index']} "
+                f"delta_fragmentation_score={item['delta_fragmentation_score']} "
+                f"worst_branch={item['worst_branch']} best_branch={item['best_branch']} "
+                f"target_context_toggle_mean={item['target_context_toggle_mean']} "
+                f"target_boundary_jump_max={item['target_boundary_jump_max']}"
+            )
+        lines.append("")
+    low_activity_soft_rerank = summary.get("low_activity_soft_rerank")
+    if isinstance(low_activity_soft_rerank, dict):
+        lines.extend(
+            [
+                "## Low-Activity Soft Rerank",
+                f"- enabled: {low_activity_soft_rerank['enabled']}",
+                f"- selection_mode: {low_activity_soft_rerank['selection_mode']}",
+                f"- soft_validation_ratio: {low_activity_soft_rerank['soft_validation_ratio']}",
+                f"- soft_validation_threshold: {low_activity_soft_rerank['soft_validation_threshold']}",
+                f"- eligible_candidate_count: {low_activity_soft_rerank['eligible_candidate_count']}",
+            ]
+        )
+        selected_candidate = low_activity_soft_rerank.get("selected_candidate")
+        if isinstance(selected_candidate, dict):
+            lines.append(
+                "- selected_candidate: "
+                f"step={selected_candidate['step']} "
+                f"score={selected_candidate['low_activity_governance_score']} "
+                f"loss_total={selected_candidate['loss_total']} "
+                f"rms_ratio_deviation={selected_candidate['rms_ratio_deviation']}"
+            )
+        metric_weights = low_activity_soft_rerank.get("metric_weights")
+        if isinstance(metric_weights, dict):
+            lines.append(f"- metric_weights: {json.dumps(metric_weights, ensure_ascii=False)}")
+        lines.append("### Ranked Candidates")
+        for candidate in low_activity_soft_rerank.get("ranked_candidates", []):
+            lines.append(
+                f"- rank={candidate['low_activity_soft_rerank_rank']} step={candidate['step']} "
+                f"score={candidate['low_activity_governance_score']} "
+                f"loss_total={candidate['loss_total']} "
+                f"fragmentation={candidate['low_activity_metrics']['mean_fragmentation_score']} "
+                f"active_fraction={candidate['low_activity_metrics']['mean_active_fraction']} "
+                f"alignment_mae={candidate['low_activity_metrics']['mean_activity_alignment_mae']} "
+                f"activity_excess={candidate['low_activity_metrics']['mean_activity_excess_mean']}"
+            )
+        for note in low_activity_soft_rerank.get("notes", []):
+            lines.append(f"- {note}")
+        lines.append("")
+    lines.extend([
+        "## Late Candidates",
+    ])
     for candidate in summary["late_candidates"]:
         pairwise_review = candidate.get("pairwise_review")
         pairwise_text = "pairwise_review=null"
@@ -195,13 +619,30 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"worsened_ratio={pairwise_review['worsened_ratio']} "
                 f"avg_delta={pairwise_review['average_delta_loss_total']}"
             )
+        low_activity_text = ""
+        low_activity_metrics = candidate.get("low_activity_metrics")
+        if isinstance(low_activity_metrics, dict):
+            low_activity_text = (
+                " "
+                f"low_activity(fragmentation={low_activity_metrics['mean_fragmentation_score']} "
+                f"active_fraction={low_activity_metrics['mean_active_fraction']} "
+                f"alignment_mae={low_activity_metrics['mean_activity_alignment_mae']} "
+                f"activity_excess={low_activity_metrics['mean_activity_excess_mean']})"
+            )
+        soft_rerank_text = ""
+        if candidate.get("low_activity_governance_score") is not None:
+            soft_rerank_text = (
+                " "
+                f"soft_rerank(score={candidate['low_activity_governance_score']} "
+                f"rank={candidate['low_activity_soft_rerank_rank']})"
+            )
         lines.append(
             f"- step={candidate['step']} loss_total={candidate['loss_total']} "
             f"rms_ratio={candidate['decoded_to_target_rms_ratio']} "
             f"rms_ratio_deviation={candidate['rms_ratio_deviation']} "
             f"within_validation_guard={candidate['within_validation_guard']} "
             f"qualifies_as_stable_late_stop={candidate['qualifies_as_stable_late_stop']} "
-            f"{pairwise_text}"
+            f"{pairwise_text}{low_activity_text}{soft_rerank_text}"
         )
     lines.extend(["", "## Notes"])
     for note in summary["notes"]:

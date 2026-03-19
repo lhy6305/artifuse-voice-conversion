@@ -27,6 +27,7 @@ from v5vc.integrity_check import check_round1_data
 from v5vc.manifest_builder import build_round1_manifests
 from v5vc.nores_vocoder_checkpoint_review import review_offline_mvp_nores_vocoder_checkpoints
 from v5vc.nores_vocoder_checkpoint_selection import select_offline_mvp_nores_vocoder_checkpoint
+from v5vc.nores_vocoder_low_activity_sensitivity import analyze_offline_mvp_nores_vocoder_low_activity_sensitivity
 from v5vc.nores_vocoder_audio_export import export_offline_mvp_nores_vocoder_audio
 from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_downstream_contract
 from v5vc.offline_teacher_runtime import run_offline_mvp_teacher_runtime
@@ -2064,6 +2065,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.03,
         help="Maximum allowed absolute deviation of decoded_to_target_rms_ratio from 1.0 for stable late-stop selection.",
     )
+    nores_vocoder_selection_parser.add_argument(
+        "--low-activity-probe",
+        type=Path,
+        default=None,
+        help="Optional stage5_low_activity_fragmentation_probe.json used to annotate checkpoint governance with low-activity tradeoffs.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--low-activity-audio-source",
+        choices=["decoded", "decoded_pitch_matched", "audit_proxy", "listening"],
+        default="decoded",
+        help="Audio source to read from the optional low-activity probe payload.",
+    )
+    nores_vocoder_selection_parser.add_argument(
+        "--low-activity-soft-validation-ratio",
+        type=float,
+        default=1.05,
+        help="Near-best validation budget used by the optional low-activity soft rerank inside late candidates.",
+    )
     nores_vocoder_audio_export_parser = subparsers.add_parser(
         "export-offline-mvp-nores-vocoder-audio",
         help="Export aligned target and decoded audio for selected Stage5 no-residual vocoder packages.",
@@ -2152,6 +2171,28 @@ def build_parser() -> argparse.ArgumentParser:
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity during export-side waveform reconstruction for newer Stage5 checkpoints.",
+    )
+    nores_vocoder_low_activity_sensitivity_parser = subparsers.add_parser(
+        "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity",
+        help="Analyze low-activity soft-rerank sensitivity over an existing Stage5 no-residual vocoder checkpoint-selection payload.",
+    )
+    nores_vocoder_low_activity_sensitivity_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        required=True,
+        help="Existing nores_vocoder_checkpoint_selection.json payload that already contains low-activity soft rerank.",
+    )
+    nores_vocoder_low_activity_sensitivity_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for low-activity soft-rerank sensitivity outputs.",
+    )
+    nores_vocoder_low_activity_sensitivity_parser.add_argument(
+        "--weight-step",
+        type=float,
+        default=0.05,
+        help="Simplex/grid step for weight sensitivity, for example 0.1 or 0.05.",
     )
 
     checkpoint_selection_parser = subparsers.add_parser(
@@ -3122,6 +3163,9 @@ def main(argv: list[str] | None = None) -> int:
             validation_guard_ratio=args.validation_guard_ratio,
             max_pairwise_worsened_ratio=args.max_pairwise_worsened_ratio,
             max_rms_ratio_deviation=args.max_rms_ratio_deviation,
+            low_activity_probe_path=args.low_activity_probe,
+            low_activity_audio_source=args.low_activity_audio_source,
+            low_activity_soft_validation_ratio=args.low_activity_soft_validation_ratio,
         )
         return 0
     if args.command == "export-offline-mvp-nores-vocoder-audio":
@@ -3141,6 +3185,13 @@ def main(argv: list[str] | None = None) -> int:
             pitch_match_max_semitones=args.pitch_match_max_semitones,
             activity_gate_weight=args.activity_gate_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
+        )
+        return 0
+    if args.command == "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity":
+        analyze_offline_mvp_nores_vocoder_low_activity_sensitivity(
+            checkpoint_selection_path=args.checkpoint_selection,
+            output_dir=args.output_dir,
+            weight_step=args.weight_step,
         )
         return 0
     if args.command == "analyze-offline-mvp-checkpoint-selection":

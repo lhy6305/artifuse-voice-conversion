@@ -20,6 +20,7 @@ DEFAULT_CANDIDATE_ACTIVITY_THRESHOLD = 0.45
 DEFAULT_WINDOW_PADDING_SEC = 0.2
 DEFAULT_MIN_AUDIT_WINDOW_SEC = 2.4
 DEFAULT_MAX_AUDIT_WINDOW_SEC = 3.0
+DEFAULT_TARGET_CONTEXT_SEC = 0.2
 
 
 @dataclass(frozen=True)
@@ -92,6 +93,8 @@ def analyze_stage5_low_activity_fragments(
         "notes": [
             "Low-activity segments are derived from aligned_target.wav via the same compute_frame_activity_target(...) energy bridge used in Stage5 activity-gate supervision.",
             "Fragmentation score is defined as extra_bursts_inside_target_low_activity plus mean absolute frame-activity toggle inside the same segment.",
+            "activity_alignment_mae measures frame-activity deviation from target inside the low-activity segment; lower means the candidate follows target loudness more closely.",
+            "activity_excess_mean and mean_active_fraction act as low-activity residual-energy / floor-leakage proxies; lower means the candidate leaves less unintended activity inside target low-energy regions.",
             "listening uses listening_audio_path from the Stage5 bundle, while decoded uses decoded_audio_path for raw diagnostic follow-up.",
             "Exported listening clips preserve at least window_padding_sec context on both sides and expand to min_audit_window_sec when the raw suspicious segment is too short for human judgment.",
         ],
@@ -209,6 +212,13 @@ def analyze_audio_source(
             frame_length=DEFAULT_FRAME_LENGTH,
             hop_length=DEFAULT_HOP_LENGTH,
         )
+        low_activity_segments = enrich_target_context_metrics(
+            segments=low_activity_segments,
+            target_activity=target_activity,
+            sample_rate=sample_rate,
+            hop_length=DEFAULT_HOP_LENGTH,
+            context_sec=DEFAULT_TARGET_CONTEXT_SEC,
+        )
         if not low_activity_segments:
             continue
 
@@ -231,6 +241,7 @@ def analyze_audio_source(
             segment_metrics = [
                 compute_segment_metrics(
                     segment=segment,
+                    target_activity=target_activity,
                     candidate_activity=candidate_activity,
                     candidate_waveform=candidate_waveform,
                     candidate_activity_threshold=float(candidate_activity_threshold),
@@ -255,6 +266,8 @@ def analyze_audio_source(
                     "extra_bursts_sum": 0.0,
                     "activity_toggle_sum": 0.0,
                     "active_fraction_sum": 0.0,
+                    "activity_alignment_mae_sum": 0.0,
+                    "activity_excess_mean_sum": 0.0,
                     "delta_peak_sum": 0.0,
                 },
             )
@@ -264,6 +277,8 @@ def analyze_audio_source(
             branch_aggregate["extra_bursts_sum"] += float(aggregate["mean_extra_bursts"])
             branch_aggregate["activity_toggle_sum"] += float(aggregate["mean_activity_toggle"])
             branch_aggregate["active_fraction_sum"] += float(aggregate["mean_active_fraction"])
+            branch_aggregate["activity_alignment_mae_sum"] += float(aggregate["mean_activity_alignment_mae"])
+            branch_aggregate["activity_excess_mean_sum"] += float(aggregate["mean_activity_excess_mean"])
             branch_aggregate["delta_peak_sum"] += float(aggregate["mean_sample_delta_peak"])
 
         if len(branch_results) < 2:
@@ -348,8 +363,56 @@ def identify_low_activity_segments(
     return segments
 
 
+def enrich_target_context_metrics(
+    segments: list[dict[str, object]],
+    target_activity: torch.Tensor,
+    sample_rate: int,
+    hop_length: int,
+    context_sec: float,
+) -> list[dict[str, object]]:
+    if not segments:
+        return segments
+    context_frames = max(1, int(round(float(context_sec) * float(sample_rate) / float(hop_length))))
+    frame_count = int(target_activity.shape[0])
+    enriched_segments: list[dict[str, object]] = []
+    for segment in segments:
+        start_frame_index = int(segment["start_frame_index"])
+        end_frame_index = int(segment["end_frame_index"])
+        pre_start = max(0, start_frame_index - context_frames)
+        post_end = min(frame_count, end_frame_index + context_frames)
+        pre_slice = target_activity[pre_start:start_frame_index]
+        core_slice = target_activity[start_frame_index:end_frame_index]
+        post_slice = target_activity[end_frame_index:post_end]
+        context_slice = target_activity[pre_start:post_end]
+        boundary_jump_pre = 0.0
+        boundary_jump_post = 0.0
+        if pre_slice.numel() > 0 and core_slice.numel() > 0:
+            boundary_jump_pre = float(torch.abs(core_slice[0] - pre_slice[-1]).item())
+        if post_slice.numel() > 0 and core_slice.numel() > 0:
+            boundary_jump_post = float(torch.abs(post_slice[0] - core_slice[-1]).item())
+        context_toggle_mean = 0.0
+        if context_slice.numel() > 1:
+            context_toggle_mean = float(torch.abs(context_slice[1:] - context_slice[:-1]).mean().item())
+        context_peak = float(context_slice.max().item()) if context_slice.numel() > 0 else 0.0
+        context_mean = float(context_slice.mean().item()) if context_slice.numel() > 0 else 0.0
+        enriched_segments.append(
+            {
+                **segment,
+                "target_context_sec": float(context_sec),
+                "target_context_activity_mean": round(context_mean, 6),
+                "target_context_activity_peak": round(context_peak, 6),
+                "target_context_toggle_mean": round(context_toggle_mean, 6),
+                "target_boundary_jump_pre": round(boundary_jump_pre, 6),
+                "target_boundary_jump_post": round(boundary_jump_post, 6),
+                "target_boundary_jump_max": round(max(boundary_jump_pre, boundary_jump_post), 6),
+            }
+        )
+    return enriched_segments
+
+
 def compute_segment_metrics(
     segment: dict[str, object],
+    target_activity: torch.Tensor,
     candidate_activity: torch.Tensor,
     candidate_waveform: torch.Tensor,
     candidate_activity_threshold: float,
@@ -359,6 +422,7 @@ def compute_segment_metrics(
     end_frame_index = int(segment["end_frame_index"])
     start_sample = int(segment["start_sample"])
     end_sample = int(segment["end_sample"])
+    target_activity_slice = target_activity[start_frame_index:end_frame_index]
     activity_slice = candidate_activity[start_frame_index:end_frame_index]
     waveform_slice = candidate_waveform[start_sample:end_sample]
     active_mask = activity_slice >= float(candidate_activity_threshold)
@@ -373,6 +437,12 @@ def compute_segment_metrics(
         delta = torch.abs(waveform_slice[1:] - waveform_slice[:-1])
         sample_delta_abs_mean = float(delta.mean().item())
         sample_delta_peak = float(delta.max().item())
+    activity_alignment_mae = 0.0
+    activity_excess_mean = 0.0
+    if activity_slice.numel() > 0 and target_activity_slice.numel() > 0:
+        diff = activity_slice - target_activity_slice
+        activity_alignment_mae = float(torch.abs(diff).mean().item())
+        activity_excess_mean = float(torch.clamp(diff, min=0.0).mean().item())
     fragmentation_score = float(extra_bursts) + float(activity_toggle)
     return {
         "segment_index": int(segment["segment_index"]),
@@ -384,12 +454,20 @@ def compute_segment_metrics(
         "end_sec": float(segment["end_sec"]),
         "duration_sec": float(segment["duration_sec"]),
         "target_activity_mean": float(segment["target_activity_mean"]),
+        "target_context_activity_mean": float(segment.get("target_context_activity_mean", 0.0)),
+        "target_context_activity_peak": float(segment.get("target_context_activity_peak", 0.0)),
+        "target_context_toggle_mean": float(segment.get("target_context_toggle_mean", 0.0)),
+        "target_boundary_jump_pre": float(segment.get("target_boundary_jump_pre", 0.0)),
+        "target_boundary_jump_post": float(segment.get("target_boundary_jump_post", 0.0)),
+        "target_boundary_jump_max": float(segment.get("target_boundary_jump_max", 0.0)),
         "burst_count": int(burst_count),
         "extra_bursts": int(extra_bursts),
         "activity_toggle_mean": round(activity_toggle, 6),
         "activity_mean": round(float(activity_slice.mean().item()) if activity_slice.numel() > 0 else 0.0, 6),
         "activity_peak": round(float(activity_slice.max().item()) if activity_slice.numel() > 0 else 0.0, 6),
         "active_fraction": round(float(active_mask.to(torch.float32).mean().item()) if active_mask.numel() > 0 else 0.0, 6),
+        "activity_alignment_mae": round(activity_alignment_mae, 6),
+        "activity_excess_mean": round(activity_excess_mean, 6),
         "sample_delta_abs_mean": round(sample_delta_abs_mean, 6),
         "sample_delta_peak": round(sample_delta_peak, 6),
         "fragmentation_score": round(fragmentation_score, 6),
@@ -418,6 +496,8 @@ def summarize_branch_segment_metrics(segment_metrics: list[dict[str, object]]) -
             "mean_extra_bursts": 0.0,
             "mean_activity_toggle": 0.0,
             "mean_active_fraction": 0.0,
+            "mean_activity_alignment_mae": 0.0,
+            "mean_activity_excess_mean": 0.0,
             "mean_sample_delta_peak": 0.0,
         }
     segment_count = float(len(segment_metrics))
@@ -439,6 +519,14 @@ def summarize_branch_segment_metrics(segment_metrics: list[dict[str, object]]) -
             sum(float(item["active_fraction"]) for item in segment_metrics) / segment_count,
             6,
         ),
+        "mean_activity_alignment_mae": round(
+            sum(float(item["activity_alignment_mae"]) for item in segment_metrics) / segment_count,
+            6,
+        ),
+        "mean_activity_excess_mean": round(
+            sum(float(item["activity_excess_mean"]) for item in segment_metrics) / segment_count,
+            6,
+        ),
         "mean_sample_delta_peak": round(
             sum(float(item["sample_delta_peak"]) for item in segment_metrics) / segment_count,
             6,
@@ -457,6 +545,8 @@ def summarize_branch_aggregates(branch_aggregates: dict[str, dict[str, float]]) 
             "mean_extra_bursts": round(float(aggregate["extra_bursts_sum"]) / record_count, 6),
             "mean_activity_toggle": round(float(aggregate["activity_toggle_sum"]) / record_count, 6),
             "mean_active_fraction": round(float(aggregate["active_fraction_sum"]) / record_count, 6),
+            "mean_activity_alignment_mae": round(float(aggregate["activity_alignment_mae_sum"]) / record_count, 6),
+            "mean_activity_excess_mean": round(float(aggregate["activity_excess_mean_sum"]) / record_count, 6),
             "mean_sample_delta_peak": round(float(aggregate["delta_peak_sum"]) / record_count, 6),
         }
     return summary
@@ -854,6 +944,8 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"mean_extra_bursts={aggregate['mean_extra_bursts']} "
                 f"mean_activity_toggle={aggregate['mean_activity_toggle']} "
                 f"mean_active_fraction={aggregate['mean_active_fraction']} "
+                f"mean_activity_alignment_mae={aggregate['mean_activity_alignment_mae']} "
+                f"mean_activity_excess_mean={aggregate['mean_activity_excess_mean']} "
                 f"mean_sample_delta_peak={aggregate['mean_sample_delta_peak']}"
             )
         lines.append("")
@@ -867,6 +959,8 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"clip_start_sec={window.get('clip_start_sec', window['start_sec'])} "
                 f"clip_end_sec={window.get('clip_end_sec', window['end_sec'])} "
                 f"clip_duration_sec={window.get('clip_duration_sec', window['duration_sec'])} "
+                f"target_context_toggle_mean={window['worst_branch'].get('target_context_toggle_mean', 0.0)} "
+                f"target_boundary_jump_max={window['worst_branch'].get('target_boundary_jump_max', 0.0)} "
                 f"delta_fragmentation_score={window['delta_fragmentation_score']} "
                 f"worst_branch={window['worst_branch']['branch_label']} "
                 f"best_branch={window['best_branch']['branch_label']} "
