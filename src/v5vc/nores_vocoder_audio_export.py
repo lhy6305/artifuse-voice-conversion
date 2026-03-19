@@ -30,11 +30,18 @@ def export_offline_mvp_nores_vocoder_audio(
     sample_count: int,
     target_record_ids: list[str] | None,
     audit_carrier_frequency: float,
+    listening_audio_source: str,
+    pitch_match_reference: str,
+    pitch_match_fmin_hz: float,
+    pitch_match_fmax_hz: float,
+    pitch_match_max_semitones: float,
     activity_gate_weight: float,
     use_predicted_activity_gate: bool,
 ) -> None:
     output_dir = output_dir.resolve()
     reset_managed_directory(output_dir)
+    resolved_listening_audio_source = normalize_listening_audio_source(listening_audio_source)
+    resolved_pitch_match_reference = normalize_pitch_match_reference(pitch_match_reference)
 
     resolved_checkpoint_path, selection_summary = resolve_checkpoint_path_from_inputs(
         checkpoint_path=checkpoint_path,
@@ -117,10 +124,33 @@ def export_offline_mvp_nores_vocoder_audio(
             stem = sanitize_filename(str(entry["record_id"]))
             aligned_target_path = output_dir / f"{stem}__aligned_target.wav"
             decoded_path = output_dir / f"{stem}__decoded.wav"
+            decoded_pitch_matched_path = output_dir / f"{stem}__decoded_pitch_matched.wav"
             audit_proxy_path = output_dir / f"{stem}__audit_proxy.wav"
             write_waveform_int16(aligned_target_path, aligned_target, sample_rate=int(runtime["sample_rate"]))
             write_waveform_int16(decoded_path, decoded_waveform, sample_rate=int(runtime["sample_rate"]))
+            pitch_match_metrics = None
+            decoded_pitch_matched = None
+            if resolved_pitch_match_reference == "aligned_target":
+                decoded_pitch_matched, pitch_match_metrics = pitch_match_decoded_waveform_to_reference(
+                    decoded_waveform=decoded_waveform,
+                    reference_waveform=aligned_target,
+                    sample_rate=int(runtime["sample_rate"]),
+                    fmin_hz=float(pitch_match_fmin_hz),
+                    fmax_hz=float(pitch_match_fmax_hz),
+                    max_semitones=float(pitch_match_max_semitones),
+                )
+                write_waveform_int16(
+                    decoded_pitch_matched_path,
+                    decoded_pitch_matched,
+                    sample_rate=int(runtime["sample_rate"]),
+                )
             write_waveform_int16(audit_proxy_path, audit_proxy, sample_rate=int(runtime["sample_rate"]))
+            listening_audio_path = resolve_listening_audio_path(
+                listening_audio_source=resolved_listening_audio_source,
+                decoded_path=decoded_path,
+                decoded_pitch_matched_path=decoded_pitch_matched_path if pitch_match_metrics is not None else None,
+                audit_proxy_path=audit_proxy_path,
+            )
             exported_records.append(
                 {
                     "record_id": str(entry["record_id"]),
@@ -129,10 +159,16 @@ def export_offline_mvp_nores_vocoder_audio(
                     "sample_rate": int(runtime["sample_rate"]),
                     "aligned_target_audio_path": aligned_target_path.as_posix(),
                     "decoded_audio_path": decoded_path.as_posix(),
+                    "decoded_pitch_matched_audio_path": None
+                    if pitch_match_metrics is None
+                    else decoded_pitch_matched_path.as_posix(),
                     "audit_proxy_audio_path": audit_proxy_path.as_posix(),
+                    "listening_audio_source": resolved_listening_audio_source,
+                    "listening_audio_path": listening_audio_path.as_posix(),
                     "audio_path": str(payload.get("target_audio_path")),
                     "input_audio_path": aligned_target_path.as_posix(),
-                    "proxy_audio_path": audit_proxy_path.as_posix(),
+                    "proxy_audio_path": listening_audio_path.as_posix(),
+                    "pitch_match_metrics": pitch_match_metrics,
                     "loss_metrics": loss_metrics,
                 }
             )
@@ -144,6 +180,13 @@ def export_offline_mvp_nores_vocoder_audio(
             "mode": "low_frequency_proxy_from_decoded_waveform",
             "carrier_frequency_hz": float(audit_carrier_frequency),
             "silence_gate_reference": "aligned_target",
+        },
+        "listening_audio_source": resolved_listening_audio_source,
+        "pitch_match": {
+            "reference": resolved_pitch_match_reference,
+            "fmin_hz": float(pitch_match_fmin_hz),
+            "fmax_hz": float(pitch_match_fmax_hz),
+            "max_semitones": float(pitch_match_max_semitones),
         },
         "waveform_decode": {
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
@@ -160,8 +203,9 @@ def export_offline_mvp_nores_vocoder_audio(
         "notes": [
             "aligned_target.wav is the frame-aligned target waveform used by the current Stage5 bootstrap objective.",
             "decoded.wav is reconstructed from the checkpoint's waveform_frames head via overlap-add with the current export-side gate settings.",
+            "decoded_pitch_matched.wav is an optional listening-only variant that globally pitch-shifts decoded.wav toward the aligned target's median voiced F0 while preserving duration.",
             "audit_proxy.wav is a low-frequency audit render derived from decoded.wav and gated by aligned_target activity so current GUI listening is less fatiguing and target silence remains silent.",
-            "proxy_audio_path in the GUI-compatible manifest points to audit_proxy.wav by default; decoded.wav is retained for raw technical inspection.",
+            f"proxy_audio_path in the GUI-compatible manifest points to {resolved_listening_audio_source}.wav for primary listening; the non-primary audio is retained for technical inspection.",
             "This export is for human listening and checkpoint comparison; it is still not the final multi-resolution or adversarial vocoder route from the design doc.",
         ],
     }
@@ -228,6 +272,35 @@ def normalize_selection_target(selection_target: str) -> str:
     if normalized not in mapping:
         raise ValueError(f"Unsupported selection_target: {selection_target}")
     return mapping[normalized]
+
+
+def normalize_listening_audio_source(listening_audio_source: str) -> str:
+    normalized = str(listening_audio_source).strip().lower()
+    if normalized not in {"decoded", "decoded_pitch_matched", "audit_proxy"}:
+        raise ValueError(f"Unsupported listening_audio_source: {listening_audio_source}")
+    return normalized
+
+
+def normalize_pitch_match_reference(pitch_match_reference: str) -> str:
+    normalized = str(pitch_match_reference).strip().lower()
+    if normalized not in {"none", "aligned_target"}:
+        raise ValueError(f"Unsupported pitch_match_reference: {pitch_match_reference}")
+    return normalized
+
+
+def resolve_listening_audio_path(
+    listening_audio_source: str,
+    decoded_path: Path,
+    decoded_pitch_matched_path: Path | None,
+    audit_proxy_path: Path,
+) -> Path:
+    if listening_audio_source == "decoded":
+        return decoded_path
+    if listening_audio_source == "decoded_pitch_matched":
+        if decoded_pitch_matched_path is None:
+            raise ValueError("decoded_pitch_matched listening source requires pitch-matched export output.")
+        return decoded_pitch_matched_path
+    return audit_proxy_path
 
 
 def resolve_package_entries(
@@ -417,6 +490,110 @@ def compute_zero_cross_ratio(waveform: torch.Tensor) -> float:
     return float(((previous * current) < 0.0).to(torch.float32).mean().item())
 
 
+def pitch_match_decoded_waveform_to_reference(
+    decoded_waveform: torch.Tensor,
+    reference_waveform: torch.Tensor,
+    sample_rate: int,
+    fmin_hz: float,
+    fmax_hz: float,
+    max_semitones: float,
+) -> tuple[torch.Tensor, dict[str, object] | None]:
+    decoded_median_f0_hz = estimate_median_voiced_f0_hz(
+        waveform=decoded_waveform,
+        sample_rate=sample_rate,
+        fmin_hz=fmin_hz,
+        fmax_hz=fmax_hz,
+    )
+    reference_median_f0_hz = estimate_median_voiced_f0_hz(
+        waveform=reference_waveform,
+        sample_rate=sample_rate,
+        fmin_hz=fmin_hz,
+        fmax_hz=fmax_hz,
+    )
+    metrics = {
+        "reference": "aligned_target",
+        "decoded_median_f0_hz": None if decoded_median_f0_hz is None else round(float(decoded_median_f0_hz), 6),
+        "reference_median_f0_hz": None if reference_median_f0_hz is None else round(float(reference_median_f0_hz), 6),
+        "applied_semitones": 0.0,
+        "applied_ratio": 1.0,
+        "status": "skipped_missing_f0",
+    }
+    if decoded_median_f0_hz is None or reference_median_f0_hz is None:
+        return decoded_waveform.clone(), metrics
+    raw_semitones = 12.0 * math.log2(float(reference_median_f0_hz) / float(decoded_median_f0_hz))
+    applied_semitones = max(-float(max_semitones), min(float(max_semitones), raw_semitones))
+    if abs(applied_semitones) < 0.05:
+        metrics["status"] = "skipped_small_shift"
+        return decoded_waveform.clone(), metrics
+    shifted = apply_global_pitch_shift(
+        waveform=decoded_waveform,
+        sample_rate=sample_rate,
+        semitones=applied_semitones,
+    )
+    metrics["applied_semitones"] = round(float(applied_semitones), 6)
+    metrics["applied_ratio"] = round(float(2.0 ** (applied_semitones / 12.0)), 6)
+    metrics["status"] = "applied"
+    return shifted, metrics
+
+
+def estimate_median_voiced_f0_hz(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    fmin_hz: float,
+    fmax_hz: float,
+) -> float | None:
+    if waveform.numel() <= 0:
+        return None
+    try:
+        import librosa
+        import numpy as np
+    except ImportError as exc:
+        raise RuntimeError("librosa is required for pitch-matched audio export.") from exc
+    samples = waveform.detach().to(torch.float32).cpu().numpy()
+    f0_hz, _voiced_flag, _voiced_prob = librosa.pyin(
+        samples,
+        fmin=float(fmin_hz),
+        fmax=float(fmax_hz),
+        sr=int(sample_rate),
+        frame_length=2048,
+        hop_length=256,
+    )
+    voiced_f0_hz = f0_hz[np.isfinite(f0_hz)]
+    if voiced_f0_hz.size <= 0:
+        return None
+    return float(np.median(voiced_f0_hz))
+
+
+def apply_global_pitch_shift(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    semitones: float,
+) -> torch.Tensor:
+    if waveform.numel() <= 0:
+        return waveform.clone()
+    try:
+        import librosa
+    except ImportError as exc:
+        raise RuntimeError("librosa is required for pitch-matched audio export.") from exc
+    samples = waveform.detach().to(torch.float32).cpu().numpy()
+    shifted = librosa.effects.pitch_shift(
+        samples,
+        sr=int(sample_rate),
+        n_steps=float(semitones),
+    )
+    shifted_tensor = torch.from_numpy(shifted).to(torch.float32)
+    if int(shifted_tensor.shape[0]) != int(waveform.shape[0]):
+        shifted_tensor = slice_or_pad_waveform(
+            shifted_tensor,
+            start=0,
+            end=int(waveform.shape[0]),
+        )
+    peak = float(shifted_tensor.abs().max().item()) if shifted_tensor.numel() > 0 else 0.0
+    if peak > 0.999:
+        shifted_tensor = shifted_tensor * float(0.999 / peak)
+    return shifted_tensor.clamp(-1.0, 1.0)
+
+
 def infer_branch_label(
     checkpoint_path: Path,
     selection_summary: dict[str, object] | None,
@@ -438,7 +615,13 @@ def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, ob
                 "audio_path": record["audio_path"],
                 "sample_rate": record["sample_rate"],
                 "input_audio_path": record["input_audio_path"],
+                "decoded_audio_path": record.get("decoded_audio_path"),
+                "decoded_pitch_matched_audio_path": record.get("decoded_pitch_matched_audio_path"),
+                "audit_proxy_audio_path": record.get("audit_proxy_audio_path"),
+                "listening_audio_source": record.get("listening_audio_source"),
+                "listening_audio_path": record.get("listening_audio_path"),
                 "proxy_audio_path": record["proxy_audio_path"],
+                "pitch_match_metrics": record.get("pitch_match_metrics"),
                 "loss_metrics": record["loss_metrics"],
             }
         )
@@ -451,6 +634,8 @@ def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, ob
         "selection_target": summary["selection_target"],
         "selected_checkpoint_summary": summary["selected_checkpoint_summary"],
         "audit_render": summary.get("audit_render"),
+        "listening_audio_source": summary.get("listening_audio_source"),
+        "pitch_match": summary.get("pitch_match"),
         "waveform_decode": summary.get("waveform_decode"),
         "dataset_index_path": summary["dataset_index_path"],
         "split_name": summary["split_name"],
@@ -470,6 +655,8 @@ def build_proxy_audio_export_markdown(summary: dict[str, object]) -> str:
         f"- checkpoint_selection_path: {summary['checkpoint_selection_path']}",
         f"- selection_target: {summary['selection_target']}",
         f"- audit_render: {json.dumps(summary.get('audit_render'), ensure_ascii=False)}",
+        f"- listening_audio_source: {summary.get('listening_audio_source')}",
+        f"- pitch_match: {json.dumps(summary.get('pitch_match'), ensure_ascii=False)}",
         f"- waveform_decode: {json.dumps(summary.get('waveform_decode'), ensure_ascii=False)}",
         f"- sample_count: {summary['sample_count']}",
         "",
@@ -479,6 +666,8 @@ def build_proxy_audio_export_markdown(summary: dict[str, object]) -> str:
         lines.append(
             f"- record_id={record['record_id']} "
             f"input_audio_path={record['input_audio_path']} "
+            f"listening_audio_path={record.get('listening_audio_path')} "
+            f"decoded_pitch_matched_audio_path={record.get('decoded_pitch_matched_audio_path')} "
             f"proxy_audio_path={record['proxy_audio_path']}"
         )
     lines.extend(["", "## Notes"])
@@ -497,6 +686,8 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- selection_target: {summary['selection_target']}",
         f"- selected_checkpoint_summary: {json.dumps(summary['selected_checkpoint_summary'], ensure_ascii=False)}",
         f"- audit_render: {json.dumps(summary.get('audit_render'), ensure_ascii=False)}",
+        f"- listening_audio_source: {summary.get('listening_audio_source')}",
+        f"- pitch_match: {json.dumps(summary.get('pitch_match'), ensure_ascii=False)}",
         f"- waveform_decode: {json.dumps(summary.get('waveform_decode'), ensure_ascii=False)}",
         f"- dataset_index_path: {summary['dataset_index_path']}",
         f"- split_name: {summary['split_name']}",
@@ -510,6 +701,7 @@ def build_markdown(summary: dict[str, object]) -> str:
             f"loss_total={record['loss_metrics']['loss_total']} "
             f"aligned_target_audio_path={record['aligned_target_audio_path']} "
             f"decoded_audio_path={record['decoded_audio_path']} "
+            f"decoded_pitch_matched_audio_path={record.get('decoded_pitch_matched_audio_path')} "
             f"audit_proxy_audio_path={record.get('audit_proxy_audio_path')}"
         )
     lines.extend(["", "## Notes"])

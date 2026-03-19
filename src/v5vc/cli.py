@@ -2040,6 +2040,34 @@ def build_parser() -> argparse.ArgumentParser:
         help="Carrier frequency in Hz for the low-frequency audit proxy written for GUI listening.",
     )
     nores_vocoder_audio_export_parser.add_argument(
+        "--listening-audio-source",
+        default="decoded",
+        help="Primary listening source written into the GUI-compatible manifest: decoded, decoded_pitch_matched, or audit_proxy.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--pitch-match-reference",
+        default="none",
+        help="Optional pitch-matching reference for decoded listening audio: none or aligned_target.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--pitch-match-fmin-hz",
+        type=float,
+        default=65.0,
+        help="Lower voiced F0 bound in Hz used by pitch-matching analysis.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--pitch-match-fmax-hz",
+        type=float,
+        default=440.0,
+        help="Upper voiced F0 bound in Hz used by pitch-matching analysis.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--pitch-match-max-semitones",
+        type=float,
+        default=8.0,
+        help="Maximum absolute semitone shift allowed during decoded pitch matching.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
         "--activity-gate-weight",
         type=float,
         default=0.0,
@@ -3017,6 +3045,11 @@ def main(argv: list[str] | None = None) -> int:
             sample_count=args.sample_count,
             target_record_ids=args.target_record_ids,
             audit_carrier_frequency=args.audit_carrier_frequency,
+            listening_audio_source=args.listening_audio_source,
+            pitch_match_reference=args.pitch_match_reference,
+            pitch_match_fmin_hz=args.pitch_match_fmin_hz,
+            pitch_match_fmax_hz=args.pitch_match_fmax_hz,
+            pitch_match_max_semitones=args.pitch_match_max_semitones,
             activity_gate_weight=args.activity_gate_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
         )

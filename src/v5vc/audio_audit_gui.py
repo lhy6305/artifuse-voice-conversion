@@ -633,6 +633,11 @@ def build_candidate_map(branch_label: str, record_payload: dict[str, Any]) -> di
             f"{branch_label}:teacher_proxy": record_payload.get("teacher_proxy_audio_path"),
             f"{branch_label}:student_proxy": record_payload.get("student_proxy_audio_path"),
         }
+    primary_listening_path = select_primary_listening_path(record_payload)
+    if primary_listening_path is not None:
+        return {
+            branch_label: primary_listening_path,
+        }
     if "decoded_audio_path" in record_payload:
         return {
             branch_label: record_payload.get("decoded_audio_path"),
@@ -640,6 +645,26 @@ def build_candidate_map(branch_label: str, record_payload: dict[str, Any]) -> di
     return {
         branch_label: record_payload.get("proxy_audio_path"),
     }
+
+
+def select_primary_listening_path(record_payload: dict[str, Any]) -> str | None:
+    listening_audio_path = record_payload.get("listening_audio_path")
+    if isinstance(listening_audio_path, str) and listening_audio_path.strip():
+        return listening_audio_path
+    listening_audio_source = str(record_payload.get("listening_audio_source", "")).strip().lower()
+    if listening_audio_source == "decoded":
+        decoded_audio_path = record_payload.get("decoded_audio_path")
+        if isinstance(decoded_audio_path, str) and decoded_audio_path.strip():
+            return decoded_audio_path
+    if listening_audio_source == "decoded_pitch_matched":
+        decoded_pitch_matched_audio_path = record_payload.get("decoded_pitch_matched_audio_path")
+        if isinstance(decoded_pitch_matched_audio_path, str) and decoded_pitch_matched_audio_path.strip():
+            return decoded_pitch_matched_audio_path
+    if listening_audio_source == "audit_proxy":
+        audit_proxy_audio_path = record_payload.get("audit_proxy_audio_path")
+        if isinstance(audit_proxy_audio_path, str) and audit_proxy_audio_path.strip():
+            return audit_proxy_audio_path
+    return None
 
 
 def build_review_summary(

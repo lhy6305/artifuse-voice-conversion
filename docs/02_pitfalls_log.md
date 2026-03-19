@@ -6407,3 +6407,202 @@
     “治理结果暂时为 null”
     误当成
     “不能继续推进”
+### 252. 当用户主观觉得“新点更柔和、波动更少”时，不能直接把它等同于负面过平滑；应先区分“目标对齐起伏被抹掉了”还是“旧路线里不受控的噪声式抖动被压下去了”
+- 现象:
+  - 本轮用户对
+    `activitygate60 vs 72`
+    的主观反馈是:
+    - 基本打平
+    - `72`
+      略柔和
+    - 两者似乎都比
+      旧第三条候选
+      更平
+  - 但对同批样本的
+    `audit_proxy`
+    aggregate 复核显示:
+    - `60 / 72`
+      的
+      `audit_env_corr`
+      和
+      `audit_delta_corr`
+      都高于旧
+      `step48`
+- 风险:
+  - 如果把
+    “听起来更柔和”
+    直接翻译成
+    “过平滑、一定更差”，
+    很容易把
+    有益的稳定化
+    误判成回退
+  - 反过来，
+    如果只看
+    更高的相关性，
+    也可能忽略
+    起伏幅度
+    是否被收得过头
+- 处理要求:
+  - 以后遇到
+    “更柔和 / 更平”
+    的听感反馈，
+    默认同时核对:
+    - envelope correlation
+    - delta correlation
+    - dynamic std ratio
+    - peak-to-peak ratio
+  - 报告里必须分开写清:
+    - 对齐程度
+    - 起伏幅度
+  - 不再把
+    “更柔和”
+    自动写成
+    负面结论
+### 253. 当当前导出链同时提供 `decoded.wav` 与 `audit_proxy.wav` 时，不能再让 `audit_proxy.wav` 默认主导人工听审；否则会把“辅助诊断音频”误当成“最接近成品的可听结果”
+- 现象:
+  - `audit_proxy.wav`
+    的长处是:
+    - 动态/静音问题更容易暴露
+  - 但它本质上
+    不是人耳日常处理的
+    正常说话音频
+  - 如果继续默认主听它，
+    用户很容易:
+    - 抓不住真正成品听感重点
+    - 或被异常听感本身带偏
+- 风险:
+  - 容易把:
+    - 辅助诊断结果
+    当成
+    主听感结论
+  - 也容易让
+    “proxy 更平 / 更刺激 / 更奇怪”
+    这类特征
+    误伤对真实输出的判断
+- 处理要求:
+  - 以后只要
+    Stage5 bundle
+    同时含有:
+    - `decoded.wav`
+    - `audit_proxy.wav`
+  - 默认主听入口
+    应切到:
+    - `decoded.wav`
+  - `audit_proxy.wav`
+    仅保留为:
+    - 动态/静音/边界
+      诊断工具
+  - 报告里必须明确写清:
+    - 当前主听源
+    - 当前诊断源
+### 254. 当 exporter 已把“主听音频是谁”写进 manifest 后，GUI consumer 不能继续保留“看到 `decoded_audio_path` 就固定播 decoded”的硬编码；否则 `listening_audio_source` 会沦为假契约
+- 现象:
+  - 本轮
+    `export-offline-mvp-nores-vocoder-audio`
+    已新增:
+    - `listening_audio_source`
+    - `listening_audio_path`
+  - 但 GUI
+    的候选选择逻辑
+    仍是:
+    - 只要记录里有
+      `decoded_audio_path`
+    - 就直接返回
+      `decoded`
+- 风险:
+  - 会导致:
+    - `--listening-audio-source audit_proxy`
+      在 bundle
+      和文档里
+      看起来已生效
+    - 但 GUI
+      实际播放的
+      仍可能是
+      `decoded.wav`
+  - 这类问题最危险的地方
+    不在于报错，
+    而在于:
+    - 一切都“看起来正常”
+    - 只是人工听审
+      基于错误音频
+      做结论
+- 处理要求:
+  - 只要 producer
+    新增了
+    主听源字段，
+    consumer
+    必须同步优先读取:
+    - `listening_audio_path`
+  - 若要兼容旧 bundle，
+    只能把:
+    - `decoded_audio_path`
+    - `audit_proxy_audio_path`
+    - `proxy_audio_path`
+    作为回退
+  - 以后凡是
+    “导出清单驱动 GUI”
+    的链路改动，
+    都至少补一次:
+    - 函数级路径验证
+    - 一次 GUI smoke
+### 255. 当当前 `decoded.wav` 的主观音高明显偏高到足以引起心理不适时，不能机械坚持“既然它最接近成品就必须直接听 raw decoded”；应先为人工听评提供 listening-only 的 pitch-normalized 版本
+- 现象:
+  - 本轮 Stage5
+    在切回
+    `decoded.wav`
+    主听后，
+    用户明确反馈:
+    - 音调太高
+    - 已导致听评取消
+  - 同批
+    `activitygate72`
+    validation 记录上，
+    `decoded`
+    的中位 voiced F0
+    近似锁在
+    `275.46 Hz`
+  - 相对
+    `aligned_target`
+    的目标口径，
+    aggregate
+    ratio
+    中位数约为
+    `0.896792`
+    即约
+    `-1.9`
+    semitones
+- 风险:
+  - 若继续强推
+    raw `decoded`
+    进人工听评，
+    用户给出的结论
+    会被:
+    - 生理/心理不适
+    - 绝对音高偏差
+    直接污染
+  - 但若反过来
+    把 pitch-normalized
+    听评结果
+    当成
+    “模型原始输出已经修好”
+    也会误导
+- 处理要求:
+  - 当 raw `decoded`
+    因音高问题
+    已不适合继续主听时，
+    应补一条
+    listening-only
+    分支，
+    例如:
+    - `decoded_pitch_matched.wav`
+  - 该分支应:
+    - 显式记录参考源
+    - 显式记录 shift ratio /
+      semitone
+    - 保持时长不变
+  - 报告里必须同时写清:
+    - 它适用于什么判断
+    - 它不适用于什么判断
+  - raw `decoded.wav`
+    仍需保留为:
+    - 技术排查入口

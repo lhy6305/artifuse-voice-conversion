@@ -10748,3 +10748,486 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/202_stage5_activitygate_checkpoint_governance_and_audio_audit_kickoff_report.md`
   - 新 family 的治理结果、`60 vs 72` 听审契约与当前取舍说明
+
+## 2026-03-18 Stage5 `activitygate60 vs 72` human audit 与 smoothing hypothesis 更新
+
+### 当前进度补充
+651. 已完成: 记录本轮用户人工听审反馈，
+   当前
+   `step60`
+   与
+   `step72`
+   在各属性上
+   主观几乎打平
+652. 已完成: 记录新的主观印象:
+   - `step72`
+     似乎比
+     `step60`
+     更柔和一点
+653. 已完成: 记录新的风险假设:
+   - 两者在连续多音节内
+     的波动感
+     可能被平滑化
+654. 已完成: 用同批
+   `6`
+   条 validation 样本，
+   对
+   `step60 / step72`
+   的
+   `audit_proxy.wav`
+   补做
+   modulation 侧 aggregate
+   复核
+655. 已完成: 确认
+   `step72`
+   相比
+   `step60`
+   的确更柔和一些，
+   体现在:
+   - `audit_dynamic_std_ratio`
+     更低
+   - `audit_delta_abs_ratio`
+     更低
+   - `audit_peak_to_peak_ratio`
+     更低
+656. 已完成: 同时确认
+   当前没有证据显示
+   新 route
+   比旧
+   `step48`
+   proxy
+   更“平到发死”；
+   相反，
+   从 target-aligned
+   envelope 指标看，
+   `60 / 72`
+   仍整体更强
+657. 已完成: 新增正式报告
+   - `docs/203_stage5_activitygate60_vs_72_human_audit_and_smoothing_hypothesis_report.md`
+
+### 当前阶段结论补充
+- 当前这轮听审
+  不支持:
+  - 把默认点
+    从 `72`
+    改成
+    `60`
+- 更准确的口径是:
+  - `72`
+    仍是当前主点
+  - `60`
+    仍保留为
+    loudness-balanced
+    对照点
+  - `72`
+    的“更柔和”
+    已被量化支持，
+    但暂未显示为
+    明确负面退化
+
+先说人话:
+- 你听到的
+  “72 更柔和”
+  不是幻觉，
+  数字上也能看到。
+- 但现在看，
+  它更像是
+  把不太受控的抖动
+  收掉了一点，
+  还没到
+  “把该有的波动
+   也一起抹没了”
+  的程度。
+
+### 更新后的下一阶段任务
+1. 暂不因本轮打平听审
+   改写
+   `step72`
+   的主点身份
+2. 后续若继续治理
+   activity-gate family，
+   应补:
+   - modulation /
+     smoothing
+     侧监控口径
+3. 若继续做人工听审，
+   更适合扩大样本，
+   不再只盯
+   当前这两点
+   做反复重复比较
+
+### 文档补充
+- `docs/203_stage5_activitygate60_vs_72_human_audit_and_smoothing_hypothesis_report.md`
+  - 本轮人耳结论、modulation 复核与当前默认点判断
+
+## 2026-03-18 Stage5 decoded primary listening contract 更新
+
+### 当前进度补充
+658. 已完成: 接收并确认用户提醒，
+   当前继续主听
+   `audit_proxy.wav`
+   不利于抓住
+   更接近成品的听感问题
+659. 已完成: 在
+   `src/v5vc/cli.py`
+   为
+   `export-offline-mvp-nores-vocoder-audio`
+   新增:
+   - `--listening-audio-source`
+   并将默认值切到:
+   - `decoded`
+660. 已完成: 在
+   `src/v5vc/nores_vocoder_audio_export.py`
+   把 GUI-compatible manifest
+   中的主试听路径
+   改成可配置，
+   当前默认指向:
+   - `decoded.wav`
+661. 已完成: 重导当前主线的
+   `activitygate60 / 72`
+   validation bundle，
+   现在二者都明确记录:
+   - `listening_audio_source = decoded`
+662. 已完成: 用新口径重做
+   GUI smoke:
+   - `reports/audio/audio_audit_gui_stage5_activitygate60_vs_72_decoded_session/`
+663. 已完成: 新增正式报告
+   - `docs/204_stage5_decoded_primary_listening_contract_report.md`
+
+### 当前阶段结论补充
+- 当前 Stage5
+  人工听审的正式口径
+  已从:
+  - 默认主听
+    `audit_proxy.wav`
+- 切到:
+  - 默认主听
+    `decoded.wav`
+  - `audit_proxy.wav`
+    退到诊断位
+- 但要明确:
+  - 这不等于
+    已经有了
+    final synth
+  - 只是当前
+    最接近 final
+    的可听结果
+
+先说人话:
+- 这一步是把
+  听审入口
+  拉回人耳更熟悉的
+  说话音频上。
+- `audit proxy`
+  以后继续用，
+  但它应该像
+  示波器一样
+  辅助排查，
+  不该再当主裁判。
+
+### 更新后的下一阶段任务
+1. 后续 activity-gate
+   人工听审，
+   默认直接听:
+   - `decoded.wav`
+2. 若听感里怀疑:
+   - 动态
+   - 静音
+   - 边界
+   再回看:
+   - `audit_proxy.wav`
+3. 后续真正 final synth
+   链路落地后，
+   再把主听入口
+   从
+   `decoded.wav`
+   切到 final synth
+
+### 文档补充
+- `docs/204_stage5_decoded_primary_listening_contract_report.md`
+  - 听审主入口切换理由、代码改动与当前双轨契约
+
+## 2026-03-18 Stage5 listening-audio-source GUI contract fix 更新
+
+### 当前进度补充
+664. 已完成: 接班恢复时复核
+   `decoded`
+   主听切换代码链，
+   发现 exporter
+   虽已写出:
+   - `listening_audio_source`
+   - `listening_audio_path`
+   但 GUI
+   在 bundle
+   同时含有
+   `decoded_audio_path`
+   时，
+   仍会无条件优先
+   `decoded`
+665. 已完成: 在
+   `src/v5vc/audio_audit_gui.py`
+   补齐 GUI
+   侧主听源解析逻辑，
+   现在会优先读取:
+   - `listening_audio_path`
+   并按
+   `listening_audio_source`
+   / 旧字段
+   做兼容回退
+666. 已完成: 用当前
+   `activitygate72`
+   bundle
+   做函数级验证，
+   确认现有
+   `decoded`
+   主听 bundle
+   仍维持原行为
+667. 已完成: 额外导出
+   `1`
+   条样本的
+   `audit_proxy`
+   主听 smoke bundle:
+   - `tmp/stage5_listening_source_audit_proxy_smoke/`
+   并确认 manifest
+   中:
+   - `listening_audio_source = audit_proxy`
+   - `listening_audio_path`
+     指向
+     `audit_proxy.wav`
+668. 已完成: 用该 smoke bundle
+   跑通 GUI 自动关闭验证:
+   - `tmp/stage5_listening_source_audit_proxy_gui_smoke/`
+669. 已完成: 新增正式报告
+   - `docs/205_stage5_listening_audio_source_gui_contract_fix_report.md`
+
+### 当前阶段结论补充
+- 先前
+  `decoded`
+  成为默认主听源
+  这件事，
+  对当前主线 bundle
+  已经成立，
+  但此前更准确地说是:
+  - exporter 契约已更新
+  - GUI consumer
+    仍残留
+    “见到 decoded
+     就直接播 decoded”
+    的旧硬编码
+- 本轮修复后，
+  `--listening-audio-source`
+  才真正成为
+  端到端生效的
+  主听切换参数
+- 当前主线不变:
+  - Stage5 默认主听
+    仍是
+    `decoded.wav`
+  - `audit_proxy.wav`
+    仍是诊断位
+- 新增能力是:
+  - 当后续确实需要
+    用
+    `audit_proxy`
+    做主听实验时，
+    GUI
+    终于会
+    按 manifest
+    真正跟随切换
+
+先说人话:
+- 上一棒把
+  “主听应该是谁”
+  写进了导出包。
+- 但 GUI
+  还残留一个老习惯，
+  会偷偷优先播
+  `decoded`。
+- 这次等于把
+  前台播放器
+  也改成听清单指挥，
+  不再自作主张。
+
+### 更新后的下一阶段任务
+1. 后续 Stage5
+   人工听审，
+   继续默认主听:
+   - `decoded.wav`
+2. 若刻意做
+   proxy-first
+   诊断实验，
+   可直接用:
+   - `--listening-audio-source audit_proxy`
+   不再担心
+   GUI
+   实际没切过去
+3. 再往后更值钱的推进
+   仍不是反复比较
+   `60 vs 72`，
+   而是:
+   - 扩大 decoded 主听样本
+   - 补 modulation /
+     smoothing
+     监控口径
+
+### 文档补充
+- `docs/205_stage5_listening_audio_source_gui_contract_fix_report.md`
+  - exporter / GUI 契约错位、修复方式与 smoke 验证
+
+## 2026-03-18 Stage5 decoded pitch-match listening contract 更新
+
+### 当前进度补充
+670. 已完成: 接收并确认用户新反馈，
+   上一轮
+   `decoded.wav`
+   人工听评
+   已取消，
+   原因是:
+   - 当前可听频率 / 基频感
+     偏高，
+     会引起心理不适
+671. 已完成: 对当前
+   `activitygate72`
+   validation bundle
+   的
+   `aligned_target.wav`
+   与
+   `decoded.wav`
+   做中位 voiced F0
+   复核，
+   观察到:
+   - `decoded`
+     在多条样本上
+     近似锁在
+     `275.46 Hz`
+   - 相对目标
+     的 aggregate
+     ratio
+     中位数约为
+     `0.896792`
+     即
+     约 `-1.9`
+     semitones
+672. 已完成: 在
+   `src/v5vc/nores_vocoder_audio_export.py`
+   新增
+   listening-only
+   后处理:
+   - `decoded_pitch_matched.wav`
+   - 基于
+     `aligned_target.wav`
+     的中位 voiced F0
+     对
+     `decoded.wav`
+     做全局 pitch shift，
+     保持时长不变
+673. 已完成: 在
+   `src/v5vc/cli.py`
+   为
+   `export-offline-mvp-nores-vocoder-audio`
+   新增:
+   - `--pitch-match-reference`
+   - `--pitch-match-fmin-hz`
+   - `--pitch-match-fmax-hz`
+   - `--pitch-match-max-semitones`
+   并允许:
+   - `--listening-audio-source decoded_pitch_matched`
+674. 已完成: 在
+   `src/v5vc/audio_audit_gui.py`
+   补齐
+   `decoded_pitch_matched`
+   的 manifest
+   兼容回退
+675. 已完成: 重导当前主线
+   `activitygate60 / 72`
+   的 pitch-matched
+   听评 bundle:
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate60_decodedpitchmatch_validation_round1_1/`
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate72_decodedpitchmatch_validation_round1_1/`
+676. 已完成: 新增 pitch-matched
+   GUI 启动脚本:
+   - `scripts/launch_stage5_audio_audit_activitygate60_vs_72_decoded_pitchmatch.ps1`
+677. 已完成: 做通
+   `decoded_pitch_matched`
+   单条 smoke
+   与双 bundle
+   GUI smoke:
+   - `tmp/stage5_decoded_pitchmatch_smoke/`
+   - `tmp/stage5_decoded_pitchmatch_gui_smoke/`
+   - `reports/audio/audio_audit_gui_stage5_activitygate60_vs_72_decodedpitchmatch_session/`
+678. 已完成: 新增正式报告
+   - `docs/206_stage5_decoded_pitchmatch_listening_contract_report.md`
+
+### 当前阶段结论补充
+- 当前 Stage5
+  若继续直接主听
+  raw
+  `decoded.wav`，
+  风险不是
+  “有点不好听”，
+  而是:
+  - 音调偏高本身
+    会干扰甚至阻断
+    人耳比较
+- 因此当前更合理的
+  人工听评口径
+  应更新为:
+  - 主听:
+    `decoded_pitch_matched.wav`
+  - raw 技术排查:
+    `decoded.wav`
+  - 动态 / 静音 / 边界
+    诊断:
+    `audit_proxy.wav`
+- 但要明确:
+  - `decoded_pitch_matched.wav`
+    是 listening-only
+    规范化版本
+  - 它适合拿来比较:
+    - 可接受度
+    - 边界
+    - 动态
+    - 相对自然度
+  - 不适合拿来宣称:
+    - 原始 Stage5 decoded
+      已经自动学会
+      正确 F0
+
+先说人话:
+- 这一步不是
+  把模型修好了，
+  是先把
+  “太尖太高，
+   听不下去”
+  这个听评障碍拿掉。
+- 以后主观比较时，
+  先把音调
+  拉回跟参考
+  一个量级，
+  再听谁更顺、
+  更稳、
+  更能接受。
+
+### 更新后的下一阶段任务
+1. 当前 `activitygate60 vs 72`
+   人工听评，
+   默认切到:
+   - `decoded_pitch_matched.wav`
+2. 若怀疑某条样本的
+   pitch-match
+   过强或失真，
+   需回看:
+   - raw `decoded.wav`
+   - `pitch_match_metrics`
+3. 人工听评里
+   暂不把
+   pitch-fidelity
+   作为主要评分项，
+   当前更聚焦:
+   - 边界
+   - 动态
+   - 整体可接受度
+
+### 文档补充
+- `docs/206_stage5_decoded_pitchmatch_listening_contract_report.md`
+  - 当前听评契约为何改成 `decoded_pitch_matched.wav`、代码实现与 smoke 验证
