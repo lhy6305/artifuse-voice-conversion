@@ -6891,3 +6891,92 @@
   - 若样本因音频边界限制仍明显短于该范围，
     默认只作为次要证据，
     不要当主样本
+### 266. `fragmentation` 偏高不等于“模型单方新增毛刺”；breath / sigh / 清辅音自身的 target 能量突变会混进 low-activity 可疑窗
+- 现象:
+  - 本轮
+    `windowed_v2`
+    听审里，
+    至少有两条样本显示:
+    - target 本身存在明显辅音 / 爆破 / 清音能量突变
+    - 或两路模型都在同一 breath-like 区间
+      出现类似毛刺
+- 风险:
+  - 如果看到
+    low-activity probe
+    里的高
+    `fragmentation_score`
+    就直接写成
+    “某 checkpoint 自己加了毛刺”，
+    很容易误判
+- 处理要求:
+  - 后续解释
+    `fragmentation`
+    结果时，
+    默认分开记录:
+    - target-correlated
+      的瞬态风险
+    - model-added
+      的局部毛刺风险
+  - 对 target 自身已有明显
+    breath / 爆破 / 清辅音突变的窗口，
+    默认不要直接当
+    “模型定罪样本”
+### 267. `fragmentation` 低也不代表低活动段表现更好；持续底音泄漏会把 burst/toggle 指标压平
+- 现象:
+  - 当前 decoded low-activity probe
+    上，
+    `step60`
+    的
+    `mean_fragmentation_score`
+    很低，
+    但
+    `mean_active_fraction = 1.0`
+  - 人耳也同步指出:
+    - `step60`
+      的静音段底音仍然存在
+- 风险:
+  - 如果只看
+    `fragmentation_score`
+    这一条，
+    会把
+    “持续有底音所以不怎么 burst”
+    误读成
+    “低活动段更干净”
+- 处理要求:
+  - 后续 low-activity 结论
+    默认至少同时看:
+    - `fragmentation_score`
+    - `mean_active_fraction`
+  - 并把
+    `mean_active_fraction`
+    明确解释为:
+    - 低活动段底音泄漏 / 活动残留指标
+### 268. 任何主观结论如果不做量化回查，都会有较高概率混入错觉、暗示或错误解释
+- 现象:
+  - 本项目里已经多次出现:
+    - 初听觉得某模型更差
+    - 后续却发现
+      片段过短、
+      target 自身带瞬态、
+      或指标解释方向错了
+- 风险:
+  - 如果把主观听感直接写成主结论，
+    很容易把:
+    - 错觉
+    - 心理暗示
+    - 选择性样本
+    - tradeoff 误读
+    固化进路线判断
+- 处理要求:
+  - 后续所有主观结论，
+    默认都要补:
+    - 可测假设
+    - 对应量化指标
+    - 样本范围
+    - 主观与量化是否一致
+  - 没有量化回查支撑时，
+    结论默认只允许写成:
+    - 听感观察
+    - 听感趋势
+  - 具体执行规范见:
+    - `docs/213_subjective_conclusion_quant_validation_protocol.md`

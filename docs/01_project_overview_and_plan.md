@@ -11768,3 +11768,135 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/211_stage5_low_activity_decoded_audit_window_rebuild_and_partial_human_feedback.md`
   - 窗口重建原因、参数、formal rerun 与当前人耳结论边界
+
+## 2026-03-19 Stage5 low-activity windowed_v2 听审结论更新
+
+### 当前进度补充
+713. 已完成: 读取
+   `reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2/`
+   的正式听审结果
+714. 已完成: 新增结论报告
+   - `docs/212_stage5_low_activity_windowed_v2_human_audit_result_and_interpretation.md`
+
+### 当前阶段结论补充
+- 当前 4 条长窗样本
+  听完后，
+  不能再把
+  `step72`
+  写成:
+  - 在低活动段系统性更差
+- 当前更合理的解释是:
+  - 部分可疑窗口
+    确实与 target 本身的
+    breath / sigh / 清辅音能量突变
+    混在一起
+  - `step72`
+    更尊重原音量变化，
+    但仍有局部偶发毛刺风险
+  - `step60`
+    的静音段底音泄漏
+    仍然存在
+- probe 里的
+  decoded aggregate
+  也支持这一点:
+  - `step60 mean_active_fraction = 1.0`
+  - `step72 mean_active_fraction = 0.521389`
+  - 即
+    `step60`
+    在 target 低活动段里
+    仍持续保留更多活动能量
+
+先说人话:
+- 这轮把判断从
+  “谁毛刺更多”
+  收紧成了
+  “谁更像原音量变化，
+  谁的残留伪影更稳定”。
+- 当前更稳定的问题
+  不是
+  `step72`
+  全面炸裂，
+  而是
+  `step60`
+  的静音底音
+  还没退干净。
+
+### 更新后的下一阶段任务
+1. 继续把
+   `mean_active_fraction`
+   提升为
+   low-activity
+   底音泄漏主指标
+2. 为
+   target-correlated
+   breath / sigh / 清辅音窗口
+   单独加标记，
+   避免这类样本被直接拿来定罪
+   “模型毛刺”
+3. 若继续做人工复核，
+   下一批优先补:
+   - 更纯的近静音样本
+   - 更长的 breath-like 过渡样本
+
+### 文档补充
+- `docs/212_stage5_low_activity_windowed_v2_human_audit_result_and_interpretation.md`
+  - 当前 windowed_v2 听审结果、解释框架与下一步指标方向
+
+## 2026-03-19 主观结论量化回查规范更新
+
+### 当前进度补充
+715. 已完成: 新增主观结论量化回查规范
+   - `docs/213_subjective_conclusion_quant_validation_protocol.md`
+
+### 当前阶段结论补充
+- 从本轮开始，
+  主观听审的角色明确收敛为:
+  - 提出假设
+  - 标记风险
+  - 触发定向量化验证
+- 任何没有量化回查支撑的主观结论，
+  默认只能写成:
+  - 听感观察
+  - 听感趋势
+  不能直接写成
+  “确认更好/更差”
+- 当前项目里的直接落地是:
+  - `step60`
+    静音段底音泄漏
+    已具备
+    听感与
+    `mean_active_fraction`
+    双重支持，
+    可暂列为
+    量化支持的结论
+  - `step72`
+    的局部毛刺
+    仍主要停留在
+    听感观察 / 局部风险，
+    后续必须继续补
+    定向量化回查
+
+先说人话:
+- 后面再出现
+  “我感觉更好/更差”，
+  不会再直接写进主结论。
+- 默认都要先回答:
+  - 这个感觉对应什么可测假设
+  - 当前有没有量化证据
+
+### 更新后的下一阶段任务
+1. 后续所有听审报告，
+   默认补齐:
+   - 主观观察
+   - 可测假设
+   - 对应指标
+   - 一致/冲突判断
+2. 对之前仅凭听感写下的结论，
+   后续引用时默认降级为:
+   - 听感观察
+   - 听感趋势
+   直到量化回查补齐
+
+### 文档补充
+- `docs/213_subjective_conclusion_quant_validation_protocol.md`
+  - 主观结论分级、最低量化回查要求与冲突处理规则
