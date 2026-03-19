@@ -17,7 +17,9 @@ DEFAULT_HOP_LENGTH = 160
 DEFAULT_MIN_LOW_ACTIVITY_FRAMES = 8
 DEFAULT_TARGET_ACTIVITY_THRESHOLD = 0.35
 DEFAULT_CANDIDATE_ACTIVITY_THRESHOLD = 0.45
-DEFAULT_WINDOW_PADDING_SEC = 0.08
+DEFAULT_WINDOW_PADDING_SEC = 0.2
+DEFAULT_MIN_AUDIT_WINDOW_SEC = 2.4
+DEFAULT_MAX_AUDIT_WINDOW_SEC = 3.0
 
 
 @dataclass(frozen=True)
@@ -38,6 +40,8 @@ def analyze_stage5_low_activity_fragments(
     min_low_activity_frames: int,
     top_k_windows: int,
     window_padding_sec: float,
+    min_audit_window_sec: float,
+    max_audit_window_sec: float,
 ) -> None:
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -65,6 +69,8 @@ def analyze_stage5_low_activity_fragments(
             min_low_activity_frames=max(1, int(min_low_activity_frames)),
             top_k_windows=max(1, int(top_k_windows)),
             window_padding_sec=max(0.0, float(window_padding_sec)),
+            min_audit_window_sec=max(0.0, float(min_audit_window_sec)),
+            max_audit_window_sec=max(0.0, float(max_audit_window_sec)),
             clip_root_dir=clip_root_dir,
         )
         results_by_source[audio_source] = source_result
@@ -80,11 +86,14 @@ def analyze_stage5_low_activity_fragments(
         "min_low_activity_frames": max(1, int(min_low_activity_frames)),
         "top_k_windows": max(1, int(top_k_windows)),
         "window_padding_sec": max(0.0, float(window_padding_sec)),
+        "min_audit_window_sec": max(0.0, float(min_audit_window_sec)),
+        "max_audit_window_sec": max(0.0, float(max_audit_window_sec)),
         "analysis_sources": results_by_source,
         "notes": [
             "Low-activity segments are derived from aligned_target.wav via the same compute_frame_activity_target(...) energy bridge used in Stage5 activity-gate supervision.",
             "Fragmentation score is defined as extra_bursts_inside_target_low_activity plus mean absolute frame-activity toggle inside the same segment.",
             "listening uses listening_audio_path from the Stage5 bundle, while decoded uses decoded_audio_path for raw diagnostic follow-up.",
+            "Exported listening clips preserve at least window_padding_sec context on both sides and expand to min_audit_window_sec when the raw suspicious segment is too short for human judgment.",
         ],
     }
     (output_dir / "stage5_low_activity_fragmentation_probe.json").write_text(
@@ -176,6 +185,8 @@ def analyze_audio_source(
     min_low_activity_frames: int,
     top_k_windows: int,
     window_padding_sec: float,
+    min_audit_window_sec: float,
+    max_audit_window_sec: float,
     clip_root_dir: Path,
 ) -> dict[str, object]:
     branch_aggregates: dict[str, dict[str, float]] = {}
@@ -268,6 +279,8 @@ def analyze_audio_source(
             clip_root_dir=clip_root_dir,
             top_k_windows=top_k_windows,
             window_padding_sec=window_padding_sec,
+            min_audit_window_sec=min_audit_window_sec,
+            max_audit_window_sec=max_audit_window_sec,
         )
         record_results.append(record_result)
         suspicious_windows.extend(record_result["top_windows"])
@@ -460,6 +473,8 @@ def build_record_result(
     clip_root_dir: Path,
     top_k_windows: int,
     window_padding_sec: float,
+    min_audit_window_sec: float,
+    max_audit_window_sec: float,
 ) -> dict[str, object]:
     top_windows: list[dict[str, object]] = []
     for segment_index, segment in enumerate(low_activity_segments):
@@ -490,7 +505,7 @@ def build_record_result(
         delta_extra_bursts = int(worst_branch["extra_bursts"]) - int(best_branch["extra_bursts"])
         if delta_fragmentation_score <= 0.0 and delta_extra_bursts <= 0:
             continue
-        clip_dir = export_segment_clips(
+        clip_dir, audit_window = export_segment_clips(
             clip_root_dir=clip_root_dir,
             audio_source=audio_source,
             record_id=record_id,
@@ -500,6 +515,8 @@ def build_record_result(
             branch_ranked_metrics=ranked,
             sample_rate=sample_rate,
             padding_sec=window_padding_sec,
+            min_audit_window_sec=min_audit_window_sec,
+            max_audit_window_sec=max_audit_window_sec,
         )
         top_windows.append(
             {
@@ -514,6 +531,9 @@ def build_record_result(
                 "worst_branch": worst_branch,
                 "best_branch": best_branch,
                 "clip_dir": clip_dir.as_posix(),
+                "clip_start_sec": float(audit_window["clip_start_sec"]),
+                "clip_end_sec": float(audit_window["clip_end_sec"]),
+                "clip_duration_sec": float(audit_window["clip_duration_sec"]),
                 "ranked_branches": ranked,
             }
         )
@@ -543,7 +563,9 @@ def export_segment_clips(
     branch_ranked_metrics: list[dict[str, object]],
     sample_rate: int,
     padding_sec: float,
-) -> Path:
+    min_audit_window_sec: float,
+    max_audit_window_sec: float,
+) -> tuple[Path, dict[str, object]]:
     record_dir = clip_root_dir / sanitize_filename(audio_source) / sanitize_filename(record_id)
     record_dir.mkdir(parents=True, exist_ok=True)
     clip_dir = record_dir / (
@@ -552,9 +574,16 @@ def export_segment_clips(
         f"{int(round(float(segment['end_sec']) * 1000.0)):06d}ms"
     )
     clip_dir.mkdir(parents=True, exist_ok=True)
-    padding_samples = int(round(float(padding_sec) * float(sample_rate)))
-    clip_start = max(0, int(segment["start_sample"]) - padding_samples)
-    clip_end = min(int(target_waveform.shape[0]), int(segment["end_sample"]) + padding_samples)
+    audit_window = compute_audit_window_bounds(
+        segment=segment,
+        total_samples=int(target_waveform.shape[0]),
+        sample_rate=sample_rate,
+        padding_sec=padding_sec,
+        min_audit_window_sec=min_audit_window_sec,
+        max_audit_window_sec=max_audit_window_sec,
+    )
+    clip_start = int(audit_window["clip_start_sample"])
+    clip_end = int(audit_window["clip_end_sample"])
     write_waveform_int16(
         clip_dir / "aligned_target.wav",
         target_waveform[clip_start:clip_end],
@@ -566,8 +595,14 @@ def export_segment_clips(
         "segment_index": int(segment["segment_index"]),
         "start_sec": float(segment["start_sec"]),
         "end_sec": float(segment["end_sec"]),
+        "clip_start_sec": float(audit_window["clip_start_sec"]),
+        "clip_end_sec": float(audit_window["clip_end_sec"]),
+        "clip_duration_sec": float(audit_window["clip_duration_sec"]),
         "padding_sec": float(padding_sec),
+        "min_audit_window_sec": float(min_audit_window_sec),
+        "max_audit_window_sec": float(max_audit_window_sec),
         "target_audio_path": target_audio_path.as_posix(),
+        "sample_rate": int(sample_rate),
         "branches": [],
     }
     for branch_metric in branch_ranked_metrics:
@@ -594,7 +629,48 @@ def export_segment_clips(
         encoding="utf-8",
         newline="\n",
     )
-    return clip_dir
+    return clip_dir, audit_window
+
+
+def compute_audit_window_bounds(
+    segment: dict[str, object],
+    total_samples: int,
+    sample_rate: int,
+    padding_sec: float,
+    min_audit_window_sec: float,
+    max_audit_window_sec: float,
+) -> dict[str, object]:
+    clip_start = max(0, int(segment["start_sample"]) - int(round(float(padding_sec) * float(sample_rate))))
+    clip_end = min(total_samples, int(segment["end_sample"]) + int(round(float(padding_sec) * float(sample_rate))))
+    required_samples = max(0, clip_end - clip_start)
+    min_window_samples = max(0, int(round(float(min_audit_window_sec) * float(sample_rate))))
+    max_window_samples = max(0, int(round(float(max_audit_window_sec) * float(sample_rate))))
+    desired_samples = max(required_samples, min_window_samples)
+    if max_window_samples > 0 and required_samples <= max_window_samples:
+        desired_samples = min(desired_samples, max_window_samples)
+    extra_samples = max(0, desired_samples - required_samples)
+    extra_left = extra_samples // 2
+    extra_right = extra_samples - extra_left
+    clip_start = max(0, clip_start - extra_left)
+    clip_end = min(total_samples, clip_end + extra_right)
+    current_samples = max(0, clip_end - clip_start)
+    if current_samples < desired_samples:
+        shortfall = desired_samples - current_samples
+        left_room = clip_start
+        shift_left = min(left_room, shortfall)
+        clip_start -= shift_left
+        shortfall -= shift_left
+        right_room = max(0, total_samples - clip_end)
+        shift_right = min(right_room, shortfall)
+        clip_end += shift_right
+    clip_duration_sec = max(0.0, float(clip_end - clip_start) / float(sample_rate))
+    return {
+        "clip_start_sample": int(clip_start),
+        "clip_end_sample": int(clip_end),
+        "clip_start_sec": round(float(clip_start) / float(sample_rate), 6),
+        "clip_end_sec": round(float(clip_end) / float(sample_rate), 6),
+        "clip_duration_sec": round(clip_duration_sec, 6),
+    }
 
 
 def read_wav_mono(path: Path) -> tuple[torch.Tensor, int]:
@@ -647,9 +723,17 @@ def build_audio_audit_bundle_manifests(summary: dict[str, object], output_dir: P
     bundle_root_dir = output_dir / "audio_audit_bundles"
     bundle_root_dir.mkdir(parents=True, exist_ok=True)
     generated_at = str(summary.get("generated_at", ""))
+    min_human_audit_window_sec = min(2.0, max(0.0, float(summary.get("min_audit_window_sec", 0.0))))
 
     for source_name, source_payload in dict(summary.get("analysis_sources", {})).items():
         top_windows = list(source_payload.get("top_windows", []))
+        eligible_windows = [
+            window
+            for window in top_windows
+            if float(window.get("clip_duration_sec", 0.0)) >= float(min_human_audit_window_sec)
+        ]
+        if eligible_windows:
+            top_windows = eligible_windows
         if not top_windows:
             continue
 
@@ -668,8 +752,8 @@ def build_audio_audit_bundle_manifests(summary: dict[str, object], output_dir: P
                 f"{metadata['record_id']}::"
                 f"{source_name}::"
                 f"segment{int(window['segment_index']):02d}::"
-                f"{int(round(float(window['start_sec']) * 1000.0)):06d}_"
-                f"{int(round(float(window['end_sec']) * 1000.0)):06d}ms"
+                f"clip{int(round(float(metadata.get('clip_start_sec', window['start_sec'])) * 1000.0)):06d}_"
+                f"{int(round(float(metadata.get('clip_end_sec', window['end_sec'])) * 1000.0)):06d}ms"
             )
             for branch_payload in metadata.get("branches", []):
                 branch_label = str(branch_payload.get("branch_label", "")).strip()
@@ -683,6 +767,7 @@ def build_audio_audit_bundle_manifests(summary: dict[str, object], output_dir: P
                         "bundle_type": "stage5_low_activity_fragmentation_audio_audit_bundle_v1",
                         "branch_label": f"{source_name}:{branch_label}",
                         "analysis_audio_source": source_name,
+                        "minimum_human_audit_window_sec": float(min_human_audit_window_sec),
                         "source_probe_summary_path": (output_dir / "stage5_low_activity_fragmentation_probe.json").as_posix(),
                         "records": [],
                     },
@@ -701,6 +786,14 @@ def build_audio_audit_bundle_manifests(summary: dict[str, object], output_dir: P
                         "segment_index": int(metadata.get("segment_index", window["segment_index"])),
                         "segment_start_sec": float(metadata.get("start_sec", window["start_sec"])),
                         "segment_end_sec": float(metadata.get("end_sec", window["end_sec"])),
+                        "clip_start_sec": float(metadata.get("clip_start_sec", window.get("clip_start_sec", window["start_sec"]))),
+                        "clip_end_sec": float(metadata.get("clip_end_sec", window.get("clip_end_sec", window["end_sec"]))),
+                        "clip_duration_sec": float(
+                            metadata.get(
+                                "clip_duration_sec",
+                                window.get("clip_duration_sec", float(window["end_sec"]) - float(window["start_sec"])),
+                            )
+                        ),
                         "fragmentation_probe": {
                             "delta_fragmentation_score": float(window["delta_fragmentation_score"]),
                             "delta_extra_bursts": int(window["delta_extra_bursts"]),
@@ -741,6 +834,8 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- min_low_activity_frames: {summary['min_low_activity_frames']}",
         f"- top_k_windows: {summary['top_k_windows']}",
         f"- window_padding_sec: {summary['window_padding_sec']}",
+        f"- min_audit_window_sec: {summary['min_audit_window_sec']}",
+        f"- max_audit_window_sec: {summary['max_audit_window_sec']}",
         "",
     ]
     for source_name, source_payload in summary["analysis_sources"].items():
@@ -769,6 +864,9 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"segment_index={window['segment_index']} "
                 f"start_sec={window['start_sec']} "
                 f"end_sec={window['end_sec']} "
+                f"clip_start_sec={window.get('clip_start_sec', window['start_sec'])} "
+                f"clip_end_sec={window.get('clip_end_sec', window['end_sec'])} "
+                f"clip_duration_sec={window.get('clip_duration_sec', window['duration_sec'])} "
                 f"delta_fragmentation_score={window['delta_fragmentation_score']} "
                 f"worst_branch={window['worst_branch']['branch_label']} "
                 f"best_branch={window['best_branch']['branch_label']} "

@@ -11685,3 +11685,86 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/210_stage5_low_activity_fragmentation_decoded_audio_audit_kickoff_and_operator_contract.md`
   - 当前正式听审命令、脚本入口、session 目录与试听重点
+
+## 2026-03-19 Stage5 低活动段听审窗口重建与部分人耳反馈更新
+
+### 当前进度补充
+706. 已完成: 根据用户实际试听反馈，
+   将
+   `stage5_low_activity_probe`
+   的默认导出窗
+   从
+   “短诊断片段”
+   调整为
+   “可听判断窗”
+707. 已完成: 当前默认参数调整为:
+   - `window_padding_sec = 0.2`
+   - `min_audit_window_sec = 2.4`
+   - `max_audit_window_sec = 3.0`
+708. 已完成: 重新生成正式目录:
+   - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/`
+709. 已完成: 重跑 decoded / audit_proxy
+   probe，
+   并重建对应 GUI bundle
+710. 已完成: 用固定脚本入口
+   再次跑通 GUI smoke
+711. 已完成: 记录用户本轮部分人耳反馈
+   到:
+   - `docs/211_stage5_low_activity_decoded_audit_window_rebuild_and_partial_human_feedback.md`
+712. 已完成: 为长窗重听
+   切出独立 session 输出目录:
+   - `reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2/`
+
+### 当前阶段结论补充
+- 之前那批过短切片
+  更适合做算法定位，
+  不适合做强人耳结论
+- 当前正式听审材料
+  已重建为:
+  - 尽量保留前后
+    `200ms`
+    上下文
+  - 单条优先扩到
+    约 `2.4s`
+- 当前人耳侧已能稳妥保留的部分结论只有:
+  - `step72`
+    比
+    `step60`
+    更尊重原音频音量变化
+- 截至当前用户已听的前两条，
+  还不能把
+  `step72`
+  写成人耳已确认存在更多毛刺
+
+先说人话:
+- 这一步不是把结论继续写大，
+  而是先把证据材料修正到能判断的长度。
+- 现在应该重新用长窗 bundle
+  继续听，
+  而不是沿用旧短片段。
+
+### 更新后的下一阶段任务
+1. 继续基于重建后的
+   decoded segmented bundle
+   做定点听审，
+   优先复核:
+   - `target::chapter3_22_firefly_114`
+   - `target::chapter3_3_firefly_213`
+   - `target::chapter3_4_firefly_106`
+2. 听审记录里，
+   把
+   “是否存在毛刺/断续”
+   与
+   “是否更尊重原音量变化”
+   分开记述，
+   避免两者混成同一结论
+3. 若某条样本因为音频边界原因
+   仍短于
+   `2s`，
+   默认降级为:
+   - 次要证据
+   - 不作为主判断样本
+
+### 文档补充
+- `docs/211_stage5_low_activity_decoded_audit_window_rebuild_and_partial_human_feedback.md`
+  - 窗口重建原因、参数、formal rerun 与当前人耳结论边界

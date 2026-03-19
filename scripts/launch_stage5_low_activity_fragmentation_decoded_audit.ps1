@@ -13,7 +13,7 @@ $command = @(
   "reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60",
   "reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72",
   "--output-dir",
-  "reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session"
+  "reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2"
 )
 
 if ($AutoCloseMs -gt 0) {

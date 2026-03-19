@@ -49,7 +49,9 @@ from v5vc.special_eval_series import evaluate_offline_mvp_special_eval_series
 from v5vc.special_slice_alignment import analyze_offline_mvp_special_slice_alignment
 from v5vc.stage5_low_activity_probe import (
     DEFAULT_CANDIDATE_ACTIVITY_THRESHOLD,
+    DEFAULT_MAX_AUDIT_WINDOW_SEC,
     DEFAULT_MIN_LOW_ACTIVITY_FRAMES,
+    DEFAULT_MIN_AUDIT_WINDOW_SEC,
     DEFAULT_TARGET_ACTIVITY_THRESHOLD,
     DEFAULT_WINDOW_PADDING_SEC,
     analyze_stage5_low_activity_fragments,
@@ -1020,7 +1022,19 @@ def build_parser() -> argparse.ArgumentParser:
         "--window-padding-sec",
         type=float,
         default=DEFAULT_WINDOW_PADDING_SEC,
-        help="Context padding applied when exporting suspicious segment clips.",
+        help="Minimum context padding applied on both sides when exporting suspicious segment clips.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--min-audit-window-sec",
+        type=float,
+        default=DEFAULT_MIN_AUDIT_WINDOW_SEC,
+        help="Minimum exported listening window length for each suspicious segment.",
+    )
+    stage5_low_activity_probe_parser.add_argument(
+        "--max-audit-window-sec",
+        type=float,
+        default=DEFAULT_MAX_AUDIT_WINDOW_SEC,
+        help="Soft cap for exported listening window length when the suspicious core fits inside it.",
     )
     streaming_student_checkpoint_select_parser.add_argument(
         "--skip-special-eval",
@@ -2868,6 +2882,8 @@ def main(argv: list[str] | None = None) -> int:
             min_low_activity_frames=args.min_low_activity_frames,
             top_k_windows=args.top_k_windows,
             window_padding_sec=args.window_padding_sec,
+            min_audit_window_sec=args.min_audit_window_sec,
+            max_audit_window_sec=args.max_audit_window_sec,
         )
         return 0
     if args.command == "average-offline-mvp-checkpoints":

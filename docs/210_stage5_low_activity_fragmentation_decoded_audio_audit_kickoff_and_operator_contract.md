@@ -17,6 +17,17 @@
   probe
   已可自动导出:
   - GUI 可读 segmented bundle
+- `docs/211_stage5_low_activity_decoded_audit_window_rebuild_and_partial_human_feedback.md`
+  已补充:
+  - 旧版切片过短，
+    不足以支撑强结论
+  - 当前正式听审窗
+    已按
+    `2.4s`
+    左右重建，
+    且默认保留
+    `200ms`
+    上下文
 
 ## 本轮目标
 1. 把当前
@@ -39,7 +50,10 @@
 - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72/`
 
 ### 2. 当前 session 输出目录
-- `reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session/`
+- `reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2/`
+- 说明:
+  - 该目录与旧短窗 session 分开，
+    避免把不同听审材料的进度混在一起
 
 ### 3. 当前对比对象含义
 - `offline_mvp_nores_vocoder_dataset_loop.step60`
@@ -51,6 +65,21 @@
     fragmentation
     可疑窗口
 
+### 4. 当前听审窗约束
+- 当前正式 bundle
+  的片段
+  不再是旧版短切片
+- 默认规则为:
+  - 先保留低活动段前后至少
+    `0.2s`
+    上下文
+  - 再尽量扩成
+    约 `2.4s`
+    的听审窗
+- 若样本本身贴边，
+  实际窗口可能短于
+  `2.4s`
+
 ## 用户应运行的正式命令
 
 ```powershell
@@ -58,7 +87,7 @@
   --bundle `
     reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60 `
     reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72 `
-  --output-dir reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session
+  --output-dir reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2
 ```
 
 ## 对应脚本入口
@@ -90,19 +119,33 @@ powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_frag
     - 毛刺
     - 断续
     - 瞬态跳变
+- 但截至
+  `docs/211`
+  记录的用户反馈，
+  当前已听前两条里，
+  `step72`
+  尚未出现毛刺现象；
+  目前唯一可稳妥保留的人耳结论是:
+  - `step72`
+    更尊重原音频音量变化
 
 ### 2. 当前更该关注的记录
 - `target::chapter3_22_firefly_114`
-  - 当前最强可疑窗口，
-    `0.98s - 1.80s`
+  - 当前最强可疑窗口
+  - 当前重建后的主要听审窗:
+    `0.19s - 2.59s`
 - `target::chapter3_3_firefly_213`
   - 当前上一轮人耳已点名的
     非音节 / breath-like
     风险样本
+  - 当前重建后的主要听审窗:
+    `1.97s - 4.37s`
 - `target::chapter3_4_firefly_106`
   - 当前 probe
     与上一轮结论
     都反复出现的长记录
+  - 当前重建后的主要听审窗:
+    `6.13s - 8.53s`
 
 ## 具体怎么听
 
@@ -149,7 +192,7 @@ powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_frag
 ### 3. GUI 正式命令已做 smoke
 
 ```powershell
-.\python.exe manage.py launch-audio-audit-gui --bundle reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60 reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72 --output-dir reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session --auto-close-ms 1000
+.\python.exe manage.py launch-audio-audit-gui --bundle reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60 reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72 --output-dir reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2 --auto-close-ms 1000
 ```
 
 - 命令返回:
@@ -166,7 +209,7 @@ powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_frag
 ## 当前操作建议
 1. 默认先跑上面的正式命令
 2. 听完后直接在:
-   - `reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session/`
+   - `reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2/`
    留下
    `audio_audit_review.json`
    和
