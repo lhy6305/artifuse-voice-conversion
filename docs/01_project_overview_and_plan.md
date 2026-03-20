@@ -13591,3 +13591,44 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/232_stage5_chapter35_36_reverb_annotation_report.md`
   - 记录本次章节级混响 sidecar 标注资产与采用理由
+
+## 2026-03-20 补充：clean-only target 对照 split 已派生
+
+### 当前动作
+- 已基于当前推荐拆分
+  `hybrid_stratified_blocked`
+  与
+  `reverb_like`
+  sidecar，
+  派生 clean-only target split：
+  - `data_prep/round1_1/splits/hybrid_stratified_blocked_target_clean_no_reverb/`
+
+### 当前影响范围
+- target train:
+  - `592 -> 578`
+  - 移除 `14`
+    条
+  - 移除时长约
+    `85.458914s`
+- target validation:
+  - `66 -> 63`
+  - 移除 `3`
+    条
+  - 移除时长约
+    `15.749977s`
+- target special eval:
+  - 维持 `8`
+    条不变
+
+### 当前意义
+1. clean-only
+   对照实验所需 split
+   已经备齐
+2. 现在可以先做
+   “是否值得 clean-only 重训”
+   的最小代价验证，
+   不必先动正式训练主线
+
+### 文档补充
+- `docs/233_stage5_clean_only_target_split_derivation_report.md`
+  - 记录 clean-only target split 的派生规则、影响范围和推荐对照方式

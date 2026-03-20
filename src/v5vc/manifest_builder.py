@@ -178,7 +178,7 @@ def write_markdown_summary(path: Path, summary: dict[str, object]) -> None:
 
 def load_jsonl(path: Path) -> list[dict[str, object]]:
     records: list[dict[str, object]] = []
-    with path.open("r", encoding="utf-8") as handle:
+    with path.open("r", encoding="utf-8-sig") as handle:
         for line in handle:
             line = line.strip()
             if not line:
