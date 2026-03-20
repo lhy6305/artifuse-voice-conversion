@@ -177,6 +177,40 @@
     不是只出现在
     单个巧合窗口
 
+### 5. `validation12` 扩样后，`smooth3` 方向仍成立
+- 扩样 probe:
+  - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_validation12_round1_1/`
+- aggregate:
+  - baseline `72`
+    - `mean_fragmentation_score = 1.497705`
+    - `mean_waveform_rms = 0.013488`
+    - `mean_sample_delta_peak = 0.162141`
+    - `mean_activity_alignment_mae = 0.513092`
+  - `72__decode_gate_smooth3`
+    - `mean_fragmentation_score = 1.196807`
+    - `mean_waveform_rms = 0.014613`
+    - `mean_sample_delta_peak = 0.079572`
+    - `mean_activity_alignment_mae = 0.550197`
+- 当前解释:
+  - `smooth3`
+    不是只在
+    `3`
+    条代表性 record
+    上碰巧有效
+  - 放到
+    `validation12`
+    后，
+    仍然保持:
+    - 明显更低的
+      fragmentation
+      与
+      sample_delta_peak
+    - 同时只付出
+      较小的
+      leakage /
+      alignment
+      代价
+
 ## 当前判断
 
 ### 1. 下一步最值得继续推进的是 smoothing-only，不是 floor
@@ -187,12 +221,11 @@
 
 ### 2. 当前还不应直接改写全局默认 decode
 - 因为:
-  - 这轮只覆盖
-    `3`
-    条代表性 record
-  - 还没有经过
-    更宽样本
-    和人耳复核
+  - 虽然已经补到
+    `validation12`
+  - 但还没有经过
+    focused
+    人耳复核
 - 但它已经足够说明:
   - 后续 focused audit
     不该再只听
@@ -210,6 +243,8 @@
   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate72_decoded_glitchablation_smooth3_validation3_round1_1/`
 - smoothing probe:
   - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smoothing_validation3_round1_1/`
+- `validation12` 扩样 probe:
+  - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_validation12_round1_1/`
 - GUI 入口:
   - `scripts/launch_stage5_step72_glitch_smoothing_audit.ps1`
 

@@ -13439,6 +13439,16 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
     `0.013321 -> 0.014492`
   - `mean_sample_delta_peak`
     `0.139163 -> 0.077360`
+- 扩到
+  `validation12`
+  后，
+  这条方向仍成立:
+  - `mean_fragmentation_score`
+    `1.497705 -> 1.196807`
+  - `mean_waveform_rms`
+    `0.013488 -> 0.014613`
+  - `mean_sample_delta_peak`
+    `0.162141 -> 0.079572`
 - 当前因此更合理的
   下一棒是:
   - 继续把
