@@ -2174,6 +2174,18 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Apply predicted frame activity during export-side waveform reconstruction for newer Stage5 checkpoints.",
     )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Optional minimum export-side frame gain applied after predicted activity gating; use this to soften hard zeroing without disabling the gate.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=0,
+        help="Optional moving-average radius for export-side predicted activity gate smoothing across neighboring frames.",
+    )
     nores_vocoder_low_activity_sensitivity_parser = subparsers.add_parser(
         "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity",
         help="Analyze low-activity soft-rerank sensitivity over an existing Stage5 no-residual vocoder checkpoint-selection payload.",
@@ -3247,6 +3259,8 @@ def main(argv: list[str] | None = None) -> int:
             pitch_match_max_semitones=args.pitch_match_max_semitones,
             activity_gate_weight=args.activity_gate_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
         )
         return 0
     if args.command == "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity":

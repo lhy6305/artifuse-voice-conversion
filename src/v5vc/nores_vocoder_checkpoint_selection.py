@@ -246,6 +246,10 @@ def load_low_activity_probe_analysis(
             "mean_activity_excess_mean": round(float(aggregate.get("mean_activity_excess_mean", 0.0)), 6),
             "mean_waveform_rms": round(float(aggregate.get("mean_waveform_rms", 0.0)), 6),
             "mean_sample_delta_peak": round(float(aggregate.get("mean_sample_delta_peak", 0.0)), 6),
+            "mean_spectral_centroid_gap_hz": round(float(aggregate.get("mean_spectral_centroid_gap_hz", 0.0)), 6),
+            "mean_spectral_bandwidth_gap_hz": round(float(aggregate.get("mean_spectral_bandwidth_gap_hz", 0.0)), 6),
+            "mean_spectral_rolloff95_gap_hz": round(float(aggregate.get("mean_spectral_rolloff95_gap_hz", 0.0)), 6),
+            "mean_spectral_hf_ratio_gap": round(float(aggregate.get("mean_spectral_hf_ratio_gap", 0.0)), 6),
         }
         compact_aggregates[str(branch_label)] = compact_aggregate
         step = infer_step_from_branch_label(str(branch_label))
@@ -294,6 +298,26 @@ def load_low_activity_probe_analysis(
         metric_name="mean_sample_delta_peak",
         mode="min",
     )
+    best_spectral_centroid_gap_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_spectral_centroid_gap_hz",
+        mode="min",
+    )
+    best_spectral_bandwidth_gap_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_spectral_bandwidth_gap_hz",
+        mode="min",
+    )
+    best_spectral_rolloff95_gap_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_spectral_rolloff95_gap_hz",
+        mode="min",
+    )
+    best_spectral_hf_ratio_gap_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_spectral_hf_ratio_gap",
+        mode="min",
+    )
     worst_floor_leakage_smoothness_ranking = rank_branch_labels_by_metric(
         compact_aggregates=compact_aggregates,
         branch_labels=worst_floor_leakage_branches,
@@ -315,6 +339,16 @@ def load_low_activity_probe_analysis(
         "best_low_activity_smoothness_branch": best_low_activity_smoothness_branches[0],
         "best_low_activity_smoothness_branches": best_low_activity_smoothness_branches,
         "worst_floor_leakage_smoothness_ranking": worst_floor_leakage_smoothness_ranking,
+    }
+    spectral_sidecar = {
+        "best_spectral_centroid_gap_branches": best_spectral_centroid_gap_branches,
+        "best_spectral_bandwidth_gap_branches": best_spectral_bandwidth_gap_branches,
+        "best_spectral_rolloff95_gap_branches": best_spectral_rolloff95_gap_branches,
+        "best_spectral_hf_ratio_gap_branches": best_spectral_hf_ratio_gap_branches,
+        "note": (
+            "Target-relative spectral-shape sidecar: lower centroid / bandwidth / rolloff / "
+            "high-frequency-ratio gap means the decoded segment stays closer to aligned_target timbre."
+        ),
     }
     governance_template = build_dual_axis_governance_template(ranking)
     top_windows = []
@@ -356,6 +390,13 @@ def load_low_activity_probe_analysis(
             f"worst_floor_leakage={format_branch_label_group(leakage_strength_axis['worst_floor_leakage_branches'])}, "
             f"best_smoothness={format_branch_label_group(ranking['best_low_activity_smoothness_branches'])}"
         ),
+        (
+            f"low_activity/{audio_source} spectral_shape_sidecar: "
+            f"best_centroid_gap={format_branch_label_group(spectral_sidecar['best_spectral_centroid_gap_branches'])}, "
+            f"best_bandwidth_gap={format_branch_label_group(spectral_sidecar['best_spectral_bandwidth_gap_branches'])}, "
+            f"best_rolloff_gap={format_branch_label_group(spectral_sidecar['best_spectral_rolloff95_gap_branches'])}, "
+            f"best_hf_ratio_gap={format_branch_label_group(spectral_sidecar['best_spectral_hf_ratio_gap_branches'])}"
+        ),
         str(governance_template["cross_axis_note"]),
         (
             "Guardrail: low-activity fragmentation is a local-risk indicator only; "
@@ -379,6 +420,7 @@ def load_low_activity_probe_analysis(
         "checkpoint_metrics_by_step": checkpoint_metrics_by_step,
         "ranking": ranking,
         "governance_template": governance_template,
+        "spectral_sidecar": spectral_sidecar,
         "top_windows": top_windows,
         "summary_lines": summary_lines,
     }
@@ -751,8 +793,25 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"alignment_mae={aggregate['mean_activity_alignment_mae']} "
                 f"activity_excess={aggregate['mean_activity_excess_mean']} "
                 f"waveform_rms={aggregate['mean_waveform_rms']} "
-                f"sample_delta_peak={aggregate['mean_sample_delta_peak']}"
+                f"sample_delta_peak={aggregate['mean_sample_delta_peak']} "
+                f"spectral_centroid_gap_hz={aggregate.get('mean_spectral_centroid_gap_hz', 0.0)} "
+                f"spectral_bandwidth_gap_hz={aggregate.get('mean_spectral_bandwidth_gap_hz', 0.0)} "
+                f"spectral_rolloff95_gap_hz={aggregate.get('mean_spectral_rolloff95_gap_hz', 0.0)} "
+                f"spectral_hf_ratio_gap={aggregate.get('mean_spectral_hf_ratio_gap', 0.0)}"
             )
+        spectral_sidecar = low_activity_probe_analysis.get("spectral_sidecar", {})
+        if isinstance(spectral_sidecar, dict) and spectral_sidecar:
+            lines.append("### Spectral Shape Sidecar")
+            lines.append(
+                "- spectral_shape: "
+                f"best_centroid_gap={format_branch_label_group(spectral_sidecar.get('best_spectral_centroid_gap_branches', []))} "
+                f"best_bandwidth_gap={format_branch_label_group(spectral_sidecar.get('best_spectral_bandwidth_gap_branches', []))} "
+                f"best_rolloff_gap={format_branch_label_group(spectral_sidecar.get('best_spectral_rolloff95_gap_branches', []))} "
+                f"best_hf_ratio_gap={format_branch_label_group(spectral_sidecar.get('best_spectral_hf_ratio_gap_branches', []))}"
+            )
+            note = spectral_sidecar.get("note")
+            if isinstance(note, str) and note.strip():
+                lines.append(f"- note: {note}")
         leakage_strength_ranking = low_activity_probe_analysis.get("ranking", {}).get(
             "worst_floor_leakage_strength_ranking",
             [],

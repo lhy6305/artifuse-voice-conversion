@@ -1,7 +1,7 @@
 # stage5 low-activity governance report - validation12 waveformrms
 
 ## Metadata
-- generated_at: 2026-03-20T19:35:57
+- generated_at: 2026-03-20T20:54:24
 - audio_source: decoded
 - governance_mode: tradeoff
 
@@ -25,6 +25,10 @@
 - offline_mvp_nores_vocoder_dataset_loop.step60 (mean_sample_delta_peak=0.196337)
 - offline_mvp_nores_vocoder_dataset_loop.step48 (mean_sample_delta_peak=0.221658)
 - offline_mvp_nores_vocoder_dataset_loop.step36 (mean_sample_delta_peak=0.34293)
+
+## Spectral Shape Sidecar
+- spectral_shape_sidecar: best_centroid_gap=offline_mvp_nores_vocoder_dataset_loop.step72 best_bandwidth_gap=offline_mvp_nores_vocoder_dataset_loop.step72 best_rolloff_gap=offline_mvp_nores_vocoder_dataset_loop.step72 best_hf_ratio_gap=offline_mvp_nores_vocoder_dataset_loop.step72
+- spectral_sidecar_note: Target-relative spectral-shape sidecar: lower centroid / bandwidth / rolloff / high-frequency-ratio gap means the decoded segment stays closer to aligned_target timbre.
 
 ## Cross-Axis Note
 - Cross-axis note: fragmentation axis and leakage-strength axis point to different branch/groups; treat this as a dual-axis tradeoff instead of forcing a single winner.

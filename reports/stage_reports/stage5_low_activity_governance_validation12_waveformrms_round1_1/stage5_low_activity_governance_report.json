@@ -1,5 +1,5 @@
 {
-  "generated_at": "2026-03-20T19:35:57",
+  "generated_at": "2026-03-20T20:54:24",
   "title": "stage5 low-activity governance report - validation12 waveformrms",
   "audio_source": "decoded",
   "governance_mode": "tradeoff",
@@ -62,6 +62,21 @@
       }
     ],
     "note": "Use this axis when comparing residual leakage strength inside a leakage cluster or choosing a fallback after fragmentation has already tied."
+  },
+  "spectral_sidecar": {
+    "best_spectral_centroid_gap_branches": [
+      "offline_mvp_nores_vocoder_dataset_loop.step72"
+    ],
+    "best_spectral_bandwidth_gap_branches": [
+      "offline_mvp_nores_vocoder_dataset_loop.step72"
+    ],
+    "best_spectral_rolloff95_gap_branches": [
+      "offline_mvp_nores_vocoder_dataset_loop.step72"
+    ],
+    "best_spectral_hf_ratio_gap_branches": [
+      "offline_mvp_nores_vocoder_dataset_loop.step72"
+    ],
+    "note": "Target-relative spectral-shape sidecar: lower centroid / bandwidth / rolloff / high-frequency-ratio gap means the decoded segment stays closer to aligned_target timbre."
   },
   "cross_axis_note": "Cross-axis note: fragmentation axis and leakage-strength axis point to different branch/groups; treat this as a dual-axis tradeoff instead of forcing a single winner.",
   "soft_rerank": {

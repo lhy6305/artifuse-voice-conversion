@@ -7759,3 +7759,232 @@
     可按需要拉宽
   - 当前修复已落到:
     - `src/v5vc/audio_audit_gui.py`
+
+### 288. 即使人工听审主观结论已经高度一致，也不能把“没导出 review json”当成无关细节；否则后续只能写摘要，不能物化 fixed audit result report
+- 现象:
+  - 本轮
+    `validation12`
+    听审里，
+    用户已经给出
+    很清晰的一致结论:
+    - `36 -> 72`
+      底噪单调递减
+    - forced choice
+      选
+      `72`
+  - 但当前 session
+    仍没有:
+    - `audio_audit_review.json`
+- 风险:
+  - 这会导致
+    后续只能写:
+    - 人工听审摘要
+  - 不能直接物化:
+    - fixed audit result report
+  - 也无法保留:
+    - field aggregate
+    - comparable / noncomparable
+    - cross-axis readout
+    这些结构化产物
+- 处理要求:
+  - 即使结论已经一致，
+    也仍建议最终补一次:
+    - GUI 导出
+      `audio_audit_review.json`
+  - 否则汇报口径必须明确写成:
+    - 人工听审摘要
+    - 而不是
+      fixed-format
+      audit result report
+
+### 289. “底噪更弱”和“关键节点毛刺更少”在人耳上是两条独立轴；forced choice 选 `72` 不等于 `72` 在所有局部问题上都更安全
+- 现象:
+  - 本轮用户直接反馈:
+    - `36/48/60/72`
+      底噪强度
+      单调递减
+    - 但在
+      清辅音渐变消失 /
+      呼吸声
+      这些代表性问题节点上，
+      `60`
+      与
+      `72`
+      都会出现
+      相近程度的
+      剧烈毛刺
+    - 同时
+      `36/48`
+      在对应位置
+      更正常
+- 风险:
+  - 如果只看到
+    forced choice
+    最后仍选
+    `72`，
+    就把它误写成
+    “72 在局部安全性上也全面更优”，
+    会把
+    两条听感轴
+    又压回单 winner
+- 处理要求:
+  - 后续汇报时，
+    默认拆开写:
+    - noise-floor / leakage-strength
+    - local glitch / burst risk
+  - 当前对
+    `72`
+    的正式口径应写成:
+    - 四者里
+      最合适的临时锚点
+    - 但仍存在
+      特定问题节点上的
+      明显毛刺
+
+### 290. 从 `36 -> 72` 的“频带更宽、听起来没那么刺耳”说明当前人耳还在感知一条独立于 low-activity 核心指标的频谱轴；如果后续完全不补频谱 sidecar，会丢掉一条真实的选择依据
+- 现象:
+  - 用户额外观察到:
+    - 从
+      `36`
+      到
+      `72`
+    - 音频频带越来越宽
+    - 听起来越来越不刺耳
+- 风险:
+  - 当前 low-activity
+    量化治理
+    主要覆盖:
+    - fragmentation
+    - alignment
+    - excess
+    - active_fraction
+    - waveform_rms
+  - 如果后续完全忽略
+    这条频谱轴，
+    会让
+    主观上非常明显的
+    “没那么刺耳 / 更开阔”
+    缺少量化表达
+- 处理要求:
+  - 后续若继续扩
+    Stage5 sidecar，
+    可考虑补:
+    - 频带宽度
+    - 高频展开
+    - 刺耳感相关
+      的频谱指标
+  - 但当前阶段
+    先把它记为:
+    - 新观察到的
+      独立听感轴
+    - 暂不直接替代
+      low-activity
+      双轴治理
+
+### 291. 在 low-activity 片段上直接看绝对 centroid / 绝对高频能量，容易把高底噪 checkpoint 误判成“频带更宽”；这类频谱 sidecar 应优先做 target-relative gap，而不是只看 candidate 本身
+- 现象:
+  - 本轮实际试算时，
+    若直接看
+    absolute spectral centroid /
+    high-frequency energy，
+    `36`
+    这类底噪更重的 checkpoint
+    会因为
+    高频噪声更多，
+    看起来像
+    “更宽”
+- 风险:
+  - 这种读法
+    会把
+    floor noise
+    当成
+    谱形优势，
+    从而和人耳感受
+    直接打架
+- 处理要求:
+  - 后续在
+    low-activity
+    家族里补
+    频谱 sidecar
+    时，
+    默认优先使用:
+    - candidate 相对
+      aligned_target
+      的 spectral gap
+  - 例如:
+    - centroid gap
+    - bandwidth gap
+    - rolloff gap
+    - hf-ratio gap
+  - 不要只看
+    candidate
+    的绝对高频量
+
+### 292. `predicted_activity_gate` 在 low-activity 上若按逐帧硬乘直接重建，确实会压 leakage，但也会把边界毛刺一起放大；这类问题第一反应应是“先做 smoothing”，而不是直接关 gate
+- 现象:
+  - 本轮
+    `step72`
+    三条代表性 glitch record
+    ablation
+    显示:
+    - 关 gate
+      后，
+      fragmentation
+      会显著下降
+    - 但
+      `decoded_to_target_rms_ratio`
+      明显反弹
+- 风险:
+  - 如果只盯
+    glitch
+    本身，
+    很容易得出
+    “那就把 gate 关了”
+    的错误结论
+- 处理要求:
+  - 对这类
+    gate-induced
+    glitch，
+    默认先尝试:
+    - smoothing-only
+  - 不要把
+    “关 gate”
+    当成首选修复
+
+### 293. `predicted_activity_gate_floor` 虽然能把 fragmentation 很快压平，但也可能把低活动段重新推回“常亮低电平泄漏”；如果 active_fraction / alignment 同时塌回去，说明这是过修
+- 现象:
+  - `step72`
+    smoothing + floor
+    实验里，
+    fragmentation
+    可快速降到
+    `0.0`
+  - 但同时:
+    - `mean_active_fraction`
+      回到
+      `1.0`
+    - `mean_activity_alignment_mae`
+      也回到
+      高泄漏簇水平
+- 风险:
+  - 如果只看
+    “毛刺没了”，
+    会误把
+    “常亮低电平”
+    当成成功修复
+- 处理要求:
+  - 任何
+    gate floor
+    方案，
+    都必须同时检查:
+    - fragmentation
+    - active_fraction
+    - alignment_mae
+    - waveform_rms
+  - 若 floor
+    让
+    active_fraction
+    重新塌回
+    `1.0`，
+    默认判为
+    过修

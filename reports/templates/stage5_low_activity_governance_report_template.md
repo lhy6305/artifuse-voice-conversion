@@ -22,6 +22,10 @@
 ### Leakage Smoothness Tie-Break
 {{leakage_smoothness_tie_break_block}}
 
+## Spectral Shape Sidecar
+- spectral_shape_sidecar: {{spectral_sidecar_line}}
+- spectral_sidecar_note: {{spectral_sidecar_note}}
+
 ## Cross-Axis Note
 - {{cross_axis_note}}
 

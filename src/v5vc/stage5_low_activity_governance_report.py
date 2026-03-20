@@ -52,6 +52,7 @@ def build_governance_report_payload(
     governance_template = dict(low_activity_probe_analysis["governance_template"])
     fragmentation_axis = dict(governance_template["fragmentation_axis"])
     leakage_strength_axis = dict(governance_template["leakage_strength_axis"])
+    spectral_sidecar = dict(low_activity_probe_analysis.get("spectral_sidecar", {}))
     low_activity_soft_rerank = dict(summary["low_activity_soft_rerank"])
     selected_candidate = dict(low_activity_soft_rerank["selected_candidate"])
     executive_status = (
@@ -68,6 +69,7 @@ def build_governance_report_payload(
         "executive_status": executive_status,
         "fragmentation_axis": fragmentation_axis,
         "leakage_strength_axis": leakage_strength_axis,
+        "spectral_sidecar": spectral_sidecar,
         "cross_axis_note": str(governance_template["cross_axis_note"]),
         "soft_rerank": {
             "enabled": bool(low_activity_soft_rerank["enabled"]),
@@ -98,6 +100,7 @@ def build_governance_report_payload(
 def build_render_fields(report: dict[str, object]) -> dict[str, str]:
     fragmentation_axis = report["fragmentation_axis"]
     leakage_strength_axis = report["leakage_strength_axis"]
+    spectral_sidecar = report.get("spectral_sidecar", {})
     soft_rerank = report["soft_rerank"]
     selected_candidate = soft_rerank["selected_candidate"]
     source_artifacts = report["source_artifacts"]
@@ -124,6 +127,22 @@ def build_render_fields(report: dict[str, object]) -> dict[str, str]:
             leakage_strength_axis["worst_floor_leakage_smoothness_ranking"]
         ),
         "leakage_note": str(leakage_strength_axis["note"]),
+        "spectral_sidecar_line": (
+            "best_centroid_gap="
+            f"{format_branch_label_group(spectral_sidecar.get('best_spectral_centroid_gap_branches', []))} "
+            "best_bandwidth_gap="
+            f"{format_branch_label_group(spectral_sidecar.get('best_spectral_bandwidth_gap_branches', []))} "
+            "best_rolloff_gap="
+            f"{format_branch_label_group(spectral_sidecar.get('best_spectral_rolloff95_gap_branches', []))} "
+            "best_hf_ratio_gap="
+            f"{format_branch_label_group(spectral_sidecar.get('best_spectral_hf_ratio_gap_branches', []))}"
+        ),
+        "spectral_sidecar_note": str(
+            spectral_sidecar.get(
+                "note",
+                "Target-relative spectral-shape sidecar is unavailable.",
+            )
+        ),
         "cross_axis_note": str(report["cross_axis_note"]),
         "soft_rerank_summary": (
             f"enabled={soft_rerank['enabled']} "

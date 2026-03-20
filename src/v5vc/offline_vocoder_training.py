@@ -1334,6 +1334,8 @@ def reconstruct_waveform_from_frames(
     frame_length: int,
     hop_length: int,
     frame_gains: torch.Tensor | None = None,
+    frame_gain_floor: float = 0.0,
+    frame_gain_smoothing_frames: int = 0,
 ) -> torch.Tensor:
     if waveform_frames.ndim != 2:
         raise ValueError(f"Expected waveform_frames shape [frames, samples], got {tuple(waveform_frames.shape)}")
@@ -1362,6 +1364,11 @@ def reconstruct_waveform_from_frames(
                 "frame_gains must match waveform frame count: "
                 f"frame_gains={tuple(resolved_frame_gains.shape)} frame_count={frame_count}"
             )
+        resolved_frame_gains = prepare_reconstruction_frame_gains(
+            frame_gains=resolved_frame_gains,
+            frame_gain_floor=float(frame_gain_floor),
+            frame_gain_smoothing_frames=int(frame_gain_smoothing_frames),
+        )
     for frame_index in range(frame_count):
         start = int(frame_index * hop_length)
         end = start + int(frame_length)
@@ -1371,6 +1378,31 @@ def reconstruct_waveform_from_frames(
         output[start:end] += frame * window
         weights[start:end] += window
     return output / weights.clamp_min(1.0e-6)
+
+
+def prepare_reconstruction_frame_gains(
+    frame_gains: torch.Tensor,
+    frame_gain_floor: float,
+    frame_gain_smoothing_frames: int,
+) -> torch.Tensor:
+    resolved = frame_gains.to(torch.float32)
+    if resolved.ndim != 1:
+        raise ValueError(f"frame_gains must be 1D, got {tuple(resolved.shape)}")
+    if int(frame_gain_smoothing_frames) > 0 and int(resolved.shape[0]) > 1:
+        radius = int(frame_gain_smoothing_frames)
+        padded = F.pad(
+            resolved.view(1, 1, -1),
+            (radius, radius),
+            mode="replicate",
+        )
+        kernel = resolved.new_ones((1, 1, radius * 2 + 1))
+        kernel = kernel / float(kernel.numel())
+        resolved = F.conv1d(padded, kernel).view(-1)
+    floor = max(0.0, min(1.0, float(frame_gain_floor)))
+    if floor > 0.0:
+        resolved = resolved.clamp(0.0, 1.0)
+        resolved = floor + resolved * (1.0 - floor)
+    return resolved.to(dtype=frame_gains.dtype, device=frame_gains.device).clamp(0.0, 1.0)
 
 
 def compute_frame_activity_target(

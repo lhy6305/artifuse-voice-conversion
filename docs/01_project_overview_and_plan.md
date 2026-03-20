@@ -13188,3 +13188,298 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `src/v5vc/audio_audit_gui.py`
   - 主布局已切到可拖拽横向分栏
+
+## 2026-03-20 Stage5 `validation12` 人工听审摘要更新
+
+### 当前进度补充
+783. 已完成: 读取
+   `validation12`
+   session
+   当前进度文件，
+   确认仍无:
+   - `audio_audit_review.json`
+784. 已完成: 根据用户直接提供的
+   人工听审结论，
+   落盘一份
+   非结构化摘要报告
+   - `docs/228_stage5_low_activity_validation12_manual_human_audit_summary_report.md`
+
+### 当前阶段结论补充
+- 当前用户给出的
+  主观结论
+  已明显收敛为:
+  - 底噪强度
+    `36 > 48 > 60 > 72`
+  - `36`
+    已接近不可接受
+  - `72`
+    仍有轻微底噪，
+    但 forced choice
+    下最合适
+  - `60`
+    与
+    `72`
+    在某些代表性问题节点
+    都会出现明显毛刺
+  - `36/48`
+    某些局部位置更正常，
+    但整体底噪代价太重
+- 当前因此应把
+  `72`
+  继续视为:
+  - 最合适的临时锚点
+- 但不能写成:
+  - 已达到成品可用
+
+先说人话:
+- 这轮主观结论已经很清楚了:
+  - `72`
+    还是四个里最能用的
+  - 但仍不够好
+  - 真正下一步该打的
+    是
+    `72`
+    在清辅音渐变 / 呼吸声
+    这些点上的毛刺
+
+### 更新后的下一阶段任务
+1. 当前若继续沿
+   主观结论推进，
+   继续把
+   `72`
+   视为
+   临时最佳锚点
+2. 下一步更值得补的
+   量化 / 工程方向是:
+   - 压低
+     `72`
+     在清辅音渐变、
+     呼吸声上的
+     剧烈毛刺
+   - 同时保持
+     当前较低底噪
+     与更宽频带
+3. 后续若要形成
+   fixed audit result report，
+   仍建议补一次:
+   - GUI 导出
+     `audio_audit_review.json`
+
+### 文档补充
+- `docs/228_stage5_low_activity_validation12_manual_human_audit_summary_report.md`
+  - 基于用户直接反馈的 `validation12` 人工听审结论摘要，以及当前治理影响
+
+## 2026-03-20 Stage5 `validation12` target-relative spectral gap sidecar 推进更新
+
+### 当前进度补充
+785. 已完成: 在
+   `src/v5vc/stage5_low_activity_probe.py`
+   中新增
+   target-relative
+   spectral gap
+   sidecar，
+   覆盖:
+   - centroid gap
+   - bandwidth gap
+   - rolloff95 gap
+   - high-frequency ratio gap
+786. 已完成: 将上述
+   spectral sidecar
+   透传到:
+   - `src/v5vc/nores_vocoder_checkpoint_selection.py`
+   - `src/v5vc/stage5_low_activity_governance_report.py`
+   - `reports/templates/stage5_low_activity_governance_report_template.md`
+787. 已完成: 真实重跑
+   `validation12 waveformrms`
+   的:
+   - probe
+   - selection
+   - governance report
+788. 已完成: 落盘专项报告
+   - `docs/229_stage5_low_activity_validation12_spectral_gap_sidecar_report.md`
+
+### 当前阶段结论补充
+- 当前新增的
+  spectral sidecar
+  不是量绝对高频，
+  而是量:
+  - candidate
+    相对
+    aligned_target
+    的频谱形状偏差
+- 当前四个 gap
+  指标都给出同一顺序:
+  - `36 > 48 > 60 > 72`
+- 这意味着:
+  - `72`
+    在
+    `validation12`
+    low-activity
+    片段里，
+    与 target
+    的谱形偏差最小
+- 当前这条量化 sidecar
+  与用户的人耳结论同向:
+  - `72`
+    整体更不刺耳、
+    更适合作为
+    临时锚点
+- 但 dual-axis
+  主结论不变:
+  - `72`
+    仍有局部毛刺风险，
+    下一步该打的是
+    glitch
+    而不是回头替
+    `36/48`
+    洗白
+
+先说人话:
+- 这次不是再写一份
+  “我也觉得 72 更好”
+- 而是把
+  “72 虽然有毛刺，
+  但整体听起来更顺、
+  更不刺耳”
+  这件事
+  补成了
+  可复用的量化 sidecar
+- 所以现在可以更硬气地继续沿
+  `72`
+  往前打，
+  重点只剩:
+  - 压局部毛刺
+
+### 更新后的下一阶段任务
+1. 继续把
+   `72`
+   视为
+   当前最合适的
+   临时锚点
+2. 下一步优先围绕
+   top windows
+   打:
+   - 清辅音渐变
+   - 呼吸声
+   上的
+   glitch / burst
+3. 后续若还要补
+   频谱侧量化，
+   默认优先扩
+   target-relative
+   sidecar，
+   不要回退到
+   只看绝对高频能量
+
+### 文档补充
+- `docs/229_stage5_low_activity_validation12_spectral_gap_sidecar_report.md`
+  - `validation12` 上 target-relative spectral gap sidecar 的代码、回放命令与当前量化结论
+
+## 2026-03-20 Stage5 `step72` glitch smoothing ablation 更新
+
+### 当前进度补充
+789. 已完成: 在
+   export-side
+   waveform decode
+   链路中补入:
+   - predicted activity gate smoothing
+   - predicted activity gate floor
+790. 已完成: 为
+   `export-offline-mvp-nores-vocoder-audio`
+   新增参数:
+   - `--predicted-activity-gate-smoothing-frames`
+   - `--predicted-activity-gate-floor`
+791. 已完成: 为非默认
+   decode
+   变体自动补
+   `branch_label`
+   后缀，
+   避免 A/B
+   probe
+   时同名塌在一起
+792. 已完成: 对
+   `step72`
+   三条代表性 glitch record
+   跑:
+   - gate on/off
+   - smoothing-only
+   - smoothing + floor
+   的小规模 ablation
+793. 已完成: 新增
+   focused GUI
+   听审脚本
+   - `scripts/launch_stage5_step72_glitch_smoothing_audit.ps1`
+794. 已完成: 落盘专项报告
+   - `docs/230_stage5_step72_glitch_smoothing_ablation_report.md`
+
+### 当前阶段结论补充
+- 当前确认:
+  - hard
+    `predicted_activity_gate`
+    确实在压 leakage
+  - 但也更像当前
+    `72`
+    局部 glitch
+    的直接来源之一
+- 当前更重要的是:
+  - 不能粗暴关 gate
+  - 因为关掉后
+    RMS
+    会明显反弹
+- 当前最健康的方向是:
+  - smoothing-only
+  - 而不是
+    smoothing + floor
+- 当前 `smooth3`
+  的代表性 tradeoff
+  最好:
+  - `mean_fragmentation_score`
+    `2.453222 -> 1.543622`
+  - `mean_waveform_rms`
+    `0.013321 -> 0.014492`
+  - `mean_sample_delta_peak`
+    `0.139163 -> 0.077360`
+- 当前因此更合理的
+  下一棒是:
+  - 继续把
+    `72__decode_gate_smooth3`
+    作为 decode-side
+    候选，
+    做更宽样本和人耳复核
+
+先说人话:
+- 问题不是
+  “gate 要不要删”
+- 而是
+  “现在这把 gate
+  切得太硬了”
+- 把 gate
+  稍微平滑后，
+  代表性毛刺窗口
+  确实明显缓了，
+  而且没有把底噪
+  全部放回来
+
+### 更新后的下一阶段任务
+1. 保留
+   `72`
+   作为主锚点，
+   但 focused audit
+   默认加入:
+   - `72__decode_gate_smooth3`
+2. 下一步优先做:
+   - 更宽样本
+     smoothing-only
+     复核
+   - baseline `72`
+     对
+     `smooth3`
+     的人耳对听
+3. 当前不要把
+   `floor`
+   直接升成默认修复
+   路线
+
+### 文档补充
+- `docs/230_stage5_step72_glitch_smoothing_ablation_report.md`
+  - `step72` glitch smoothing ablation 的代码、实验结果和当前推荐 decode-side 方向

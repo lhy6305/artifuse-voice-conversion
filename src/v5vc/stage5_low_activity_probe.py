@@ -21,6 +21,8 @@ DEFAULT_WINDOW_PADDING_SEC = 0.2
 DEFAULT_MIN_AUDIT_WINDOW_SEC = 2.4
 DEFAULT_MAX_AUDIT_WINDOW_SEC = 3.0
 DEFAULT_TARGET_CONTEXT_SEC = 0.2
+DEFAULT_SPECTRAL_ROLLOFF_PERCENTILE = 0.95
+DEFAULT_SPECTRAL_HIGH_BAND_HZ = 4000.0
 LOW_ACTIVITY_TIE_EPSILON = 1e-9
 
 
@@ -97,6 +99,7 @@ def analyze_stage5_low_activity_fragments(
             "activity_alignment_mae measures frame-activity deviation from target inside the low-activity segment; lower means the candidate follows target loudness more closely.",
             "activity_excess_mean and mean_active_fraction act as low-activity residual-energy / floor-leakage proxies; lower means the candidate leaves less unintended activity inside target low-energy regions.",
             "waveform_rms measures raw waveform residual energy inside target low-activity segments; lower means weaker leakage strength even when frame-activity metrics saturate.",
+            "Target-relative spectral gap sidecar measures how far the candidate's spectral centroid / bandwidth / high-frequency balance drift away from aligned_target inside the same low-activity segment; lower means closer timbre and usually less narrowband harshness.",
             "listening uses listening_audio_path from the Stage5 bundle, while decoded uses decoded_audio_path for raw diagnostic follow-up.",
             "Exported listening clips preserve at least window_padding_sec context on both sides and expand to min_audit_window_sec when the raw suspicious segment is too short for human judgment.",
         ],
@@ -244,6 +247,7 @@ def analyze_audio_source(
                 compute_segment_metrics(
                     segment=segment,
                     target_activity=target_activity,
+                    target_waveform=target_waveform,
                     candidate_activity=candidate_activity,
                     candidate_waveform=candidate_waveform,
                     candidate_activity_threshold=float(candidate_activity_threshold),
@@ -272,6 +276,10 @@ def analyze_audio_source(
                     "activity_excess_mean_sum": 0.0,
                     "waveform_rms_sum": 0.0,
                     "delta_peak_sum": 0.0,
+                    "spectral_centroid_gap_sum": 0.0,
+                    "spectral_bandwidth_gap_sum": 0.0,
+                    "spectral_rolloff95_gap_sum": 0.0,
+                    "spectral_hf_ratio_gap_sum": 0.0,
                 },
             )
             branch_aggregate["record_count"] += 1.0
@@ -284,6 +292,10 @@ def analyze_audio_source(
             branch_aggregate["activity_excess_mean_sum"] += float(aggregate["mean_activity_excess_mean"])
             branch_aggregate["waveform_rms_sum"] += float(aggregate["mean_waveform_rms"])
             branch_aggregate["delta_peak_sum"] += float(aggregate["mean_sample_delta_peak"])
+            branch_aggregate["spectral_centroid_gap_sum"] += float(aggregate["mean_spectral_centroid_gap_hz"])
+            branch_aggregate["spectral_bandwidth_gap_sum"] += float(aggregate["mean_spectral_bandwidth_gap_hz"])
+            branch_aggregate["spectral_rolloff95_gap_sum"] += float(aggregate["mean_spectral_rolloff95_gap_hz"])
+            branch_aggregate["spectral_hf_ratio_gap_sum"] += float(aggregate["mean_spectral_hf_ratio_gap"])
 
         if len(branch_results) < 2:
             continue
@@ -418,6 +430,7 @@ def enrich_target_context_metrics(
 def compute_segment_metrics(
     segment: dict[str, object],
     target_activity: torch.Tensor,
+    target_waveform: torch.Tensor,
     candidate_activity: torch.Tensor,
     candidate_waveform: torch.Tensor,
     candidate_activity_threshold: float,
@@ -429,6 +442,7 @@ def compute_segment_metrics(
     end_sample = int(segment["end_sample"])
     target_activity_slice = target_activity[start_frame_index:end_frame_index]
     activity_slice = candidate_activity[start_frame_index:end_frame_index]
+    target_waveform_slice = target_waveform[start_sample:end_sample]
     waveform_slice = candidate_waveform[start_sample:end_sample]
     active_mask = activity_slice >= float(candidate_activity_threshold)
     burst_count = count_bursts(active_mask)
@@ -451,6 +465,14 @@ def compute_segment_metrics(
         diff = activity_slice - target_activity_slice
         activity_alignment_mae = float(torch.abs(diff).mean().item())
         activity_excess_mean = float(torch.clamp(diff, min=0.0).mean().item())
+    target_spectral = compute_waveform_spectral_summary(
+        waveform_slice=target_waveform_slice,
+        sample_rate=sample_rate,
+    )
+    candidate_spectral = compute_waveform_spectral_summary(
+        waveform_slice=waveform_slice,
+        sample_rate=sample_rate,
+    )
     fragmentation_score = float(extra_bursts) + float(activity_toggle)
     return {
         "segment_index": int(segment["segment_index"]),
@@ -479,6 +501,22 @@ def compute_segment_metrics(
         "waveform_rms": round(waveform_rms, 6),
         "sample_delta_abs_mean": round(sample_delta_abs_mean, 6),
         "sample_delta_peak": round(sample_delta_peak, 6),
+        "spectral_centroid_gap_hz": round(
+            abs(float(candidate_spectral["centroid_hz"]) - float(target_spectral["centroid_hz"])),
+            6,
+        ),
+        "spectral_bandwidth_gap_hz": round(
+            abs(float(candidate_spectral["bandwidth_hz"]) - float(target_spectral["bandwidth_hz"])),
+            6,
+        ),
+        "spectral_rolloff95_gap_hz": round(
+            abs(float(candidate_spectral["rolloff95_hz"]) - float(target_spectral["rolloff95_hz"])),
+            6,
+        ),
+        "spectral_hf_ratio_gap": round(
+            abs(float(candidate_spectral["high_band_energy_ratio"]) - float(target_spectral["high_band_energy_ratio"])),
+            6,
+        ),
         "fragmentation_score": round(fragmentation_score, 6),
         "duration_frames": int(end_frame_index - start_frame_index),
         "duration_samples": int(end_sample - start_sample),
@@ -497,6 +535,72 @@ def count_bursts(active_mask: torch.Tensor) -> int:
     return burst_count
 
 
+def compute_waveform_spectral_summary(
+    waveform_slice: torch.Tensor,
+    sample_rate: int,
+) -> dict[str, float]:
+    if waveform_slice.numel() < 16:
+        return {
+            "centroid_hz": 0.0,
+            "bandwidth_hz": 0.0,
+            "rolloff95_hz": 0.0,
+            "high_band_energy_ratio": 0.0,
+        }
+    centered = waveform_slice.to(dtype=torch.float32).contiguous()
+    centered = centered - centered.mean()
+    if float(centered.abs().max().item()) <= 1e-9:
+        return {
+            "centroid_hz": 0.0,
+            "bandwidth_hz": 0.0,
+            "rolloff95_hz": 0.0,
+            "high_band_energy_ratio": 0.0,
+        }
+    window = torch.hann_window(int(centered.shape[0]), dtype=centered.dtype, device=centered.device)
+    spectrum = torch.fft.rfft(centered * window)
+    power = spectrum.abs().pow(2)
+    total_power = float(power.sum().item())
+    if total_power <= 1e-12:
+        return {
+            "centroid_hz": 0.0,
+            "bandwidth_hz": 0.0,
+            "rolloff95_hz": 0.0,
+            "high_band_energy_ratio": 0.0,
+        }
+    frequencies = torch.fft.rfftfreq(int(centered.shape[0]), d=1.0 / float(sample_rate)).to(
+        dtype=centered.dtype,
+        device=centered.device,
+    )
+    centroid_hz = float((power * frequencies).sum().item() / total_power)
+    centroid_tensor = torch.tensor(centroid_hz, dtype=frequencies.dtype, device=frequencies.device)
+    bandwidth_hz = float(
+        torch.sqrt(
+            torch.clamp(
+                (power * (frequencies - centroid_tensor).pow(2)).sum() / total_power,
+                min=0.0,
+            )
+        ).item()
+    )
+    cumulative_power = torch.cumsum(power, dim=0) / total_power
+    rolloff_index = int(
+        torch.searchsorted(
+            cumulative_power,
+            torch.tensor(DEFAULT_SPECTRAL_ROLLOFF_PERCENTILE, dtype=cumulative_power.dtype, device=cumulative_power.device),
+        ).item()
+    )
+    rolloff_index = min(rolloff_index, max(0, int(frequencies.shape[0]) - 1))
+    rolloff95_hz = float(frequencies[rolloff_index].item()) if int(frequencies.shape[0]) > 0 else 0.0
+    high_band_mask = frequencies >= float(DEFAULT_SPECTRAL_HIGH_BAND_HZ)
+    high_band_energy_ratio = 0.0
+    if bool(high_band_mask.any().item()):
+        high_band_energy_ratio = float(power[high_band_mask].sum().item() / total_power)
+    return {
+        "centroid_hz": round(centroid_hz, 6),
+        "bandwidth_hz": round(bandwidth_hz, 6),
+        "rolloff95_hz": round(rolloff95_hz, 6),
+        "high_band_energy_ratio": round(high_band_energy_ratio, 6),
+    }
+
+
 def summarize_branch_segment_metrics(segment_metrics: list[dict[str, object]]) -> dict[str, object]:
     if not segment_metrics:
         return {
@@ -509,6 +613,10 @@ def summarize_branch_segment_metrics(segment_metrics: list[dict[str, object]]) -
             "mean_activity_excess_mean": 0.0,
             "mean_waveform_rms": 0.0,
             "mean_sample_delta_peak": 0.0,
+            "mean_spectral_centroid_gap_hz": 0.0,
+            "mean_spectral_bandwidth_gap_hz": 0.0,
+            "mean_spectral_rolloff95_gap_hz": 0.0,
+            "mean_spectral_hf_ratio_gap": 0.0,
         }
     segment_count = float(len(segment_metrics))
     return {
@@ -545,6 +653,22 @@ def summarize_branch_segment_metrics(segment_metrics: list[dict[str, object]]) -
             sum(float(item["sample_delta_peak"]) for item in segment_metrics) / segment_count,
             6,
         ),
+        "mean_spectral_centroid_gap_hz": round(
+            sum(float(item["spectral_centroid_gap_hz"]) for item in segment_metrics) / segment_count,
+            6,
+        ),
+        "mean_spectral_bandwidth_gap_hz": round(
+            sum(float(item["spectral_bandwidth_gap_hz"]) for item in segment_metrics) / segment_count,
+            6,
+        ),
+        "mean_spectral_rolloff95_gap_hz": round(
+            sum(float(item["spectral_rolloff95_gap_hz"]) for item in segment_metrics) / segment_count,
+            6,
+        ),
+        "mean_spectral_hf_ratio_gap": round(
+            sum(float(item["spectral_hf_ratio_gap"]) for item in segment_metrics) / segment_count,
+            6,
+        ),
     }
 
 
@@ -563,6 +687,10 @@ def summarize_branch_aggregates(branch_aggregates: dict[str, dict[str, float]]) 
             "mean_activity_excess_mean": round(float(aggregate["activity_excess_mean_sum"]) / record_count, 6),
             "mean_waveform_rms": round(float(aggregate["waveform_rms_sum"]) / record_count, 6),
             "mean_sample_delta_peak": round(float(aggregate["delta_peak_sum"]) / record_count, 6),
+            "mean_spectral_centroid_gap_hz": round(float(aggregate["spectral_centroid_gap_sum"]) / record_count, 6),
+            "mean_spectral_bandwidth_gap_hz": round(float(aggregate["spectral_bandwidth_gap_sum"]) / record_count, 6),
+            "mean_spectral_rolloff95_gap_hz": round(float(aggregate["spectral_rolloff95_gap_sum"]) / record_count, 6),
+            "mean_spectral_hf_ratio_gap": round(float(aggregate["spectral_hf_ratio_gap_sum"]) / record_count, 6),
         }
     return summary
 
@@ -1144,7 +1272,11 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"mean_activity_alignment_mae={aggregate['mean_activity_alignment_mae']} "
                 f"mean_activity_excess_mean={aggregate['mean_activity_excess_mean']} "
                 f"mean_waveform_rms={aggregate['mean_waveform_rms']} "
-                f"mean_sample_delta_peak={aggregate['mean_sample_delta_peak']}"
+                f"mean_sample_delta_peak={aggregate['mean_sample_delta_peak']} "
+                f"mean_spectral_centroid_gap_hz={aggregate['mean_spectral_centroid_gap_hz']} "
+                f"mean_spectral_bandwidth_gap_hz={aggregate['mean_spectral_bandwidth_gap_hz']} "
+                f"mean_spectral_rolloff95_gap_hz={aggregate['mean_spectral_rolloff95_gap_hz']} "
+                f"mean_spectral_hf_ratio_gap={aggregate['mean_spectral_hf_ratio_gap']}"
             )
         lines.append("")
         lines.append("### Top Windows")
