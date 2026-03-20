@@ -13409,6 +13409,7 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    focused GUI
    听审脚本
    - `scripts/launch_stage5_step72_glitch_smoothing_audit.ps1`
+   - `scripts/launch_stage5_step72_glitch_smooth3_validation12_audit.ps1`
 794. 已完成: 落盘专项报告
    - `docs/230_stage5_step72_glitch_smoothing_ablation_report.md`
 

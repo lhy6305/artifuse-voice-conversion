@@ -58,6 +58,7 @@
   - `__decode_gate_smooth3`
 - 新增 GUI 听审脚本:
   - `scripts/launch_stage5_step72_glitch_smoothing_audit.ps1`
+  - `scripts/launch_stage5_step72_glitch_smooth3_validation12_audit.ps1`
 
 ## 本轮执行
 
@@ -247,6 +248,7 @@
   - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_validation12_round1_1/`
 - GUI 入口:
   - `scripts/launch_stage5_step72_glitch_smoothing_audit.ps1`
+  - `scripts/launch_stage5_step72_glitch_smooth3_validation12_audit.ps1`
 
 ## 一句话结论
 - 当前 `72`
