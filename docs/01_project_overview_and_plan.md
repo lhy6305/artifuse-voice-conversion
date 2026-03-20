@@ -13494,3 +13494,100 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/230_stage5_step72_glitch_smoothing_ablation_report.md`
   - `step72` glitch smoothing ablation 的代码、实验结果和当前推荐 decode-side 方向
+
+## 2026-03-20 补充：混响样本是否需要删除重训
+
+### 当前结论
+- 当前不建议因为
+  `validation12`
+  听审里发现的少量原生混响样本，
+  直接删除数据并重训
+
+### 原因
+- 当前被明确标注为
+  “存在混响”
+  的关键记录
+  `target::chapter3_6_firefly_106`
+  在当前推荐拆分
+  `hybrid_stratified_blocked`
+  中位于
+  `target validation`
+  而不是
+  `train`
+- 因此它不是当前训练污染源，
+  “删掉并重训”
+  对现有参数不会产生修复作用
+- 主观导出的结果也没有显示
+  混响会掩盖结论：
+  - `validation12`
+    已完成混响窗口
+    仍然把
+    `overall_pick`
+    投给
+    `step72__decode_gate_smooth3`
+  - focused
+    `validation3`
+    里的混响窗口也没有把
+    baseline / smooth3
+    排序反转
+- 量化上，
+  该记录也不是离群反例：
+  - `mean_fragmentation_score`
+    `3.358236 -> 1.355229`
+  - `mean_sample_delta_peak`
+    `0.090525 -> 0.064535`
+
+### 当前更合理的动作
+1. 保留这批样本，
+   不为此重训
+2. 后续若要做更严格治理，
+   先加
+   `reverb`
+   tag，
+   再决定是否拆成独立 challenge / robustness bucket
+
+### 文档补充
+- `docs/231_stage5_reverb_sample_retention_evaluation.md`
+  - 说明为什么当前不应把 validation-only 的混响样本误判为训练污染并触发重训
+
+## 2026-03-20 补充：chapter3_5 / chapter3_6 全量混响标注已落盘
+
+### 当前动作
+- 已按人工听审结论，
+  将
+  `chapter3_5`
+  和
+  `chapter3_6`
+  的 target 样本整体标记为
+  `reverb_like`
+
+### 落盘方式
+- 没有直接改写现有
+  train / validation
+  manifest schema
+- 新增独立 sidecar：
+  - `data_prep/round1_1/annotations/target_quality_annotations_chapter3_5_3_6_reverb.jsonl`
+- 同步新增摘要：
+  - `reports/data/round1_1_target_quality_annotations/target_quality_annotation_summary.json`
+  - `reports/data/round1_1_target_quality_annotations/target_quality_annotation_summary.md`
+
+### 当前范围
+- `chapter3_5`
+  `6`
+  条
+- `chapter3_6`
+  `11`
+  条
+- 合计
+  `17`
+  条
+
+### 当前意义
+1. 先把章节级混响事实正式固定下来，
+   供后续筛样/稳健性评估复用
+2. 先打 tag，
+   暂不因该标签本身触发删样本重训
+
+### 文档补充
+- `docs/232_stage5_chapter35_36_reverb_annotation_report.md`
+  - 记录本次章节级混响 sidecar 标注资产与采用理由

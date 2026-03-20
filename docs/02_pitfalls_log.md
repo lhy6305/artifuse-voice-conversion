@@ -7988,3 +7988,84 @@
     `1.0`，
     默认判为
     过修
+
+### 294. 听审里发现“原生带混响”的样本时，先查它是不是 train；如果它只是 validation/audit 观察位，就不要把它误判成“训练污染”并仓促重训
+- 现象:
+  - 本轮
+    `step72`
+    glitch smoothing
+    听审中，
+    `target::chapter3_6_firefly_106`
+    的若干窗口
+    被备注为
+    存在原生混响
+- 风险:
+  - 如果只看到
+    “样本不够纯净”，
+    很容易直接跳到
+    “删数据重训”
+  - 但如果该记录根本不在
+    train，
+    这一步既修不了现有模型，
+    还会破坏当前
+    validation
+    的鲁棒性观察位
+- 本次实际情况:
+  - 该记录在当前推荐拆分
+    `hybrid_stratified_blocked`
+    中位于
+    `target validation`
+  - 不在
+    train
+  - 而且主观/量化都没显示它会掩盖
+    `step72__decode_gate_smooth3`
+    优于 baseline
+    的结论
+- 处理要求:
+  - 遇到
+    混响 / 房间响应 / 轻度环境染色
+    样本时，
+    默认先确认:
+    - 它在
+      train
+      还是
+      validation
+    - 它是否真的改变了
+      分支排序
+  - 若只是
+    validation-only
+    且未扭曲结论，
+    默认保留，
+    必要时仅加
+    tag
+    或拆成独立 robustness bucket
+
+### 295. 当人工确认某个章节整批样本都带类似混响时，优先补章节级 sidecar 标注，不要临时把结论散落在 GUI 备注或单条 doc 段落里
+- 现象:
+  - 本轮人工试听进一步确认：
+    - `chapter3_5`
+      全部样本
+      存在类似混响
+    - `chapter3_6`
+      全部样本
+      也存在类似混响
+- 风险:
+  - 如果只把这类信息留在
+    单条 audit note
+    或临时对话里，
+    后续做:
+    - 数据治理
+    - selective ablation
+    - challenge eval
+    时，
+    还得重新人工回忆和核对
+- 处理要求:
+  - 对这种
+    chapter-wide
+    观察，
+    默认新增独立
+    annotation sidecar
+  - 不要急着修改现有 manifest schema；
+    先保证标签可复用、
+    可追溯、
+    不破坏当前训练入口
