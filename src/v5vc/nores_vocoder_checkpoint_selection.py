@@ -16,6 +16,8 @@ DEFAULT_LOW_ACTIVITY_METRIC_WEIGHTS = {
     "mean_fragmentation_score": 0.1,
 }
 
+LOW_ACTIVITY_TIE_EPSILON = 1e-9
+
 
 def select_offline_mvp_nores_vocoder_checkpoint(
     summary_path: Path,
@@ -255,23 +257,49 @@ def load_low_activity_probe_analysis(
     if not compact_aggregates:
         return None
 
+    best_fragmentation_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_fragmentation_score",
+        mode="min",
+    )
+    best_alignment_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_activity_alignment_mae",
+        mode="min",
+    )
+    best_low_activity_quietness_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_activity_excess_mean",
+        mode="min",
+    )
+    worst_floor_leakage_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_active_fraction",
+        mode="max",
+    )
+    best_low_activity_smoothness_branches = collect_tied_branch_labels(
+        compact_aggregates=compact_aggregates,
+        metric_name="mean_sample_delta_peak",
+        mode="min",
+    )
+    worst_floor_leakage_smoothness_ranking = rank_branch_labels_by_metric(
+        compact_aggregates=compact_aggregates,
+        branch_labels=worst_floor_leakage_branches,
+        metric_name="mean_sample_delta_peak",
+        mode="min",
+    )
     ranking = {
-        "best_fragmentation_score_branch": min(
-            compact_aggregates.items(),
-            key=lambda item: (float(item[1]["mean_fragmentation_score"]), str(item[0])),
-        )[0],
-        "best_alignment_branch": min(
-            compact_aggregates.items(),
-            key=lambda item: (float(item[1]["mean_activity_alignment_mae"]), str(item[0])),
-        )[0],
-        "best_low_activity_quietness_branch": min(
-            compact_aggregates.items(),
-            key=lambda item: (float(item[1]["mean_activity_excess_mean"]), str(item[0])),
-        )[0],
-        "worst_floor_leakage_branch": max(
-            compact_aggregates.items(),
-            key=lambda item: (float(item[1]["mean_active_fraction"]), str(item[0])),
-        )[0],
+        "best_fragmentation_score_branch": best_fragmentation_branches[0],
+        "best_fragmentation_score_branches": best_fragmentation_branches,
+        "best_alignment_branch": best_alignment_branches[0],
+        "best_alignment_branches": best_alignment_branches,
+        "best_low_activity_quietness_branch": best_low_activity_quietness_branches[0],
+        "best_low_activity_quietness_branches": best_low_activity_quietness_branches,
+        "worst_floor_leakage_branch": worst_floor_leakage_branches[0],
+        "worst_floor_leakage_branches": worst_floor_leakage_branches,
+        "best_low_activity_smoothness_branch": best_low_activity_smoothness_branches[0],
+        "best_low_activity_smoothness_branches": best_low_activity_smoothness_branches,
+        "worst_floor_leakage_smoothness_ranking": worst_floor_leakage_smoothness_ranking,
     }
     top_windows = []
     source_top_windows = source_payload.get("top_windows", [])
@@ -299,16 +327,22 @@ def load_low_activity_probe_analysis(
 
     summary_lines = [
         (
-            f"low_activity/{audio_source}: best_alignment={ranking['best_alignment_branch']}, "
-            f"best_quietness={ranking['best_low_activity_quietness_branch']}, "
-            f"best_fragmentation={ranking['best_fragmentation_score_branch']}, "
-            f"worst_floor_leakage={ranking['worst_floor_leakage_branch']}"
+            f"low_activity/{audio_source}: best_alignment={format_branch_label_group(ranking['best_alignment_branches'])}, "
+            f"best_quietness={format_branch_label_group(ranking['best_low_activity_quietness_branches'])}, "
+            f"best_fragmentation={format_branch_label_group(ranking['best_fragmentation_score_branches'])}, "
+            f"worst_floor_leakage={format_branch_label_group(ranking['worst_floor_leakage_branches'])}, "
+            f"best_smoothness={format_branch_label_group(ranking['best_low_activity_smoothness_branches'])}"
         ),
         (
             "Guardrail: low-activity fragmentation is a local-risk indicator only; "
             "interpret it together with activity_alignment_mae and activity_excess_mean before treating a checkpoint as globally worse."
         ),
     ]
+    if len(worst_floor_leakage_smoothness_ranking) > 1:
+        summary_lines.append(
+            "Within the worst_floor_leakage tie group, mean_sample_delta_peak orders smoother decoded edges as: "
+            + " < ".join(item["branch_label"] for item in worst_floor_leakage_smoothness_ranking)
+        )
     return {
         "probe_path": low_activity_probe_path.resolve().as_posix(),
         "audio_source": str(audio_source),
@@ -325,6 +359,64 @@ def infer_step_from_branch_label(branch_label: str) -> int | None:
     if match is None:
         return None
     return int(match.group(1))
+
+
+def collect_tied_branch_labels(
+    compact_aggregates: dict[str, dict[str, object]],
+    metric_name: str,
+    mode: str,
+) -> list[str]:
+    values = [
+        float(aggregate[metric_name])
+        for aggregate in compact_aggregates.values()
+    ]
+    if not values:
+        return []
+    if mode == "min":
+        target_value = min(values)
+    elif mode == "max":
+        target_value = max(values)
+    else:
+        raise ValueError(f"Unsupported tie-collection mode: {mode}")
+    tied_labels = [
+        str(branch_label)
+        for branch_label, aggregate in compact_aggregates.items()
+        if abs(float(aggregate[metric_name]) - target_value) <= LOW_ACTIVITY_TIE_EPSILON
+    ]
+    tied_labels.sort()
+    return tied_labels
+
+
+def rank_branch_labels_by_metric(
+    compact_aggregates: dict[str, dict[str, object]],
+    branch_labels: list[str],
+    metric_name: str,
+    mode: str,
+) -> list[dict[str, object]]:
+    rows = [
+        {
+            "branch_label": str(branch_label),
+            "metric_name": str(metric_name),
+            "metric_value": round(float(compact_aggregates[branch_label][metric_name]), 6),
+        }
+        for branch_label in branch_labels
+        if branch_label in compact_aggregates
+    ]
+    if mode == "min":
+        rows.sort(key=lambda item: (float(item["metric_value"]), str(item["branch_label"])))
+    elif mode == "max":
+        rows.sort(key=lambda item: (-float(item["metric_value"]), str(item["branch_label"])))
+    else:
+        raise ValueError(f"Unsupported branch-ranking mode: {mode}")
+    return rows
+
+
+def format_branch_label_group(branch_labels: list[str]) -> str:
+    if not branch_labels:
+        return "[]"
+    if len(branch_labels) == 1:
+        return branch_labels[0]
+    return "[" + ", ".join(branch_labels) + "]"
 
 
 def build_low_activity_candidate_metrics(
@@ -557,8 +649,20 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"fragmentation={aggregate['mean_fragmentation_score']} "
                 f"active_fraction={aggregate['mean_active_fraction']} "
                 f"alignment_mae={aggregate['mean_activity_alignment_mae']} "
-                f"activity_excess={aggregate['mean_activity_excess_mean']}"
+                f"activity_excess={aggregate['mean_activity_excess_mean']} "
+                f"sample_delta_peak={aggregate['mean_sample_delta_peak']}"
             )
+        leakage_smoothness_ranking = low_activity_probe_analysis.get("ranking", {}).get(
+            "worst_floor_leakage_smoothness_ranking",
+            [],
+        )
+        if isinstance(leakage_smoothness_ranking, list) and leakage_smoothness_ranking:
+            lines.append("### Worst-Floor-Leakage Tie-Break")
+            for item in leakage_smoothness_ranking:
+                lines.append(
+                    f"- branch={item['branch_label']} "
+                    f"{item['metric_name']}={item['metric_value']}"
+                )
         lines.append("### Top Windows")
         for item in low_activity_probe_analysis.get("top_windows", []):
             lines.append(
@@ -627,7 +731,8 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"low_activity(fragmentation={low_activity_metrics['mean_fragmentation_score']} "
                 f"active_fraction={low_activity_metrics['mean_active_fraction']} "
                 f"alignment_mae={low_activity_metrics['mean_activity_alignment_mae']} "
-                f"activity_excess={low_activity_metrics['mean_activity_excess_mean']})"
+                f"activity_excess={low_activity_metrics['mean_activity_excess_mean']} "
+                f"sample_delta_peak={low_activity_metrics['mean_sample_delta_peak']})"
             )
         soft_rerank_text = ""
         if candidate.get("low_activity_governance_score") is not None:

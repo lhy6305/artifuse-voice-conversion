@@ -7184,3 +7184,154 @@
     - 更多 checkpoint
     - 更多 low-activity probe
     共同回查
+### 275. low-activity governance 如果在多 checkpoint 并列时还强行给单一 winner，会把“无法区分”误写成“某一步更优”
+- 现象:
+  - 本轮
+    `36/48/60/72`
+    四候选 probe
+    显示:
+    - `step36`
+    - `step48`
+    - `step60`
+    在当前 6-record
+      low-activity 切片上
+      的核心指标完全并列
+  - 如果 still
+    只输出单一
+    `best_fragmentation`
+    或
+    `worst_floor_leakage`
+    branch，
+    结果就会被字典序
+    或遍历顺序
+    偶然决定
+- 风险:
+  - 会把
+    “当前 probe
+    分不出来”
+    误写成
+    “当前 probe
+    明确支持某一步”
+- 处理要求:
+  - 当前阶段
+    low-activity governance
+    对完全并列结果
+    默认显式写成:
+    - tie group
+  - 不再把并列硬压成
+    单 winner
+### 276. 扩 checkpoint 覆盖不等于自动提升治理分辨率；如果新加入的 checkpoint 在现有低活动切片上是“指标克隆”，soft rerank 结论不会变
+- 现象:
+  - 本轮把
+    `36`
+    和
+    `48`
+    加回 low-activity probe
+  - 但当前 decoded aggregate 上:
+    - `36/48/60`
+      的
+      `fragmentation / active_fraction / alignment / excess`
+      完全相同
+  - 所以 ratio sweep
+    虽然新增了:
+    - `1.110966`
+      和
+      `1.259344`
+      的入围点
+  - 最终推荐仍没有变化
+- 风险:
+  - 如果只看
+    “候选变多了，
+    结果还是 `72`”，
+    很容易误写成
+    “当前策略已经跨更宽候选集稳健”
+- 处理要求:
+  - 当前看到这类现象时，
+    默认先检查:
+    - 新 checkpoint
+      是否真的带来了
+      新的 low-activity 信息
+  - 若没有，
+    下一步优先补:
+    - 更广记录范围
+    - 更多低活动窗口类型
+    - 更能区分该族 checkpoint
+      的指标
+  - 不优先继续微调
+    soft rerank
+    权重
+### 277. 如果 `6-record` 和 `validation12` 两轮扩样都显示同一组 checkpoint 的 low-activity 核心指标完全重合，就应默认把“分辨率不足”当成阶段性事实，而不是继续假设下一轮小调参会自己分开
+- 现象:
+  - 当前
+    `activitygate72`
+    family
+    上，
+    `36/48/60`
+    在:
+    - `6-record`
+    - `validation12`
+    两轮 low-activity probe
+    里，
+    都表现为:
+    - `fragmentation = 0.0`
+    - `active_fraction = 1.0`
+    - `alignment / excess`
+      完全相同
+- 风险:
+  - 如果在这种情况下
+    还继续主要围绕
+    当前四项权重
+    做小调参，
+    会把大量时间花在
+    没有新增信息的参数面上
+- 处理要求:
+  - 当这种跨两轮复核的塌缩出现时，
+    默认把问题重心切到:
+    - 样本覆盖
+    - 窗口类型
+    - 新指标设计
+  - 不再把
+    “再微调一轮 soft rerank”
+    当作默认主线
+### 278. 当核心 low-activity 指标塌缩时，`mean_sample_delta_peak` 可以作为泄漏簇内部的次级平滑度排序，但不能误当作“更安静”或“更贴 target”的替代指标
+- 现象:
+  - 当前
+    `validation12`
+    probe
+    上，
+    `36/48/60`
+    的:
+    - fragmentation
+    - active_fraction
+    - alignment
+    - excess
+    完全重合
+  - 但
+    `mean_sample_delta_peak`
+    仍给出较稳定排序:
+    - `step60 < step48 < step36`
+- 风险:
+  - 如果直接把
+    `sample_delta_peak`
+    当成
+    “更安静”
+    或
+    “更尊重原音量变化”，
+    会把
+    waveform edge roughness
+    与
+    low-activity leakage / alignment
+    混为一谈
+- 处理要求:
+  - 当前阶段只把它作为:
+    - 泄漏簇内部
+      secondary smoothness sidecar
+  - 只有在
+    核心 low-activity
+    指标已经塌缩时，
+    才用它做次级排序
+  - 不直接用它覆盖
+    fragmentation /
+    alignment /
+    excess /
+    active_fraction

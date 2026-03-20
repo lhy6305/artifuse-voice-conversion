@@ -107,7 +107,7 @@ def analyze_offline_mvp_nores_vocoder_low_activity_sensitivity(
         "notes": [
             "This analysis reuses the existing late_candidates payload and does not reopen the main selector policy.",
             "Only candidates that already carry low_activity_metrics and satisfy the pairwise cap can participate in the soft rerank sensitivity scan.",
-            "Because the current probe only covers steps 60 and 72, these conclusions are local to the current low-activity comparison set.",
+            build_locality_note(eligible_metric_candidates),
         ],
     }
     write_json(output_dir / "nores_vocoder_low_activity_sensitivity.json", summary)
@@ -387,6 +387,21 @@ def summarize_rerank(rerank: dict[str, object]) -> dict[str, object]:
             for item in ranked_candidates
         ],
     }
+
+
+def build_locality_note(eligible_metric_candidates: list[dict[str, object]]) -> str:
+    covered_steps = [
+        int(item["step"])
+        for item in eligible_metric_candidates
+    ]
+    covered_steps.sort()
+    if not covered_steps:
+        return "The current checkpoint-selection payload does not expose any low-activity metric-ready late candidates."
+    covered_text = ", ".join(str(step) for step in covered_steps)
+    return (
+        "These conclusions are local to the current low-activity comparison set, "
+        f"which currently covers late candidates at steps [{covered_text}]."
+    )
 
 
 def build_markdown(summary: dict[str, object]) -> str:

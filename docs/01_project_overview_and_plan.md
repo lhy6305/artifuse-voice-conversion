@@ -12197,3 +12197,332 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/217_stage5_low_activity_soft_rerank_sensitivity_report.md`
   - 当前 soft rerank 的门槛/权重敏感性、翻盘边界与适用范围
+
+## 2026-03-20 Stage5 low-activity probe 四候选扩展更新
+
+### 当前进度补充
+729. 已完成: 补导出
+   `activitygate36`
+   与
+   `activitygate48`
+   的
+   6-record
+   decoded-pitch-match validation bundle
+730. 已完成: 将 low-activity probe
+   从
+   `60/72`
+   扩展到:
+   - `36/48/60/72`
+731. 已完成: 基于四候选 probe
+   重跑 selection sidecar
+   与 sensitivity
+732. 已完成: 修正
+   low-activity governance
+   tie 表达
+   与
+   sensitivity locality note
+733. 已完成: 新增阶段报告
+   - `docs/218_stage5_low_activity_probe_4way_expansion_report.md`
+
+### 当前阶段结论补充
+- 当前四候选 decoded low-activity probe
+  显示:
+  - `step36`
+  - `step48`
+  - `step60`
+  在当前 6-record
+  低活动切片上，
+  核心指标几乎完全相同
+- `step72`
+  仍然是唯一明显不同的一类:
+  - fragmentation 更高
+  - 但 activity alignment /
+    quietness 更好
+- 把
+  `48`
+  与
+  `36`
+  加回候选池后，
+  当前 soft rerank
+  推荐仍然是:
+  - `step72`
+- 但这轮更重要的新发现不是
+  “权重更稳了”，
+  而是:
+  - 当前 low-activity
+    切片
+    对
+    `36/48/60`
+    的区分能力很弱
+
+先说人话:
+- 现在不是
+  “48 加进来后还是干不过 72”
+- 更准确地说是:
+  - 这批低活动样本
+    看 `36/48/60`
+    基本都像一个东西
+- 所以下一步该补的是
+  更有区分力的样本和指标，
+  不是继续在这组切片上死调权重。
+
+### 更新后的下一阶段任务
+1. 后续若继续推进
+   Stage5 low-activity governance，
+   优先补:
+   - 更多 record
+   - 更多低活动窗口类型
+   - 更能区分
+     `36/48/60`
+     的指标
+2. 当前不要把
+   “四候选下结果仍是 `72`”
+   误写成:
+   - 当前 soft rerank
+     已经跨更宽候选集
+     系统性稳健
+3. 之后若再重跑 sensitivity，
+   默认使用:
+   - 四候选 probe
+     以上的覆盖范围，
+   避免再次退回
+   `60/72`
+   的局部二选一口径
+
+### 文档补充
+- `docs/218_stage5_low_activity_probe_4way_expansion_report.md`
+  - 四候选 probe、selection 与 sensitivity 结果，以及当前区分能力边界
+
+## 2026-03-20 Stage5 low-activity `validation12` 扩样复核更新
+
+### 当前进度补充
+734. 已完成: 为
+   `36/48/60/72`
+   四个 checkpoint
+   补导出
+   `validation12`
+   decoded-pitch-match bundle
+735. 已完成: 运行
+   `validation12`
+   版
+   four-way low-activity probe
+736. 已完成: 基于
+   `validation12`
+   probe
+   重跑 selection
+   与 sensitivity
+737. 已完成: 新增扩样复核报告
+   - `docs/219_stage5_low_activity_validation12_recheck_report.md`
+
+### 当前阶段结论补充
+- 当前
+  `36/48/60`
+  的 low-activity
+  核心指标塌缩，
+  在
+  `validation12`
+  子集上仍然成立
+- 当前不是
+  `6-record`
+  特例
+- 更宽样本下，
+  `step72`
+  的 tradeoff
+  也更清楚:
+  - fragmentation 更高
+  - 但 quietness /
+    alignment
+    明显更好
+- 当前 soft rerank
+  在
+  `validation12`
+  上仍然推荐:
+  - `step72`
+  且翻盘边界仍然是:
+  - `fragmentation_weight >= 0.55`
+
+先说人话:
+- 现在这条线已经不是
+  “小样本里看起来像这样”
+- 而是
+  换一批更宽的 validation
+  子集后，
+  结论还是同一个方向
+- 所以下一步该补的，
+  已经很明确是
+  更有区分力的样本和指标，
+  不是继续纠缠
+  现有权重的小数点
+
+### 更新后的下一阶段任务
+1. 后续若继续推进
+   Stage5 low-activity
+   governance，
+   优先补:
+   - 更广 validation 覆盖
+   - 更能区分
+     `36/48/60`
+     的低活动指标
+   - 定向窗口挖掘
+2. 当前不要继续把
+   主要精力放在:
+   - `0.35 / 0.35 / 0.2 / 0.1`
+     这组权重的微调
+3. 之后如果要继续做
+   主观复核，
+   优先围绕
+   `validation12`
+   probe
+   里的高 delta windows
+   做定点听审
+
+### 文档补充
+- `docs/219_stage5_low_activity_validation12_recheck_report.md`
+  - 更宽 validation 子集上的 low-activity 复核与当前结论稳健性
+
+## 2026-03-20 Stage5 low-activity smoothness sidecar 补充更新
+
+### 当前进度补充
+738. 已完成: 对
+   `validation12`
+   probe
+   中
+   `36/48/60`
+   的
+   `mean_sample_delta_peak`
+   做 record 级稳定性复核
+739. 已完成: 在
+   selection sidecar
+   中新增:
+   - `best_low_activity_smoothness_branch`
+   - `worst_floor_leakage_smoothness_ranking`
+740. 已完成: 新增补充报告
+   - `docs/220_stage5_low_activity_smoothness_sidecar_report.md`
+
+### 当前阶段结论补充
+- 当前
+  `36/48/60`
+  虽然在核心 low-activity
+  指标上塌缩，
+  但
+  `mean_sample_delta_peak`
+  提供了一个较稳定的
+  次级排序:
+  - `step60 < step48 < step36`
+- 量化支持为:
+  - `12/12`
+    记录上
+    `36 > 48`
+  - `12/12`
+    记录上
+    `36 > 60`
+  - `10/12`
+    记录上
+    `48 > 60`
+- 当前这条信息
+  已接入
+  governance sidecar，
+  但仍未升格为:
+  - 主 selector
+  - soft rerank 主规则
+
+先说人话:
+- 现在终于不是
+  “36/48/60 完全一团糊，
+  什么都分不出来”
+- 而是已经能补一句:
+  - 如果非要在这三者里挑
+    一个更平滑的泄漏版本，
+    当前更像是
+    `60`
+    最好，
+    `48`
+    次之，
+    `36`
+    最粗。
+
+### 更新后的下一阶段任务
+1. 后续若继续做
+   Stage5 low-activity
+   fallback 治理，
+   默认把
+   `mean_sample_delta_peak`
+   作为:
+   - 泄漏簇内部的
+     secondary smoothness sidecar
+2. 当前不要把它误升格成:
+   - “更安静”
+   - “更尊重 target”
+   的主指标
+3. 若后续仍要继续补指标，
+   优先寻找:
+   - 能区分
+     `36/48/60`
+     的
+     leakage-strength
+     类指标，
+   而不是只停留在
+   smoothness
+
+### 文档补充
+- `docs/220_stage5_low_activity_smoothness_sidecar_report.md`
+  - `mean_sample_delta_peak` 作为泄漏簇内部次级排序的稳定性与当前使用边界
+
+## 2026-03-20 Stage5 low-activity `validation12` 听审交付补充更新
+
+### 当前进度补充
+741. 已完成: 为
+   `validation12`
+   low-activity
+   probe
+   生成四路 decoded
+   GUI 听审 bundle
+742. 已完成: 新增 GUI 启动脚本
+   - `scripts/launch_stage5_low_activity_validation12_decoded_audit.ps1`
+743. 已完成: 新增听审交付契约
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+
+### 当前阶段结论补充
+- 当前若要做
+  `validation12`
+  的人工复听，
+  已经不需要再手工拼路径
+- 当前最合理的听审顺序是:
+  - 先看
+    `step72`
+    相对其余三路
+    是否在高 delta
+    低活动窗里
+    确实更容易 burst
+  - 若确认存在明显风险，
+    再在
+    `36/48/60`
+    内部补听
+    `60 < 48 < 36`
+    的平滑度顺序
+
+先说人话:
+- 现在这条线已经不是
+  “如果要听，
+  以后再说”
+- 而是已经把
+  听什么、
+  怎么开、
+  输出放哪
+  都固定下来了
+
+### 更新后的下一阶段任务
+1. 若后续继续走
+   人耳复核路线，
+   直接使用:
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+2. 若先继续走量化路线，
+   下一步优先补:
+   - 区分
+     `36/48/60`
+     leakage-strength
+     的新指标
+
+### 文档补充
+- `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+  - `validation12` low-activity 定点复听的命令、脚本入口与试听重点
