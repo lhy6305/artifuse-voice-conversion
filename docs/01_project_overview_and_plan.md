@@ -12526,3 +12526,469 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
   - `validation12` low-activity 定点复听的命令、脚本入口与试听重点
+
+## 2026-03-20 Stage5 low-activity waveform RMS leakage-strength sidecar 更新
+
+### 当前进度补充
+744. 已完成: 为
+   `validation12`
+   low-activity
+   probe
+   新增
+   waveform-domain
+   leakage-strength
+   指标
+   - `mean_waveform_rms`
+745. 已完成: 将
+   `mean_waveform_rms`
+   接入:
+   - `stage5_low_activity_probe`
+   - `checkpoint selection`
+     的
+     governance sidecar
+746. 已完成: 重跑
+   `validation12`
+   的
+   probe / selection / sensitivity
+   新产物
+747. 已完成: 新增正式报告
+   - `docs/222_stage5_low_activity_waveform_rms_leakage_strength_sidecar_report.md`
+
+### 当前阶段结论补充
+- 当前
+  `36/48/60`
+  在
+  frame-activity
+  域上的
+  core low-activity
+  指标
+  仍然塌缩
+- 但
+  `mean_waveform_rms`
+  现在已经足够稳定地给出:
+  - overall:
+    `72 < 60 < 48 < 36`
+  - leakage cluster:
+    `60 < 48 < 36`
+- 当前
+  `12 / 12`
+  条
+  `validation12`
+  记录上，
+  都支持:
+  - `36 > 48`
+  - `48 > 60`
+- 这说明:
+  - 现在已经不只是
+    smoothness sidecar
+    能区分
+    `36/48/60`
+  - leakage-strength
+    本身也已经能区分
+
+先说人话:
+- 之前只能说
+  `60`
+  更平滑
+- 现在还能更直接地说
+  `60`
+  在这些低活动窗里，
+  残留能量也确实比
+  `48`
+  和
+  `36`
+  更弱
+
+### 更新后的下一阶段任务
+1. 若继续走
+   人耳复核路线，
+   仍优先使用:
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+2. 若继续走
+   量化治理路线，
+   当前更合理的下一步是:
+   - 判断
+     `waveform_rms`
+     是否值得进入
+     后续 family
+     的通用 low-activity sidecar
+   - 而不是立刻把它写进
+     主 soft rerank
+     权重
+
+### 文档补充
+- `docs/222_stage5_low_activity_waveform_rms_leakage_strength_sidecar_report.md`
+  - `waveform_rms` 的定义、代码接入点、重跑结果与当前使用边界
+
+## 2026-03-20 Stage5 low-activity waveform RMS 通用 sidecar 升级更新
+
+### 当前进度补充
+748. 已完成: 回到
+   `6-record`
+   四候选 probe，
+   复核
+   `waveform_rms`
+   的稳定性
+749. 已完成: 回到
+   `60 vs 72`
+   multisource probe，
+   复核
+   `waveform_rms`
+   在
+   `decoded / decoded_pitch_matched / audit_proxy`
+   上的适用边界
+750. 已完成: 生成对应的
+   `6-record`
+   与
+   `60 vs 72`
+   selection / sensitivity
+   正式产物
+751. 已完成: 新增正式报告
+   - `docs/223_stage5_low_activity_waveform_rms_generalization_and_governance_promotion_report.md`
+
+### 当前阶段结论补充
+- 当前可以把
+  `waveform_rms`
+  的制度口径升级为:
+  - 通用
+    low-activity
+    leakage-strength sidecar
+- 当前证据覆盖到:
+  - `6-record` 四候选
+  - `validation12` 四候选
+  - `60 vs 72`
+    的
+    `decoded`
+  - `60 vs 72`
+    的
+    `decoded_pitch_matched`
+  - `60 vs 72`
+    的
+    `audit_proxy`
+- 但升级边界也更清楚了:
+  - 它表达的是
+    residual leakage strength
+  - 不是
+    fragmentation
+    裁决器
+
+先说人话:
+- 现在已经可以把
+  `waveform_rms`
+  当作项目里的固定辅助口径了
+- 但不能因为它稳定，
+  就把
+  “残留能量更弱”
+  误写成
+  “整体更安全”
+
+### 更新后的下一阶段任务
+1. 若继续完善
+   low-activity governance，
+   当前更合理的下一步是:
+   - 明确
+     `fragmentation`
+     与
+     `leakage-strength`
+     的双轴报告模板
+2. 若继续做人工复听，
+   仍然优先围绕:
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+   的
+   decoded
+   定点复核
+
+### 文档补充
+- `docs/223_stage5_low_activity_waveform_rms_generalization_and_governance_promotion_report.md`
+  - `waveform_rms` 跨样本宽度、跨音源复核结果，以及“可升为通用 sidecar 但不可升为主裁决器”的升级边界
+
+## 2026-03-20 Stage5 low-activity 双轴 governance 模板化更新
+
+### 当前进度补充
+752. 已完成: 为
+   low-activity
+   probe
+   增加
+   `governance_template`
+   固定字段
+753. 已完成: 为
+   checkpoint selection
+   的
+   `low_activity_probe_analysis`
+   增加同构
+   `governance_template`
+754. 已完成: 重跑
+   `validation12`
+   四候选、
+   `6-record`
+   四候选、
+   `60 vs 72`
+   multisource
+   的关键 probe / selection
+   产物
+755. 已完成: 新增正式报告
+   - `docs/224_stage5_low_activity_dual_axis_governance_template_integration_report.md`
+
+### 当前阶段结论补充
+- 当前
+  Stage5 low-activity
+  governance
+  已经从:
+  - 双轴概念
+  升级为:
+  - 双轴模板化产物
+- 现在 probe
+  和 selection
+  都会默认写出:
+  - `fragmentation_axis`
+  - `leakage_strength_axis`
+  - `cross_axis_note`
+- 所以当前再看产物时，
+  默认就能直接知道:
+  - 当前是
+    `convergent`
+    还是
+    `tradeoff`
+
+先说人话:
+- 之前得靠人自己读懂
+  一堆指标后
+  才能知道
+  “这其实是双轴”
+- 现在文档和产物
+  会直接告诉你
+  “别压成一个 winner”
+
+### 更新后的下一阶段任务
+1. 若继续沿
+   low-activity governance
+   推进，
+   当前最合理的下一步是:
+   - 决定
+     双轴模板
+     是否也要扩到
+     未来新的
+     low-activity family
+     与阶段汇报脚本
+2. 若当前主线要回到
+   人工复听，
+   继续优先使用:
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+
+### 文档补充
+- `docs/224_stage5_low_activity_dual_axis_governance_template_integration_report.md`
+  - 双轴模板字段、重跑范围、以及“从概念升级到模板化产物”的当前状态
+
+## 2026-03-20 Stage5 low-activity fixed governance report 入口更新
+
+### 当前进度补充
+756. 已完成: 新增
+   Stage5 low-activity
+   固定报告物化模块
+   - `src/v5vc/stage5_low_activity_governance_report.py`
+757. 已完成: 新增模板
+   - `reports/templates/stage5_low_activity_governance_report_template.md`
+758. 已完成: 新增正式命令
+   - `materialize-stage5-low-activity-governance-report`
+759. 已完成: 基于当前三套关键 selection
+   产物，
+   物化三份 fixed governance report
+760. 已完成: 新增正式报告
+   - `docs/225_stage5_low_activity_governance_fixed_report_materializer_report.md`
+
+### 当前阶段结论补充
+- 当前
+  Stage5 low-activity
+  governance
+  已经不只是:
+  - probe / selection
+    内嵌模板
+- 还具备了:
+  - fixed-format
+    governance report
+    入口
+- 所以后续若扩新的
+  low-activity family，
+  现在已经可以复用:
+  - 同一物化命令
+  - 同一模板
+  - 同一 `stage_reports`
+    目录结构
+
+先说人话:
+- 现在要看这条线的正式结论，
+  已经不用再自己翻
+  json
+  和
+  markdown
+  拼起来了
+- 直接打开固定 report
+  就能看
+  双轴结论
+
+### 更新后的下一阶段任务
+1. 若继续沿
+   low-activity governance
+   扩展，
+   当前最合理的下一步是:
+   - 决定是否把
+     fixed governance report
+     再接进
+     听审交付文档
+     或未来阶段总览
+2. 若回到人工复听主线，
+   仍然优先使用:
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+
+### 文档补充
+- `docs/225_stage5_low_activity_governance_fixed_report_materializer_report.md`
+  - 固定报告命令、模板、物化目录与当前工程意义
+
+## 2026-03-20 Stage5 low-activity `validation12` 听审契约联动更新
+
+### 当前进度补充
+761. 已完成: 将
+   `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+   切到最新
+   `waveformrms`
+   bundle
+762. 已完成: 将
+   fixed governance report
+   显式接入
+   `221`
+   听审契约
+763. 已完成: 更新
+   `scripts/launch_stage5_low_activity_validation12_decoded_audit.ps1`
+   到最新 bundle 路径
+764. 已完成: 重新跑通
+   更新后脚本的
+   GUI smoke
+765. 已完成: 新增正式报告
+   - `docs/226_stage5_low_activity_validation12_audit_contract_governance_integration_report.md`
+
+### 当前阶段结论补充
+- 当前
+  `validation12`
+  decoded
+  听审交付
+  已经不再只是:
+  - fixed GUI launch
+- 还显式挂上了:
+  - fixed governance report
+- 当前默认执行顺序已经固定为:
+  - 先看量化 fixed report
+  - 再进 GUI 听审
+
+先说人话:
+- 现在这条线的正式入口
+  已经把
+  “怎么看量化结论”
+  和
+  “怎么开听审”
+  放在一起了
+- 后续接班时，
+  不需要再自己补那句
+  “先看报告再去听”
+
+### 更新后的下一阶段任务
+1. 若继续沿
+   low-activity governance
+   与听审联动推进，
+   当前最合理的下一步是:
+   - 判断是否要把
+     fixed governance report
+     的路径
+     也直接写进
+     未来的听审结果汇总文档
+2. 若当前转回
+   人工复听主线，
+   继续直接使用:
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+   - `scripts/launch_stage5_low_activity_validation12_decoded_audit.ps1`
+
+### 文档补充
+- `docs/226_stage5_low_activity_validation12_audit_contract_governance_integration_report.md`
+  - `221` 契约更新、脚本切换、smoke 验证与当前联动意义
+
+## 2026-03-20 Stage5 low-activity 听审结果 fixed report 入口补齐更新
+
+### 当前进度补充
+766. 已完成: 确认
+   `validation12`
+   session
+   当前只有:
+   - `audio_audit_progress.json`
+   尚无最终
+   `audio_audit_review.json`
+767. 已完成: 为
+   `validation12`
+   新增听审结果物化脚本
+   - `scripts/materialize_stage5_low_activity_validation12_decoded_audit_result_report.ps1`
+768. 已完成: 将
+   听审完成后的
+   fixed audit result report
+   物化命令
+   与脚本入口
+   写回
+   `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+769. 已完成: 用
+   `windowed_v2 decoded 60vs72`
+   已完成 session
+   真实跑通
+   `materialize-stage5-low-activity-audit-result-report`
+770. 已完成: 生成正式验证产物
+   - `reports/stage_reports/stage5_low_activity_audit_result_windowedv2_60_vs_72_decoded_round1_1/`
+771. 已完成: 新增正式报告
+   - `docs/227_stage5_low_activity_audit_result_fixed_report_bootstrap_report.md`
+
+### 当前阶段结论补充
+- 当前
+  Stage5 low-activity
+  这条线
+  已经不再只具备:
+  - fixed governance report
+  - fixed audit contract
+- 现在还具备了:
+  - fixed audit result report
+    物化入口
+- 因而后续只要
+  GUI
+  真正导出
+  `audio_audit_review.json`，
+  就可以直接把
+  人工听审结果
+  与双轴治理口径
+  固定到同一份正式报告里
+
+先说人话:
+- 现在不只是
+  “知道先看哪个报告、
+  怎么开 GUI”
+- 也已经补上了
+  “听完以后
+  怎么把结果收成正式结论”
+
+### 更新后的下一阶段任务
+1. 若用户完成
+   `validation12`
+   GUI 听审，
+   直接运行:
+   - `scripts/materialize_stage5_low_activity_validation12_decoded_audit_result_report.ps1`
+2. 若当前仍未完成
+   `validation12`
+   听审，
+   继续沿:
+   - `docs/221_stage5_low_activity_validation12_decoded_audit_contract.md`
+   - `scripts/launch_stage5_low_activity_validation12_decoded_audit.ps1`
+   推进
+3. 后续若扩新的
+   Stage5 low-activity
+   family，
+   默认同时补齐:
+   - fixed governance report
+   - fixed audit contract
+   - fixed audit result report
+
+### 文档补充
+- `docs/227_stage5_low_activity_audit_result_fixed_report_bootstrap_report.md`
+  - 听审结果 fixed report 入口、`validation12` 结果物化脚本，以及基于旧 session 的真实物化验证

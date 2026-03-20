@@ -48,6 +48,7 @@ from v5vc.split_materialization import materialize_round1_split
 from v5vc.special_eval import evaluate_offline_mvp_special_eval, evaluate_round1_special_eval
 from v5vc.special_eval_series import evaluate_offline_mvp_special_eval_series
 from v5vc.special_slice_alignment import analyze_offline_mvp_special_slice_alignment
+from v5vc.stage5_low_activity_audit_result_report import materialize_stage5_low_activity_audit_result_report
 from v5vc.stage5_low_activity_probe import (
     DEFAULT_CANDIDATE_ACTIVITY_THRESHOLD,
     DEFAULT_MAX_AUDIT_WINDOW_SEC,
@@ -57,6 +58,7 @@ from v5vc.stage5_low_activity_probe import (
     DEFAULT_WINDOW_PADDING_SEC,
     analyze_stage5_low_activity_fragments,
 )
+from v5vc.stage5_low_activity_governance_report import materialize_stage5_low_activity_governance_report
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
     build_streaming_student_calibration_assets,
@@ -2194,6 +2196,66 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.05,
         help="Simplex/grid step for weight sensitivity, for example 0.1 or 0.05.",
     )
+    stage5_low_activity_governance_report_parser = subparsers.add_parser(
+        "materialize-stage5-low-activity-governance-report",
+        help="Materialize a fixed-format Stage5 low-activity governance report from a checkpoint-selection payload.",
+    )
+    stage5_low_activity_governance_report_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        required=True,
+        help="Path to nores_vocoder_checkpoint_selection.json that already embeds low_activity_probe_analysis.",
+    )
+    stage5_low_activity_governance_report_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for the fixed-format governance report outputs.",
+    )
+    stage5_low_activity_governance_report_parser.add_argument(
+        "--template",
+        type=Path,
+        default=Path("reports/templates/stage5_low_activity_governance_report_template.md"),
+        help="Markdown template used to render the governance report.",
+    )
+    stage5_low_activity_governance_report_parser.add_argument(
+        "--title",
+        default=None,
+        help="Optional override title written into the governance report.",
+    )
+    stage5_low_activity_audit_result_report_parser = subparsers.add_parser(
+        "materialize-stage5-low-activity-audit-result-report",
+        help="Materialize a fixed-format Stage5 low-activity audit result report by joining audio_audit_review.json with a governance report.",
+    )
+    stage5_low_activity_audit_result_report_parser.add_argument(
+        "--audio-audit-review",
+        type=Path,
+        required=True,
+        help="Path to audio_audit_review.json exported by the Stage5 listening GUI.",
+    )
+    stage5_low_activity_audit_result_report_parser.add_argument(
+        "--governance-report",
+        type=Path,
+        required=True,
+        help="Path to stage5_low_activity_governance_report.json that defines the dual-axis quantitative context.",
+    )
+    stage5_low_activity_audit_result_report_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for the fixed-format audit result report outputs.",
+    )
+    stage5_low_activity_audit_result_report_parser.add_argument(
+        "--template",
+        type=Path,
+        default=Path("reports/templates/stage5_low_activity_audit_result_report_template.md"),
+        help="Markdown template used to render the audit result report.",
+    )
+    stage5_low_activity_audit_result_report_parser.add_argument(
+        "--title",
+        default=None,
+        help="Optional override title written into the audit result report.",
+    )
 
     checkpoint_selection_parser = subparsers.add_parser(
         "analyze-offline-mvp-checkpoint-selection",
@@ -3192,6 +3254,23 @@ def main(argv: list[str] | None = None) -> int:
             checkpoint_selection_path=args.checkpoint_selection,
             output_dir=args.output_dir,
             weight_step=args.weight_step,
+        )
+        return 0
+    if args.command == "materialize-stage5-low-activity-governance-report":
+        materialize_stage5_low_activity_governance_report(
+            checkpoint_selection_path=args.checkpoint_selection,
+            output_dir=args.output_dir,
+            template_path=args.template,
+            title=args.title,
+        )
+        return 0
+    if args.command == "materialize-stage5-low-activity-audit-result-report":
+        materialize_stage5_low_activity_audit_result_report(
+            audio_audit_review_path=args.audio_audit_review,
+            governance_report_path=args.governance_report,
+            output_dir=args.output_dir,
+            template_path=args.template,
+            title=args.title,
         )
         return 0
     if args.command == "analyze-offline-mvp-checkpoint-selection":

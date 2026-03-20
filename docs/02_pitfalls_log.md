@@ -7335,3 +7335,305 @@
     alignment /
     excess /
     active_fraction
+
+### 279. 当 low-activity 的 frame-activity 指标在泄漏簇内全部饱和时，继续围绕 `active_fraction / activity_excess / alignment` 微调权重不会自己长出分辨率；需要回到 waveform 域补 `RMS` 这类泄漏强度 sidecar
+- 现象:
+  - 当前
+    `validation12`
+    low-activity
+    probe
+    上，
+    `36/48/60`
+    的:
+    - `mean_active_fraction = 1.0`
+    - `mean_activity_alignment_mae = 0.980059`
+    - `mean_activity_excess_mean = 0.980059`
+    完全重合
+  - 但同一批窗口里，
+    raw waveform
+    的
+    `mean_waveform_rms`
+    仍稳定给出:
+    - `step60 < step48 < step36`
+- 风险:
+  - 如果在这种 activity-bridge
+    已饱和的状态下，
+    还继续主要围绕
+    `active_fraction`
+    `activity_excess`
+    的权重微调，
+    会把
+    “当前指标没信息”
+    误当成
+    “当前权重还不对”
+  - 反过来，
+    若把
+    `waveform_rms`
+    直接升格成
+    新主目标，
+    又会把
+    leakage-strength
+    与
+    fragmentation
+    风险
+    混为一谈
+- 处理要求:
+  - 当前看到这类 activity 饱和时，
+    默认先补:
+    - `waveform_rms`
+    - 或同类
+      waveform-domain
+      leakage-strength
+      sidecar
+  - 但该类指标
+    默认只做:
+    - 泄漏强度补充表达
+    - tie group
+      内部排序
+  - 不直接覆盖:
+    - fragmentation
+    - alignment
+    - excess
+
+### 280. `waveform_rms` 虽然可以升为通用 leakage-strength sidecar，但不能因为它跨样本、跨音源都稳定，就把它误当成 fragmentation 或整体安全性的替代裁决器
+- 现象:
+  - 当前
+    `waveform_rms`
+    已在:
+    - `6-record`
+      四候选
+    - `validation12`
+      四候选
+    - `60 vs 72`
+      的
+      `decoded / decoded_pitch_matched / audit_proxy`
+    上都稳定给出
+    一致 leakage-strength
+    顺序
+  - 但同一批
+    `60 vs 72`
+    对照里，
+    fragmentation
+    在:
+    - `decoded`
+    - `decoded_pitch_matched`
+      上更支持
+      `step60`
+      安全
+    - `audit_proxy`
+      上甚至会偏向
+      `step72`
+      更安全
+- 风险:
+  - 如果只因为
+    `waveform_rms`
+    更稳定，
+    就把它上升成
+    “谁整体更安全”
+    的裁决器，
+    会把
+    residual leakage strength
+    和
+    burst / toggle / fragmentation
+    风险
+    混成一条轴
+  - 这会把
+    `72`
+    这种
+    “泄漏更弱但 fragmentation 风险更高”
+    的 checkpoint
+    误写成
+    单边更优
+- 处理要求:
+  - 当前阶段默认把
+    `waveform_rms`
+    写成:
+    - 通用 leakage-strength sidecar
+  - 默认不把它直接并入:
+    - 主 soft rerank 权重
+    - fragmentation 结论
+    - overall safety
+      结论
+  - 汇报时必须显式分开写:
+    - leakage-strength
+    - fragmentation
+
+### 281. 当治理制度已经是双轴时，如果正式产物仍只给一行压缩 summary，读者会自然把 tradeoff 误读成单一 winner；因此双轴口径必须模板化写进 probe 和 selection 输出
+- 现象:
+  - 在
+    `waveform_rms`
+    升级为
+    通用 leakage-strength sidecar
+    之后，
+    实际制度已经变成:
+    - fragmentation axis
+    - leakage-strength axis
+  - 但若产物只保留:
+    - 一行 summary
+    - 一段 branch aggregate
+  - 读者仍很容易把
+    “双轴 tradeoff”
+    误读成
+    “系统已经默认选出一个总 winner”
+- 风险:
+  - 会把
+    `tradeoff`
+    重新压回
+    “单项最优”
+    叙事
+  - 进一步导致:
+    - 报告间口径漂移
+    - 人工听审目标错位
+    - 后续 family
+      误用单轴结论
+- 处理要求:
+  - 当前阶段默认要求
+    probe
+    和 selection
+    都固定输出:
+    - `fragmentation_axis`
+    - `leakage_strength_axis`
+    - `cross_axis_note`
+    - `mode`
+      (`convergent / partial_overlap / tradeoff`)
+  - 不再允许只靠
+    “读者自行综合”
+    来恢复双轴制度
+
+### 282. 当双轴治理已经模板化后，如果仍没有 fixed-format report 入口，后续 family 很容易重新退回“手工从 selection json 摘结论”的状态，导致口径再次漂移
+- 现象:
+  - 当前双轴制度
+    已经写进:
+    - probe
+    - selection
+  - 但如果没有
+    单独的
+    fixed governance report
+    命令，
+    后续 family
+    仍可能回到:
+    - 手工读 selection
+    - 手工摘双轴结论
+    - 手工再写专项报告
+- 风险:
+  - 会让:
+    - 目录结构
+    - 标题格式
+    - 执行口径
+    - 结论字段
+    再次漂移
+  - 也会让
+    “这条线是否已有正式汇报入口”
+    变得不确定
+- 处理要求:
+  - 当前阶段默认为
+    Stage5 low-activity
+    family
+    保留:
+    - 固定 report 命令
+    - 固定模板
+    - 固定 `stage_reports`
+      输出目录
+  - 后续扩新的
+    low-activity family
+    时，
+    默认优先复用
+    fixed report
+    入口，
+    而不是重新手写总结
+
+### 283. 当听审交付已经依赖双轴治理时，如果 audit contract 里不显式挂上 fixed governance report，操作人仍会把这条线误看成“只需要开 GUI”
+- 现象:
+  - 当前
+    Stage5 low-activity
+    的正式判断，
+    已经依赖:
+    - fragmentation axis
+    - leakage-strength axis
+    - cross-axis note
+  - 但如果听审契约
+    只给:
+    - bundle 路径
+    - output 目录
+    - 启动命令
+  - 操作人仍会自然把它理解成:
+    - “这是一次纯人工听感任务”
+- 风险:
+  - 会让听审时
+    忽略:
+    - 当前为什么是
+      `tradeoff`
+    - 当前一级问题
+      和
+      二级 fallback
+      问题
+      分别是什么
+  - 也会让
+    “先看量化 fixed report，
+    再进 GUI”
+    这条顺序
+    重新丢失
+- 处理要求:
+  - 当前阶段只要
+    听审任务
+    建立在双轴治理之上，
+    audit contract
+    默认必须显式写出:
+    - fixed governance report 路径
+    - 当前 governance mode
+    - 当前建议执行顺序
+
+### 284. 当 GUI session 已启动但结果还停留在 `audio_audit_progress.json` 或原始 `audio_audit_review.json` 时，不能把这条线写成“听审结果已正式落盘”；还必须把 review 与 governance report 物化成 fixed audit result report
+- 现象:
+  - 当前
+    `validation12`
+    low-activity
+    session
+    里，
+    只有:
+    - `audio_audit_progress.json`
+  - 尚未出现:
+    - `audio_audit_review.json`
+  - 即使后续
+    review json
+    已生成，
+    如果不再继续物化，
+    最终也仍只是:
+    - GUI 原始导出
+    - 不是正式汇报入口
+- 风险:
+  - 容易把
+    “session 已启动”
+    或
+    “review json 已存在”
+    误写成
+    “听审结果已经正式收口”
+  - 也会让
+    人工听审结论
+    再次脱离:
+    - fragmentation axis
+    - leakage-strength axis
+    - cross-axis readout
+    的固定口径
+- 处理要求:
+  - 当前阶段只有在同时满足以下条件时，
+    才把听审结果写成
+    “已正式落盘”:
+    - `audio_audit_review.json`
+      已生成
+    - `materialize-stage5-low-activity-audit-result-report`
+      已执行
+    - fixed audit result report
+      已落到
+      `reports/stage_reports/`
+  - 对
+    `validation12`
+    这条线，
+    默认使用:
+    - `scripts/materialize_stage5_low_activity_validation12_decoded_audit_result_report.ps1`
+      做结果物化
+  - 不再把:
+    - `audio_audit_progress.json`
+    - 或单独的
+      `audio_audit_review.json`
+    当作最终正式汇报入口

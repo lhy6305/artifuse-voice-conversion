@@ -21,6 +21,7 @@ DEFAULT_WINDOW_PADDING_SEC = 0.2
 DEFAULT_MIN_AUDIT_WINDOW_SEC = 2.4
 DEFAULT_MAX_AUDIT_WINDOW_SEC = 3.0
 DEFAULT_TARGET_CONTEXT_SEC = 0.2
+LOW_ACTIVITY_TIE_EPSILON = 1e-9
 
 
 @dataclass(frozen=True)
@@ -95,6 +96,7 @@ def analyze_stage5_low_activity_fragments(
             "Fragmentation score is defined as extra_bursts_inside_target_low_activity plus mean absolute frame-activity toggle inside the same segment.",
             "activity_alignment_mae measures frame-activity deviation from target inside the low-activity segment; lower means the candidate follows target loudness more closely.",
             "activity_excess_mean and mean_active_fraction act as low-activity residual-energy / floor-leakage proxies; lower means the candidate leaves less unintended activity inside target low-energy regions.",
+            "waveform_rms measures raw waveform residual energy inside target low-activity segments; lower means weaker leakage strength even when frame-activity metrics saturate.",
             "listening uses listening_audio_path from the Stage5 bundle, while decoded uses decoded_audio_path for raw diagnostic follow-up.",
             "Exported listening clips preserve at least window_padding_sec context on both sides and expand to min_audit_window_sec when the raw suspicious segment is too short for human judgment.",
         ],
@@ -268,6 +270,7 @@ def analyze_audio_source(
                     "active_fraction_sum": 0.0,
                     "activity_alignment_mae_sum": 0.0,
                     "activity_excess_mean_sum": 0.0,
+                    "waveform_rms_sum": 0.0,
                     "delta_peak_sum": 0.0,
                 },
             )
@@ -279,6 +282,7 @@ def analyze_audio_source(
             branch_aggregate["active_fraction_sum"] += float(aggregate["mean_active_fraction"])
             branch_aggregate["activity_alignment_mae_sum"] += float(aggregate["mean_activity_alignment_mae"])
             branch_aggregate["activity_excess_mean_sum"] += float(aggregate["mean_activity_excess_mean"])
+            branch_aggregate["waveform_rms_sum"] += float(aggregate["mean_waveform_rms"])
             branch_aggregate["delta_peak_sum"] += float(aggregate["mean_sample_delta_peak"])
 
         if len(branch_results) < 2:
@@ -312,6 +316,7 @@ def analyze_audio_source(
     return {
         "record_count": len(record_results),
         "branch_aggregates": branch_summaries,
+        "governance_template": build_dual_axis_governance_template(branch_summaries),
         "records": record_results,
         "top_windows": top_windows,
     }
@@ -431,6 +436,9 @@ def compute_segment_metrics(
     activity_toggle = 0.0
     if activity_slice.numel() > 1:
         activity_toggle = float(torch.abs(activity_slice[1:] - activity_slice[:-1]).mean().item())
+    waveform_rms = 0.0
+    if waveform_slice.numel() > 0:
+        waveform_rms = float(torch.sqrt((waveform_slice * waveform_slice).mean()).item())
     sample_delta_abs_mean = 0.0
     sample_delta_peak = 0.0
     if waveform_slice.numel() > 1:
@@ -468,6 +476,7 @@ def compute_segment_metrics(
         "active_fraction": round(float(active_mask.to(torch.float32).mean().item()) if active_mask.numel() > 0 else 0.0, 6),
         "activity_alignment_mae": round(activity_alignment_mae, 6),
         "activity_excess_mean": round(activity_excess_mean, 6),
+        "waveform_rms": round(waveform_rms, 6),
         "sample_delta_abs_mean": round(sample_delta_abs_mean, 6),
         "sample_delta_peak": round(sample_delta_peak, 6),
         "fragmentation_score": round(fragmentation_score, 6),
@@ -498,6 +507,7 @@ def summarize_branch_segment_metrics(segment_metrics: list[dict[str, object]]) -
             "mean_active_fraction": 0.0,
             "mean_activity_alignment_mae": 0.0,
             "mean_activity_excess_mean": 0.0,
+            "mean_waveform_rms": 0.0,
             "mean_sample_delta_peak": 0.0,
         }
     segment_count = float(len(segment_metrics))
@@ -527,6 +537,10 @@ def summarize_branch_segment_metrics(segment_metrics: list[dict[str, object]]) -
             sum(float(item["activity_excess_mean"]) for item in segment_metrics) / segment_count,
             6,
         ),
+        "mean_waveform_rms": round(
+            sum(float(item["waveform_rms"]) for item in segment_metrics) / segment_count,
+            6,
+        ),
         "mean_sample_delta_peak": round(
             sum(float(item["sample_delta_peak"]) for item in segment_metrics) / segment_count,
             6,
@@ -547,9 +561,150 @@ def summarize_branch_aggregates(branch_aggregates: dict[str, dict[str, float]]) 
             "mean_active_fraction": round(float(aggregate["active_fraction_sum"]) / record_count, 6),
             "mean_activity_alignment_mae": round(float(aggregate["activity_alignment_mae_sum"]) / record_count, 6),
             "mean_activity_excess_mean": round(float(aggregate["activity_excess_mean_sum"]) / record_count, 6),
+            "mean_waveform_rms": round(float(aggregate["waveform_rms_sum"]) / record_count, 6),
             "mean_sample_delta_peak": round(float(aggregate["delta_peak_sum"]) / record_count, 6),
         }
     return summary
+
+
+def build_dual_axis_governance_template(
+    branch_aggregates: dict[str, dict[str, object]],
+) -> dict[str, object]:
+    if not branch_aggregates:
+        return {
+            "mode": "unavailable",
+            "fragmentation_axis": {},
+            "leakage_strength_axis": {},
+            "cross_axis_note": "No branch aggregates are available.",
+        }
+
+    best_fragmentation_branches = collect_tied_branch_labels_local(
+        branch_aggregates=branch_aggregates,
+        metric_name="mean_fragmentation_score",
+        mode="min",
+    )
+    best_alignment_branches = collect_tied_branch_labels_local(
+        branch_aggregates=branch_aggregates,
+        metric_name="mean_activity_alignment_mae",
+        mode="min",
+    )
+    best_quietness_branches = collect_tied_branch_labels_local(
+        branch_aggregates=branch_aggregates,
+        metric_name="mean_activity_excess_mean",
+        mode="min",
+    )
+    best_leakage_strength_branches = collect_tied_branch_labels_local(
+        branch_aggregates=branch_aggregates,
+        metric_name="mean_waveform_rms",
+        mode="min",
+    )
+    worst_floor_leakage_branches = collect_tied_branch_labels_local(
+        branch_aggregates=branch_aggregates,
+        metric_name="mean_active_fraction",
+        mode="max",
+    )
+    worst_floor_leakage_strength_ranking = rank_branch_labels_by_metric_local(
+        branch_aggregates=branch_aggregates,
+        branch_labels=worst_floor_leakage_branches,
+        metric_name="mean_waveform_rms",
+        mode="min",
+    )
+    worst_floor_leakage_smoothness_ranking = rank_branch_labels_by_metric_local(
+        branch_aggregates=branch_aggregates,
+        branch_labels=worst_floor_leakage_branches,
+        metric_name="mean_sample_delta_peak",
+        mode="min",
+    )
+    fragmentation_set = set(best_fragmentation_branches)
+    leakage_set = set(best_leakage_strength_branches)
+    if fragmentation_set == leakage_set:
+        mode = "convergent"
+        cross_axis_note = (
+            "Fragmentation axis and leakage-strength axis currently point to the same branch/group."
+        )
+    elif fragmentation_set.intersection(leakage_set):
+        mode = "partial_overlap"
+        cross_axis_note = (
+            "Fragmentation axis and leakage-strength axis partially overlap; keep both axes visible."
+        )
+    else:
+        mode = "tradeoff"
+        cross_axis_note = (
+            "Fragmentation axis and leakage-strength axis point to different branch/groups; "
+            "treat this as a dual-axis tradeoff instead of forcing a single winner."
+        )
+    return {
+        "mode": mode,
+        "fragmentation_axis": {
+            "best_fragmentation_branches": best_fragmentation_branches,
+            "best_alignment_branches": best_alignment_branches,
+            "best_quietness_branches": best_quietness_branches,
+            "note": "Use this axis when burst/toggle risk and local structural safety are the primary question.",
+        },
+        "leakage_strength_axis": {
+            "best_leakage_strength_branches": best_leakage_strength_branches,
+            "worst_floor_leakage_branches": worst_floor_leakage_branches,
+            "worst_floor_leakage_strength_ranking": worst_floor_leakage_strength_ranking,
+            "worst_floor_leakage_smoothness_ranking": worst_floor_leakage_smoothness_ranking,
+            "note": "Use this axis when comparing residual leakage strength inside a leakage cluster or choosing a fallback after fragmentation has already tied.",
+        },
+        "cross_axis_note": cross_axis_note,
+    }
+
+
+def collect_tied_branch_labels_local(
+    branch_aggregates: dict[str, dict[str, object]],
+    metric_name: str,
+    mode: str,
+) -> list[str]:
+    values = [float(aggregate[metric_name]) for aggregate in branch_aggregates.values()]
+    if not values:
+        return []
+    if mode == "min":
+        target_value = min(values)
+    elif mode == "max":
+        target_value = max(values)
+    else:
+        raise ValueError(f"Unsupported tie mode: {mode}")
+    labels = [
+        str(branch_label)
+        for branch_label, aggregate in branch_aggregates.items()
+        if abs(float(aggregate[metric_name]) - target_value) <= LOW_ACTIVITY_TIE_EPSILON
+    ]
+    labels.sort()
+    return labels
+
+
+def rank_branch_labels_by_metric_local(
+    branch_aggregates: dict[str, dict[str, object]],
+    branch_labels: list[str],
+    metric_name: str,
+    mode: str,
+) -> list[dict[str, object]]:
+    rows = [
+        {
+            "branch_label": str(branch_label),
+            "metric_name": str(metric_name),
+            "metric_value": round(float(branch_aggregates[branch_label][metric_name]), 6),
+        }
+        for branch_label in branch_labels
+        if branch_label in branch_aggregates
+    ]
+    if mode == "min":
+        rows.sort(key=lambda item: (float(item["metric_value"]), str(item["branch_label"])))
+    elif mode == "max":
+        rows.sort(key=lambda item: (-float(item["metric_value"]), str(item["branch_label"])))
+    else:
+        raise ValueError(f"Unsupported ranking mode: {mode}")
+    return rows
+
+
+def format_branch_label_group_local(branch_labels: list[str]) -> str:
+    if not branch_labels:
+        return "[]"
+    if len(branch_labels) == 1:
+        return branch_labels[0]
+    return "[" + ", ".join(branch_labels) + "]"
 
 
 def build_record_result(
@@ -711,6 +866,7 @@ def export_segment_clips(
                 "clip_path": branch_output_path.as_posix(),
                 "fragmentation_score": branch_metric["fragmentation_score"],
                 "extra_bursts": branch_metric["extra_bursts"],
+                "waveform_rms": branch_metric["waveform_rms"],
                 "sample_delta_peak": branch_metric["sample_delta_peak"],
             }
         )
@@ -936,6 +1092,47 @@ def build_markdown(summary: dict[str, object]) -> str:
             f"- bundle_root={Path('audio_audit_bundles') / sanitize_filename(source_name)}"
         )
         lines.append("")
+        governance_template = source_payload.get("governance_template", {})
+        if isinstance(governance_template, dict) and governance_template:
+            fragmentation_axis = governance_template.get("fragmentation_axis", {})
+            leakage_strength_axis = governance_template.get("leakage_strength_axis", {})
+            lines.append("### Dual-Axis Governance Template")
+            lines.append(f"- mode={governance_template.get('mode', 'unavailable')}")
+            if isinstance(fragmentation_axis, dict):
+                lines.append(
+                    "- fragmentation_axis: "
+                    f"best_fragmentation={format_branch_label_group_local(fragmentation_axis.get('best_fragmentation_branches', []))} "
+                    f"best_alignment={format_branch_label_group_local(fragmentation_axis.get('best_alignment_branches', []))} "
+                    f"best_quietness={format_branch_label_group_local(fragmentation_axis.get('best_quietness_branches', []))}"
+                )
+                note = fragmentation_axis.get("note")
+                if isinstance(note, str) and note.strip():
+                    lines.append(f"- fragmentation_note: {note}")
+            if isinstance(leakage_strength_axis, dict):
+                lines.append(
+                    "- leakage_strength_axis: "
+                    f"best_leakage_strength={format_branch_label_group_local(leakage_strength_axis.get('best_leakage_strength_branches', []))} "
+                    f"worst_floor_leakage={format_branch_label_group_local(leakage_strength_axis.get('worst_floor_leakage_branches', []))}"
+                )
+                strength_ranking = leakage_strength_axis.get("worst_floor_leakage_strength_ranking", [])
+                if isinstance(strength_ranking, list) and strength_ranking:
+                    lines.append(
+                        "- leakage_strength_tie_break: "
+                        + " < ".join(item["branch_label"] for item in strength_ranking)
+                    )
+                smoothness_ranking = leakage_strength_axis.get("worst_floor_leakage_smoothness_ranking", [])
+                if isinstance(smoothness_ranking, list) and smoothness_ranking:
+                    lines.append(
+                        "- leakage_smoothness_tie_break: "
+                        + " < ".join(item["branch_label"] for item in smoothness_ranking)
+                    )
+                note = leakage_strength_axis.get("note")
+                if isinstance(note, str) and note.strip():
+                    lines.append(f"- leakage_note: {note}")
+            cross_axis_note = governance_template.get("cross_axis_note")
+            if isinstance(cross_axis_note, str) and cross_axis_note.strip():
+                lines.append(f"- cross_axis_note: {cross_axis_note}")
+            lines.append("")
         lines.append("### Branch Aggregates")
         for branch_label, aggregate in source_payload["branch_aggregates"].items():
             lines.append(
@@ -946,6 +1143,7 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"mean_active_fraction={aggregate['mean_active_fraction']} "
                 f"mean_activity_alignment_mae={aggregate['mean_activity_alignment_mae']} "
                 f"mean_activity_excess_mean={aggregate['mean_activity_excess_mean']} "
+                f"mean_waveform_rms={aggregate['mean_waveform_rms']} "
                 f"mean_sample_delta_peak={aggregate['mean_sample_delta_peak']}"
             )
         lines.append("")

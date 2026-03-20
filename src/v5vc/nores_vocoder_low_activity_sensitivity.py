@@ -425,7 +425,8 @@ def build_markdown(summary: dict[str, object]) -> str:
             f"fragmentation={candidate['low_activity_metrics']['mean_fragmentation_score']} "
             f"active_fraction={candidate['low_activity_metrics']['mean_active_fraction']} "
             f"alignment_mae={candidate['low_activity_metrics']['mean_activity_alignment_mae']} "
-            f"activity_excess={candidate['low_activity_metrics']['mean_activity_excess_mean']}"
+            f"activity_excess={candidate['low_activity_metrics']['mean_activity_excess_mean']} "
+            f"waveform_rms={candidate['low_activity_metrics'].get('mean_waveform_rms', 0.0)}"
         )
     lines.extend(["", "## Current Breakdown"])
     for candidate in current_soft_rerank["ranked_candidates"]:

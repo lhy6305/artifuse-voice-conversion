@@ -18,10 +18,19 @@
     提供了
     `step60 < step48 < step36`
     的次级平滑度顺序
+- `docs/225_stage5_low_activity_governance_fixed_report_materializer_report.md`
+  已进一步把
+  当前量化治理
+  固定成:
+  - fixed governance report
+  - dual-axis
+    (`fragmentation axis`
+    vs
+    `leakage-strength axis`)
 
 ## 本轮目标
 1. 把
-   `validation12`
+  `validation12`
    的 high-delta
    低活动窗口
    收成可直接启动的
@@ -35,11 +44,36 @@
 
 ## 当前听审对象
 
+### 0. 当前量化治理固定入口
+- fixed report:
+  - `reports/stage_reports/stage5_low_activity_governance_validation12_waveformrms_round1_1/stage5_low_activity_governance_report.md`
+- 对应 json:
+  - `reports/stage_reports/stage5_low_activity_governance_validation12_waveformrms_round1_1/stage5_low_activity_governance_report.json`
+- 当前固定口径:
+  - `governance_mode = tradeoff`
+  - fragmentation axis
+    更偏向:
+    - `36/48/60`
+      这组
+      local-safe
+      branch
+  - leakage-strength axis
+    更偏向:
+    - `72`
+  - soft rerank
+    当前仍选:
+    - `72`
+- 当前建议顺序:
+  - 先看这份
+    fixed governance report
+  - 再进 GUI
+    做人耳复核
+
 ### 1. 当前 bundle 目录
-- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step36/`
-- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step48/`
-- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60/`
-- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72/`
+- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step36/`
+- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step48/`
+- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60/`
+- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72/`
 
 ### 2. 当前 session 输出目录
 - `reports/audio/audio_audit_gui_stage5_low_activity_validation12_decoded_session/`
@@ -60,23 +94,25 @@
     需要在
     `36/48/60`
     里找 fallback，
-    当前人耳上是否也支持:
+    当前人耳上是否也支持
+    量化侧已经给出的:
     - `step60`
       比
       `step48`
       和
       `step36`
-      更平滑
+      残留更弱、
+      也更平滑
 
 ## 用户应运行的正式命令
 
 ```powershell
 .\python.exe manage.py launch-audio-audit-gui `
   --bundle `
-    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step36 `
-    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step48 `
-    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60 `
-    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72 `
+    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step36 `
+    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step48 `
+    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step60 `
+    reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72 `
   --output-dir reports/audio/audio_audit_gui_stage5_low_activity_validation12_decoded_session
 ```
 
@@ -89,6 +125,42 @@ powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_vali
 - 若只想做启动 smoke，
   可额外传:
   - `-AutoCloseMs 1000`
+
+## 听审完成后的结果物化命令
+
+- 使用条件:
+  - GUI session
+    已完成
+  - 且已导出:
+    - `reports/audio/audio_audit_gui_stage5_low_activity_validation12_decoded_session/audio_audit_review.json`
+
+```powershell
+.\python.exe manage.py materialize-stage5-low-activity-audit-result-report `
+  --audio-audit-review reports/audio/audio_audit_gui_stage5_low_activity_validation12_decoded_session/audio_audit_review.json `
+  --governance-report reports/stage_reports/stage5_low_activity_governance_validation12_waveformrms_round1_1/stage5_low_activity_governance_report.json `
+  --output-dir reports/stage_reports/stage5_low_activity_audit_result_validation12_waveformrms_round1_1 `
+  --title "stage5 low-activity audit result report - validation12 waveformrms decoded"
+```
+
+## 对应结果物化脚本
+
+```powershell
+powershell -ExecutionPolicy Bypass -File scripts/materialize_stage5_low_activity_validation12_decoded_audit_result_report.ps1
+```
+
+- 当前固定输出目录:
+  - `reports/stage_reports/stage5_low_activity_audit_result_validation12_waveformrms_round1_1/`
+- 当前目的:
+  - 把
+    GUI
+    导出的
+    原始听审结果
+    与
+    fixed governance report
+    自动收成
+    一份
+    fixed-format
+    听审结果报告
 
 ## 当前优先试听窗口
 
@@ -126,11 +198,13 @@ powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_vali
   - `step60`
     是否比
     `step48`
-    更平滑
+    残留更弱、
+    也更平滑
   - `step48`
     是否比
     `step36`
-    更平滑
+    残留更弱、
+    也更平滑
 
 ### 3. 当前先不要把这轮听审写成
 - 整体音色最好
@@ -140,12 +214,18 @@ powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_vali
 ## 本轮验证
 
 ### 1. segmented bundle 已存在
-- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_round1_1/`
+- `reports/audio/stage5_low_activity_fragmentation_probe_activitygate36_48_60_72_decoded_validation12_waveformrms_round1_1/`
 
 ### 2. 启动脚本已可用
 - `scripts/launch_stage5_low_activity_validation12_decoded_audit.ps1`
 
-### 3. GUI 启动 smoke 已通过
+### 3. 结果物化脚本已可用
+- `scripts/materialize_stage5_low_activity_validation12_decoded_audit_result_report.ps1`
+
+### 4. 量化治理 fixed report 已可用
+- `reports/stage_reports/stage5_low_activity_governance_validation12_waveformrms_round1_1/stage5_low_activity_governance_report.md`
+
+### 5. GUI 启动 smoke 已通过
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_validation12_decoded_audit.ps1 -AutoCloseMs 1000
@@ -158,16 +238,31 @@ powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_low_activity_vali
 - 当前已看到:
   - `_segment_cache/`
   - `audio_audit_progress.json`
+- 但当前还没有:
+  - `audio_audit_review.json`
+- 因此:
+  - 结果物化命令
+    要等
+    本轮听审真正完成后
+    再运行
 
 ## 一句话结论
 - 当前 `validation12`
   的 low-activity
   定点复听入口
   已具备:
+  - fixed governance report
   - 固定 bundle
   - 固定输出目录
   - 正式命令
   - 脚本入口
+  - 听审完成后的
+    fixed audit result report
+    物化入口
 - 后续若要做人耳复核，
-  现在可以直接开听，
-  不需要再手工拼路径。
+  现在可以按
+  “先看量化 fixed report，
+  再进 GUI 听，
+  听完后物化 fixed audit result report”
+  的固定顺序执行，
+  不需要再手工拼路径或手工恢复双轴结论。

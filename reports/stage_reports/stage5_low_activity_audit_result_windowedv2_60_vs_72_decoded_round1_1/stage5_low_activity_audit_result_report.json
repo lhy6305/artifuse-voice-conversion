@@ -1,0 +1,136 @@
+{
+  "generated_at": "2026-03-20T19:59:56",
+  "title": "stage5 low-activity audit result report - windowed_v2 decoded 60vs72",
+  "audio_source": "decoded",
+  "governance_mode": "tradeoff",
+  "executive_status": "Human audit completed 4/4; comparable records=3/4; overall-pick aggregate among comparable records is offline_mvp_nores_vocoder_dataset_loop.step60=1, offline_mvp_nores_vocoder_dataset_loop.step72=1, 打平=1; Human overall-pick remains split across the two governance axes; keep governance mode at tradeoff rather than collapsing to a single winner.",
+  "review_coverage": {
+    "record_count": 4,
+    "completed_count": 4,
+    "comparable_count": 3,
+    "partial_comparable_count": 0,
+    "noncomparable_count": 1
+  },
+  "overall_pick_aggregate": {
+    "offline_mvp_nores_vocoder_dataset_loop.step60": 1,
+    "offline_mvp_nores_vocoder_dataset_loop.step72": 1,
+    "打平": 1
+  },
+  "cross_axis_readout": {
+    "label": "split_across_axes",
+    "note": "Human overall-pick remains split across the two governance axes; keep governance mode at tradeoff rather than collapsing to a single winner.",
+    "leading_branch_labels": [
+      "offline_mvp_nores_vocoder_dataset_loop.step60",
+      "offline_mvp_nores_vocoder_dataset_loop.step72"
+    ],
+    "axis_support": {
+      "fragmentation_axis": 1,
+      "leakage_strength_axis": 1,
+      "tie": 1
+    }
+  },
+  "field_aggregates": {
+    "best_rhythm": {
+      "打平": 3
+    },
+    "best_boundary": {
+      "打平": 3
+    },
+    "most_stable": {
+      "打平": 3
+    },
+    "overall_pick": {
+      "offline_mvp_nores_vocoder_dataset_loop.step60": 1,
+      "offline_mvp_nores_vocoder_dataset_loop.step72": 1,
+      "打平": 1
+    }
+  },
+  "comparable_record_notes": [
+    {
+      "record_id": "target::chapter3_22_firefly_114::decoded::segment01::clip000189_002589ms",
+      "valid_for_comparison": "yes",
+      "overall_pick": "offline_mvp_nores_vocoder_dataset_loop.step72",
+      "notes": "(empty)"
+    },
+    {
+      "record_id": "target::chapter3_4_firefly_106::decoded::segment06::clip006126_008526ms",
+      "valid_for_comparison": "yes",
+      "overall_pick": "offline_mvp_nores_vocoder_dataset_loop.step60",
+      "notes": "本条结尾出现step72的典型毛刺。step60也有该情况，但毛刺间隔更短（类似“帧率更高”），导致听起来更平滑。"
+    },
+    {
+      "record_id": "target::chapter3_4_firefly_109::decoded::segment00::clip000000_002400ms",
+      "valid_for_comparison": "yes",
+      "overall_pick": "打平",
+      "notes": "本条两者无明显区分。但这条的清音段（吸气/叹气）两者都出现毛刺。我有一个猜测：原音频对应段在能量上确实出现这种毛刺，而不是模型自己加进去。"
+    }
+  ],
+  "noncomparable_record_notes": [
+    {
+      "record_id": "target::chapter3_3_firefly_213::decoded::segment03::clip001970_004370ms",
+      "valid_for_comparison": "no",
+      "overall_pick": "",
+      "notes": "本条原音频出现频繁辅音/爆破音导致能量突变明显，无法在更细粒度上对比“毛刺”是否出现，但整体上两者质量无明显区别。"
+    }
+  ],
+  "session_notes": "",
+  "governance_snapshot": {
+    "executive_status": "Current low-activity governance mode is tradeoff; fragmentation axis favors offline_mvp_nores_vocoder_dataset_loop.step60; leakage-strength axis favors offline_mvp_nores_vocoder_dataset_loop.step72; soft rerank currently selects step 72.",
+    "fragmentation_axis": {
+      "best_fragmentation_branches": [
+        "offline_mvp_nores_vocoder_dataset_loop.step60"
+      ],
+      "best_alignment_branches": [
+        "offline_mvp_nores_vocoder_dataset_loop.step72"
+      ],
+      "best_quietness_branches": [
+        "offline_mvp_nores_vocoder_dataset_loop.step72"
+      ],
+      "note": "Use this axis when burst/toggle risk and local structural safety are the primary question."
+    },
+    "leakage_strength_axis": {
+      "best_leakage_strength_branches": [
+        "offline_mvp_nores_vocoder_dataset_loop.step72"
+      ],
+      "worst_floor_leakage_branches": [
+        "offline_mvp_nores_vocoder_dataset_loop.step60"
+      ],
+      "worst_floor_leakage_strength_ranking": [
+        {
+          "branch_label": "offline_mvp_nores_vocoder_dataset_loop.step60",
+          "metric_name": "mean_waveform_rms",
+          "metric_value": 0.026557
+        }
+      ],
+      "worst_floor_leakage_smoothness_ranking": [
+        {
+          "branch_label": "offline_mvp_nores_vocoder_dataset_loop.step60",
+          "metric_name": "mean_sample_delta_peak",
+          "metric_value": 0.223779
+        }
+      ],
+      "note": "Use this axis when comparing residual leakage strength inside a leakage cluster or choosing a fallback after fragmentation has already tied."
+    },
+    "cross_axis_note": "Cross-axis note: fragmentation axis and leakage-strength axis point to different branch/groups; treat this as a dual-axis tradeoff instead of forcing a single winner.",
+    "selected_candidate": {
+      "step": 72,
+      "score": 0.1,
+      "loss_total": 0.564671,
+      "rms_ratio_deviation": 0.082565
+    }
+  },
+  "source_artifacts": {
+    "audio_audit_review_path": "F:/proj_dev/tmp/workdir4/reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2/audio_audit_review.json",
+    "audio_audit_review_markdown_path": "F:/proj_dev/tmp/workdir4/reports/audio/audio_audit_gui_stage5_low_activity_fragmentation_decoded_session_windowed_v2/audio_audit_review.md",
+    "governance_report_path": "F:/proj_dev/tmp/workdir4/reports/stage_reports/stage5_low_activity_governance_60_vs_72_waveformrms_round1_1/stage5_low_activity_governance_report.json",
+    "governance_report_markdown_path": "F:/proj_dev/tmp/workdir4/reports/stage_reports/stage5_low_activity_governance_60_vs_72_waveformrms_round1_1/stage5_low_activity_governance_report.md",
+    "checkpoint_selection_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_rmsguard02_activitygate02_gate72_deterministic_waveformrms_round1_1/nores_vocoder_checkpoint_selection.json",
+    "probe_path": "F:/proj_dev/tmp/workdir4/reports/audio/stage5_low_activity_fragmentation_probe_activitygate60_vs_72_multisource_waveformrms_round1_1/stage5_low_activity_fragmentation_probe.json"
+  },
+  "notes": [
+    "This fixed-format report joins human audio-audit output with the fixed governance report instead of requiring a separate narrative-only interpretation memo.",
+    "Cross-axis readout is derived from comparable-record overall_pick results; tie counts are preserved instead of being forced into one branch.",
+    "Use the governance snapshot to keep fragmentation-axis and leakage-strength-axis wording aligned with the quantitative report."
+  ],
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/stage_reports/stage5_low_activity_audit_result_windowedv2_60_vs_72_decoded_round1_1"
+}
