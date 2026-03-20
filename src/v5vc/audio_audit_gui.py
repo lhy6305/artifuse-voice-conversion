@@ -72,9 +72,9 @@ GUI_HELP_TEXT = """\
 - 绝对音高
 - 高频质感
 
-当前默认播放的是 audit proxy / proxy 音频：
-- 用来听结构和稳定性
-- 不是最终成品音色
+当前默认播放的是 bundle 里的 listening_audio_path：
+- 具体可能是 decoded / decoded_pitch_matched / audit_proxy
+- 以当前试听包清单为准
 """
 
 TIE_LABEL = "打平"
@@ -129,6 +129,8 @@ class AudioAuditApp:
         self.progress_json_path = self.output_dir / "audio_audit_progress.json"
         self.segment_cache_dir = self.output_dir / "_segment_cache"
         self.segment_cache_dir.mkdir(parents=True, exist_ok=True)
+        self.playback_cache_dir = self.output_dir / "_playback_cache"
+        self.playback_cache_dir.mkdir(parents=True, exist_ok=True)
 
         self.records_by_id: dict[str, AuditRecord] = {}
         self.record_order: list[str] = []
@@ -153,6 +155,8 @@ class AudioAuditApp:
         self.session_notes_text: tk.Text | None = None
         self.notes_text: tk.Text | None = None
         self.segment_combo: ttk.Combobox | None = None
+        self.right_canvas: tk.Canvas | None = None
+        self.right_canvas_window_id: int | None = None
         self.valid_var = tk.StringVar(value=VALIDITY_CODE_TO_LABEL["yes"])
         self.completed_var = tk.BooleanVar(value=False)
         self.field_vars: dict[str, tk.StringVar] = {
@@ -173,13 +177,16 @@ class AudioAuditApp:
         self.refresh_current_record()
 
     def build_layout(self) -> None:
-        self.root.columnconfigure(0, weight=0)
-        self.root.columnconfigure(1, weight=1)
+        self.root.columnconfigure(0, weight=1)
         self.root.rowconfigure(0, weight=1)
 
-        left = ttk.Frame(self.root, padding=10)
-        left.grid(row=0, column=0, sticky="ns")
+        main_pane = ttk.Panedwindow(self.root, orient=tk.HORIZONTAL)
+        main_pane.grid(row=0, column=0, sticky="nsew")
+
+        left = ttk.Frame(main_pane, padding=10, width=420)
+        left.columnconfigure(0, weight=1)
         left.rowconfigure(4, weight=1)
+        main_pane.add(left, weight=1)
 
         ttk.Label(left, text="试听包").grid(row=0, column=0, sticky="w")
         bundle_controls = ttk.Frame(left)
@@ -192,8 +199,16 @@ class AudioAuditApp:
         filter_entry.grid(row=3, column=0, sticky="new", pady=(6, 6))
         filter_entry.bind("<KeyRelease>", self.on_filter_changed)
 
-        self.record_listbox = tk.Listbox(left, width=46, height=36, exportselection=False)
-        self.record_listbox.grid(row=4, column=0, sticky="nsew")
+        list_frame = ttk.Frame(left)
+        list_frame.grid(row=4, column=0, sticky="nsew")
+        list_frame.columnconfigure(0, weight=1)
+        list_frame.rowconfigure(0, weight=1)
+
+        self.record_listbox = tk.Listbox(list_frame, width=46, height=36, exportselection=False)
+        self.record_listbox.grid(row=0, column=0, sticky="nsew")
+        record_scrollbar = ttk.Scrollbar(list_frame, orient="vertical", command=self.record_listbox.yview)
+        record_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.record_listbox.configure(yscrollcommand=record_scrollbar.set)
         self.record_listbox.bind("<<ListboxSelect>>", self.on_record_selected)
         self.record_listbox.bind("<Up>", lambda _event: "break")
         self.record_listbox.bind("<Down>", lambda _event: "break")
@@ -211,8 +226,21 @@ class AudioAuditApp:
             row=6, column=0, sticky="ew", pady=(10, 0)
         )
 
-        right = ttk.Frame(self.root, padding=10)
-        right.grid(row=0, column=1, sticky="nsew")
+        right_container = ttk.Frame(main_pane, padding=10)
+        right_container.columnconfigure(0, weight=1)
+        right_container.rowconfigure(0, weight=1)
+        main_pane.add(right_container, weight=3)
+
+        self.right_canvas = tk.Canvas(right_container, highlightthickness=0)
+        self.right_canvas.grid(row=0, column=0, sticky="nsew")
+        right_scrollbar = ttk.Scrollbar(right_container, orient="vertical", command=self.right_canvas.yview)
+        right_scrollbar.grid(row=0, column=1, sticky="ns")
+        self.right_canvas.configure(yscrollcommand=right_scrollbar.set)
+
+        right = ttk.Frame(self.right_canvas)
+        self.right_canvas_window_id = self.right_canvas.create_window((0, 0), window=right, anchor="nw")
+        right.bind("<Configure>", self.on_right_frame_configured)
+        self.right_canvas.bind("<Configure>", self.on_right_canvas_configured)
         right.columnconfigure(0, weight=1)
         right.rowconfigure(4, weight=1)
         right.rowconfigure(5, weight=1)
@@ -299,15 +327,23 @@ class AudioAuditApp:
         notes_frame.grid(row=5, column=0, sticky="nsew", pady=(10, 0))
         notes_frame.columnconfigure(0, weight=1)
         notes_frame.rowconfigure(0, weight=1)
+        notes_frame.columnconfigure(1, weight=0)
         self.notes_text = tk.Text(notes_frame, height=9, wrap="word")
         self.notes_text.grid(row=0, column=0, sticky="nsew")
+        notes_scrollbar = ttk.Scrollbar(notes_frame, orient="vertical", command=self.notes_text.yview)
+        notes_scrollbar.grid(row=0, column=1, sticky="ns", padx=(8, 0))
+        self.notes_text.configure(yscrollcommand=notes_scrollbar.set)
 
         session_frame = ttk.LabelFrame(right, text="本次会话备注", padding=10)
         session_frame.grid(row=6, column=0, sticky="nsew", pady=(10, 0))
         session_frame.columnconfigure(0, weight=1)
         session_frame.rowconfigure(0, weight=1)
+        session_frame.columnconfigure(1, weight=0)
         self.session_notes_text = tk.Text(session_frame, height=8, wrap="word")
         self.session_notes_text.grid(row=0, column=0, sticky="nsew")
+        session_scrollbar = ttk.Scrollbar(session_frame, orient="vertical", command=self.session_notes_text.yview)
+        session_scrollbar.grid(row=0, column=1, sticky="ns", padx=(8, 0))
+        self.session_notes_text.configure(yscrollcommand=session_scrollbar.set)
 
         footer = ttk.Frame(right)
         footer.grid(row=7, column=0, sticky="ew", pady=(10, 0))
@@ -317,6 +353,16 @@ class AudioAuditApp:
     def bind_shortcuts(self) -> None:
         self.root.bind("<Control-s>", lambda _event: self.save_progress())
         self.root.bind("<Control-e>", lambda _event: self.export_review())
+
+    def on_right_frame_configured(self, _event: tk.Event[tk.Misc]) -> None:
+        if self.right_canvas is None:
+            return
+        self.right_canvas.configure(scrollregion=self.right_canvas.bbox("all"))
+
+    def on_right_canvas_configured(self, event: tk.Event[tk.Misc]) -> None:
+        if self.right_canvas is None or self.right_canvas_window_id is None:
+            return
+        self.right_canvas.itemconfigure(self.right_canvas_window_id, width=event.width)
 
     def open_bundle_dialog(self) -> None:
         selected = filedialog.askopenfilenames(
@@ -573,7 +619,30 @@ class AudioAuditApp:
         if not path.exists():
             messagebox.showerror("音频听审工具", f"音频文件不存在：\n{path}")
             return
-        winsound.PlaySound(str(path), winsound.SND_FILENAME | winsound.SND_ASYNC)
+        playback_path = self.prepare_playback_path(path)
+        try:
+            winsound.PlaySound(str(playback_path), winsound.SND_FILENAME | winsound.SND_ASYNC)
+        except RuntimeError as exc:
+            messagebox.showerror(
+                "音频听审工具",
+                f"播放失败：\n{playback_path}\n\n{exc}",
+            )
+            self.status_var.set(f"播放失败：{playback_path.name}")
+            return
+
+    def prepare_playback_path(self, path: Path) -> Path:
+        normalized_path = path.resolve()
+        if normalized_path.suffix.lower() != ".wav":
+            return normalized_path
+        # winsound uses legacy Win32 file APIs underneath on some systems.
+        # Materializing a short cached path avoids silent playback failures
+        # when deeply nested bundle paths exceed classic MAX_PATH-style limits.
+        cache_key = hashlib.sha1(normalized_path.as_posix().encode("utf-8")).hexdigest()[:16]
+        cache_path = self.playback_cache_dir / f"{cache_key}_{normalized_path.name}"
+        if cache_path.exists():
+            return cache_path
+        cache_path.write_bytes(normalized_path.read_bytes())
+        return cache_path
 
     def stop_audio(self) -> None:
         if winsound is None:
