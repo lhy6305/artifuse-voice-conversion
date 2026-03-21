@@ -85,7 +85,7 @@
 - postenv export:
   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate72_decoded_glitchablation_smooth3postenv_validation12_round1_1/`
 - probe:
-  - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_postenv_validation12_round1_1/`
+  - `reports/audio/stage5_s72_glitch_s3_postenv_v12_probe/`
 
 ## 结果
 
@@ -196,10 +196,10 @@
 ```powershell
 .\python.exe manage.py launch-audio-audit-gui `
   --bundle `
-  reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_postenv_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72__decode_gate_smooth3 `
-  reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_postenv_validation12_round1_1/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72__decode_gate_smooth3_postenv `
+  reports/audio/stage5_s72_glitch_s3_postenv_v12_probe/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72__decode_gate_smooth3 `
+  reports/audio/stage5_s72_glitch_s3_postenv_v12_probe/audio_audit_bundles/decoded/offline_mvp_nores_vocoder_dataset_loop_step72__decode_gate_smooth3_postenv `
   --output-dir `
-  reports/audio/audio_audit_gui_stage5_step72_glitch_smooth3_postenv_validation12_session
+  reports/audio/audio_audit_gui_stage5_s72_s3_postenv_v12_session
 ```
 
 ### 3. 本轮主对比目标

@@ -13799,7 +13799,7 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
     全部同向改善
 - `validation12`
   probe：
-  - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_postenv_validation12_round1_1/stage5_low_activity_fragmentation_probe.md`
+  - `reports/audio/stage5_s72_glitch_s3_postenv_v12_probe/stage5_low_activity_fragmentation_probe.md`
   - `postenv`
     相比
     `smooth3`
@@ -13887,7 +13887,7 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
   - 脚本：
     `scripts/launch_stage5_step72_glitch_smooth3_postenv_validation12_audit.ps1`
   - session 输出目录：
-    `reports/audio/audio_audit_gui_stage5_step72_glitch_smooth3_postenv_validation12_session`
+    `reports/audio/audio_audit_gui_stage5_s72_s3_postenv_v12_session`
   - 主对比目标：
     `step72__decode_gate_smooth3`
     vs
@@ -14014,3 +14014,183 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/238_teacher_first_single_target_terminal_user_line_bootstrap_report.md`
   - 记录终端用户线命令实现、默认参数口径、smoke 结果与当前边界
+## 2026-03-21 补充：终端用户线已完成多输入 smoke，并补上 PowerShell 包装脚本
+### 当前结论
+- 当前
+  `teacher-first / single-target`
+  终端用户线已额外完成
+  `3`
+  条真实输入 smoke：
+  - 原始长录音前
+    `2.0s`
+    截断
+  - 常规 source segment
+  - peak 片段
+- 三条命令均成功导出：
+  - `decoded.wav`
+  - `teacher_first_vc_demo.json/.md`
+  - 中间 contract / scaffold
+- 同时已补一条更适合终端用户直接运行的 PowerShell 包装脚本：
+  - `scripts/run_teacher_first_single_target_vc_demo.ps1`
+
+### 本轮 smoke 结果
+1. `data_convert/dataset_ly65_raw.wav`
+   - `--max-audio-sec 2.0`
+   - `decoded_audio_sec = 1.998333`
+   - `decoded_waveform_rms = 0.046524`
+2. `data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav`
+   - `decoded_audio_sec = 1.528333`
+   - `decoded_waveform_rms = 0.085918`
+3. `data_prep/round1/source_segments/peaks/peak_011_0002370615_top_peak.wav`
+   - `decoded_audio_sec = 1.398333`
+   - `decoded_waveform_rms = 0.130412`
+
+### 当前新增脚本
+1. 新增：
+   - `scripts/run_teacher_first_single_target_vc_demo.ps1`
+2. 作用：
+   - 仅要求输入音频
+   - 默认自动创建本轮运行输出目录
+   - 可选切到
+     `post_ola_envelope`
+   - 可选关闭中间产物保留
+   - 已完成一次脚本级 smoke，
+     确认自动输出目录与
+     `-NoSaveIntermediates`
+     同时生效
+3. 当前默认输出根目录：
+   - `reports/runtime/offline_mvp_teacher_first_vc_demo_runs/`
+
+### 当前意义
+- 当前终端用户线已经不只是在单一 smoke 输入上成立，
+  而是在至少三类真实输入形态上都能稳定跑通
+- 新增脚本也避免用户反复复用同一固定输出目录时，
+  被底层 managed-directory reset
+  覆盖旧产物
+## 2026-03-21 补充：终端用户包装脚本已补齐高静音、`postenv` 与 `16kHz` 输入边界 smoke
+### 当前结论
+- 包装脚本当前又补过
+  `3`
+  类关键边界：
+  - 高静音 segment
+  - `postenv`
+    显式切换
+  - 非默认采样率
+    `16kHz`
+- 三类输入均成功导出：
+  - `decoded.wav`
+  - `teacher_first_vc_demo.json/.md`
+- 同时已把包装脚本默认 chunk 策略从
+  “隐式沿底层 sample-based 默认”
+  调整为：
+  - 显式传
+    `--chunk-ms 33.333333`
+  以保持不同采样率下的默认时间窗基本一致
+
+### 本轮结果
+1. 高静音输入
+   - 输入：
+     `data_prep/round1/source_segments/segments/segment_0061_0000300400_0000300910.wav`
+   - `decoded_audio_sec = 0.508333`
+   - `decoded_waveform_rms = 0.027804`
+2. `postenv` 包装脚本 smoke
+   - 输入：
+     `data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav`
+   - `branch_label = stage5_best_validation_step72__decode_gate_smooth3_postenv`
+   - `decoded_waveform_rms = 0.08585`
+3. `16kHz` 输入
+   - 临时输入：
+     `tmp/teacher_first_vc_demo_inputs/segment_0001_0000020110_0000021640_16k.wav`
+   - `decoded_audio_sec = 1.525`
+   - `decoded_waveform_rms = 0.085248`
+   - 当前脚本级默认 chunk：
+     `chunk_samples = 533`
+     `chunk_ms = 33.3125`
+
+### 当前新增认识
+- 非默认采样率输入本身不是 blocker，
+  当前链路已经能正常跑通
+- 但若包装脚本不显式传
+  `chunk-ms`，
+  teacher runtime
+  默认会退回 sample-based chunk，
+  让不同采样率下的时间窗发生漂移
+- 现在这个问题已在包装脚本层先收敛，
+  至少终端用户默认入口不再受该漂移影响
+
+### 文档补充
+- `docs/239_teacher_first_single_target_multisource_smoke_and_wrapper_report.md`
+  - 已补充高静音、
+    `postenv`、
+    `16kHz`
+    边界 smoke 与 chunk-ms 默认修正
+## 2026-03-21 补充：实验线 `postenv` focused human audit 入口已恢复为可启动状态
+### 当前结论
+- 实验线当前仍然不应扩新 probe，
+  下一棒仍是：
+  - `step72__decode_gate_smooth3`
+    vs
+    `step72__decode_gate_smooth3_postenv`
+    的 focused human audit
+- 本轮发现：
+  - 原
+    `postenv`
+    听审脚本指向的 decoded bundle
+    在当前工作区缺失
+  - 正式 session
+    目录里只剩：
+    `audio_audit_progress.json`
+    没有：
+    `audio_audit_review.json`
+- 现已修复：
+  - 官方脚本会先检查 bundle
+  - 若缺失，
+    自动从两路 Stage5 export
+    重建 decoded audit bundle
+  - 然后再启动 GUI
+
+### 当前验证
+1. 官方脚本：
+   - `scripts/launch_stage5_step72_glitch_smooth3_postenv_validation12_audit.ps1`
+2. smoke 命令：
+   - `powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_step72_glitch_smooth3_postenv_validation12_audit.ps1 -AutoCloseMs 1000`
+3. 结果：
+   - exit code `0`
+   - 已自动重建：
+     `reports/audio/stage5_s72_glitch_s3_postenv_v12_probe/audio_audit_bundles/decoded/...`
+   - GUI session
+     已再次确认可启动，
+     正式输出目录仍为：
+     `reports/audio/audio_audit_gui_stage5_s72_s3_postenv_v12_session/`
+
+### 当前边界
+- 这次修复回答的是：
+  - “听审入口现在还能不能真正打开”
+- 它没有回答：
+  - `postenv`
+    是否已经通过 focused human audit
+- 当前 session
+  仍只有：
+  - `audio_audit_progress.json`
+- 所以实验线状态仍应写成：
+  - 待人工听审收口，
+    尚未形成正式主观结论
+
+### 文档补充
+- `docs/240_stage5_step72_glitch_smooth3_postenv_human_audit_reactivation_report.md`
+  - 记录 bundle 恢复、脚本自愈、正式听审命令、输出目录与当前未完成状态
+
+### 下一步
+1. 继续补：
+   - 静音占比更高片段
+   - 非默认 sample rate 输入
+   - `postenv`
+     显式切换 smoke
+2. 若这些边界仍稳定，
+   再考虑是否补：
+   - 更清晰的失败分层 summary
+   - 更贴近最终交付的用户目录契约
+
+### 文档补充
+- `docs/239_teacher_first_single_target_multisource_smoke_and_wrapper_report.md`
+  - 记录本轮三条 smoke、包装脚本入口、默认输出目录与当前边界

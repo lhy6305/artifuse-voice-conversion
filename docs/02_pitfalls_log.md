@@ -8309,3 +8309,161 @@
     应返回清楚报错并提示：
     - 改用 `best_validation`
     - 或显式传 checkpoint
+### 304. 终端用户线一旦底层命令会 reset managed output directory，就不能把固定示例输出目录直接当长期默认入口；否则重复运行会悄悄覆盖旧结果
+- 现象:
+  - 当前
+    `run-offline-mvp-teacher-first-vc-demo`
+    入口内部会先：
+    - 删除已有 output dir
+    - 再重建目录并写入新产物
+  - 如果终端用户长期照抄同一个示例目录，
+    例如：
+    `tmp/teacher_first_vc_demo_smoke`
+    或某个固定
+    `reports/runtime/...`
+    路径，
+    旧的
+    `decoded.wav`
+    与中间 contract/scaffold
+    会被新一轮执行直接覆盖
+- 风险:
+  - 用户可能误以为自己还保留着上一轮结果，
+    实际上已经被静默替换
+  - 这会干扰：
+    - 多样本对比
+    - 问题复现
+    - 听感回溯
+  - 还容易把
+    “同一命令多跑几次”
+    误看成
+    “系统输出不稳定”
+- 处理要求:
+  - 面向终端用户交付时，
+    默认应提供：
+    - 每轮自动生成独立输出目录
+    - 或明确要求用户显式传不同 output dir
+  - 示例级 smoke 目录
+    可以保留，
+    但不应直接作为长期包装脚本默认值
+### 305. teacher-first 终端用户包装脚本如果默认沿 sample-based chunk，而不是时间窗 chunk，会在非默认采样率输入下悄悄把 runtime 时序边界改掉
+- 现象:
+  - 当前 teacher runtime
+    的底层默认 chunk
+    来自：
+    `frame_length * 4`
+    即 sample-based 默认
+  - 在常见输入上，
+    这会落到：
+    `1600 samples`
+    约
+    `33.33ms`
+  - 但当输入改成
+    `16kHz`
+    时，
+    同样的
+    `1600 samples`
+    会直接变成：
+    `100ms`
+- 风险:
+  - 即便链路还能跑通，
+    teacher runtime
+    的 chunk 语义也已经变了
+  - 这会让：
+    - 不同采样率输入之间的行为
+      变得不再可比
+    - streaming/full-pass 一致性观察
+      混入额外变量
+    - 后续边界问题排查
+      很难区分到底是
+      sample rate
+      本身的问题，
+      还是 runtime chunk
+      被放大造成的问题
+- 处理要求:
+  - 面向终端用户的默认包装脚本，
+    应优先显式传：
+    - `chunk-ms`
+  - 仅在用户明确需要时，
+    才暴露或回退到
+    sample-based chunk
+  - 报告非默认采样率 smoke
+    时，
+    应同时记录：
+    - `chunk_samples`
+    - `chunk_ms`
+### 306. 如果 low-activity probe 的 `clips/` 还在，但 `audio_audit_bundles/` 被清空或丢失，现有 GUI session 会停留在旧 `audio_audit_progress.json`，而正式听审脚本会直接失效
+- 现象:
+  - 本轮
+    `step72__decode_gate_smooth3_postenv`
+    focused human audit
+    的正式 session
+    目录仍保留：
+    - `audio_audit_progress.json`
+  - 但对应的 decoded bundle
+    目录一度缺失，
+    导致：
+    - `launch-audio-audit-gui`
+      无法解析 manifest
+    - 官方启动脚本
+      直接报
+      `找不到试听包清单文件`
+- 风险:
+  - 如果只看见 session
+    目录还在，
+    很容易误判成：
+    - “这条听审线仍可直接继续”
+  - 实际上，
+    旧 progress
+    只说明 GUI 曾经启动过，
+    不说明 bundle
+    仍然完整可读
+  - 这样会把实验线卡在：
+    - 文档说能听
+    - 但脚本已经打不开
+- 处理要求:
+  - 只要 session
+    目录存在但 bundle
+    缺失，
+    就不能把这条线写成
+    “可直接继续人工听审”
+  - 针对固定听审脚本，
+    应优先加入：
+    - bundle 存在性检查
+    - 缺失时的自动重建
+  - 听审交接时，
+    除了记录 session
+    目录，
+    还应明确：
+    - bundle 根目录
+    - 是否已验证 GUI 可启动
+### 307. Stage5 probe 根目录名如果过长，会把后续 `clips/decoded/target__/segment__/branch.wav` 整条链推到目标文件系统路径上限；正式路径应优先收敛到短别名
+- 现象:
+  - 本轮原始 probe 根目录：
+    `stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_postenv_validation12_round1_1`
+  - 继续向下叠加：
+    - `audio_audit_bundles/decoded/...`
+    - `clips/decoded/target__.../segment_.../...wav`
+    后，
+    很容易在较严格的目标文件系统上超出路径长度限制
+- 风险:
+  - 即便仓库本地还能勉强工作，
+    一旦：
+    - 拷到别的盘
+    - 进入更深工作目录
+    - 交给更严格的文件系统
+    就可能直接失败
+  - 而且这类问题通常不是单个脚本参数能解决，
+    因为真正爆掉的是整条落盘链路
+- 处理要求:
+  - 对长期复用的 probe/session 目录，
+    不要只追求“名字完整可读”，
+    还要控制正式路径长度预算
+  - 当某条实验线已经稳定，
+    应尽快把正式目录名收敛成短别名，
+    例如：
+    - `stage5_s72_glitch_s3_postenv_v12_probe`
+    - `audio_audit_gui_stage5_s72_s3_postenv_v12_session`
+  - 缩短目录名后，
+    还要重新生成 manifest/probe 产物，
+    不能只做目录重命名，
+    否则内部绝对路径仍会残留旧长路径
