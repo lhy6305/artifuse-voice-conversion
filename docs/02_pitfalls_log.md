@@ -8919,6 +8919,82 @@
     模式下的
     `打平`
     自动解释
+### 320. 当 Stage5 no-res milestone acceptance 已经在首条完整试听和后续抽样里暴露出“没有语音、只有 buzzing”时，不要再执着于把剩余 GUI 记录逐条打满才承认失败
+- 现象:
+  - 当前 milestone acceptance
+    设计上原本是：
+    - 对当前 best route
+      做更广样本面验收
+  - 但如果实际用户反馈已经是：
+    - 没有人声
+    - 没有可辨识音节
+    - 没有音调变化
+    - 只有 envelope-modulated buzzing
+  - 那失败已经不再是：
+    - 某条记录的局部例外
+  - 而是：
+    - route 级别的基础性失败
+- 风险:
+  - 如果这时仍要求：
+    - 先把剩余
+      `N`
+      条全部逐条打分完
+    - 才能写失败结论
+  - 很容易得到：
+    - 时间被消耗在低信息量重复试听上
+    - 但真正新的 root cause
+      问题迟迟没有被正式立题
+  - 还会把实验线状态误写成：
+    - “milestone acceptance 仍进行中”
+    而不是：
+    - “milestone acceptance 已失败”
+- 处理要求:
+  - 只要用户已经给出一致且高置信度的
+    route-level
+    失败结论，
+    就应允许：
+    - 先写正式失败报告
+    - 先更新实验线状态
+  - GUI
+    逐条穷举可作为后续补全材料，
+    但不应阻塞：
+    - 失败结论落盘
+    - 下一题切到 root-cause isolation
+### 321. 如果用户进一步确认“历史上所有人工听审都从未出现可辨识语音”，下一题就不能再停留在当前 checkpoint 或当前 bundle 的失败解释；必须上升到整条 no-res 路线的 speech-emergence 根因
+- 现象:
+  - 当前新增的边界不是：
+    - “这次 milestone acceptance 失败”
+  - 而是：
+    - 到目前为止，
+      所有人工听审
+      都没有任何一次
+      听到可辨识人声
+- 风险:
+  - 如果还把下一题写成：
+    - 当前 best route
+      为什么 failed
+  - 很容易继续围绕：
+    - checkpoint
+    - decode 参数
+    - 单次导出
+    打转
+  - 但这些题都默认了：
+    - 语音曾经出现过，
+      只是这次没出现
+  - 而当前历史事实恰恰不是这样
+- 处理要求:
+  - 一旦确认：
+    - 历史上从未出现
+      recognizable speech
+  - 下一题必须直接升级成：
+    - Stage5 no-res
+      speech-emergence
+      root-cause isolation
+  - 后续实验问题应优先围绕：
+    - 条件控制是否真正被使用
+    - decoder/loss 是否学成假解
+    - 当前量化改善是否都只发生在
+      非语音输出内部
 ### 318. 当用户线出现“能稳定导出但主观上高频 buzzing”的症状时，不能只看 scaffold-level applicability probe 就下结论；decoder-side 行为可能已经严重脱离训练内分布
 - 现象:
   - 当前
@@ -8977,3 +9053,158 @@
   - 才能判断问题更接近：
     - 路由/文件错误
     - 还是 checkpoint 适用性失配
+### 319. 当 gate on/off 与 `postenv/pre_overlap_add` 都无法明显改变高频 buzzing 指标时，不要继续把时间花在 decode-side apply-mode 微调上；这通常说明问题不在 gate 语义层
+- 现象:
+  - 本轮对同一组
+    user-line
+    case
+    做了三类 decoder probe：
+    - gate on + `post_ola_envelope`
+    - gate on + `pre_overlap_add`
+    - gate off
+  - 结果显示：
+    - 两种 apply mode
+      的
+      `high_band_energy_ratio`
+      近乎一致
+    - gate off
+      虽然抬高了 RMS，
+      但
+      `HF / centroid / rolloff95`
+      仍旧异常偏高
+- 风险:
+  - 如果此时还继续围绕：
+    - smoothing
+    - floor
+    - apply mode
+    - gate 开关
+    做更多局部小题，
+  - 很容易得到：
+    - 结果很多
+    - 但新增信息很少
+  - 真正需要回答的
+    “当前 control / conditioning
+    是否超出 checkpoint 适用范围”
+    反而会被继续拖后
+- 处理要求:
+  - 当 gate 隔离试验已经表明：
+    - 频谱异常不随 gate 语义反转
+  - 默认就应停止继续扫
+    decode-side
+    apply-mode
+    小题
+  - 下一步应切到：
+    - control / conditioning
+      适用性
+    - 或用户线入口前的风险拦截
+### 320. 当固定 conditioning 回拉、`q01/q99` 裁剪、甚至一阶 affine 分布匹配都不能把高频异常拉回时，不要再把“简单 inference 归一化”当成默认可行解
+- 现象:
+  - 本轮在用户线
+    decoder probe
+    上继续做了三类
+    inference-side
+    归一化：
+    - `conditioning_reference_mean`
+    - `reference_q01_q99_clip`
+    - `reference_affine_match`
+  - 结果显示：
+    - 前两类几乎没有变化
+    - `reference_affine_match`
+      虽然能让部分 gate/RMS
+      指标靠近训练内分布，
+      但
+      `decoded_spectral_high_band_energy_ratio`
+      仍稳定在
+      `~0.477`
+      量级，
+      远高于参考
+      `~0.0645`
+- 风险:
+  - 如果这时还继续默认假设：
+    - 再补一点 clip
+    - 再补一点 mean shift
+    - 再补一个更花哨的归一化
+    就能修好，
+  - 很容易在
+    “低成本预处理”
+    上反复打转，
+    但不去回答真正的问题：
+    - 到底是哪一族动态控制
+      触发了失配
+- 处理要求:
+  - 当简单 inference
+    归一化已经连续失败时，
+    默认下一步不要继续扩
+    通用归一化策略库
+  - 应转到：
+    - 按控制 family
+      做替换/屏蔽/消融
+    - 定位具体失配来源
+### 321. 当 family-level override 只把信号收敛到 `noise_energy_proxy` 一带、却没有把高频异常真正拉回健康范围时，不能把它误写成“唯一根因已锁定”
+- 现象:
+  - 本轮用户线
+    decoder behavior probe
+    已补齐
+    family-level override
+  - 第一轮结果显示：
+    - `z_art`
+      与
+      `event_probs`
+      基本不是主杠杆
+    - proxy family
+      的主要信号
+      更集中在
+      `energy_proxy`
+    - 继续细分后，
+      `noise_energy_proxy`
+      在常规/peak case
+      上最有改善，
+      `periodic_energy_proxy`
+      反而更容易恶化
+  - 但即便最优单 family
+    替换后，
+    `decoded_spectral_high_band_energy_ratio`
+    仍停留在
+    `~0.476`
+    量级，
+    远高于训练内参考
+    `~0.0645`
+  - 高静音 case
+    也没有被单 family
+    替换反转
+- 风险:
+  - 如果这时把结论直接写成：
+    - “根因就是
+      noise_energy_proxy”
+  - 就会把当前真实状态误扁平化成：
+    - 单点修复题
+  - 这会掩盖：
+    - 整体 user-line control semantics
+      仍未落回
+      Stage5 checkpoint
+      的健康适用范围
+    - silence-heavy
+      case
+      仍可能是一条独立边界
+- 处理要求:
+  - 当 family-level
+    probe
+    只能把问题收敛到
+    “最强局部杠杆”
+    而非
+    “单一替换可修复”
+  - 正式文档里必须写成：
+    - 当前最值得优先继续深挖的 family
+    - 哪些 case
+      上有改善
+    - 哪些 case
+      仍不反转
+  - 下一步应转向：
+    - 该 family
+      的语义核对、
+      时间轨迹比较、
+      与高静音边界的耦合
+  - 不要把
+    “局部杠杆最大”
+    误写成
+    “唯一根因已定”

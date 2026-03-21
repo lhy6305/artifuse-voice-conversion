@@ -1,0 +1,94 @@
+{
+  "contract_version": "offline_teacher_downstream_control_v1",
+  "generated_at": "2026-03-21T18:38:29",
+  "input_audio_path": "F:/proj_dev/tmp/workdir4/data_prep/round1/source_segments/segments/segment_0061_0000300400_0000300910.wav",
+  "teacher": {
+    "experiment_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+    "route_handoff_path": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_route_handoff_round1_1_longwindow_final/route_handoff.json"
+  },
+  "runtime": {
+    "device": "cpu",
+    "sample_rate": 48000,
+    "frame_length": 400,
+    "hop_length": 160,
+    "frame_ms": 8.333333,
+    "hop_ms": 3.333333,
+    "chunk_samples": 1600,
+    "chunk_ms": 33.333333,
+    "frame_count": 151
+  },
+  "conditioning": {
+    "asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha": 1.15
+  },
+  "provided_keys": [
+    "frame_start_ms",
+    "z_art",
+    "event_logits",
+    "event_probs",
+    "hidden",
+    "fused_hidden",
+    "acoustic.energy_log",
+    "acoustic.abs_mean",
+    "acoustic.zero_cross_rate",
+    "acoustic.delta_energy",
+    "conditioning.s_spk_target",
+    "conditioning.s_geom_target",
+    "conditioning.alpha"
+  ],
+  "derived_proxy_keys": [
+    "energy_proxy",
+    "voiced_proxy",
+    "aperiodicity_proxy",
+    "event_presence_proxy",
+    "energy_change_proxy"
+  ],
+  "missing_design_keys": [
+    "f0_hz",
+    "r_res",
+    "final_vocoder_waveform"
+  ],
+  "summary_stats": {
+    "energy_log": {
+      "mean": -6.968357,
+      "std": 1.537399,
+      "min": -7.936511,
+      "max": -3.589357
+    },
+    "zero_cross_rate": {
+      "mean": 0.049567,
+      "std": 0.008909,
+      "min": 0.043322,
+      "max": 0.071281
+    },
+    "event_presence_proxy": {
+      "mean": 0.33243,
+      "std": 0.076856,
+      "min": 0.288734,
+      "max": 0.523831
+    },
+    "voiced_proxy": {
+      "mean": 0.3192,
+      "std": 0.063526,
+      "min": 0.282981,
+      "max": 0.477329
+    },
+    "energy_proxy": {
+      "mean": 0.101239,
+      "std": 0.221565,
+      "min": 0.000381,
+      "max": 0.694509
+    }
+  },
+  "verification": null,
+  "notes": [
+    "This contract is a teacher-first downstream control packet, not the final Stage5 vocoder contract from the design doc.",
+    "aperiodicity_proxy is currently derived from acoustic.zero_cross_rate and should be treated as a provisional noise-control proxy only.",
+    "voiced_proxy currently maps to event_probs[:, 3], which is the teacher's voiced-like event channel rather than a dedicated vuv head.",
+    "No explicit f0_hz or r_res is available in the current offline teacher; downstream modules must treat those as missing or optional."
+  ]
+}

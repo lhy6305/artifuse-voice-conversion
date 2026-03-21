@@ -63,6 +63,49 @@ HIGH_RISK_HIGH_BAND_ENERGY_RATIO = 0.25
 ELEVATED_RISK_SPECTRAL_CENTROID_HZ = 3100.0
 ELEVATED_RISK_SPECTRAL_ROLLOFF95_HZ = 21500.0
 ELEVATED_RISK_HIGH_BAND_ENERGY_RATIO = 0.15
+DECODER_PROBE_CONTROL_FAMILY_ALIASES = {
+    "z_art": "z_art",
+    "zart": "z_art",
+    "event_probs": "event_probs",
+    "event_probs_family": "event_probs",
+    "events": "event_probs",
+    "proxy_family": "proxy_family",
+    "proxies": "proxy_family",
+    "all_proxies": "proxy_family",
+    "voiced_proxy": "voiced_proxy",
+    "energy_proxy": "energy_proxy",
+    "periodic_energy_proxy": "periodic_energy_proxy",
+    "noise_energy_proxy": "noise_energy_proxy",
+    "aperiodicity_proxy": "aperiodicity_proxy",
+    "event_presence_proxy": "event_presence_proxy",
+    "energy_change_proxy": "energy_change_proxy",
+}
+DECODER_PROBE_CONTROL_OVERRIDE_MODE_ALIASES = {
+    "zero": "zero",
+    "zeros": "zero",
+    "reference_mean": "reference_mean",
+    "refmean": "reference_mean",
+    "mean": "reference_mean",
+}
+DECODER_PROBE_CONTROL_FAMILY_TARGETS = {
+    "z_art": (("periodic", "z_art"),),
+    "event_probs": (("noise", "event_probs"),),
+    "voiced_proxy": (("periodic", "voiced_proxy"),),
+    "energy_proxy": (("periodic", "energy_proxy"), ("noise", "energy_proxy")),
+    "periodic_energy_proxy": (("periodic", "energy_proxy"),),
+    "noise_energy_proxy": (("noise", "energy_proxy"),),
+    "aperiodicity_proxy": (("noise", "aperiodicity_proxy"),),
+    "event_presence_proxy": (("noise", "event_presence_proxy"),),
+    "energy_change_proxy": (("noise", "energy_change_proxy"),),
+    "proxy_family": (
+        ("periodic", "voiced_proxy"),
+        ("periodic", "energy_proxy"),
+        ("noise", "aperiodicity_proxy"),
+        ("noise", "event_presence_proxy"),
+        ("noise", "energy_change_proxy"),
+        ("noise", "energy_proxy"),
+    ),
+}
 
 
 PIPELINE_LAYER_DEFINITIONS = (
@@ -2200,6 +2243,8 @@ def analyze_teacher_first_vc_decoder_behavior(
     chunk_ms: float | None,
     use_predicted_activity_gate: bool,
     predicted_activity_gate_apply_mode: str,
+    normalization_strategy: str,
+    control_family_overrides: list[str] | None,
 ) -> None:
     resolved_reference_packages = resolve_reference_package_paths(
         reference_package_paths=reference_package_paths,
@@ -2218,12 +2263,15 @@ def analyze_teacher_first_vc_decoder_behavior(
     checkpoint_payload = load_vocoder_checkpoint_payload(resolved_checkpoint_path)
     resolved_device = resolve_runtime_device(device)
     resolved_apply_mode = normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_mode)
+    resolved_normalization_strategy = normalize_decoder_probe_normalization_strategy(normalization_strategy)
+    resolved_control_family_overrides = parse_decoder_probe_control_family_overrides(control_family_overrides)
 
     output_dir = output_dir.resolve()
     reset_managed_directory(output_dir)
     cases_dir = output_dir / "cases"
     cases_dir.mkdir(parents=True, exist_ok=True)
 
+    reference_feature_summary = build_reference_distribution_summary(resolved_reference_packages)
     reference_summary = build_reference_decoder_behavior_summary(
         reference_package_paths=resolved_reference_packages,
         checkpoint_payload=checkpoint_payload,
@@ -2271,11 +2319,17 @@ def analyze_teacher_first_vc_decoder_behavior(
         )
         if not isinstance(scaffold_payload, dict):
             raise TypeError(f"Unsupported scaffold payload type: {type(scaffold_payload)!r}")
+        normalized_scaffold_payload, normalization_summary = normalize_scaffold_payload_for_decoder_probe(
+            scaffold_payload=scaffold_payload,
+            reference_feature_summary=reference_feature_summary,
+            normalization_strategy=resolved_normalization_strategy,
+            control_family_overrides=resolved_control_family_overrides,
+        )
         case_summaries.append(
             build_decoder_behavior_case_summary(
                 case_id=case_id,
                 demo_summary=demo_summary,
-                scaffold_payload=scaffold_payload,
+                scaffold_payload=normalized_scaffold_payload,
                 checkpoint_payload=checkpoint_payload,
                 device=resolved_device,
                 reference_metric_distribution=dict(reference_summary["metric_distribution"]),
@@ -2283,6 +2337,8 @@ def analyze_teacher_first_vc_decoder_behavior(
                 predicted_activity_gate_floor=0.0,
                 predicted_activity_gate_smoothing_frames=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
                 predicted_activity_gate_apply_mode=resolved_apply_mode,
+                normalization_summary=normalization_summary,
+                probe_decoded_audio_path=case_output_dir / "decoder_probe_decoded.wav",
             )
         )
 
@@ -2298,9 +2354,14 @@ def analyze_teacher_first_vc_decoder_behavior(
             "predicted_activity_gate_floor": 0.0,
             "predicted_activity_gate_smoothing_frames": DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
             "predicted_activity_gate_apply_mode": resolved_apply_mode,
+            "normalization_strategy": resolved_normalization_strategy,
+            "control_family_overrides": serialize_decoder_probe_control_family_overrides(
+                resolved_control_family_overrides
+            ),
         },
         "reference_package_count": len(resolved_reference_packages),
         "reference_packages": [path.as_posix() for path in resolved_reference_packages],
+        "reference_feature_summary": reference_feature_summary,
         "reference_decoder_behavior": reference_summary,
         "case_count": len(case_summaries),
         "cases": case_summaries,
@@ -2308,6 +2369,8 @@ def analyze_teacher_first_vc_decoder_behavior(
             "This probe compares decoder-side behavior for teacher-first user-line cases against the same checkpoint on in-distribution Stage5 training packages.",
             "If user-line inputs look only mildly shifted at the scaffold level but decoder metrics are extreme here, the failure is more likely a checkpoint-conditioning applicability issue than a simple file or routing bug.",
             "High decoded spectral centroid, high high-band-energy ratio, or heavy waveform-frame clipping relative to reference cases are strong signs of the observed high-frequency buzzing failure mode.",
+            "normalization_strategy is inference-only probe logic; it does not modify the saved teacher contract or the main user-line runtime defaults.",
+            "control_family_overrides are inference-only probe interventions for family-level root-cause isolation; they do not change the saved teacher contract or default runtime path.",
         ],
     }
     (output_dir / "teacher_first_vc_decoder_behavior_probe.json").write_text(
@@ -2365,7 +2428,7 @@ def build_reference_decoder_behavior_summary(
             noise_input_dim=int(batch["noise_branch_features"].shape[-1]),
             frame_length=int(runtime["frame_length"]),
         )
-        metrics = collect_decoder_behavior_metrics(
+        metrics, _ = collect_decoder_behavior_metrics(
             model=model,
             periodic_branch_features=batch["periodic_branch_features"],
             noise_branch_features=batch["noise_branch_features"],
@@ -2401,6 +2464,310 @@ def build_reference_decoder_behavior_summary(
     }
 
 
+def normalize_decoder_probe_normalization_strategy(normalization_strategy: str) -> str:
+    normalized = str(normalization_strategy).strip().lower().replace("-", "_")
+    aliases = {
+        "none": "none",
+        "conditioning_mean": "conditioning_reference_mean",
+        "conditioning_reference_mean": "conditioning_reference_mean",
+        "clip": "reference_q01_q99_clip",
+        "reference_q01_q99_clip": "reference_q01_q99_clip",
+        "affine": "reference_affine_match",
+        "reference_affine_match": "reference_affine_match",
+        "conditioning_mean_plus_clip": "conditioning_reference_mean_plus_reference_q01_q99_clip",
+        "conditioning_reference_mean_plus_reference_q01_q99_clip": "conditioning_reference_mean_plus_reference_q01_q99_clip",
+    }
+    if normalized not in aliases:
+        raise ValueError(
+            "Unsupported normalization strategy for decoder probe: "
+            f"{normalization_strategy!r}. Expected one of: none, conditioning_reference_mean, "
+            "reference_q01_q99_clip, reference_affine_match, "
+            "conditioning_reference_mean_plus_reference_q01_q99_clip."
+        )
+    return aliases[normalized]
+
+
+def parse_decoder_probe_control_family_overrides(
+    control_family_overrides: list[str] | None,
+) -> list[dict[str, object]]:
+    if not control_family_overrides:
+        return []
+    normalized_rows: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
+    for raw_value in control_family_overrides:
+        raw_text = str(raw_value).strip()
+        if not raw_text:
+            continue
+        separator = "=" if "=" in raw_text else ":"
+        if separator not in raw_text:
+            raise ValueError(
+                "Unsupported control-family override format: "
+                f"{raw_value!r}. Expected family=mode, for example z_art=reference_mean."
+            )
+        raw_family, raw_mode = [part.strip().lower().replace("-", "_") for part in raw_text.split(separator, 1)]
+        family = DECODER_PROBE_CONTROL_FAMILY_ALIASES.get(raw_family)
+        if family is None:
+            raise ValueError(
+                "Unsupported control-family override family: "
+                f"{raw_family!r}. Expected one of: "
+                + ", ".join(sorted(DECODER_PROBE_CONTROL_FAMILY_TARGETS.keys()))
+                + "."
+            )
+        mode = DECODER_PROBE_CONTROL_OVERRIDE_MODE_ALIASES.get(raw_mode)
+        if mode is None:
+            raise ValueError(
+                "Unsupported control-family override mode: "
+                f"{raw_mode!r}. Expected one of: zero, reference_mean."
+            )
+        dedupe_key = (family, mode)
+        if dedupe_key in seen:
+            continue
+        seen.add(dedupe_key)
+        normalized_rows.append(
+            {
+                "family": family,
+                "mode": mode,
+                "targets": list(DECODER_PROBE_CONTROL_FAMILY_TARGETS[family]),
+            }
+        )
+    return normalized_rows
+
+
+def serialize_decoder_probe_control_family_overrides(
+    control_family_overrides: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    serialized_rows = []
+    for item in control_family_overrides:
+        targets = list(item.get("targets", []))
+        serialized_rows.append(
+            {
+                "family": str(item.get("family")),
+                "mode": str(item.get("mode")),
+                "targets": [f"{branch}.{semantic}" for branch, semantic in targets],
+            }
+        )
+    return serialized_rows
+
+
+def normalize_scaffold_payload_for_decoder_probe(
+    *,
+    scaffold_payload: dict[str, object],
+    reference_feature_summary: dict[str, object],
+    normalization_strategy: str,
+    control_family_overrides: list[dict[str, object]] | None = None,
+) -> tuple[dict[str, object], dict[str, object]]:
+    normalized_strategy = normalize_decoder_probe_normalization_strategy(normalization_strategy)
+    resolved_control_family_overrides = list(control_family_overrides or [])
+    branch_scaffold = dict(scaffold_payload["branch_scaffold"])
+    periodic_features = branch_scaffold["periodic_branch_features"].detach().clone().to(torch.float32)
+    noise_features = branch_scaffold["noise_branch_features"].detach().clone().to(torch.float32)
+    transformations: list[str] = []
+    if normalized_strategy == "none" and not resolved_control_family_overrides:
+        return (
+            {
+                **scaffold_payload,
+                "branch_scaffold": {
+                    **branch_scaffold,
+                    "periodic_branch_features": periodic_features,
+                    "noise_branch_features": noise_features,
+                },
+            },
+            {
+                "strategy": normalized_strategy,
+                "transformations": transformations,
+                "control_family_overrides": [],
+            },
+        )
+
+    layout = build_branch_feature_layout(scaffold_payload)
+    periodic_reference = dict(reference_feature_summary["periodic"])
+    noise_reference = dict(reference_feature_summary["noise"])
+    periodic_mean = torch.tensor(periodic_reference["per_dim_mean"], dtype=torch.float32)
+    periodic_q01 = torch.tensor(periodic_reference["per_dim_q01"], dtype=torch.float32)
+    periodic_q99 = torch.tensor(periodic_reference["per_dim_q99"], dtype=torch.float32)
+    noise_mean = torch.tensor(noise_reference["per_dim_mean"], dtype=torch.float32)
+    noise_q01 = torch.tensor(noise_reference["per_dim_q01"], dtype=torch.float32)
+    noise_q99 = torch.tensor(noise_reference["per_dim_q99"], dtype=torch.float32)
+
+    if normalized_strategy in {
+        "conditioning_reference_mean",
+        "conditioning_reference_mean_plus_reference_q01_q99_clip",
+    }:
+        for semantic in ("alpha", "s_spk_target", "s_geom_target"):
+            slice_info = layout["periodic"].get(semantic)
+            if slice_info is None:
+                continue
+            start, end = slice_info
+            periodic_features[:, start:end] = periodic_mean[start:end].view(1, end - start).expand(
+                periodic_features.shape[0],
+                end - start,
+            )
+            transformations.append(
+                f"periodic.{semantic} -> reference_mean[{start}:{end}]"
+            )
+        for semantic in ("alpha", "s_spk_target"):
+            slice_info = layout["noise"].get(semantic)
+            if slice_info is None:
+                continue
+            start, end = slice_info
+            noise_features[:, start:end] = noise_mean[start:end].view(1, end - start).expand(
+                noise_features.shape[0],
+                end - start,
+            )
+            transformations.append(
+                f"noise.{semantic} -> reference_mean[{start}:{end}]"
+            )
+    if normalized_strategy in {
+        "reference_q01_q99_clip",
+        "conditioning_reference_mean_plus_reference_q01_q99_clip",
+    }:
+        periodic_features = torch.maximum(
+            torch.minimum(periodic_features, periodic_q99.view(1, -1)),
+            periodic_q01.view(1, -1),
+        )
+        noise_features = torch.maximum(
+            torch.minimum(noise_features, noise_q99.view(1, -1)),
+            noise_q01.view(1, -1),
+        )
+        transformations.append("periodic.* -> clamp(reference_q01, reference_q99)")
+        transformations.append("noise.* -> clamp(reference_q01, reference_q99)")
+    if normalized_strategy == "reference_affine_match":
+        periodic_features = match_feature_distribution_to_reference(
+            candidate_features=periodic_features,
+            reference_mean=periodic_mean,
+            reference_std=torch.tensor(periodic_reference["per_dim_std"], dtype=torch.float32),
+        )
+        noise_features = match_feature_distribution_to_reference(
+            candidate_features=noise_features,
+            reference_mean=noise_mean,
+            reference_std=torch.tensor(noise_reference["per_dim_std"], dtype=torch.float32),
+        )
+        transformations.append("periodic.* -> affine_match(reference_mean, reference_std)")
+        transformations.append("noise.* -> affine_match(reference_mean, reference_std)")
+    control_override_summary = []
+    for override in resolved_control_family_overrides:
+        family = str(override["family"])
+        mode = str(override["mode"])
+        targets = list(override.get("targets", []))
+        serialized_targets = []
+        for branch_name, semantic in targets:
+            slice_info = layout[branch_name].get(semantic)
+            if slice_info is None:
+                continue
+            start, end = slice_info
+            if branch_name == "periodic":
+                branch_features = periodic_features
+                reference_mean = periodic_mean
+            else:
+                branch_features = noise_features
+                reference_mean = noise_mean
+            if mode == "zero":
+                branch_features[:, start:end] = 0.0
+                transformations.append(f"{branch_name}.{semantic} -> zero[{start}:{end}]")
+            elif mode == "reference_mean":
+                branch_features[:, start:end] = reference_mean[start:end].view(1, end - start).expand(
+                    branch_features.shape[0],
+                    end - start,
+                )
+                transformations.append(
+                    f"{branch_name}.{semantic} -> reference_mean[{start}:{end}]"
+                )
+            else:
+                raise ValueError(f"Unsupported control-family override mode after normalization: {mode!r}")
+            serialized_targets.append(f"{branch_name}.{semantic}")
+        control_override_summary.append(
+            {
+                "family": family,
+                "mode": mode,
+                "targets": serialized_targets,
+            }
+        )
+    return (
+        {
+            **scaffold_payload,
+            "branch_scaffold": {
+                **branch_scaffold,
+                "periodic_branch_features": periodic_features,
+                "noise_branch_features": noise_features,
+            },
+        },
+        {
+            "strategy": normalized_strategy,
+            "transformations": transformations,
+            "control_family_overrides": control_override_summary,
+        },
+    )
+
+
+def match_feature_distribution_to_reference(
+    *,
+    candidate_features: torch.Tensor,
+    reference_mean: torch.Tensor,
+    reference_std: torch.Tensor,
+) -> torch.Tensor:
+    candidate = candidate_features.to(torch.float32)
+    candidate_mean = candidate.mean(dim=0)
+    candidate_std = candidate.std(dim=0, unbiased=False)
+    safe_candidate_std = torch.clamp(candidate_std, min=1.0e-6)
+    safe_reference_std = torch.clamp(reference_std.to(torch.float32), min=0.0)
+    normalized = (candidate - candidate_mean.view(1, -1)) / safe_candidate_std.view(1, -1)
+    matched = normalized * safe_reference_std.view(1, -1) + reference_mean.view(1, -1)
+    zero_reference_mask = safe_reference_std <= 1.0e-8
+    if bool(zero_reference_mask.any().item()):
+        matched[:, zero_reference_mask] = reference_mean[zero_reference_mask].view(1, -1).expand(
+            candidate.shape[0],
+            int(zero_reference_mask.sum().item()),
+        )
+    return matched
+
+
+def build_branch_feature_layout(scaffold_payload: dict[str, object]) -> dict[str, dict[str, tuple[int, int]]]:
+    available_controls = dict(scaffold_payload["available_controls"])
+    conditioning = dict(scaffold_payload["conditioning"])
+
+    z_art_dim = int(available_controls["z_art"].shape[-1])
+    event_dim = int(available_controls["event_probs"].shape[-1])
+    energy_proxy_dim = int(available_controls["energy_proxy"].shape[-1])
+    voiced_proxy_dim = int(available_controls["voiced_proxy"].shape[-1])
+    aperiodicity_proxy_dim = int(available_controls["aperiodicity_proxy"].shape[-1])
+    event_presence_proxy_dim = int(available_controls["event_presence_proxy"].shape[-1])
+    energy_change_proxy_dim = int(available_controls["energy_change_proxy"].shape[-1])
+    speaker_dim = int(conditioning["s_spk_target"].shape[-1])
+    geom_dim = int(conditioning["s_geom_target"].shape[-1])
+    alpha_dim = int(conditioning["alpha"].numel())
+
+    periodic_start = 0
+    periodic = {}
+    for semantic, dim in (
+        ("z_art", z_art_dim),
+        ("voiced_proxy", voiced_proxy_dim),
+        ("energy_proxy", energy_proxy_dim),
+        ("alpha", alpha_dim),
+        ("s_spk_target", speaker_dim),
+        ("s_geom_target", geom_dim),
+    ):
+        periodic[semantic] = (periodic_start, periodic_start + dim)
+        periodic_start += dim
+
+    noise_start = 0
+    noise = {}
+    for semantic, dim in (
+        ("event_probs", event_dim),
+        ("aperiodicity_proxy", aperiodicity_proxy_dim),
+        ("event_presence_proxy", event_presence_proxy_dim),
+        ("energy_change_proxy", energy_change_proxy_dim),
+        ("energy_proxy", energy_proxy_dim),
+        ("alpha", alpha_dim),
+        ("s_spk_target", speaker_dim),
+    ):
+        noise[semantic] = (noise_start, noise_start + dim)
+        noise_start += dim
+    return {
+        "periodic": periodic,
+        "noise": noise,
+    }
+
+
 def build_decoder_behavior_case_summary(
     *,
     case_id: str,
@@ -2413,10 +2780,12 @@ def build_decoder_behavior_case_summary(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    normalization_summary: dict[str, object],
+    probe_decoded_audio_path: Path | None,
 ) -> dict[str, object]:
     branch_scaffold = dict(scaffold_payload["branch_scaffold"])
     source_runtime = dict(scaffold_payload["source_runtime"])
-    metrics = collect_decoder_behavior_metrics(
+    metrics, decoded_waveform = collect_decoder_behavior_metrics(
         model=build_vocoder_model_from_runtime_dims(
             checkpoint_payload=checkpoint_payload,
             periodic_input_dim=int(branch_scaffold["periodic_branch_features"].shape[-1]),
@@ -2435,13 +2804,20 @@ def build_decoder_behavior_case_summary(
         predicted_activity_gate_apply_mode=predicted_activity_gate_apply_mode,
         aligned_waveform=None,
     )
+    if probe_decoded_audio_path is not None:
+        write_waveform_int16(
+            probe_decoded_audio_path,
+            decoded_waveform,
+            sample_rate=int(source_runtime["sample_rate"]),
+        )
     return {
         "case_id": case_id,
         "input_audio_path": demo_summary.get("input_audio_path"),
-        "decoded_audio_path": demo_summary.get("decoded_audio_path"),
+        "decoded_audio_path": None if probe_decoded_audio_path is None else probe_decoded_audio_path.as_posix(),
         "decoded_audio_sec": demo_summary.get("decoded_audio_sec"),
         "decoded_waveform_rms": demo_summary.get("decoded_waveform_rms"),
         "branch_label": dict(demo_summary.get("vocoder", {})).get("branch_label"),
+        "normalization": normalization_summary,
         "decoder_metrics": metrics,
         "reference_shift": analyze_decoder_metric_shift(
             candidate_metrics=dict(metrics["scalar_metrics"]),
@@ -2464,7 +2840,7 @@ def collect_decoder_behavior_metrics(
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
     aligned_waveform: torch.Tensor | None,
-) -> dict[str, object]:
+) -> tuple[dict[str, object], torch.Tensor]:
     resolved_apply_mode = normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_mode)
     with torch.no_grad():
         outputs = model(
@@ -2583,7 +2959,7 @@ def collect_decoder_behavior_metrics(
         },
         "aligned_reference": aligned_reference,
         "scalar_metrics": scalar_metrics,
-    }
+    }, decoded_waveform_cpu
 
 
 def compute_zero_crossing_rate(waveform: torch.Tensor) -> float:
@@ -2703,6 +3079,7 @@ def build_decoder_behavior_probe_markdown(summary: dict[str, object]) -> str:
                 f"  decoded_audio_sec: {case.get('decoded_audio_sec')}",
                 f"  decoded_waveform_rms: {case.get('decoded_waveform_rms')}",
                 f"  branch_label: {case.get('branch_label')}",
+                f"  normalization: {json.dumps(case.get('normalization'), ensure_ascii=False)}",
                 f"  decoder_metrics: {json.dumps(case.get('decoder_metrics'), ensure_ascii=False)}",
                 f"  reference_shift: {json.dumps(case.get('reference_shift'), ensure_ascii=False)}",
             ]

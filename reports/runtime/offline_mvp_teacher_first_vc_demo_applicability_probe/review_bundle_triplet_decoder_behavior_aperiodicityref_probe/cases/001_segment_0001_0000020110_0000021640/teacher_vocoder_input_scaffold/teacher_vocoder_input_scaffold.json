@@ -1,0 +1,37 @@
+{
+  "generated_at": "2026-03-21T18:39:35",
+  "contract_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/review_bundle_triplet_decoder_behavior_aperiodicityref_probe/cases/001_segment_0001_0000020110_0000021640/teacher_contract/teacher_downstream_control_contract.pt",
+  "scaffold_version": "offline_teacher_vocoder_input_scaffold_v1",
+  "source_audio_path": "F:/proj_dev/tmp/workdir4/data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav",
+  "source_runtime": {
+    "sample_rate": 48000,
+    "frame_length": 400,
+    "hop_length": 160,
+    "chunk_samples": 1600
+  },
+  "frame_count": 457,
+  "periodic_branch_feature_dim": 35,
+  "noise_branch_feature_dim": 29,
+  "available_controls": {
+    "z_art_dim": 8,
+    "event_dim": 8,
+    "speaker_dim": 16,
+    "geom_dim": 8
+  },
+  "missing_design_keys": {
+    "periodic_branch": [
+      "f0_hz"
+    ],
+    "noise_branch": [
+      "r_res"
+    ],
+    "global": [
+      "final_vocoder_waveform"
+    ]
+  },
+  "notes": [
+    "This scaffold is a consumer-side adapter for the current teacher-first contract, not a real vocoder implementation.",
+    "periodic_branch_features uses voiced_proxy and energy_proxy instead of final f0_hz/vuv/E semantics.",
+    "noise_branch_features uses aperiodicity_proxy and event_probs, but r_res remains unavailable in the current teacher path."
+  ]
+}

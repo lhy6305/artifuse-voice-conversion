@@ -1824,6 +1824,26 @@ def build_parser() -> argparse.ArgumentParser:
         default="post_ola_envelope",
         help="How predicted activity gains are applied when the gate is enabled: pre_overlap_add or post_ola_envelope.",
     )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--normalization-strategy",
+        default="none",
+        help=(
+            "Optional inference-only scaffold normalization strategy for the probe: "
+            "none, conditioning_reference_mean, reference_q01_q99_clip, reference_affine_match, or "
+            "conditioning_reference_mean_plus_reference_q01_q99_clip."
+        ),
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--control-family-override",
+        dest="control_family_overrides",
+        action="append",
+        default=[],
+        help=(
+            "Optional inference-only family-level override for root-cause isolation. "
+            "Format: family=mode, for example z_art=reference_mean or proxy_family=zero. "
+            "Can be passed multiple times."
+        ),
+    )
 
     nores_vocoder_parser = subparsers.add_parser(
         "prepare-offline-mvp-nores-vocoder-scaffold",
@@ -3649,6 +3669,8 @@ def main(argv: list[str] | None = None) -> int:
             chunk_ms=args.chunk_ms,
             use_predicted_activity_gate=bool(args.use_predicted_activity_gate),
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+            normalization_strategy=args.normalization_strategy,
+            control_family_overrides=list(args.control_family_overrides),
         )
         return 0
     if args.command == "prepare-offline-mvp-nores-vocoder-scaffold":

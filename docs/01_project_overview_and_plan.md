@@ -14823,8 +14823,96 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    `audio_audit_review.json`
 
 ### 文档补充
-- `docs/251_stage5_nores_milestone_acceptance_tooling_and_result_materializer_report.md`
+- `docs/252_stage5_nores_milestone_acceptance_tooling_and_result_materializer_report.md`
   - 记录本轮 GUI 专用模式、结果物化模块、脚本入口与 smoke 结果
+## 2026-03-21 补充：Stage5 no-res milestone acceptance 已得到明确负结论，当前不再继续逐条穷举听审
+### 当前结论
+- 用户已完成：
+  - 第一条 milestone record
+    的完整试听
+  - 以及后续若干条的抽样试听
+- 当前主观结论非常明确：
+  - 完全不存在可辨识人声或音节
+  - 甚至不存在可感知的音调变化
+  - 听到的是由能量包络驱动音量起伏的
+    单调 buzzing
+- 因此当前
+  `step72 + smooth3 + postenv`
+  no-res route
+  已直接判定：
+  - `未通过`
+    Stage5 no-res
+    milestone acceptance
+
+### 当前状态更新
+1. milestone acceptance
+   不再是：
+   - 等待最终结果
+2. 当前更准确的状态是：
+   - 已有人工负结论
+3. 当前不建议继续：
+   - 把剩余记录逐条补成
+     `12/12`
+     GUI
+     穷举评分
+   - 因为当前失败已经落在：
+     - “是否存在可辨识语音”
+     这一更早门槛
+
+### 更新后的下一步
+1. 当前下一题应从：
+   - 门槛验收
+   改成：
+   - root-cause isolation
+2. 要回答的问题应改写为：
+   - 为什么当前 best route
+     的 decoded
+     会退化成
+     envelope-modulated buzzing
+3. 在这个 root cause
+   明确前，
+   不再回到：
+   - milestone session
+     的逐条补打分
+   - 或旧的局部 tweak
+
+### 文档补充
+- `docs/253_stage5_nores_milestone_acceptance_partial_human_audit_fail_report.md`
+  - 记录本轮用户人工结论、当前覆盖边界、为什么已足以直接判失败，以及实验线下一题应转向 root-cause
+## 2026-03-21 补充：Stage5 no-res 下一题已进一步收紧为 speech-emergence 级 root-cause 问题
+### 当前结论
+- 用户进一步补充确认：
+  - 从头到尾所有人工听审中，
+    从未出现过可辨识人声
+- 因此当前实验线下一题，
+  已不应再写成：
+  - 当前 best route
+    为什么失败
+- 而应写成：
+  - 为什么整个
+    Stage5 no-res
+    训练路线到目前为止
+    都没有形成
+    speech-like output
+
+### 当前更新后的问题定义
+1. 当前不再优先问：
+   - 哪个 checkpoint 更接近通过
+   - 哪个 decode tweak
+     更平滑
+2. 当前更该问：
+   - decoder 是否真正使用了条件控制
+   - 现有 loss / decoder
+     是否学成了
+     envelope-following
+     假解
+   - 当前所有量化改善，
+     是否都发生在
+     “非语音输出内部”
+
+### 文档补充
+- `docs/254_stage5_nores_root_cause_question_refinement_report.md`
+  - 记录为什么当前题目必须上升到路线级 root cause，而不再停留在 checkpoint 级 milestone failure
 ## 2026-03-21 补充：用户线上下文已恢复，当前真正接班点转为 decoder-side 适用性诊断
 ### 当前结论
 - 本次恢复明确只继续用户线，
@@ -14876,3 +14964,167 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/250_user_line_context_restore_and_decoder_behavior_takeover_report.md`
   - 记录本次只做用户线的接班恢复、会话续登记、新增 decoder-behavior CLI 与 triplet probe 结果
+## 2026-03-21 补充：用户线 gate 隔离试验已完成，当前不建议继续扫 apply-mode 小题
+### 当前结论
+- 本轮已完成用户线短期计划中的：
+  1. gate 隔离试验
+  2. runtime 风险告警
+- 当前结果显示：
+  - `post_ola_envelope`
+    与
+    `pre_overlap_add`
+    的 decoded 高频异常几乎不反转
+  - 关闭 predicted gate
+    后，
+    RMS 会明显抬高，
+    但
+    `high_band_energy_ratio / centroid / rolloff95`
+    仍保持异常高位
+- 所以当前更准确的判断是：
+  - buzzing
+    不是主要由 decode-side
+    gate apply mode
+    触发
+  - 而更像是
+    Stage5 checkpoint
+    对 user-line control / conditioning
+    的整体适用性失配
+
+### 当前新增能力
+1. `run-offline-mvp-teacher-first-vc-demo`
+   summary
+   已新增：
+   - `applicability_risk`
+   - `decoded_spectral_summary`
+2. `analyze-offline-mvp-teacher-first-vc-decoder-behavior`
+   已支持：
+   - gate on/off
+   - apply mode
+     显式切换
+
+### 更新后的下一步
+1. 当前不建议继续扫：
+   - `postenv vs pre_overlap_add`
+   - predicted gate
+     周边微调
+2. 若继续用户线，
+   下一题应转向：
+   - control / conditioning
+     适用性收敛
+   - 更强的用户线 applicability guard
+3. 在新的缓解策略落地前，
+   review bundle
+   不应作为质量展示材料
+
+### 文档补充
+- `docs/251_user_line_gate_isolation_and_runtime_risk_warning_report.md`
+  - 记录本轮 gate 隔离命令、对比结果、runtime 风险告警 smoke 与“不要继续扫 apply-mode 小题”的正式理由
+## 2026-03-21 补充：用户线 inference-side 归一化试验已完成，简单分布匹配不足以修回 buzzing
+### 当前结论
+- 本轮已在 decoder probe
+  上补完
+  inference-side
+  归一化策略：
+  - `conditioning_reference_mean`
+  - `reference_q01_q99_clip`
+  - `reference_affine_match`
+- 当前结果显示：
+  1. 固定 conditioning
+     均值替换
+     基本无变化
+  2. `q01/q99`
+     裁剪
+     也几乎无变化
+  3. `reference_affine_match`
+     虽然把一些门控/RMS类统计明显拉近训练分布，
+     但
+     `HF / centroid / rolloff95`
+     仍极端偏高
+- 所以当前更准确的判断是：
+  - 简单一阶分布匹配
+    还不足以修回用户线 buzzing
+  - 下一步应该继续往
+    动态控制 family
+    的定位题走，
+    而不是再扩通用归一化小题
+
+### 更新后的下一步
+1. 当前不建议把
+   `reference_affine_match`
+   升格为正式 runtime 默认
+2. 若继续用户线，
+   下一题应转向：
+   - 分家族控制替换/屏蔽试验
+   - 例如：
+     `z_art`
+     / `event_probs`
+     / energy proxies
+3. 当前 runtime
+   仍保留
+   `applicability_risk`
+   作为正式风险口径
+
+### 文档补充
+- `docs/252_user_line_inference_normalization_probe_report.md`
+  - 记录本轮简单 inference 归一化试验、各策略结果与“下一步应转向动态控制 family 定位”的正式理由
+## 2026-03-21 补充：用户线动态控制 family 隔离试验已完成，当前最强局部杠杆收敛到 `noise_energy_proxy`
+### 当前结论
+- 本轮已把
+  `analyze-offline-mvp-teacher-first-vc-decoder-behavior`
+  正式补齐：
+  - `--control-family-override family=mode`
+- 在用户线 triplet case
+  上完成
+  `z_art / event_probs / proxy_family`
+  及 proxy 子族替换后，
+  当前结果显示：
+  1. `z_art`
+     与
+     `event_probs`
+     不是 buzzing
+     的主杠杆
+  2. proxy family
+     的主要信号
+     更集中在
+     `energy_proxy`
+  3. 再细分后，
+     最有信息量的
+     是
+     `noise_energy_proxy`
+     而不是
+     `periodic_energy_proxy`
+- 但当前也必须明确：
+  - 即便在最有改善的 case
+    上，
+    `HF`
+    仍停留在
+    `~0.476`
+    量级，
+    远高于训练内参考
+    `~0.0645`
+  - 高静音 case
+    在单 family 替换下
+    仍不反转
+
+### 更新后的下一步
+1. 若继续用户线，
+   下一题应优先转向：
+   - noise-side energy proxy
+     的语义核对
+   - 以及它与高静音 case
+     的适用性边界
+2. 当前不建议回退去继续扫：
+   - `z_art`
+   - `event_probs`
+   - 更通用的 inference
+     normalization
+3. 当前用户线的正式定位仍是：
+   - 工程闭环成立
+   - buzzing
+     已定位到更具体的控制 family 邻域
+   - 但质量适用性
+     仍未收口
+
+### 文档补充
+- `docs/255_user_line_dynamic_control_family_isolation_report.md`
+  - 记录本轮 family-level override probe、proxy 子族细分结果，以及“当前最强局部杠杆是 `noise_energy_proxy` 但不是唯一根因”的正式理由

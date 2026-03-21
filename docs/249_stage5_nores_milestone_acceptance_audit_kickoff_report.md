@@ -196,19 +196,18 @@ $env:PYTHONPATH = "src"
 
 ## 下一步
 1. 若用户继续实验线，
-   先完成这轮 milestone acceptance
-   听审记录
-2. 听审后先运行：
+   优先参考：
+   - `docs/253_stage5_nores_milestone_acceptance_partial_human_audit_fail_report.md`
+2. 若后续还要补齐 GUI
+   导出的正式
+   `audio_audit_review.json`，
+   再运行：
    - `powershell -ExecutionPolicy Bypass -File scripts/materialize_stage5_nores_milestone_acceptance_result_report.ps1`
-3. 再把结论收成正式文档，
-   明确写出：
-   - 当前 no-res route
-     是否已通过
-     “可懂、稳定、基本自然”
-     的阶段门槛
-   - 若未通过，
-     主要失败维度是什么
-4. 在这轮门槛验收给出结论前，
+3. 当前在新的 root-cause
+   题被明确前，
+   不再继续这轮 milestone acceptance
+   的逐条穷举听审
+4. 在新的调查方向明确前，
    不再重开当前局部 tweak
    小题
 
