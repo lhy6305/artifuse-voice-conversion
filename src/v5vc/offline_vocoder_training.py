@@ -1336,6 +1336,7 @@ def reconstruct_waveform_from_frames(
     frame_gains: torch.Tensor | None = None,
     frame_gain_floor: float = 0.0,
     frame_gain_smoothing_frames: int = 0,
+    frame_gain_apply_mode: str = "pre_overlap_add",
 ) -> torch.Tensor:
     if waveform_frames.ndim != 2:
         raise ValueError(f"Expected waveform_frames shape [frames, samples], got {tuple(waveform_frames.shape)}")
@@ -1348,6 +1349,9 @@ def reconstruct_waveform_from_frames(
     total_length = int(frame_length + max(0, frame_count - 1) * hop_length)
     output = waveform_frames.new_zeros((total_length,))
     weights = waveform_frames.new_zeros((total_length,))
+    normalized_apply_mode = str(frame_gain_apply_mode).strip().lower()
+    if normalized_apply_mode not in {"pre_overlap_add", "post_ola_envelope"}:
+        raise ValueError(f"Unsupported frame_gain_apply_mode: {frame_gain_apply_mode}")
     window = torch.hann_window(
         int(frame_length),
         periodic=False,
@@ -1369,15 +1373,28 @@ def reconstruct_waveform_from_frames(
             frame_gain_floor=float(frame_gain_floor),
             frame_gain_smoothing_frames=int(frame_gain_smoothing_frames),
         )
+    gain_output = None
+    gain_weights = None
+    if resolved_frame_gains is not None and normalized_apply_mode == "post_ola_envelope":
+        gain_output = waveform_frames.new_zeros((total_length,))
+        gain_weights = waveform_frames.new_zeros((total_length,))
     for frame_index in range(frame_count):
         start = int(frame_index * hop_length)
         end = start + int(frame_length)
         frame = waveform_frames[frame_index]
-        if resolved_frame_gains is not None:
+        if resolved_frame_gains is not None and normalized_apply_mode == "pre_overlap_add":
             frame = frame * resolved_frame_gains[frame_index].clamp(0.0, 1.0)
         output[start:end] += frame * window
         weights[start:end] += window
-    return output / weights.clamp_min(1.0e-6)
+        if gain_output is not None and gain_weights is not None:
+            gain = resolved_frame_gains[frame_index].clamp(0.0, 1.0)
+            gain_output[start:end] += gain * window
+            gain_weights[start:end] += window
+    reconstructed = output / weights.clamp_min(1.0e-6)
+    if gain_output is not None and gain_weights is not None:
+        gain_envelope = gain_output / gain_weights.clamp_min(1.0e-6)
+        reconstructed = reconstructed * gain_envelope.clamp(0.0, 1.0)
+    return reconstructed
 
 
 def prepare_reconstruction_frame_gains(

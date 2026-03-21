@@ -9,6 +9,42 @@
 4. `initial_design.md`
 5. `initial_design_judg.md`
 
+## 当前双线入口
+- 自 `2026-03-21` 起，当前工作默认拆成两条线并行管理：
+  - 实验线：
+    继续推进
+    Stage5
+    decode-side
+    分支验证与听审治理
+  - 终端用户线：
+    设计并实现
+    `teacher-first / single-target`
+    最小可运行闭环
+- 恢复上下文时，
+  除了先读本页与
+  `01/02`
+  外，
+  还应按接手方向补读：
+  - 接实验线：
+    `docs/236_stage5_step72_decode_gate_smooth3_postenv_validation_report.md`
+  - 接终端用户线：
+    `docs/237_teacher_first_single_target_terminal_user_line_design.md`
+- 当前实验线断点不是“继续做新 probe”，
+  而是：
+  - 已有待审主分支
+    `step72__decode_gate_smooth3_postenv`
+  - 下一步应直接进入 focused human audit
+- 当前终端用户线断点不是“继续证明 Stage5 validation export 能导 wav”，
+  而是：
+  - 把现有
+    teacher runtime /
+    downstream contract /
+    vocoder scaffold /
+    trained checkpoint
+    接成真实
+    `source audio -> target audio`
+    最小闭环
+
 ## 强制规范
 ### 1. 编码规范
 - 全部代码、脚本、文档统一使用 UTF-8 无 BOM。

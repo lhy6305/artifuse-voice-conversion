@@ -13632,3 +13632,385 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/233_stage5_clean_only_target_split_derivation_report.md`
   - 记录 clean-only target split 的派生规则、影响范围和推荐对照方式
+## 2026-03-20 补充：clean-only target 对照训练已实跑并收口
+### 事前预测
+- `clean-only`
+  更可能只是让部分样本听感更“干净”，
+  但整体结果大概率持平或略弱于当前 baseline
+
+### 实际结果
+- clean-only dataset loop 已完成：
+  - `reports/runtime/offline_mvp_nores_vocoder_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_clean_no_reverb_round1_1/offline_mvp_nores_vocoder_dataset_loop.summary.md`
+- baseline loop 作为对照：
+  - `reports/runtime/offline_mvp_nores_vocoder_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_round1_1/offline_mvp_nores_vocoder_dataset_loop.summary.md`
+- 各自 loop summary 上，
+  clean-only best checkpoint 仍是 `step72`，
+  但 validation loss_total 为
+  `0.570703`，
+  baseline 为
+  `0.564671`
+
+### 方法学补充
+- 由于 clean-only 分支把 validation 也从
+  `66`
+  条裁到了
+  `63`，
+  所以上面这组数不能直接当作严格同验证面的比较
+- 为避免误判，
+  已补做 common-eval：
+  - `reports/runtime/offline_mvp_nores_vocoder_clean_no_reverb_comparison_round1_1/clean_no_reverb_vs_baseline_common_eval.md`
+- 在原正式 baseline validation `66` 条包上：
+  - baseline checkpoint:
+    `0.564671`
+  - clean-only checkpoint:
+    `0.567886`
+  - delta:
+    `+0.003215`
+- 在 clean-only validation `63` 条包上：
+  - baseline checkpoint:
+    `0.568566`
+  - clean-only checkpoint:
+    `0.570703`
+  - delta:
+    `+0.002137`
+
+### 当前决策
+1. 这条 clean-only 对照不升格为正式训练主线
+2. 当前正式 split 继续保留
+   `hybrid_stratified_blocked`
+3. `chapter3_5 / chapter3_6`
+   的混响样本继续保留，只通过
+   `reverb_like`
+   sidecar 管理
+
+### 顺手修复
+- 本次第一次重跑时发现：
+  clean-only 派生 split 的 JSONL 带 UTF-8 BOM，
+  现有 loader 会报
+  `Unexpected UTF-8 BOM`
+- 已在
+  `src/v5vc/manifest_builder.py`
+  将
+  `load_jsonl()`
+  的读取编码改为
+  `utf-8-sig`
+
+### 文档补充
+- `docs/234_stage5_clean_only_vs_baseline_training_run_report.md`
+  - 记录本次预测、实跑结果、同验证面交叉评估与最终决策
+## 2026-03-20 补充：`step72__decode_gate_smooth3` 已提升为 Stage5 默认 decode-side 导出设置
+### 当前结论
+- 当前 Stage5 no-res vocoder 的正式 decode-side 默认值提升为：
+  - `predicted_activity_gate_smoothing_frames = 3`
+  - `predicted_activity_gate_floor = 0.0`
+- 这次提升只作用于
+  `export-offline-mvp-nores-vocoder-audio`
+  的默认导出行为，
+  不改写 checkpoint，
+  也不影响显式传参的历史复现
+
+### 提升依据
+- `docs/230_stage5_step72_glitch_smoothing_ablation_report.md`
+  已确认：
+  `smooth3`
+  在
+  `validation12`
+  上显著压低
+  fragmentation
+  与
+  sample_delta_peak
+- `reports/audio/audio_audit_gui_stage5_step72_glitch_smooth3_validation12_session/audio_audit_review.json`
+  的 aggregate 显示：
+  - `overall_pick`
+    对
+    `step72__decode_gate_smooth3`
+    计数为
+    `11`
+  - `best_boundary`
+    计数为
+    `11`
+  - `most_stable`
+    计数为
+    `11`
+- 因而这条分支已经满足：
+  - focused human audit
+    不反转
+  - expanded validation12
+    量化不反转
+
+### 当前动作
+1. 在
+   `src/v5vc/nores_vocoder_audio_export.py`
+   中新增
+   `DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES = 3`
+2. 在
+   `src/v5vc/cli.py`
+   中将
+   `export-offline-mvp-nores-vocoder-audio`
+   的
+   `--predicted-activity-gate-smoothing-frames`
+   默认值从
+   `0`
+   提升为
+   `3`
+3. 明确保留显式回退口径：
+   - `--predicted-activity-gate-smoothing-frames 0`
+
+### 当前意义
+- 后续新的 Stage5 export / human audit / probe
+  默认都不再停留在已知更差的 hard-gate decode
+- 若后续继续推进，
+  优先应转到：
+  - 是否还存在比
+    `smooth3`
+    更窄更稳的局部修正
+  - 而不是反复比较
+    `step72 raw`
+    和
+    `smooth3`
+
+### 文档补充
+- `docs/235_stage5_step72_decode_gate_smooth3_default_promotion_report.md`
+  - 记录默认提升的依据、代码修改与回退口径
+## 2026-03-20 补充：`step72__decode_gate_smooth3_postenv` 已固化为下一轮待审主分支
+### 当前结论
+- 当前新加的 decode-side apply mode 对照
+  `post_ola_envelope`
+  已完成
+  `validation3`
+  与
+  `validation12`
+  两轮 probe
+- 结果没有反转，
+  反而继续同向优于当前默认导出主线
+  `step72__decode_gate_smooth3`
+- 但由于还没有 focused human audit，
+  当前先把它写成：
+  - 下一轮待审主分支
+  而不是：
+  - 新的全局默认 apply mode
+
+### 当前证据
+- `validation3`
+  probe：
+  - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_postenv_validation3_round1_1/stage5_low_activity_fragmentation_probe.md`
+  - aggregate 上
+    fragmentation / alignment / waveform RMS / sample delta peak
+    全部同向改善
+- `validation12`
+  probe：
+  - `reports/audio/stage5_low_activity_fragmentation_probe_activitygate72_decoded_glitchablation_smooth3_postenv_validation12_round1_1/stage5_low_activity_fragmentation_probe.md`
+  - `postenv`
+    相比
+    `smooth3`
+    在
+    fragmentation、
+    alignment、
+    waveform RMS、
+    sample delta peak、
+    spectral centroid / bandwidth / HF ratio gap
+    上全部改善，
+    只在
+    `rolloff95 gap`
+    上小幅变差
+  - `top windows`
+    中：
+    - `11 / 12`
+      支持
+      `postenv`
+    - `1 / 12`
+      支持旧分支，
+      且仅是
+      utterance 起点极短窗口
+
+### 当前动作
+1. 代码层已支持：
+   - `--predicted-activity-gate-apply-mode pre_overlap_add`
+   - `--predicted-activity-gate-apply-mode post_ola_envelope`
+2. `post_ola_envelope`
+   分支会自动打上：
+   - `__decode_gate_smooth3_postenv`
+3. 已新增下一轮 GUI 听审入口：
+   - `scripts/launch_stage5_step72_glitch_smooth3_postenv_validation12_audit.ps1`
+
+### 下一步
+1. 用新增 GUI 入口，
+   直接听：
+   - `step72__decode_gate_smooth3`
+   - `step72__decode_gate_smooth3_postenv`
+2. 若 focused human audit
+   继续不反转，
+   再决定是否把
+   `post_ola_envelope`
+   升格为新的默认 apply mode
+
+### 文档补充
+- `docs/236_stage5_step72_decode_gate_smooth3_postenv_validation_report.md`
+  - 记录本轮 postenv 的代码入口、validation3/validation12 结果、待审主分支口径与 GUI 听审交付
+## 2026-03-21 补充：当前工作已拆分为实验线与终端用户线
+### 拆分原因
+- 到当前阶段，
+  有两类任务已经不适合继续混在一起推进：
+  - 一类是
+    Stage5
+    主线 decode 分支的实验验证与听审收口
+  - 另一类是
+    面向终端用户的
+    `teacher-first`
+    最小 source-to-target
+    闭环设计
+- 若继续把两者混写成同一条任务，
+  很容易出现：
+  - 实验线持续有进展，
+    但用户线没有真正形成可运行入口
+  - 或者反过来为了做用户线，
+    把尚未听审确认的实验候选误写成既定默认
+
+### 当前双线定义
+#### 1. 实验线
+- 目标：
+  继续完成
+  `step72__decode_gate_smooth3`
+  对
+  `step72__decode_gate_smooth3_postenv`
+  的 focused human audit
+- 当前待审主分支：
+  - `step72__decode_gate_smooth3_postenv`
+- 当前断点：
+  - 量化与 top windows
+    已完成
+  - GUI 听审入口
+    已完成
+  - 尚缺：
+    focused human audit
+- 当前接班入口：
+  - 脚本：
+    `scripts/launch_stage5_step72_glitch_smooth3_postenv_validation12_audit.ps1`
+  - session 输出目录：
+    `reports/audio/audio_audit_gui_stage5_step72_glitch_smooth3_postenv_validation12_session`
+  - 主对比目标：
+    `step72__decode_gate_smooth3`
+    vs
+    `step72__decode_gate_smooth3_postenv`
+- 当前注意：
+  - 这条线暂时不要再扩新 probe；
+    下一棒就是听审收口
+
+#### 2. 终端用户线
+- 目标：
+  设计并实现
+  `teacher-first / single-target`
+  最小 source-to-target
+  可运行闭环
+- 当前断点：
+  - teacher runtime
+    已有正式 wrapper
+  - teacher downstream contract
+    已有正式导出
+  - consumer-side vocoder scaffold
+    已成立
+  - Stage5 checkpoint
+    已可导出 validation `decoded.wav`
+  - 但当前仓库仍缺：
+    - 一条直接吃任意源音频的最终用户入口
+    - 不依赖
+      `aligned_target`
+      的最小导出命令
+- 当前设计入口：
+  - `docs/237_teacher_first_single_target_terminal_user_line_design.md`
+
+### 当前边界
+- 现有
+  Stage5 validation/export
+  链路
+  不能直接当成终端用户线闭环；
+  因为它仍依赖：
+  - training package
+  - `aligned_target.wav`
+  - paired validation 语义
+- 所以当前对“项目是否已经能跑”的更准确说法应是：
+  - 目标侧训练/导出链已经能产出可听 wav
+  - 但真实
+    `source audio -> target audio`
+    的终端用户闭环
+    还没有正式入口
+
+### 本轮动作
+1. 正式把当前工作拆成：
+   - 实验线
+   - 终端用户线
+2. 明确实验线停点：
+   - `postenv`
+     focused human audit
+3. 正式补建终端用户线设计文档：
+   - `docs/237_teacher_first_single_target_terminal_user_line_design.md`
+
+### 文档补充
+- `docs/237_teacher_first_single_target_terminal_user_line_design.md`
+  - 记录终端用户线的目标范围、可复用资产、validation-only 禁用项、建议 CLI 与验收标准
+## 2026-03-21 补充：终端用户线最小 `teacher-first / single-target` 闭环命令已落地
+### 当前结论
+- 终端用户线第一条真实入口已经实现：
+  - `run-offline-mvp-teacher-first-vc-demo`
+- 这条命令已经能把：
+  - 源音频
+  - teacher runtime / downstream contract
+  - consumer-side scaffold
+  - Stage5 no-res vocoder checkpoint
+  串成：
+  - `decoded.wav`
+- 当前默认 decode
+  仍沿正式主线：
+  - predicted activity gate 开启
+  - smoothing = `3`
+  - apply mode = `pre_overlap_add`
+- 待审分支
+  `postenv`
+  目前只保留显式参数切换，
+  还没有提升成用户线默认
+
+### 当前实现
+1. 新增模块：
+   - `src/v5vc/teacher_first_vc_demo.py`
+2. 新增 CLI：
+   - `run-offline-mvp-teacher-first-vc-demo`
+3. 当前默认 checkpoint selection：
+   - `reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_rmsguard02_activitygate02_gate72_deterministic_lowactivity4way_validation12_waveformrms_round1_1/nores_vocoder_checkpoint_selection.json`
+4. 当前默认 selection target：
+   - `best_validation`
+
+### smoke 结果
+- 命令：
+  - `.\python.exe manage.py run-offline-mvp-teacher-first-vc-demo --input-audio data_convert/dataset_ly65_raw.wav --output-dir tmp/teacher_first_vc_demo_smoke --max-audio-sec 2.0 --device cpu`
+- 结果：
+  - exit code `0`
+  - 已生成：
+    - `tmp/teacher_first_vc_demo_smoke/decoded.wav`
+    - `tmp/teacher_first_vc_demo_smoke/teacher_first_vc_demo.json`
+    - `tmp/teacher_first_vc_demo_smoke/teacher_contract/`
+    - `tmp/teacher_first_vc_demo_smoke/teacher_vocoder_input_scaffold/`
+
+### 当前边界
+- 这条命令当前证明的是：
+  - source-to-target
+    最小闭环已成立
+- 不是：
+  - final quality 已达标
+  - many-to-many 已成立
+  - `postenv`
+    已正式默认化
+
+### 当前建议
+1. 继续对不同真实源音频做 smoke
+2. 再决定是否补：
+   - 更终端用户化的脚本包装
+   - 更严格的失败分层 summary
+3. 实验线 meanwhile
+   继续按原断点，
+   做
+   `postenv`
+   focused human audit
+
+### 文档补充
+- `docs/238_teacher_first_single_target_terminal_user_line_bootstrap_report.md`
+  - 记录终端用户线命令实现、默认参数口径、smoke 结果与当前边界

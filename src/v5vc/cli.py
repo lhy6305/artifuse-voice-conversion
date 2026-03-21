@@ -28,10 +28,19 @@ from v5vc.manifest_builder import build_round1_manifests
 from v5vc.nores_vocoder_checkpoint_review import review_offline_mvp_nores_vocoder_checkpoints
 from v5vc.nores_vocoder_checkpoint_selection import select_offline_mvp_nores_vocoder_checkpoint
 from v5vc.nores_vocoder_low_activity_sensitivity import analyze_offline_mvp_nores_vocoder_low_activity_sensitivity
-from v5vc.nores_vocoder_audio_export import export_offline_mvp_nores_vocoder_audio
+from v5vc.nores_vocoder_audio_export import (
+    DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+    export_offline_mvp_nores_vocoder_audio,
+)
 from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_downstream_contract
 from v5vc.offline_teacher_runtime import run_offline_mvp_teacher_runtime
 from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
+from v5vc.teacher_first_vc_demo import (
+    DEFAULT_CALIBRATION_ASSET_PATH,
+    DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+    DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+    run_offline_mvp_teacher_first_vc_demo,
+)
 from v5vc.offline_vocoder_scaffold import prepare_offline_mvp_nores_vocoder_scaffold
 from v5vc.offline_vocoder_training import (
     build_offline_mvp_nores_vocoder_dataset_packages,
@@ -1466,6 +1475,136 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("reports/runtime/offline_mvp_teacher_vocoder_input_scaffold"),
         help="Directory for consumer-side scaffold outputs.",
     )
+    teacher_first_vc_demo_parser = subparsers.add_parser(
+        "run-offline-mvp-teacher-first-vc-demo",
+        help="Run the teacher-first single-target source-to-target demo path and export decoded audio.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--input-audio",
+        type=Path,
+        required=True,
+        help="Source wav path used as the terminal-user input.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/offline_mvp_teacher_first_vc_demo"),
+        help="Directory for the decoded wav, summary, and optional intermediates.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--teacher-route-handoff",
+        type=Path,
+        default=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+        help="Route handoff used to resolve the formal teacher checkpoint when --teacher-checkpoint is omitted.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--teacher-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit teacher checkpoint override.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--calibration-asset",
+        type=Path,
+        default=DEFAULT_CALIBRATION_ASSET_PATH,
+        help="Calibration asset providing the fixed single-target conditioning preset.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--vocoder-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit Stage5 no-res vocoder checkpoint override.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--vocoder-checkpoint-selection",
+        type=Path,
+        default=DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+        help="Checkpoint-selection json used when --vocoder-checkpoint is omitted.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to use when resolving --vocoder-checkpoint-selection: best_validation, stable_late_stop, or best_rms.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--chunk-samples",
+        type=int,
+        default=None,
+        help="Optional runtime chunk size in samples. Mutually exclusive with --chunk-ms.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=None,
+        help="Optional runtime chunk size in milliseconds when --chunk-samples is omitted.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--device",
+        default="auto",
+        help="Runtime device. Use auto, cpu, cuda, or cuda:0.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from the input wav.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--skip-full-pass-verify",
+        action="store_true",
+        help="Skip the full-utterance verification pass during teacher contract export.",
+    )
+    teacher_first_vc_demo_parser.set_defaults(
+        save_intermediates=True,
+        use_predicted_activity_gate=True,
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--save-intermediates",
+        dest="save_intermediates",
+        action="store_true",
+        help="Keep teacher contract and vocoder scaffold intermediates under the output directory.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--no-save-intermediates",
+        dest="save_intermediates",
+        action="store_false",
+        help="Remove intermediate contract/scaffold assets after decoded.wav is exported.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_true",
+        help="Apply predicted frame activity during waveform reconstruction.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--no-use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_false",
+        help="Disable predicted frame activity during waveform reconstruction.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Optional minimum frame gain applied after predicted activity gating.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help=(
+            "Moving-average radius for export-side predicted activity gate smoothing across neighboring frames. "
+            "Defaults to the current promoted Stage5 decode setting."
+        ),
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--predicted-activity-gate-apply-mode",
+        default="pre_overlap_add",
+        help=(
+            "How predicted activity gains are applied during waveform reconstruction: "
+            "pre_overlap_add or post_ola_envelope."
+        ),
+    )
 
     nores_vocoder_parser = subparsers.add_parser(
         "prepare-offline-mvp-nores-vocoder-scaffold",
@@ -2183,8 +2322,19 @@ def build_parser() -> argparse.ArgumentParser:
     nores_vocoder_audio_export_parser.add_argument(
         "--predicted-activity-gate-smoothing-frames",
         type=int,
-        default=0,
-        help="Optional moving-average radius for export-side predicted activity gate smoothing across neighboring frames.",
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help=(
+            "Moving-average radius for export-side predicted activity gate smoothing across neighboring frames. "
+            "Defaults to the current promoted Stage5 decode setting; pass 0 to recover the legacy hard-gate export."
+        ),
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--predicted-activity-gate-apply-mode",
+        default="pre_overlap_add",
+        help=(
+            "How export-side predicted activity gains are applied during waveform reconstruction: "
+            "pre_overlap_add or post_ola_envelope."
+        ),
     )
     nores_vocoder_low_activity_sensitivity_parser = subparsers.add_parser(
         "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity",
@@ -3110,6 +3260,28 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
         )
         return 0
+    if args.command == "run-offline-mvp-teacher-first-vc-demo":
+        run_offline_mvp_teacher_first_vc_demo(
+            input_audio_path=args.input_audio,
+            output_dir=args.output_dir,
+            teacher_route_handoff_path=args.teacher_route_handoff,
+            teacher_checkpoint_path=args.teacher_checkpoint,
+            calibration_asset_path=args.calibration_asset,
+            vocoder_checkpoint_path=args.vocoder_checkpoint,
+            vocoder_checkpoint_selection_path=args.vocoder_checkpoint_selection,
+            selection_target=args.selection_target,
+            chunk_samples=args.chunk_samples,
+            chunk_ms=args.chunk_ms,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+            verify_against_full_pass=not bool(args.skip_full_pass_verify),
+            save_intermediates=bool(args.save_intermediates),
+            use_predicted_activity_gate=bool(args.use_predicted_activity_gate),
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+        )
+        return 0
     if args.command == "prepare-offline-mvp-nores-vocoder-scaffold":
         prepare_offline_mvp_nores_vocoder_scaffold(
             scaffold_path=args.input_scaffold,
@@ -3261,6 +3433,7 @@ def main(argv: list[str] | None = None) -> int:
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
         )
         return 0
     if args.command == "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity":

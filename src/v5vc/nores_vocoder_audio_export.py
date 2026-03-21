@@ -20,6 +20,8 @@ from v5vc.offline_vocoder_training import (
 from v5vc.proxy_audio_export import compute_proxy_activity_gate, smooth_noise
 from v5vc.target_format_recovery import write_waveform_int16
 
+DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES = 3
+
 
 def export_offline_mvp_nores_vocoder_audio(
     output_dir: Path,
@@ -39,6 +41,7 @@ def export_offline_mvp_nores_vocoder_audio(
     use_predicted_activity_gate: bool,
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
+    predicted_activity_gate_apply_mode: str,
 ) -> None:
     if float(predicted_activity_gate_floor) < 0.0 or float(predicted_activity_gate_floor) > 1.0:
         raise ValueError("predicted_activity_gate_floor must be within [0.0, 1.0].")
@@ -48,6 +51,9 @@ def export_offline_mvp_nores_vocoder_audio(
     reset_managed_directory(output_dir)
     resolved_listening_audio_source = normalize_listening_audio_source(listening_audio_source)
     resolved_pitch_match_reference = normalize_pitch_match_reference(pitch_match_reference)
+    resolved_predicted_activity_gate_apply_mode = normalize_predicted_activity_gate_apply_mode(
+        predicted_activity_gate_apply_mode
+    )
 
     resolved_checkpoint_path, selection_summary = resolve_checkpoint_path_from_inputs(
         checkpoint_path=checkpoint_path,
@@ -82,6 +88,7 @@ def export_offline_mvp_nores_vocoder_audio(
         use_predicted_activity_gate=bool(use_predicted_activity_gate),
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+        predicted_activity_gate_apply_mode=resolved_predicted_activity_gate_apply_mode,
     )
 
     exported_records: list[dict[str, object]] = []
@@ -122,6 +129,7 @@ def export_offline_mvp_nores_vocoder_audio(
                 frame_gains=predicted_activity if bool(use_predicted_activity_gate) else None,
                 frame_gain_floor=float(predicted_activity_gate_floor),
                 frame_gain_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+                frame_gain_apply_mode=resolved_predicted_activity_gate_apply_mode,
             ).cpu()
             aligned_target = batch["aligned_waveform"][: decoded_waveform.shape[0]].cpu()
             audit_proxy = synthesize_nores_vocoder_audit_proxy(
@@ -204,6 +212,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "activity_gate_weight_for_metrics": float(activity_gate_weight),
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
+            "predicted_activity_gate_apply_mode": resolved_predicted_activity_gate_apply_mode,
         },
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "checkpoint_selection_path": None if selection_summary is None else checkpoint_selection_path.resolve().as_posix(),
@@ -216,7 +225,7 @@ def export_offline_mvp_nores_vocoder_audio(
         "notes": [
             "aligned_target.wav is the frame-aligned target waveform used by the current Stage5 bootstrap objective.",
             "decoded.wav is reconstructed from the checkpoint's waveform_frames head via overlap-add with the current export-side gate settings.",
-            "When use_predicted_activity_gate is enabled, predicted_activity_gate_floor and predicted_activity_gate_smoothing_frames define export-side gate softening only; they do not rewrite the saved checkpoint.",
+            "When use_predicted_activity_gate is enabled, predicted_activity_gate_floor, predicted_activity_gate_smoothing_frames, and predicted_activity_gate_apply_mode define export-side gate softening only; they do not rewrite the saved checkpoint.",
             "decoded_pitch_matched.wav is an optional listening-only variant that globally pitch-shifts decoded.wav toward the aligned target's median voiced F0 while preserving duration.",
             "audit_proxy.wav is a low-frequency audit render derived from decoded.wav and gated by aligned_target activity so current GUI listening is less fatiguing and target silence remains silent.",
             f"proxy_audio_path in the GUI-compatible manifest points to {resolved_listening_audio_source}.wav for primary listening; the non-primary audio is retained for technical inspection.",
@@ -299,6 +308,16 @@ def normalize_pitch_match_reference(pitch_match_reference: str) -> str:
     normalized = str(pitch_match_reference).strip().lower()
     if normalized not in {"none", "aligned_target"}:
         raise ValueError(f"Unsupported pitch_match_reference: {pitch_match_reference}")
+    return normalized
+
+
+def normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_mode: str) -> str:
+    normalized = str(predicted_activity_gate_apply_mode).strip().lower()
+    if normalized not in {"pre_overlap_add", "post_ola_envelope"}:
+        raise ValueError(
+            "Unsupported predicted_activity_gate_apply_mode: "
+            f"{predicted_activity_gate_apply_mode}"
+        )
     return normalized
 
 
@@ -615,11 +634,13 @@ def infer_branch_label(
     use_predicted_activity_gate: bool,
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
+    predicted_activity_gate_apply_mode: str,
 ) -> str:
     suffix = describe_waveform_decode_variant(
         use_predicted_activity_gate=bool(use_predicted_activity_gate),
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+        predicted_activity_gate_apply_mode=str(predicted_activity_gate_apply_mode),
     )
     if selection_summary is not None:
         selected_step = selection_summary.get("step")
@@ -632,6 +653,7 @@ def describe_waveform_decode_variant(
     use_predicted_activity_gate: bool,
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
+    predicted_activity_gate_apply_mode: str,
 ) -> str:
     if not bool(use_predicted_activity_gate):
         return "__decode_gate_off"
@@ -641,6 +663,9 @@ def describe_waveform_decode_variant(
     if float(predicted_activity_gate_floor) > 1.0e-9:
         floor_tag = int(round(float(predicted_activity_gate_floor) * 1000.0))
         parts.append(f"floor{floor_tag:03d}")
+    normalized_apply_mode = normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_mode)
+    if normalized_apply_mode == "post_ola_envelope":
+        parts.append("postenv")
     if not parts:
         return ""
     return "__decode_gate_" + "_".join(parts)

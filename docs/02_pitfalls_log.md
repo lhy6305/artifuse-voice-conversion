@@ -8096,3 +8096,216 @@
   - 用派生 split
     先做最小对照实验，
     再决定是否升级成正式训练数据治理动作
+### 297. clean-only 分支如果连 validation 也一起裁掉，就不能只看各自 loop summary 的 best loss 做最终优劣判断；必须补同验证面的交叉评估
+- 现象:
+  - 本次 clean-only 对照训练里，
+    target validation
+    从
+    `66`
+    条缩到了
+    `63`
+  - 因此
+    `0.570703`
+    对
+    `0.564671`
+    只能说明
+    “方向上没有赢”，
+    但不能直接当严格 apples-to-apples 结论
+- 风险:
+  - 如果忽略验证面变化，
+    很容易把
+    “数据面变了”
+    误读成
+    “模型一定更好/更差”
+- 处理要求:
+  - 任何 split ablation
+    只要改了 validation 面，
+    默认都要补：
+    - baseline checkpoint on baseline validation
+    - candidate checkpoint on baseline validation
+    - baseline checkpoint on candidate validation
+    - candidate checkpoint on candidate validation
+  - 最终是否升格为主线，
+    以同验证面的交叉评估为准
+
+### 298. 项目内 JSONL loader 默认应兼容 UTF-8 BOM；否则派生 split 或 PowerShell 落盘文件会在首行直接炸掉
+- 现象:
+  - 本次
+    `hybrid_stratified_blocked_target_clean_no_reverb`
+    派生 split
+    首次被 builder 读取时，
+    触发
+    `Unexpected UTF-8 BOM`
+- 风险:
+  - 只要 JSONL 是由 PowerShell 默认编码或其他 BOM 保留写法产出，
+    就会在
+    `json.loads()`
+    之前失败，
+    阻断后续训练/评估链
+- 处理要求:
+  - 项目级
+    `load_jsonl()`
+    默认使用
+    `utf-8-sig`
+    读取，
+    让 loader 对 BOM 容忍
+  - 不要把
+    “所有生成脚本都必须保证 no-BOM”
+    当成唯一防线
+### 299. 当 export-side 修正已经同时通过 focused human audit 与 expanded validation 复核时，不要继续把更差的旧 decode 留作默认值
+- 现象:
+  - `step72__decode_gate_smooth3`
+    已经同时满足：
+    - representative glitch windows
+      上的人耳支持
+    - `validation12`
+      扩样量化不反转
+    - `validation12`
+      导出 review aggregate
+      对
+      `overall_pick / best_boundary / most_stable`
+      都给出单向支持
+- 风险:
+  - 如果仍把旧
+    hard-gate decode
+    留作默认，
+    后续主线 export / audit
+    就会持续产出一个已经被证明更差的默认版本
+  - 同时还会把
+    `smooth3`
+    误降级成
+    “只有懂上下文的人才会手动打开”的隐藏修正
+- 处理要求:
+  - 当 export-side 修正满足：
+    - focused human audit 不反转
+    - expanded validation quant 不反转
+  - 就应提升为默认导出设置
+  - 同时保留显式回退参数，
+    用于历史基线复现
+### 300. 新的 export-side 变体如果已经在 expanded validation 上同向优于当前默认，但还没过 focused human audit，就先固化成“待审主分支”并把 GUI 入口一起交付，不要要么直接默认化、要么只停留在代码里
+- 现象:
+  - 本轮
+    `step72__decode_gate_smooth3_postenv`
+    在
+    `validation3`
+    与
+    `validation12`
+    上都继续同向优于当前默认
+    `step72__decode_gate_smooth3`
+  - 但它还没有完成
+    focused human audit
+- 风险:
+  - 如果直接默认化，
+    会跳过
+    “量化先过，
+    人耳再兜底”
+    的升级纪律
+  - 如果反过来只改代码不补听审入口，
+    它又会停留在
+    “仓库里有能力，
+    但没人真正接着审”
+    的半成品状态
+- 处理要求:
+  - 当新分支满足：
+    - expanded validation quant 同向优于当前默认
+    - top windows 没有出现实质性反转
+    - 仍缺 focused human audit
+  - 默认处理成：
+    - 下一轮待审主分支
+  - 同时必须补齐：
+    - 正式报告
+    - GUI 听审脚本
+    - 听审输出目录
+    - 主对比目标与试听重点
+### 301. 终端用户线不能把现有 Stage5 validation/export 链误当成真实 source-to-target 闭环；凡是依赖 `aligned_target` 的能力，都必须从用户入口里剥离
+- 现象:
+  - 当前仓库已经有：
+    - `decoded.wav`
+      导出
+    - GUI 听审
+    - `decoded_pitch_matched.wav`
+    - `audit_proxy.wav`
+  - 但这些能力大多建立在：
+    - dataset training package
+    - `aligned_target.wav`
+    - paired validation
+    之上
+- 风险:
+  - 如果看到“已经能导 wav”，
+    就误判成
+    “终端用户输入一段源音频也已经能直接出结果”，
+    会把用户线设计直接带偏
+  - 进一步还会把：
+    - `decoded_to_target_rms_ratio`
+    - `pitch-match against aligned_target`
+    - `audit_proxy gated by aligned_target`
+    这些 validation-only 诊断能力，
+    错塞进用户路径
+- 处理要求:
+  - 终端用户线设计时，
+    必须先区分：
+    - 哪些是 source-to-target 真闭环所需
+    - 哪些只是 validation/audit 专用 sidecar
+  - 任何依赖
+    `aligned_target`
+    的能力，
+    默认都不能作为用户入口前提
+
+### 302. 当实验线还有“待审主分支”未决时，终端用户线不要把该分支直接写死成默认；应保留显式可切换参数，等待听审结论落锤
+- 现象:
+  - 当前实验线停在：
+    `step72__decode_gate_smooth3_postenv`
+    focused human audit
+  - 量化已支持，
+    但最终默认值
+    还没经过人耳确认
+- 风险:
+  - 如果终端用户线现在就把
+    `post_ola_envelope`
+    写死成唯一默认，
+    一旦听审反转，
+    用户入口又要回改
+  - 反过来如果完全不暴露该开关，
+    终端用户线又无法复用实验线已跑出的更优候选
+- 处理要求:
+  - 在实验线结论落锤前，
+    终端用户线应把 decode apply mode
+    设计成：
+    - 默认沿当前正式主线
+    - 同时允许显式切到待审主分支
+  - 等 focused human audit
+    完成后，
+    再决定是否收敛为新的唯一默认
+### 303. 终端用户线如果默认依赖 checkpoint-selection payload，就不能假设每份 payload 都有 `stable_late_stop`；默认值必须优先保证“能开箱即跑”
+- 现象:
+  - 当前 Stage5
+    的若干较新 selection payload
+    中，
+    `selected_stable_late_stop`
+    可能为
+    `null`
+  - 但
+    `best_validation`
+    仍可稳定解析到当前主线
+    `step72`
+- 风险:
+  - 如果终端用户入口把
+    `stable_late_stop`
+    写死成默认，
+    很容易出现：
+    - 代码逻辑没问题
+    - 但默认命令直接因 selection payload 缺字段而失败
+  - 这会把“用户线能不能跑”
+    和
+    “治理字段是否存在”
+    错绑到一起
+- 处理要求:
+  - 终端用户线第一版默认值，
+    应优先选择：
+    - 当前确定能解析的 checkpoint role
+  - 若用户显式要求
+    `stable_late_stop`
+    而 payload 不支持，
+    应返回清楚报错并提示：
+    - 改用 `best_validation`
+    - 或显式传 checkpoint
