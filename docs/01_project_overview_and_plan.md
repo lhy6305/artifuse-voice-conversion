@@ -14357,3 +14357,522 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
   - 已补充失败分层 summary 与短成功 smoke
 - `docs/242_multi_ai_parallel_collaboration_assessment_and_registry_report.md`
   - 已补充 write-root 冲突显式告警与临时冲突验证
+## 2026-03-21 补充：实验线上下文恢复后确认 `postenv` 默认提升已正式收口
+### 当前结论
+- 本轮按
+  `docs/00 / 01 / 02 / 236 / 240 / 241 / 242`
+  与当前代码、正式听审产物恢复后确认：
+  - 实验线真实停点
+    已经不是
+    `postenv`
+    focused human audit 待完成
+  - 而是：
+    `postenv`
+    听审已完成，
+    Stage5 decode-side 默认 apply mode
+    已正式提升为
+    `post_ola_envelope`
+- 当前磁盘证据已同时具备：
+  - `docs/241_stage5_step72_postenv_default_promotion_after_human_audit_report.md`
+  - `reports/audio/audio_audit_gui_stage5_s72_s3_postenv_v12_session/audio_audit_review.json`
+    中
+    `10 / 10`
+    可比较记录全部完成，
+    且未出现对旧默认的反向支持
+- 当前代码默认值也已对齐：
+  - `export-offline-mvp-nores-vocoder-audio`
+    默认
+    `predicted activity gate smoothing = 3`
+  - 默认
+    `predicted activity gate apply mode = post_ola_envelope`
+
+### 当前边界
+- 当前默认提升覆盖的是：
+  - Stage5 decode / export CLI
+  - 终端用户线 CLI
+- 不应把它误读成：
+  - 所有低层 waveform 重建调用
+    都已全局切到
+    `postenv`
+- 目前
+  `src/v5vc/offline_vocoder_training.py`
+  的低层重建函数
+  默认值仍保留旧口径，
+  所以未来若直接绕过上层入口调用，
+  必须显式传
+  `frame_gain_apply_mode`
+
+### 更新后的下一步
+1. 若继续实验线，
+   不再回到
+   `smooth3`
+   vs
+   `smooth3_postenv`
+   的旧听审
+2. 真正新的实验线任务，
+   应从
+   `postenv`
+   默认提升之后的下一道
+   decode-side / governance
+   问题重新立题
+3. 多 AI
+   继续并行时，
+   先更新旧会话状态，
+   再为新 objective
+   登记新的 write roots，
+   不沿用已完成的旧听审占坑状态
+
+### 文档补充
+- `docs/243_experiment_line_context_restore_takeover_report.md`
+  - 记录本轮恢复读取范围、代码与产物核对结果、当前真实停点与实验线下一步边界
+## 2026-03-21 补充：Stage5 decode apply-mode 语义已做最小硬化
+### 当前结论
+- 本轮继续沿实验线只做
+  decode-side
+  治理收口，
+  没有新开 probe
+- 当前已把
+  `src/v5vc/offline_vocoder_training.py`
+  中训练损失路径对
+  `reconstruct_waveform_from_frames(...)`
+  的调用，
+  从
+  “隐式吃低层旧默认”
+  改成：
+  - 显式传
+    `frame_gain_apply_mode = pre_overlap_add`
+- 同时训练 summary / loss metrics
+  现在也会显式写出：
+  - `reconstruction_frame_gain_apply_mode = pre_overlap_add`
+
+### 当前意义
+- 这次改动不是把训练也切到
+  `postenv`
+- 而是把当前真实边界写死成代码事实：
+  - export / user runtime
+    默认是
+    `post_ola_envelope`
+  - training reconstruction loss
+    当前显式保持
+    `pre_overlap_add`
+- 这样后续若要改训练 apply mode，
+  必须作为独立实验立题，
+  不会再被隐式默认或上下文误读带过去
+
+### 当前验证
+- 已执行：
+  - `.\python.exe -m py_compile src\v5vc\offline_vocoder_training.py`
+- 结果：
+  - exit code `0`
+
+### 文档补充
+- `docs/244_stage5_decode_apply_mode_semantics_hardening_report.md`
+  - 记录本轮代码动作、当前训练/导出边界与为什么这次只做语义硬化
+## 2026-03-21 补充：Stage5 训练 reconstruction apply mode 已接成正式参数
+### 当前结论
+- 在上一轮把训练默认语义显式钉成
+  `pre_overlap_add`
+  之后，
+  本轮继续把训练侧 apply mode
+  接成正式 CLI 参数：
+  - `--reconstruction-frame-gain-apply-mode`
+- 当前该参数已覆盖：
+  - `run-offline-mvp-nores-vocoder-train-step`
+  - `run-offline-mvp-nores-vocoder-training-loop`
+  - `run-offline-mvp-nores-vocoder-dataset-training-loop`
+- 当前默认仍保持：
+  - `pre_overlap_add`
+
+### 当前验证
+- 已通过：
+  - `.\python.exe -m py_compile src\v5vc\offline_vocoder_training.py src\v5vc\cli.py`
+- 已通过：
+  - 训练 CLI `--help`
+    校验
+- 已完成一次真实单步 smoke：
+  - 显式传
+    `--reconstruction-frame-gain-apply-mode post_ola_envelope`
+  - 命令成功结束，
+    且 summary
+    已正确写出：
+    `reconstruction_frame_gain_apply_mode = post_ola_envelope`
+
+### 当前意义
+- 现在如果后续真要比较：
+  - 训练沿旧口径
+  - 还是训练也切到
+    `postenv`
+- 已经可以直接作为独立实验变量推进，
+  不需要再通过改源码默认来偷渡
+
+### 文档补充
+- `docs/245_stage5_training_reconstruction_apply_mode_plumbing_report.md`
+  - 记录训练侧新参数、接线范围、单步 smoke 与当前默认边界
+## 2026-03-21 补充：Stage5 training apply-mode 最小 A/B 已完成，当前不建议直接升格
+### 当前结论
+- 本轮继续沿实验线把
+  training-side
+  apply mode
+  做到了最小正式 A/B：
+  - 同包单步
+  - 同包 `3 step` loop
+  - 小型 dataset loop
+- 当前三层结果都显示：
+  - `pre_overlap_add`
+    与
+    `post_ola_envelope`
+    差异极小，
+    大多只在
+    `1e-5 ~ 1e-4`
+    量级
+- 因而当前更合理的判断是：
+  - training-side
+    apply mode
+    已具备正式实验能力
+  - 但现有短程证据
+    还不足以支持
+    把它直接升格成更大训练主实验
+
+### 本轮补充工程修复
+- 在把
+  `reconstruction_frame_gain_apply_mode`
+  写入 per-package
+  `loss_metrics`
+  后，
+  dataset loop
+  首次执行暴露出：
+  - `average_loss_metrics(...)`
+    错把字符串字段也按浮点聚合
+- 当前已修复为：
+  - 数值字段求平均
+  - 非数值字段若一致则原样保留
+  - 若不一致则显式报错
+
+### 更新后的下一步
+1. 当前不建议仅凭这轮短程结果，
+   就把训练默认从
+   `pre_overlap_add`
+   改成
+   `postenv`
+2. 若未来还要继续问这条题，
+   下一轮应直接升级到：
+   - 更长 dataset loop
+   - 正式 validation split
+   - checkpoint 对照
+3. 在那之前，
+   继续把
+   training-side
+   `pre_overlap_add`
+   视为正式默认
+
+### 文档补充
+- `docs/246_stage5_training_applymode_minimal_ab_probe_report.md`
+  - 记录本轮单步 / 3-step / dataset-level A/B、聚合 bug 修复与当前判断
+## 2026-03-21 补充：Stage5 实验线下一问题评估已完成，当前建议先冻结而不是继续扩小题
+### 当前结论
+- 本轮已把当前实验线最近几条最可能继续扩写的子题统一评估：
+  - decode-side
+    `postenv`
+    已正式默认化
+  - training-side
+    apply mode
+    已有正式实验入口，
+    但最小 A/B
+    差异极弱
+  - clean-only /
+    reverb-like
+    路线
+    已有负结论
+- 因而当前最推荐的下一步不是继续起新小实验，
+  而是：
+  - 先冻结这条局部微调线
+  - 等新的明确症状、
+    新 family，
+    或用户明确要求某条题升级时，
+    再重开实验
+
+### 当前推荐排序
+1. 先冻结当前实验线，
+   不再追加低信息量专项
+2. 若未来出现新的明确 decode-side 症状，
+   再重开局部修正题
+3. 若用户明确要求追
+   training-side
+   apply mode，
+   再升级到正式长程 A/B
+4. 当前不建议重开
+   clean-only /
+   reverb-like
+   路线
+
+### 文档补充
+- `docs/247_stage5_experiment_line_next_question_assessment_report.md`
+  - 记录本轮候选题筛选、优先级排序与“当前先冻结”的推荐结论
+## 2026-03-21 补充：Stage5 原设计门槛复核已完成，当前不建议继续扫局部方案
+### 当前结论
+- 本轮按
+  `initial_design.md`
+  与
+  `initial_design_judg.md`
+  回到原设计门槛复核后确认：
+  - 当前 Stage5
+    最近几条局部子题
+    的确已经基本收口
+  - 但原设计真正关心的主问题，
+    还不是：
+    - `postenv`
+      还能不能再细扫
+    - training-side
+      apply mode
+      还能不能再多跑几轮
+  - 而仍然是：
+    - no-res 主干
+      是否已经达到
+      “可懂、稳定、基本自然”
+    - 当前控制变量
+      是否有正式证据证明
+      它们在 Stage5
+      路线上真的被模型使用
+
+### 当前已确认的进展
+1. Stage5
+   no-res scaffold、
+   full-split training、
+   waveform bootstrap、
+   checkpoint selection、
+   audio export、
+   low-activity governance
+   与
+   `postenv`
+   默认治理
+   都已经成立
+2. 当前 best route
+   已经不是
+   “没有可听音频的纸面阶段”，
+   而是具备：
+   - `decoded.wav`
+     主听
+   - selector
+   - GUI audit
+   - decode-side
+     默认治理
+
+### 当前仍缺的关键证据
+1. 当前 Stage5
+   仍是
+   no-res bootstrap route，
+   不是原设计完整版条件声码器
+2. 当前 loss recipe
+   仍是：
+   - waveform L1
+   - single-resolution log-STFT
+   - RMS guard
+   还不是
+   MRSTFT /
+   adversarial /
+   feature matching
+   主配方
+3. 当前主观与量化证据
+   更强地回答了：
+   - leakage
+   - fragmentation
+   - decode-side
+     局部治理
+   但还没有正式回答：
+   - no-res 主干
+     是否已在更广面上达到
+     “基本自然”
+4. 当前没有看到
+   Stage5
+   专属的正式
+   `z_art / e_evt`
+   使用性证据
+
+### 更新后的下一步
+1. 当前不建议继续扫：
+   - `postenv`
+     周边局部方案
+   - training-side
+     apply mode
+     短程 probe
+   - clean-only /
+     reverb-like
+     复跑
+2. 若继续实验线，
+   下一题应回到原设计主门槛：
+   - Stage5 no-res
+     是否已达到
+     “可懂、稳定、基本自然”
+   - 当前条件控制
+     是否已具备正式使用性证据
+3. 在新的明确症状出现前，
+   不再为当前局部 decode/apply-mode
+   小题追加实验预算
+
+### 文档补充
+- `docs/248_stage5_original_design_milestone_review_report.md`
+  - 记录本轮原设计门槛复核、当前已达成项、缺证据项与“不要继续扫局部方案”的正式理由
+## 2026-03-21 补充：Stage5 no-res 门槛验收听审入口已正式落地
+### 当前结论
+- 当前实验线已从：
+  - “下一题应切到
+    no-res
+    门槛验收”
+  推进到：
+  - “门槛验收听审现在可直接启动”
+- 本轮没有重开新的训练或 decode
+  tweak，
+  而是把当前 best route
+  的正式听审入口固定为：
+  - `reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate72_decoded_glitchablation_smooth3postenv_validation12_round1_1/`
+
+### 当前正式入口
+1. 命令：
+   `.\python.exe manage.py launch-audio-audit-gui --bundle reports/runtime/offline_mvp_nores_vocoder_audio_export_activitygate72_decoded_glitchablation_smooth3postenv_validation12_round1_1 --output-dir reports/audio/audio_audit_gui_stage5_nores_milestone_acceptance_session`
+2. 脚本：
+   `powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_nores_milestone_acceptance_audit.ps1`
+3. 输出目录：
+   - `reports/audio/audio_audit_gui_stage5_nores_milestone_acceptance_session/`
+
+### 当前这轮要回答的问题
+1. 当前
+   `step72 + smooth3 + postenv`
+   no-res route，
+   是否已达到：
+   - 可懂
+   - 稳定
+   - 基本自然
+2. 若未达到，
+   当前主要失败维度
+   更像是：
+   - intelligibility
+   - stability
+   - 还是 naturalness
+
+### 边界说明
+- 这轮不是新的分支对比题，
+  而是当前 best route
+  的绝对门槛验收
+- 当前主听仍是：
+  - `decoded.wav`
+- `aligned_target.wav`
+  仍只是 bootstrap objective
+  的对齐参考，
+  不是用户线 source-to-target
+  闭环结果
+
+### 文档补充
+- `docs/249_stage5_nores_milestone_acceptance_audit_kickoff_report.md`
+  - 记录本轮正式验收入口、命令、脚本、输出目录与主判断维度
+## 2026-03-21 补充：Stage5 no-res 门槛验收 GUI 已切成专用模式，且结果物化入口已补齐
+### 当前结论
+- 当前实验线的
+  milestone acceptance
+  不再借用旧的分支对比字段：
+  - `best_rhythm`
+  - `best_boundary`
+  - `most_stable`
+  - `overall_pick`
+- 当前已正式切成：
+  - `milestone_acceptance`
+    评审模式
+  - 字段固定为：
+    - `intelligibility`
+    - `stability`
+    - `basic_naturalness`
+    - `milestone_verdict`
+- 同时已补齐：
+  - fixed result materializer
+  - 固定模板
+  - 固定结果脚本
+
+### 当前正式入口
+1. 启动脚本：
+   `powershell -ExecutionPolicy Bypass -File scripts/launch_stage5_nores_milestone_acceptance_audit.ps1`
+2. 结果脚本：
+   `powershell -ExecutionPolicy Bypass -File scripts/materialize_stage5_nores_milestone_acceptance_result_report.ps1`
+3. 输出目录：
+   - `reports/audio/audio_audit_gui_stage5_nores_milestone_acceptance_session/`
+   - `reports/stage_reports/stage5_nores_milestone_acceptance_result_round1_1/`
+
+### 当前验证
+1. `audio_audit_gui`
+   已支持：
+   - `--review-mode milestone_acceptance`
+2. milestone launch script
+   smoke
+   已成功，
+   且当前
+   `audio_audit_progress.json`
+   已写出：
+   - `review_mode = milestone_acceptance`
+3. 当前结果物化模块
+   `v5vc.stage5_nores_milestone_acceptance_report`
+   已具备独立帮助入口
+
+### 当前更新后的下一步
+1. 继续实验线时，
+   先完成这轮
+   no-res
+   milestone acceptance
+   听审
+2. 听完后先物化：
+   - fixed milestone acceptance report
+3. 再写最终门槛结论文档，
+   不要只停留在
+   `audio_audit_review.json`
+
+### 文档补充
+- `docs/251_stage5_nores_milestone_acceptance_tooling_and_result_materializer_report.md`
+  - 记录本轮 GUI 专用模式、结果物化模块、脚本入口与 smoke 结果
+## 2026-03-21 补充：用户线上下文已恢复，当前真正接班点转为 decoder-side 适用性诊断
+### 当前结论
+- 本次恢复明确只继续用户线，
+  忽略实验线未提交内容。
+- 当前用户线已具备：
+  - 单条最小闭环 CLI
+  - PowerShell 包装脚本
+  - review bundle
+  - self-check
+  - scaffold-level applicability probe
+- 当前真正未收口的问题是：
+  - review bundle
+    能导出，
+    但听感出现高频 buzzing
+- 本轮进一步补齐了正式 CLI：
+  - `analyze-offline-mvp-teacher-first-vc-decoder-behavior`
+- 并完成首轮 triplet probe，
+  当前判断更偏向：
+  - user-line 控制进入当前 Stage5 checkpoint 后，
+    decoder 行为明显脱离训练内分布
+  - 不只是简单 scaffold 轻微偏移
+
+### 当前关键结果
+1. 参考 train package
+   decoded 指标分布稳定在：
+   - `decoded_spectral_high_band_energy_ratio ≈ 0.0645`
+2. 用户线 triplet case
+   全部落到：
+   - `decoded_spectral_high_band_energy_ratio ≈ 0.4776~0.4795`
+3. `rolloff95 / centroid / bandwidth`
+   也全部系统性抬高，
+   与高频 buzzing
+   主观症状一致
+
+### 更新后的下一步
+1. 当前不应再把 review bundle
+   当作质量已可展示的正向入口
+2. 若继续用户线，
+   下一题应转向：
+   - applicability boundary
+   - user-line 异常告警
+   - conditioning / control
+     如何更贴近 Stage5 训练内分布
+3. 在缓解方案落地前，
+   当前用户线的准确定位应是：
+   - 工程闭环成立
+   - 质量适用性待治理
+
+### 文档补充
+- `docs/250_user_line_context_restore_and_decoder_behavior_takeover_report.md`
+  - 记录本次只做用户线的接班恢复、会话续登记、新增 decoder-behavior CLI 与 triplet probe 结果

@@ -19,23 +19,47 @@ except ImportError:  # pragma: no cover
     winsound = None
 
 
-SCORING_FIELDS = (
+TIE_LABEL = "打平"
+FULL_AUDIO_SEGMENT_LABEL = "整段"
+AUTO_SEGMENT_MIN_SECONDS = 8.0
+SEGMENT_LENGTH_SECONDS = 4.0
+SEGMENT_OVERLAP_SECONDS = 0.5
+
+
+@dataclass(frozen=True)
+class ReviewModeConfig:
+    review_mode: str
+    scoring_fields: tuple[tuple[str, str], ...]
+    validity_options: tuple[tuple[str, str], ...]
+    validity_field_label: str
+    scoring_option_mode: str
+    fixed_field_options: dict[str, tuple[str, ...]]
+    blank_completed_label: str | None
+    tie_policy: str
+    help_text: str
+
+
+COMPARATIVE_SCORING_FIELDS = (
     ("best_rhythm", "节奏最好"),
     ("best_boundary", "边界最好"),
     ("most_stable", "最稳定"),
     ("overall_pick", "综合首选"),
 )
 
-VALIDITY_OPTIONS = (
-    ("yes", "可比较"),
-    ("partial", "部分可比较"),
-    ("no", "不建议比较"),
-)
-
-VALIDITY_CODE_TO_LABEL = {code: label for code, label in VALIDITY_OPTIONS}
-VALIDITY_LABEL_TO_CODE = {label: code for code, label in VALIDITY_OPTIONS}
-
-GUI_HELP_TEXT = """\
+COMPARATIVE_REVIEW_MODE_CONFIG = ReviewModeConfig(
+    review_mode="comparative",
+    scoring_fields=COMPARATIVE_SCORING_FIELDS,
+    validity_options=(
+        ("yes", "可比较"),
+        ("partial", "部分可比较"),
+        ("no", "不建议比较"),
+    ),
+    validity_field_label="是否适合比较",
+    scoring_option_mode="candidate_labels",
+    fixed_field_options={},
+    blank_completed_label=TIE_LABEL,
+    tie_policy="已完成且可比较的记录中，留空评分字段按“打平”解释。",
+    help_text="""\
 判断词：
 
 节奏最好：
@@ -75,13 +99,88 @@ GUI_HELP_TEXT = """\
 当前默认播放的是 bundle 里的 listening_audio_path：
 - 具体可能是 decoded / decoded_pitch_matched / audit_proxy
 - 以当前试听包清单为准
-"""
+""",
+)
 
-TIE_LABEL = "打平"
-FULL_AUDIO_SEGMENT_LABEL = "整段"
-AUTO_SEGMENT_MIN_SECONDS = 8.0
-SEGMENT_LENGTH_SECONDS = 4.0
-SEGMENT_OVERLAP_SECONDS = 0.5
+MILESTONE_ACCEPTANCE_REVIEW_MODE_CONFIG = ReviewModeConfig(
+    review_mode="milestone_acceptance",
+    scoring_fields=(
+        ("intelligibility", "可懂性"),
+        ("stability", "稳定性"),
+        ("basic_naturalness", "基本自然度"),
+        ("milestone_verdict", "阶段结论"),
+    ),
+    validity_options=(
+        ("yes", "可判"),
+        ("partial", "部分可判"),
+        ("no", "暂不判"),
+    ),
+    validity_field_label="是否适合判定",
+    scoring_option_mode="fixed_options",
+    fixed_field_options={
+        "intelligibility": ("", "可懂", "部分可懂", "不可懂"),
+        "stability": ("", "稳定", "轻微问题", "不稳定"),
+        "basic_naturalness": ("", "基本自然", "偏技术信号", "明显不自然"),
+        "milestone_verdict": ("", "通过", "边缘", "未通过"),
+    },
+    blank_completed_label=None,
+    tie_policy="本模式不自动把留空解释为打平；门槛验收字段应显式填写。",
+    help_text="""\
+判断词：
+
+可懂性：
+- 可懂：主体内容大体能听清
+- 部分可懂：能听出大意，但经常糊
+- 不可懂：长期难辨识
+
+稳定性：
+- 稳定：没有明显持续破音、乱跳或 buzzing
+- 轻微问题：偶发异常，但整体还能接受
+- 不稳定：异常频繁，影响整体判断
+
+基本自然度：
+- 基本自然：虽然还不是最终成品，但已像正常语音
+- 偏技术信号：还能听，但人工合成/技术信号感明显
+- 明显不自然：长期不像正常语音
+
+阶段结论：
+- 通过：当前 no-res route 已达到本阶段门槛
+- 边缘：接近门槛，但还不够稳
+- 未通过：当前还不能算过门槛
+
+是否适合判定：
+- 可判：足以给出门槛判断
+- 部分可判：能判断，但伪影会干扰
+- 暂不判：当前样本失真过重，不强判
+
+当前优先看：
+- 可懂性
+- 稳定性
+- 基本自然度
+- 持续 buzzing / 破音 / 句内乱跳
+
+当前先不看：
+- 最终音色是否完美
+- MRSTFT / adversarial 成品级质感
+- 与用户线 source-to-target 的真实闭环体验
+
+当前默认播放的是 bundle 里的 listening_audio_path：
+- milestone acceptance 当前应以 decoded 为主听
+- aligned_target 只是 bootstrap objective 的对齐参考
+""",
+)
+
+REVIEW_MODE_CONFIGS = {
+    COMPARATIVE_REVIEW_MODE_CONFIG.review_mode: COMPARATIVE_REVIEW_MODE_CONFIG,
+    MILESTONE_ACCEPTANCE_REVIEW_MODE_CONFIG.review_mode: MILESTONE_ACCEPTANCE_REVIEW_MODE_CONFIG,
+}
+
+
+def get_review_mode_config(review_mode: str) -> ReviewModeConfig:
+    normalized = str(review_mode).strip().lower()
+    if normalized not in REVIEW_MODE_CONFIGS:
+        raise ValueError(f"Unsupported review mode: {review_mode}")
+    return REVIEW_MODE_CONFIGS[normalized]
 
 
 @dataclass
@@ -120,7 +219,9 @@ class AudioAuditApp:
         root: tk.Tk,
         manifest_paths: list[Path],
         output_dir: Path,
+        review_mode: str,
     ) -> None:
+        self.review_mode_config = get_review_mode_config(review_mode)
         self.root = root
         self.output_dir = output_dir.resolve()
         self.output_dir.mkdir(parents=True, exist_ok=True)
@@ -157,10 +258,10 @@ class AudioAuditApp:
         self.segment_combo: ttk.Combobox | None = None
         self.right_canvas: tk.Canvas | None = None
         self.right_canvas_window_id: int | None = None
-        self.valid_var = tk.StringVar(value=VALIDITY_CODE_TO_LABEL["yes"])
+        self.valid_var = tk.StringVar(value=self.review_mode_config.validity_options[0][1])
         self.completed_var = tk.BooleanVar(value=False)
         self.field_vars: dict[str, tk.StringVar] = {
-            field_id: tk.StringVar(value="") for field_id, _ in SCORING_FIELDS
+            field_id: tk.StringVar(value="") for field_id, _ in self.review_mode_config.scoring_fields
         }
         self.score_widgets: dict[str, ttk.Combobox] = {}
         self.candidate_frames: list[ttk.Frame] = []
@@ -289,7 +390,7 @@ class AudioAuditApp:
         scoring_frame.grid(row=3, column=0, sticky="ew", pady=(10, 0))
         scoring_frame.columnconfigure(1, weight=1)
         row_index = 0
-        for field_id, field_label in SCORING_FIELDS:
+        for field_id, field_label in self.review_mode_config.scoring_fields:
             ttk.Label(scoring_frame, text=field_label).grid(row=row_index, column=0, sticky="w")
             combo = ttk.Combobox(
                 scoring_frame,
@@ -300,11 +401,11 @@ class AudioAuditApp:
             self.score_widgets[field_id] = combo
             row_index += 1
 
-        ttk.Label(scoring_frame, text="是否适合比较").grid(row=row_index, column=0, sticky="w")
+        ttk.Label(scoring_frame, text=self.review_mode_config.validity_field_label).grid(row=row_index, column=0, sticky="w")
         validity_combo = ttk.Combobox(
             scoring_frame,
             textvariable=self.valid_var,
-            values=[label for _code, label in VALIDITY_OPTIONS],
+            values=[label for _code, label in self.review_mode_config.validity_options],
             state="readonly",
         )
         validity_combo.grid(row=row_index, column=1, sticky="ew", padx=(8, 0), pady=(0, 6))
@@ -320,7 +421,7 @@ class AudioAuditApp:
         help_frame.rowconfigure(0, weight=1)
         help_text = tk.Text(help_frame, height=12, wrap="word")
         help_text.grid(row=0, column=0, sticky="nsew")
-        help_text.insert("1.0", GUI_HELP_TEXT)
+        help_text.insert("1.0", self.review_mode_config.help_text)
         help_text.configure(state="disabled")
 
         notes_frame = ttk.LabelFrame(right, text="单条备注", padding=10)
@@ -475,6 +576,12 @@ class AudioAuditApp:
         payload = self.read_progress_payload()
         if payload is None:
             return
+        progress_review_mode = str(payload.get("review_mode", COMPARATIVE_REVIEW_MODE_CONFIG.review_mode)).strip().lower()
+        if progress_review_mode != self.review_mode_config.review_mode:
+            self.status_var.set(
+                "发现旧进度文件，但评审模式与当前会话不一致，未自动套用旧评分。"
+            )
+            return
         manifests = [Path(item).resolve() for item in payload.get("loaded_manifests", [])]
         if manifests and manifests != [item.resolve() for item in self.loaded_manifest_paths]:
             self.status_var.set("发现旧进度文件，但当前加载的试听包不一致，未自动套用旧评分。")
@@ -499,7 +606,10 @@ class AudioAuditApp:
             filtered_ids.append(record_id)
             review = self.review_state.get(record_id, {})
             status = "[x]" if review.get("completed") else "[ ]"
-            validity = validity_label_from_value(str(review.get("valid_for_comparison", "yes")))
+            validity = validity_label_from_value(
+                str(review.get("valid_for_comparison", "yes")),
+                self.review_mode_config,
+            )
             self.record_listbox.insert(tk.END, f"{status} {record_id} ({validity})")
         self.filtered_record_ids = filtered_ids
         if filtered_ids:
@@ -556,8 +666,11 @@ class AudioAuditApp:
             ttk.Button(frame, text="播放", command=lambda path=candidate.path: self.play_track(path)).grid(row=0, column=2, sticky="e")
             self.candidate_frames.append(frame)
 
-        options = [""] + [candidate.label for candidate in record.candidates]
-        for field_id, _field_label in SCORING_FIELDS:
+        for field_id, _field_label in self.review_mode_config.scoring_fields:
+            if self.review_mode_config.scoring_option_mode == "candidate_labels":
+                options = [""] + [candidate.label for candidate in record.candidates]
+            else:
+                options = list(self.review_mode_config.fixed_field_options.get(field_id, ("",)))
             self.score_widgets[field_id].configure(values=options)
 
     def clear_candidate_widgets(self) -> None:
@@ -567,9 +680,14 @@ class AudioAuditApp:
 
     def load_review_state(self, record_id: str) -> None:
         review = self.review_state.get(record_id, {})
-        for field_id, _field_label in SCORING_FIELDS:
+        for field_id, _field_label in self.review_mode_config.scoring_fields:
             self.field_vars[field_id].set(str(review.get(field_id, "")))
-        self.valid_var.set(validity_label_from_value(str(review.get("valid_for_comparison", "yes"))))
+        self.valid_var.set(
+            validity_label_from_value(
+                str(review.get("valid_for_comparison", "yes")),
+                self.review_mode_config,
+            )
+        )
         self.completed_var.set(bool(review.get("completed", False)))
         if self.notes_text is not None:
             self.notes_text.delete("1.0", tk.END)
@@ -581,9 +699,12 @@ class AudioAuditApp:
         record_id = self.filtered_record_ids[self.current_index]
         self.review_state[record_id] = {
             field_id: self.field_vars[field_id].get().strip()
-            for field_id, _field_label in SCORING_FIELDS
+            for field_id, _field_label in self.review_mode_config.scoring_fields
         }
-        self.review_state[record_id]["valid_for_comparison"] = validity_code_from_value(self.valid_var.get().strip())
+        self.review_state[record_id]["valid_for_comparison"] = validity_code_from_value(
+            self.valid_var.get().strip(),
+            self.review_mode_config,
+        )
         self.review_state[record_id]["completed"] = bool(self.completed_var.get())
         if self.notes_text is not None:
             self.review_state[record_id]["notes"] = self.notes_text.get("1.0", tk.END).strip()
@@ -673,6 +794,7 @@ class AudioAuditApp:
     def save_progress(self) -> None:
         self.save_current_record_state()
         payload = {
+            "review_mode": self.review_mode_config.review_mode,
             "loaded_manifests": [path.as_posix() for path in self.loaded_manifest_paths],
             "current_index": self.current_index,
             "review_state": self.review_state,
@@ -709,6 +831,7 @@ class AudioAuditApp:
             review_state=self.review_state,
             manifest_paths=self.loaded_manifest_paths,
             session_notes="" if self.session_notes_text is None else self.session_notes_text.get("1.0", tk.END).strip(),
+            review_mode_config=self.review_mode_config,
         )
         self.export_json_path.write_text(
             json.dumps(summary, ensure_ascii=False, indent=2),
@@ -892,18 +1015,26 @@ def build_review_summary(
     review_state: dict[str, dict[str, Any]],
     manifest_paths: list[Path],
     session_notes: str,
+    review_mode_config: ReviewModeConfig,
 ) -> dict[str, Any]:
     aggregate: dict[str, dict[str, int]] = {}
-    for field_id, _field_label in SCORING_FIELDS:
+    for field_id, _field_label in review_mode_config.scoring_fields:
         counter = Counter()
         for record_id in records_by_id:
             review = dict(review_state.get(record_id, {}))
-            selected = normalize_review_choice(field_id=field_id, review=review)
+            selected = normalize_review_choice(
+                field_id=field_id,
+                review=review,
+                review_mode_config=review_mode_config,
+            )
             if selected:
                 counter[selected] += 1
         aggregate[field_id] = dict(sorted(counter.items()))
     validity_counter = Counter(
-        validity_code_from_value(str(review_state.get(record_id, {}).get("valid_for_comparison", "yes")).strip())
+        validity_code_from_value(
+            str(review_state.get(record_id, {}).get("valid_for_comparison", "yes")).strip(),
+            review_mode_config,
+        )
         for record_id in records_by_id
     )
     completed_count = sum(1 for record_id in records_by_id if bool(review_state.get(record_id, {}).get("completed", False)))
@@ -912,8 +1043,12 @@ def build_review_summary(
     for record_id, record in records_by_id.items():
         review = dict(review_state.get(record_id, {}))
         interpreted_review = {
-            field_id: normalize_review_choice(field_id=field_id, review=review)
-            for field_id, _field_label in SCORING_FIELDS
+            field_id: normalize_review_choice(
+                field_id=field_id,
+                review=review,
+                review_mode_config=review_mode_config,
+            )
+            for field_id, _field_label in review_mode_config.scoring_fields
         }
         records_payload.append(
             {
@@ -927,11 +1062,17 @@ def build_review_summary(
         )
 
     return {
+        "review_mode": review_mode_config.review_mode,
+        "field_labels": {field_id: field_label for field_id, field_label in review_mode_config.scoring_fields},
+        "validity_field_label": review_mode_config.validity_field_label,
+        "validity_options": {
+            code: label for code, label in review_mode_config.validity_options
+        },
         "manifest_paths": [path.as_posix() for path in manifest_paths],
         "record_count": len(records_by_id),
         "completed_count": completed_count,
         "session_notes": session_notes,
-        "tie_policy": "已完成且可比较的记录中，留空评分字段按“打平”解释。",
+        "tie_policy": review_mode_config.tie_policy,
         "aggregate": {
             "by_field": aggregate,
             "valid_for_comparison": dict(sorted(validity_counter.items())),
@@ -941,11 +1082,18 @@ def build_review_summary(
 
 
 def build_review_markdown(summary: dict[str, Any]) -> str:
-    field_label_map = dict(SCORING_FIELDS)
+    field_label_map = {
+        str(field_id): str(field_label)
+        for field_id, field_label in dict(summary.get("field_labels", {})).items()
+    }
+    validity_options = {
+        str(code): str(label) for code, label in dict(summary.get("validity_options", {})).items()
+    }
     lines = [
         "# 音频听审结果",
         "",
         "## 概览",
+        f"- 评审模式: {summary.get('review_mode', COMPARATIVE_REVIEW_MODE_CONFIG.review_mode)}",
         f"- 总记录数: {summary['record_count']}",
         f"- 已完成数: {summary['completed_count']}",
         f"- 清单文件: {summary['manifest_paths']}",
@@ -960,32 +1108,46 @@ def build_review_markdown(summary: dict[str, Any]) -> str:
                 lines.append(f"- {label}: {value}")
         else:
             lines.append("- 暂无")
-    lines.append("### 是否适合比较")
+    lines.append(f"### {summary.get('validity_field_label', '是否适合比较')}")
     for label, value in summary["aggregate"]["valid_for_comparison"].items():
-        lines.append(f"- {validity_label_from_value(label)}: {value}")
+        lines.append(f"- {validity_options.get(str(label), str(label))}: {value}")
     lines.extend(["", "## 会话备注", summary["session_notes"] or "（空）", "", "## 单条记录"])
     for record in summary["records"]:
         lines.append(f"### {record['record_id']}")
         lines.append(f"- 候选音频: {record['candidate_labels']}")
         review = record["review"]
         interpreted_review = record.get("interpreted_review", {})
-        for field_id, _field_label in SCORING_FIELDS:
+        for field_id in field_label_map:
             lines.append(f"- {field_label_map[field_id]}: {interpreted_review.get(field_id, review.get(field_id, ''))}")
-        lines.append(f"- 是否适合比较: {validity_label_from_value(str(review.get('valid_for_comparison', 'yes')))}")
+        lines.append(
+            f"- {summary.get('validity_field_label', '是否适合比较')}: "
+            f"{validity_options.get(str(review.get('valid_for_comparison', 'yes')), str(review.get('valid_for_comparison', 'yes')))}"
+        )
         lines.append(f"- 是否完成: {review.get('completed', False)}")
         lines.append(f"- 备注: {review.get('notes', '')}")
         lines.append("")
     return "\n".join(lines)
 
 
-def normalize_review_choice(field_id: str, review: dict[str, Any]) -> str:
+def normalize_review_choice(
+    field_id: str,
+    review: dict[str, Any],
+    review_mode_config: ReviewModeConfig,
+) -> str:
     selected = str(review.get(field_id, "")).strip()
     if selected:
         return selected
     is_completed = bool(review.get("completed", False))
-    validity_code = validity_code_from_value(str(review.get("valid_for_comparison", "yes")).strip())
-    if is_completed and validity_code != "no":
-        return TIE_LABEL
+    validity_code = validity_code_from_value(
+        str(review.get("valid_for_comparison", "yes")).strip(),
+        review_mode_config,
+    )
+    if (
+        is_completed
+        and validity_code != "no"
+        and review_mode_config.blank_completed_label is not None
+    ):
+        return review_mode_config.blank_completed_label
     return ""
 
 
@@ -1040,20 +1202,24 @@ def read_wav_duration(path: Path) -> tuple[float, int, int]:
     return frame_count / float(sample_rate), sample_rate, frame_count
 
 
-def validity_label_from_value(value: str) -> str:
+def validity_label_from_value(value: str, review_mode_config: ReviewModeConfig) -> str:
+    code_to_label = {code: label for code, label in review_mode_config.validity_options}
+    label_to_code = {label: code for code, label in review_mode_config.validity_options}
     normalized = value.strip()
-    if normalized in VALIDITY_CODE_TO_LABEL:
-        return VALIDITY_CODE_TO_LABEL[normalized]
-    if normalized in VALIDITY_LABEL_TO_CODE:
+    if normalized in code_to_label:
+        return code_to_label[normalized]
+    if normalized in label_to_code:
         return normalized
-    return VALIDITY_CODE_TO_LABEL["yes"]
+    return code_to_label["yes"]
 
 
-def validity_code_from_value(value: str) -> str:
+def validity_code_from_value(value: str, review_mode_config: ReviewModeConfig) -> str:
+    code_to_label = {code: label for code, label in review_mode_config.validity_options}
+    label_to_code = {label: code for code, label in review_mode_config.validity_options}
     normalized = value.strip()
-    if normalized in VALIDITY_LABEL_TO_CODE:
-        return VALIDITY_LABEL_TO_CODE[normalized]
-    if normalized in VALIDITY_CODE_TO_LABEL:
+    if normalized in label_to_code:
+        return label_to_code[normalized]
+    if normalized in code_to_label:
         return normalized
     return "yes"
 
@@ -1081,12 +1247,19 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="可选 smoke test 模式：窗口在指定毫秒后自动关闭。",
     )
+    parser.add_argument(
+        "--review-mode",
+        default=COMPARATIVE_REVIEW_MODE_CONFIG.review_mode,
+        choices=sorted(REVIEW_MODE_CONFIGS.keys()),
+        help="评审模式：comparative 用于多分支对比，milestone_acceptance 用于单 bundle 的绝对门槛验收。",
+    )
     return parser
 
 
 def launch_audio_audit_gui(
     bundle_paths: list[Path],
     output_dir: Path,
+    review_mode: str = COMPARATIVE_REVIEW_MODE_CONFIG.review_mode,
     auto_close_ms: int | None = None,
 ) -> None:
     root = tk.Tk()
@@ -1094,6 +1267,7 @@ def launch_audio_audit_gui(
         root=root,
         manifest_paths=bundle_paths,
         output_dir=output_dir,
+        review_mode=review_mode,
     )
     root.protocol("WM_DELETE_WINDOW", lambda: on_close(app))
     if auto_close_ms is not None:
@@ -1113,6 +1287,7 @@ def main(argv: list[str] | None = None) -> int:
     launch_audio_audit_gui(
         bundle_paths=list(args.bundle),
         output_dir=args.output_dir,
+        review_mode=args.review_mode,
         auto_close_ms=args.auto_close_ms,
     )
     return 0

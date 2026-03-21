@@ -19,6 +19,15 @@ from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_
 from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
 from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
 
+DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE = "pre_overlap_add"
+
+
+def normalize_training_reconstruction_frame_gain_apply_mode(frame_gain_apply_mode: str) -> str:
+    normalized = str(frame_gain_apply_mode).strip().lower()
+    if normalized not in {"pre_overlap_add", "post_ola_envelope"}:
+        raise ValueError(f"Unsupported training reconstruction frame_gain_apply_mode: {frame_gain_apply_mode}")
+    return normalized
+
 
 def build_offline_mvp_nores_vocoder_training_package(
     scaffold_path: Path,
@@ -176,6 +185,7 @@ def run_offline_mvp_nores_vocoder_training_step(
     stft_weight: float,
     rms_guard_weight: float,
     use_predicted_activity_gate: bool,
+    reconstruction_frame_gain_apply_mode: str,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -185,6 +195,9 @@ def run_offline_mvp_nores_vocoder_training_step(
         int(seed),
         resolved_device,
         deterministic=bool(deterministic),
+    )
+    resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
+        reconstruction_frame_gain_apply_mode
     )
 
     run_started_at = datetime.now()
@@ -241,6 +254,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         stft_weight=stft_weight,
         rms_guard_weight=rms_guard_weight,
         use_predicted_activity_gate=use_predicted_activity_gate,
+        reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
     )
     optimizer.zero_grad(set_to_none=True)
     total_loss.backward()
@@ -278,6 +292,7 @@ def run_offline_mvp_nores_vocoder_training_step(
             "stft": float(stft_weight),
             "rms_guard": float(rms_guard_weight),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
+            "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
         "train_step": {
             "started_at": run_started_at.isoformat(timespec="seconds"),
@@ -348,6 +363,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
     stft_weight: float,
     rms_guard_weight: float,
     use_predicted_activity_gate: bool,
+    reconstruction_frame_gain_apply_mode: str,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -357,6 +373,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
         int(seed),
         resolved_device,
         deterministic=bool(deterministic),
+    )
+    resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
+        reconstruction_frame_gain_apply_mode
     )
     checkpoints_dir = output_dir / "checkpoints"
     logs_dir = output_dir / "logs"
@@ -434,6 +453,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
             stft_weight=stft_weight,
             rms_guard_weight=rms_guard_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
+            reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
@@ -478,6 +498,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
+                reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                 frame_length=int(validation_runtime["frame_length"]),
                 hop_length=int(validation_runtime["hop_length"]),
                 validation_source=(
@@ -551,6 +572,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "stft": float(stft_weight),
                 "rms_guard": float(rms_guard_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
+                "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
         },
         "train_frame_count": int(training_payload["frame_count"]),
@@ -740,6 +762,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     stft_weight: float,
     rms_guard_weight: float,
     use_predicted_activity_gate: bool,
+    reconstruction_frame_gain_apply_mode: str,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -749,6 +772,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         int(seed),
         resolved_device,
         deterministic=bool(deterministic),
+    )
+    resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
+        reconstruction_frame_gain_apply_mode
     )
     checkpoints_dir = output_dir / "checkpoints"
     logs_dir = output_dir / "logs"
@@ -852,6 +878,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
+                reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
             )
             accumulated_loss = total_loss if accumulated_loss is None else accumulated_loss + total_loss
             package_metrics.append(
@@ -912,6 +939,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     stft_weight=stft_weight,
                     rms_guard_weight=rms_guard_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
+                    reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     validation_source="validation_packages",
                 )
             else:
@@ -929,6 +957,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     stft_weight=stft_weight,
                     rms_guard_weight=rms_guard_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
+                    reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     validation_source="train_packages_reused",
                 )
             validation_history.append(validation_payload_summary)
@@ -993,6 +1022,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "stft": float(stft_weight),
                 "rms_guard": float(rms_guard_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
+                "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
         },
         "step_history": step_history,
@@ -1336,7 +1366,7 @@ def reconstruct_waveform_from_frames(
     frame_gains: torch.Tensor | None = None,
     frame_gain_floor: float = 0.0,
     frame_gain_smoothing_frames: int = 0,
-    frame_gain_apply_mode: str = "pre_overlap_add",
+    frame_gain_apply_mode: str = DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
 ) -> torch.Tensor:
     if waveform_frames.ndim != 2:
         raise ValueError(f"Expected waveform_frames shape [frames, samples], got {tuple(waveform_frames.shape)}")
@@ -1507,7 +1537,11 @@ def compute_nores_vocoder_losses(
     stft_weight: float,
     rms_guard_weight: float,
     use_predicted_activity_gate: bool,
+    reconstruction_frame_gain_apply_mode: str,
 ) -> tuple[torch.Tensor, dict[str, float]]:
+    resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
+        reconstruction_frame_gain_apply_mode
+    )
     frame_activity_target = harmonic_target.new_ones(periodic_gate_target.shape)
     if aligned_waveform is not None and frame_length is not None and hop_length is not None:
         frame_activity_target = compute_frame_activity_target(
@@ -1550,6 +1584,7 @@ def compute_nores_vocoder_losses(
             frame_length=int(frame_length),
             hop_length=int(hop_length),
             frame_gains=predicted_activity if bool(use_predicted_activity_gate) else None,
+            frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
         )
         target_waveform = aligned_waveform[: decoded_waveform.shape[0]]
         waveform_loss = F.l1_loss(decoded_waveform, target_waveform)
@@ -1591,6 +1626,7 @@ def compute_nores_vocoder_losses(
         "periodic_gate_target_mean": round(float(periodic_gate_supervision.detach().mean().cpu().item()), 6),
         "noise_gate_target_mean": round(float(noise_gate_supervision.detach().mean().cpu().item()), 6),
         "activity_gate_target_mean": round(float(frame_activity_target.detach().mean().cpu().item()), 6),
+        "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         "decoded_waveform_rms": round(decoded_waveform_rms, 6),
         "target_waveform_rms": round(target_waveform_rms, 6),
         "decoded_to_target_rms_ratio": round(
@@ -1614,6 +1650,7 @@ def run_nores_vocoder_validation_pass(
     stft_weight: float,
     rms_guard_weight: float,
     use_predicted_activity_gate: bool,
+    reconstruction_frame_gain_apply_mode: str,
     frame_length: int,
     hop_length: int,
     validation_source: str,
@@ -1642,6 +1679,7 @@ def run_nores_vocoder_validation_pass(
             stft_weight=stft_weight,
             rms_guard_weight=rms_guard_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
+            reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
         )
     return {
         "step": int(step),
@@ -1689,6 +1727,7 @@ def run_nores_vocoder_dataset_validation_pass(
     stft_weight: float,
     rms_guard_weight: float,
     use_predicted_activity_gate: bool,
+    reconstruction_frame_gain_apply_mode: str,
     validation_source: str,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
@@ -1723,6 +1762,7 @@ def run_nores_vocoder_dataset_validation_pass(
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
+                reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
             )
             package_metrics.append(
                 {
@@ -1742,16 +1782,25 @@ def run_nores_vocoder_dataset_validation_pass(
     }
 
 
-def average_loss_metrics(metrics_list: list[dict[str, float]]) -> dict[str, float]:
+def average_loss_metrics(metrics_list: list[dict[str, object]]) -> dict[str, object]:
     if not metrics_list:
         return {}
     keys = list(metrics_list[0].keys())
-    averaged: dict[str, float] = {}
+    averaged: dict[str, object] = {}
     for key in keys:
-        averaged[key] = round(
-            sum(float(metrics[key]) for metrics in metrics_list) / len(metrics_list),
-            6,
-        )
+        values = [metrics[key] for metrics in metrics_list]
+        first_value = values[0]
+        try:
+            averaged[key] = round(
+                sum(float(value) for value in values) / len(values),
+                6,
+            )
+        except (TypeError, ValueError):
+            if any(value != first_value for value in values[1:]):
+                raise ValueError(
+                    f"Cannot average non-numeric loss metric {key!r} with inconsistent values: {values!r}"
+                )
+            averaged[key] = first_value
     return averaged
 
 

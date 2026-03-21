@@ -1,0 +1,14 @@
+# Offline MVP No-Residual Vocoder Train Step
+
+- generated_at: 2026-03-21T17:23:36
+- training_package_path: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_train_targets_smoke_chapter3_3_firefly_162/offline_mvp_nores_vocoder_train_targets.pt
+- model: {"name": "no_residual_source_filter_vocoder_scaffold", "hidden_dim": 64, "harmonic_bins": 32, "noise_bins": 32, "decoder_frame_length": 400}
+- optimizer: {"name": "Adam", "learning_rate": 0.001, "max_grad_norm": 5.0}
+- loss_weights: {"harmonic": 1.0, "noise": 1.0, "periodic_gate": 0.2, "noise_gate": 0.2, "activity_gate": 0.0, "waveform": 0.5, "stft": 0.5, "rms_guard": 0.2, "use_predicted_activity_gate": true, "reconstruction_frame_gain_apply_mode": "pre_overlap_add"}
+- train_step: {"started_at": "2026-03-21T17:23:34", "ended_at": "2026-03-21T17:23:36", "duration_sec": 1.502319, "frame_count": 167, "grad_norm": 3.0808, "loss_metrics": {"loss_total": 1.745659, "loss_harmonic_envelope": 0.448234, "loss_noise_envelope": 0.289309, "loss_periodic_gate": 0.70122, "loss_noise_gate": 0.644863, "loss_activity_gate": 0.528207, "loss_waveform": 0.217344, "loss_stft": 1.066686, "loss_rms_guard": 0.484418, "periodic_gate_pred_mean": 0.546134, "noise_gate_pred_mean": 0.640239, "activity_gate_pred_mean": 0.640239, "periodic_gate_target_mean": 0.596185, "noise_gate_target_mean": 0.648318, "activity_gate_target_mean": 0.847907, "reconstruction_frame_gain_apply_mode": "pre_overlap_add", "decoded_waveform_rms": 0.227042, "target_waveform_rms": 0.13987, "decoded_to_target_rms_ratio": 1.62323}}
+- checkpoint_path: F:/proj_dev/tmp/workdir4/reports/runtime/stage5_training_reconstruction_applymode_probe_round1_1/train_step_preola/offline_mvp_nores_vocoder_train_step.pt
+
+## Notes
+- This is a single-step Stage5 plumbing validation for the no-residual baseline route.
+- The objective may combine proxy spectral/gate targets with optional aligned waveform/STFT bootstrap losses, but it is still not the final multi-resolution or adversarial vocoder recipe from the design doc.
+- Use this step to verify loss, backward, optimizer, and checkpoint plumbing before adding adversarial or larger-scale decoder training.

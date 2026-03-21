@@ -8588,3 +8588,392 @@
     warning，
     让操作者第一时间知道当前 write root
     需要重新切分
+### 311. 当 `docs/240` 这种“听审入口恢复”中间态已经被 `docs/241` 和正式 `audio_audit_review.json` 覆盖后，不能再把实验线误判成“仍待人工听审”
+- 现象:
+  - 当前仓库里同时存在：
+    - `docs/240_stage5_step72_glitch_smooth3_postenv_human_audit_reactivation_report.md`
+    - `docs/241_stage5_step72_postenv_default_promotion_after_human_audit_report.md`
+  - 同时正式 session
+    目录里也已经存在：
+    - `audio_audit_review.json`
+    - `audio_audit_review.md`
+- 风险:
+  - 如果恢复上下文时只停在
+    `docs/240`
+    这种中间态，
+    会把真实停点误判回：
+    - `postenv`
+      仍待听审
+    - `reports/audio`
+      仍被旧听审 objective
+      占用
+  - 这样会让接班者重复检查已经收口的问题，
+    甚至继续维持过期的 live session 占坑
+- 处理要求:
+  - 恢复实验线时，
+    不能只读“reactivation”
+    类文档；
+    还必须同时核对：
+    - 后续正式结论文档
+    - 正式 review 产物
+    - 当前 CLI 默认值
+  - 只有三者一致后，
+    才能判断实验线真实停点
+
+### 312. Stage5 `postenv` 当前提升的是上层 decode/export 默认，不等于所有低层 waveform 重建调用都会自动继承新 apply mode
+- 现象:
+  - 当前
+    `export-offline-mvp-nores-vocoder-audio`
+    与
+    `run-offline-mvp-teacher-first-vc-demo`
+    都已把默认 apply mode
+    提升到：
+    `post_ola_envelope`
+  - 但
+    `src/v5vc/offline_vocoder_training.py`
+    中
+    `reconstruct_waveform_from_frames(...)`
+    的低层函数默认值
+    仍是：
+    `pre_overlap_add`
+  - 同文件里的训练损失路径
+    还存在不显式传
+    `frame_gain_apply_mode`
+    的调用
+- 风险:
+  - 以后如果有人绕过上层 CLI，
+    直接调低层函数，
+    会静默回到旧 apply mode
+  - 反过来如果不加区分地直接修改低层默认，
+    又可能顺带改掉训练路径语义，
+    让“导出默认提升”
+    误扩散成
+    “训练默认也被一起改了”
+- 处理要求:
+  - 未来凡是直接调用低层 waveform 重建函数，
+    都应显式传：
+    - `frame_gain_apply_mode`
+  - 讨论
+    `postenv`
+    默认提升时，
+    必须明确区分：
+    - 上层 decode/export 默认
+    - 低层训练/工具调用默认
+- 本轮处理结果:
+  - 训练损失路径已改为显式传：
+    - `frame_gain_apply_mode = pre_overlap_add`
+  - 训练 summary / metrics
+    也已开始显式记录：
+    - `reconstruction_frame_gain_apply_mode`
+  - 但低层函数本身仍保留默认值，
+    所以后续新增调用点
+    依旧不能偷懒省略该参数
+### 313. 当训练侧 apply mode 已接成正式参数后，不能再用“改源码默认”代替实验设计；否则会把实验变量和主线默认重新绑回一起
+- 现象:
+  - 当前训练 CLI
+    已正式支持：
+    - `--reconstruction-frame-gain-apply-mode`
+  - 且该参数已经贯通：
+    - train-step
+    - training-loop
+    - dataset-training-loop
+- 风险:
+  - 如果后续还继续通过改
+    `DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE`
+    来做对照，
+    会重新把：
+    - 工程默认
+    - 实验变量
+    混在一起
+  - 这样会让接班者分不清：
+    - 这次是在做正式实验
+    - 还是在改主线默认
+- 处理要求:
+  - 后续凡是讨论训练侧
+    apply mode
+    对照，
+    优先直接用正式 CLI 参数起实验
+  - 只有在实验结论已经收口并决定升格默认时，
+    才考虑改训练侧默认常量
+### 314. dataset-level `average_loss_metrics(...)` 不能默认假设所有 loss_metrics 字段都是数值；一旦把字符串元数据也落进去，聚合阶段会直接炸掉
+- 现象:
+  - 本轮给训练侧
+    `loss_metrics`
+    新增了：
+    - `reconstruction_frame_gain_apply_mode`
+  - 随后首次跑
+    dataset loop
+    时，
+    `average_loss_metrics(...)`
+    仍把所有字段都按
+    `float(...)`
+    聚合，
+    直接报错：
+    - `could not convert string to float`
+- 风险:
+  - 这类问题会让：
+    - 单步 smoke
+      通过
+    - 但 dataset loop
+      才真正失败
+  - 也就是：
+    新参数看起来“接上了”，
+    实际上还没有穿透到完整训练入口
+- 处理要求:
+  - 以后只要往
+    `loss_metrics`
+    里新增非数值字段，
+    就必须同步检查：
+    - step-level 写盘
+    - validation 聚合
+    - dataset package 聚合
+  - 聚合函数应遵守：
+    - 数值字段求平均
+    - 非数值字段若一致则保留
+    - 非数值字段若不一致则显式报错，
+      不能静默吞掉
+### 315. 当一条实验子线已经连续得到“主线已收口 / 短程无强信号 / 已有负结论”这三类结果时，不要为了维持推进感继续扩小实验；这通常只是在消耗实验预算
+- 现象:
+  - 当前 Stage5
+    实验线最近几条子题已经分别收敛到：
+    - decode-side
+      `postenv`
+      已正式默认化
+    - training-side
+      apply mode
+      最小 A/B
+      几乎打平
+    - clean-only /
+      reverb-like
+      路线
+      已有负结论
+- 风险:
+  - 如果此时还继续追加：
+    - 更多短程 smoke
+    - 没有新症状支撑的局部 probe
+    - 只是为了“线别停”
+      的微调实验
+  - 很容易得到：
+    - 新结果很多
+    - 但真正新增信息很少
+  - 最后既占训练预算，
+    也让接班者更难看出
+    哪些题其实早该停
+- 处理要求:
+  - 当子线已经同时满足：
+    - 主线结论已收口
+    - 短程 A/B
+      无强信号
+    - 或已有正式负结论
+  - 默认动作应转为：
+    - 先冻结该子线
+    - 重新做候选题评估
+  - 只有出现新的明确症状、
+    新 family，
+    或用户明确要求升级证据层级时，
+    才重新开实验
+### 316. 当 Stage5 最近几条局部 tweak 都已收口时，不要把“还能继续扫局部参数”误当成“最合理的下一步”；应先回到原设计门槛，检查真正悬空的是不是 no-res 主干能力与控制变量使用性证据
+- 现象:
+  - 当前实验线最近很容易继续开的题，
+    主要是：
+    - decode-side
+      `postenv`
+      周边
+    - training-side
+      apply mode
+    - clean-only /
+      reverb-like
+  - 但这些题现在分别已经变成：
+    - 已正式默认化
+    - 短程无强信号
+    - 已有负结论
+  - 同时，
+    回到
+    `initial_design.md`
+    看，
+    Stage5
+    真正的大门槛仍然是：
+    - no-res 主干
+      是否可懂、稳定、基本自然
+    - 控制变量
+      是否真在起作用
+- 风险:
+  - 如果这时还沿着
+    “当前最容易动手的小参数”
+    继续扫，
+    很容易得到：
+    - 局部报告越来越多
+    - 但原设计最关键的问题
+      仍未被正式回答
+  - 接班者会误以为：
+    - 这条线还在高速推进
+  - 实际上更可能只是：
+    - 在边角题上循环
+- 处理要求:
+  - 当局部 tweak
+    已阶段性收口时，
+    下一步默认先做：
+    - 原设计门槛复核
+  - 明确拆开：
+    - 已达成
+    - 未达成
+    - 缺证据
+  - 只有当原设计主门槛已经回答清楚，
+    或出现新的明确异常时，
+    才继续开下一条局部实验
+### 317. 当 Stage5 从“分支治理题”切到“门槛验收题”后，不能继续沿用旧的对比分支心智；绝对验收必须固定当前 best route，并明确 pass/fail 维度
+- 现象:
+  - Stage5
+    之前连续几轮工作，
+    主要都是：
+    - `step72 vs step96 vs step48`
+    - `activitygate60 vs 72`
+    - `smooth3 vs postenv`
+    这类分支对比
+  - 但当这些题收口后，
+    下一步已经变成：
+    - 当前 best route
+      自己是否通过
+      no-res
+      阶段门槛
+- 风险:
+  - 如果这时还继续沿用：
+    - “再找一个对照分支”
+    - “再比较两个 bundle”
+    的心智，
+  - 很容易把：
+    - 绝对验收问题
+  - 又退化回：
+    - 局部排序问题
+  - 结果就是：
+    - 会开很多新 session
+    - 但始终没人真正回答
+      “当前 best route
+      到底过没过门槛”
+- 处理要求:
+  - 当题目已经切到
+    Stage5 no-res
+    门槛验收时，
+    默认先固定：
+    - 单一当前 best route bundle
+    - 固定 session 输出目录
+    - 固定主判断维度：
+      - intelligibility
+      - stability
+      - basic naturalness
+  - 只有当门槛验收明确失败，
+    且失败维度清楚后，
+    才回到新的局部对照实验
+### 319. 当 Stage5 单 bundle 的绝对门槛验收继续复用旧的分支对比评分字段时，听审虽然能启动，但结论结构会持续跑偏
+- 现象:
+  - 当前
+    Stage5 no-res
+    milestone acceptance
+    的题目，
+    本质上是在问：
+    - 当前 best route
+      自己是否达到
+      可懂 / 稳定 / 基本自然
+  - 但旧
+    `audio_audit_gui`
+    默认字段是：
+    - `best_rhythm`
+    - `best_boundary`
+    - `most_stable`
+    - `overall_pick`
+  - 这些字段适合：
+    - 多分支比较
+  - 不适合：
+    - 单 bundle
+      的绝对门槛验收
+- 风险:
+  - 如果不改字段，
+    团队会得到：
+    - 能听
+    - 也能导出
+    - 但最后文档仍然得靠人工“翻译”成
+      可懂性 / 稳定性 / 自然度
+  - 这会让：
+    - 单条备注
+    - aggregate
+    - fixed report
+    三者长期不对题
+  - 甚至会把绝对验收问题，
+    又悄悄拖回：
+    - “谁更好”
+    的对比心智
+- 处理要求:
+  - 只要题目已经切到
+    单 bundle
+    的
+    Stage5 no-res
+    milestone acceptance，
+    就应切到专用评审模式
+  - 字段至少直接覆盖：
+    - intelligibility
+    - stability
+    - basic naturalness
+    - milestone verdict
+  - 且留空语义不能再沿用
+    comparative
+    模式下的
+    `打平`
+    自动解释
+### 318. 当用户线出现“能稳定导出但主观上高频 buzzing”的症状时，不能只看 scaffold-level applicability probe 就下结论；decoder-side 行为可能已经严重脱离训练内分布
+- 现象:
+  - 当前
+    `teacher-first / single-target`
+    用户线已经具备：
+    - 最小闭环 CLI
+    - review bundle
+    - applicability probe
+  - 第一轮 scaffold-level
+    applicability probe
+    显示：
+    - 常规 segment
+      与 peak case
+      的特征偏移不算极端
+    - 但主观听感仍出现明显高频 buzzing
+  - 本轮继续补做
+    decoder behavior probe
+    后发现：
+    - 参考 train package
+      的
+      `decoded_spectral_high_band_energy_ratio`
+      约为
+      `0.0645`
+    - 用户线 case
+      却稳定落到
+      `0.4776~0.4795`
+    - `rolloff95 / centroid / bandwidth`
+      也系统性偏高
+- 风险:
+  - 如果只看 scaffold-level
+    分布，
+    很容易误判成：
+    - 输入特征只是轻微偏移
+    - 现有用户线质量问题不严重
+  - 实际上真正的异常
+    可能在：
+    - decoder 接收这组控制后，
+      输出频谱分布整体塌向高频
+  - 这会让团队继续把：
+    - review bundle
+      当作质量演示入口，
+    而忽略它其实已经越过适用性边界
+- 处理要求:
+  - 当用户线已经出现：
+    - “工程能跑”
+    - 但“听感异常”
+  - 诊断不能停在
+    scaffold-level
+    对比；
+    必须继续补：
+    - same-checkpoint
+      decoder behavior probe
+  - 只有同时看过：
+    - control/scaffold 分布
+    - decoded 行为分布
+  - 才能判断问题更接近：
+    - 路由/文件错误
+    - 还是 checkpoint 适用性失配

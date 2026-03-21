@@ -41,13 +41,19 @@ from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_
 from v5vc.offline_teacher_runtime import run_offline_mvp_teacher_runtime
 from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
 from v5vc.teacher_first_vc_demo import (
+    analyze_teacher_first_vc_applicability,
+    analyze_teacher_first_vc_decoder_behavior,
+    build_teacher_first_vc_review_bundle,
     DEFAULT_CALIBRATION_ASSET_PATH,
+    DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH,
     DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
     DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+    run_teacher_first_vc_demo_self_check,
     run_offline_mvp_teacher_first_vc_demo,
 )
 from v5vc.offline_vocoder_scaffold import prepare_offline_mvp_nores_vocoder_scaffold
 from v5vc.offline_vocoder_training import (
+    DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
     build_offline_mvp_nores_vocoder_dataset_packages,
     build_offline_mvp_nores_vocoder_training_package,
     run_offline_mvp_nores_vocoder_dataset_training_loop,
@@ -1610,6 +1616,214 @@ def build_parser() -> argparse.ArgumentParser:
             "pre_overlap_add or post_ola_envelope."
         ),
     )
+    teacher_first_vc_demo_self_check_parser = subparsers.add_parser(
+        "self-check-offline-mvp-teacher-first-vc-demo",
+        help="Run a short success/failure regression bundle for the teacher-first single-target demo path.",
+    )
+    teacher_first_vc_demo_self_check_parser.add_argument(
+        "--input-audio",
+        type=Path,
+        default=DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH,
+        help="Short source wav used for the self-check bundle.",
+    )
+    teacher_first_vc_demo_self_check_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("tmp/teacher_first_vc_demo_self_check"),
+        help="Directory for case outputs and the aggregate self-check summary.",
+    )
+    teacher_first_vc_demo_self_check_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the self-check bundle. Defaults to cpu for reproducibility.",
+    )
+    teacher_first_vc_demo_self_check_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=0.1,
+        help="Optional max duration to read from the input wav for each self-check case.",
+    )
+    teacher_first_vc_review_bundle_parser = subparsers.add_parser(
+        "build-offline-mvp-teacher-first-vc-review-bundle",
+        help="Export a multi-case terminal-user listening bundle on top of the teacher-first single-target runtime.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        default=[],
+        help="Input wav path to include in the review bundle. Can be passed multiple times.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--input-spec-jsonl",
+        type=Path,
+        default=None,
+        help="Optional jsonl spec with case_id, input_audio_path, max_audio_sec, and notes fields.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/offline_mvp_teacher_first_vc_demo_review_bundle"),
+        help="Directory for bundle summaries, per-case runs, and flattened listening wav files.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the review bundle. Defaults to cpu for reproducibility.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--max-audio-sec-default",
+        type=float,
+        default=None,
+        help="Fallback max duration when --input-audio is used directly without per-case max_audio_sec.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each bundle case.",
+    )
+    teacher_first_vc_review_bundle_parser.set_defaults(
+        save_intermediates=False,
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--save-intermediates",
+        dest="save_intermediates",
+        action="store_true",
+        help="Keep per-case teacher contract and vocoder scaffold intermediates.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--no-save-intermediates",
+        dest="save_intermediates",
+        action="store_false",
+        help="Remove per-case intermediates after decoded wav export.",
+    )
+    teacher_first_vc_review_bundle_parser.add_argument(
+        "--skip-full-pass-verify",
+        action="store_true",
+        help="Skip the teacher full-pass verification stage for each bundle case.",
+    )
+    teacher_first_vc_applicability_parser = subparsers.add_parser(
+        "analyze-offline-mvp-teacher-first-vc-applicability",
+        help="Compare teacher-first user-line scaffold features against Stage5 reference training-package distributions.",
+    )
+    teacher_first_vc_applicability_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        required=True,
+        help="Input wav path to diagnose. Can be passed multiple times.",
+    )
+    teacher_first_vc_applicability_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe"),
+        help="Directory for per-case runs and applicability summaries.",
+    )
+    teacher_first_vc_applicability_parser.add_argument(
+        "--reference-package",
+        dest="reference_package_list",
+        action="append",
+        type=Path,
+        default=[],
+        help="Optional explicit Stage5 training-package path. Can be passed multiple times.",
+    )
+    teacher_first_vc_applicability_parser.add_argument(
+        "--reference-package-limit",
+        type=int,
+        default=32,
+        help="When explicit reference packages are omitted, use up to this many default Stage5 train packages.",
+    )
+    teacher_first_vc_applicability_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the diagnostic case exports. Defaults to cpu.",
+    )
+    teacher_first_vc_applicability_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from each diagnostic input wav.",
+    )
+    teacher_first_vc_applicability_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each diagnostic export.",
+    )
+    teacher_first_vc_decoder_behavior_parser = subparsers.add_parser(
+        "analyze-offline-mvp-teacher-first-vc-decoder-behavior",
+        help="Compare teacher-first user-line decoder outputs against the same Stage5 checkpoint on in-distribution training packages.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        required=True,
+        help="Input wav path to diagnose. Can be passed multiple times.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/decoder_behavior_probe"
+        ),
+        help="Directory for per-case runs and decoder-behavior summaries.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--reference-package",
+        dest="reference_package_list",
+        action="append",
+        type=Path,
+        default=[],
+        help="Optional explicit Stage5 training-package path. Can be passed multiple times.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--reference-package-limit",
+        type=int,
+        default=32,
+        help="When explicit reference packages are omitted, use up to this many default Stage5 train packages.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the diagnostic case exports. Defaults to cpu.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from each diagnostic input wav.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each diagnostic export.",
+    )
+    teacher_first_vc_decoder_behavior_parser.set_defaults(
+        use_predicted_activity_gate=True,
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_true",
+        help="Apply the predicted activity gate during decoder-behavior reconstruction.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--disable-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_false",
+        help="Bypass the predicted activity gate so the probe reconstructs directly from waveform_frames.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--predicted-activity-gate-apply-mode",
+        default="post_ola_envelope",
+        help="How predicted activity gains are applied when the gate is enabled: pre_overlap_add or post_ola_envelope.",
+    )
 
     nores_vocoder_parser = subparsers.add_parser(
         "prepare-offline-mvp-nores-vocoder-scaffold",
@@ -1800,6 +2014,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
     )
+    nores_vocoder_train_step_parser.add_argument(
+        "--reconstruction-frame-gain-apply-mode",
+        default=DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
+        help=(
+            "How predicted frame gains are applied during training-side waveform reconstruction: "
+            "pre_overlap_add or post_ola_envelope. "
+            "Defaults to the current explicit training semantics."
+        ),
+    )
     nores_vocoder_train_loop_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-training-loop",
         help="Run a minimal multi-step training loop on the no-residual vocoder target package.",
@@ -1926,6 +2149,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--reconstruction-frame-gain-apply-mode",
+        default=DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
+        help=(
+            "How predicted frame gains are applied during training-side waveform reconstruction: "
+            "pre_overlap_add or post_ola_envelope. "
+            "Defaults to the current explicit training semantics."
+        ),
     )
     nores_vocoder_dataset_packages_parser = subparsers.add_parser(
         "build-offline-mvp-nores-vocoder-dataset-packages",
@@ -2148,6 +2380,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--reconstruction-frame-gain-apply-mode",
+        default=DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
+        help=(
+            "How predicted frame gains are applied during training-side waveform reconstruction: "
+            "pre_overlap_add or post_ola_envelope. "
+            "Defaults to the current explicit training semantics."
+        ),
     )
     nores_vocoder_review_parser = subparsers.add_parser(
         "review-offline-mvp-nores-vocoder-checkpoints",
@@ -3366,6 +3607,50 @@ def main(argv: list[str] | None = None) -> int:
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
         )
         return 0
+    if args.command == "self-check-offline-mvp-teacher-first-vc-demo":
+        run_teacher_first_vc_demo_self_check(
+            input_audio_path=args.input_audio,
+            output_dir=args.output_dir,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+        )
+        return 0
+    if args.command == "build-offline-mvp-teacher-first-vc-review-bundle":
+        build_teacher_first_vc_review_bundle(
+            output_dir=args.output_dir,
+            input_audio_paths=list(args.input_audio_list),
+            input_spec_jsonl_path=args.input_spec_jsonl,
+            device=args.device,
+            max_audio_sec_default=args.max_audio_sec_default,
+            save_intermediates=bool(args.save_intermediates),
+            verify_against_full_pass=not bool(args.skip_full_pass_verify),
+            chunk_ms=args.chunk_ms,
+        )
+        return 0
+    if args.command == "analyze-offline-mvp-teacher-first-vc-applicability":
+        analyze_teacher_first_vc_applicability(
+            input_audio_paths=list(args.input_audio_list),
+            output_dir=args.output_dir,
+            reference_package_paths=list(args.reference_package_list),
+            reference_package_limit=args.reference_package_limit,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+            chunk_ms=args.chunk_ms,
+        )
+        return 0
+    if args.command == "analyze-offline-mvp-teacher-first-vc-decoder-behavior":
+        analyze_teacher_first_vc_decoder_behavior(
+            input_audio_paths=list(args.input_audio_list),
+            output_dir=args.output_dir,
+            reference_package_paths=list(args.reference_package_list),
+            reference_package_limit=args.reference_package_limit,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+            chunk_ms=args.chunk_ms,
+            use_predicted_activity_gate=bool(args.use_predicted_activity_gate),
+            predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+        )
+        return 0
     if args.command == "prepare-offline-mvp-nores-vocoder-scaffold":
         prepare_offline_mvp_nores_vocoder_scaffold(
             scaffold_path=args.input_scaffold,
@@ -3406,6 +3691,7 @@ def main(argv: list[str] | None = None) -> int:
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
+            reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -3431,6 +3717,7 @@ def main(argv: list[str] | None = None) -> int:
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
+            reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -3476,6 +3763,7 @@ def main(argv: list[str] | None = None) -> int:
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
+            reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":

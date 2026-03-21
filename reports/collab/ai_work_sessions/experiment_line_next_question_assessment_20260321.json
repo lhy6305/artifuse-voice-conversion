@@ -1,0 +1,23 @@
+{
+  "session_id": "experiment_line_next_question_assessment_20260321",
+  "owner": "codex-main",
+  "lane": "experiment_line",
+  "status": "completed",
+  "objective": "completed ranked next-question assessment for experiment line and recommended freezing low-information sublines",
+  "created_at": "2026-03-21T17:33:12",
+  "updated_at": "2026-03-21T17:35:53",
+  "write_roots": [
+    "F:/proj_dev/tmp/workdir4/docs",
+    "F:/proj_dev/tmp/workdir4/reports/collab/ai_work_sessions"
+  ],
+  "read_roots": [],
+  "handoff_docs": [
+    "F:/proj_dev/tmp/workdir4/docs/247_stage5_experiment_line_next_question_assessment_report.md"
+  ],
+  "depends_on": [],
+  "notes": [
+    "Current recommendation: do not open a new experiment until a higher-value Stage5 question appears."
+  ],
+  "write_root_conflicts": [],
+  "warnings": []
+}

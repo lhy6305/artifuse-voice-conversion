@@ -1,0 +1,243 @@
+{
+  "generated_at": "2026-03-21T17:24:18",
+  "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_train_targets_smoke_chapter3_3_firefly_162/offline_mvp_nores_vocoder_train_targets.pt",
+  "validation_package_path": null,
+  "timing": {
+    "started_at": "2026-03-21T17:24:16",
+    "ended_at": "2026-03-21T17:24:18",
+    "duration_sec": 1.759694
+  },
+  "model": {
+    "name": "no_residual_source_filter_vocoder_scaffold",
+    "hidden_dim": 64,
+    "harmonic_bins": 32,
+    "noise_bins": 32,
+    "decoder_frame_length": 400
+  },
+  "runtime": {
+    "device": "cpu"
+  },
+  "reproducibility": {
+    "seed": 20260317,
+    "deterministic_algorithms": false,
+    "cudnn_deterministic": false,
+    "cudnn_benchmark": false
+  },
+  "training": {
+    "seed": 20260317,
+    "deterministic": false,
+    "num_steps": 3,
+    "validation_interval": 1,
+    "checkpoint_interval": 3,
+    "learning_rate": 0.001,
+    "max_grad_norm": 5.0,
+    "loss_weights": {
+      "harmonic": 1.0,
+      "noise": 1.0,
+      "periodic_gate": 0.2,
+      "noise_gate": 0.2,
+      "activity_gate": 0.0,
+      "waveform": 0.5,
+      "stft": 0.5,
+      "rms_guard": 0.2,
+      "use_predicted_activity_gate": true,
+      "reconstruction_frame_gain_apply_mode": "pre_overlap_add"
+    }
+  },
+  "train_frame_count": 167,
+  "validation_frame_count": 167,
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-21T17:24:18",
+      "ended_at": "2026-03-21T17:24:18",
+      "duration_sec": 0.113303,
+      "frame_count": 167,
+      "grad_norm": 3.0808,
+      "loss_metrics": {
+        "loss_total": 1.745659,
+        "loss_harmonic_envelope": 0.448234,
+        "loss_noise_envelope": 0.289309,
+        "loss_periodic_gate": 0.70122,
+        "loss_noise_gate": 0.644863,
+        "loss_activity_gate": 0.528207,
+        "loss_waveform": 0.217344,
+        "loss_stft": 1.066686,
+        "loss_rms_guard": 0.484418,
+        "periodic_gate_pred_mean": 0.546134,
+        "noise_gate_pred_mean": 0.640239,
+        "activity_gate_pred_mean": 0.640239,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.227042,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.62323
+      },
+      "status": "step_completed"
+    },
+    {
+      "step": 2,
+      "started_at": "2026-03-21T17:24:18",
+      "ended_at": "2026-03-21T17:24:18",
+      "duration_sec": 0.072379,
+      "frame_count": 167,
+      "grad_norm": 2.664131,
+      "loss_metrics": {
+        "loss_total": 1.503343,
+        "loss_harmonic_envelope": 0.383495,
+        "loss_noise_envelope": 0.241135,
+        "loss_periodic_gate": 0.692209,
+        "loss_noise_gate": 0.655948,
+        "loss_activity_gate": 0.601249,
+        "loss_waveform": 0.187569,
+        "loss_stft": 0.920685,
+        "loss_rms_guard": 0.27477,
+        "periodic_gate_pred_mean": 0.561019,
+        "noise_gate_pred_mean": 0.575693,
+        "activity_gate_pred_mean": 0.57907,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.184101,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.316228
+      },
+      "status": "step_completed"
+    },
+    {
+      "step": 3,
+      "started_at": "2026-03-21T17:24:18",
+      "ended_at": "2026-03-21T17:24:18",
+      "duration_sec": 0.071793,
+      "frame_count": 167,
+      "grad_norm": 2.653991,
+      "loss_metrics": {
+        "loss_total": 1.342578,
+        "loss_harmonic_envelope": 0.339088,
+        "loss_noise_envelope": 0.207927,
+        "loss_periodic_gate": 0.681805,
+        "loss_noise_gate": 0.682937,
+        "loss_activity_gate": 0.613115,
+        "loss_waveform": 0.171388,
+        "loss_stft": 0.817979,
+        "loss_rms_guard": 0.139656,
+        "periodic_gate_pred_mean": 0.568595,
+        "noise_gate_pred_mean": 0.514739,
+        "activity_gate_pred_mean": 0.568595,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.160834,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.149879
+      },
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 1,
+      "validation_source": "train_targets_reused",
+      "frame_count": 167,
+      "loss_metrics": {
+        "loss_total": 1.503343,
+        "loss_harmonic_envelope": 0.383495,
+        "loss_noise_envelope": 0.241135,
+        "loss_periodic_gate": 0.692209,
+        "loss_noise_gate": 0.655948,
+        "loss_activity_gate": 0.601249,
+        "loss_waveform": 0.187569,
+        "loss_stft": 0.920685,
+        "loss_rms_guard": 0.27477,
+        "periodic_gate_pred_mean": 0.561019,
+        "noise_gate_pred_mean": 0.575693,
+        "activity_gate_pred_mean": 0.57907,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.184101,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.316228
+      }
+    },
+    {
+      "step": 2,
+      "validation_source": "train_targets_reused",
+      "frame_count": 167,
+      "loss_metrics": {
+        "loss_total": 1.342578,
+        "loss_harmonic_envelope": 0.339088,
+        "loss_noise_envelope": 0.207927,
+        "loss_periodic_gate": 0.681805,
+        "loss_noise_gate": 0.682937,
+        "loss_activity_gate": 0.613115,
+        "loss_waveform": 0.171388,
+        "loss_stft": 0.817979,
+        "loss_rms_guard": 0.139656,
+        "periodic_gate_pred_mean": 0.568595,
+        "noise_gate_pred_mean": 0.514739,
+        "activity_gate_pred_mean": 0.568595,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.160834,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.149879
+      }
+    },
+    {
+      "step": 3,
+      "validation_source": "train_targets_reused",
+      "frame_count": 167,
+      "loss_metrics": {
+        "loss_total": 1.208208,
+        "loss_harmonic_envelope": 0.313696,
+        "loss_noise_envelope": 0.171134,
+        "loss_periodic_gate": 0.681215,
+        "loss_noise_gate": 0.701545,
+        "loss_activity_gate": 0.640069,
+        "loss_waveform": 0.152163,
+        "loss_stft": 0.717952,
+        "loss_rms_guard": 0.058839,
+        "periodic_gate_pred_mean": 0.540944,
+        "noise_gate_pred_mean": 0.482956,
+        "activity_gate_pred_mean": 0.540944,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.131878,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 0.942858
+      }
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_training_reconstruction_applymode_probe_round1_1/training_loop_preola/checkpoints/offline_mvp_nores_vocoder_loop.step3.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_training_reconstruction_applymode_probe_round1_1/training_loop_preola/checkpoints/offline_mvp_nores_vocoder_loop.step3.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 3,
+      "loss_total": 1.208208,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_training_reconstruction_applymode_probe_round1_1/training_loop_preola/checkpoints/offline_mvp_nores_vocoder_loop.step3.pt"
+    }
+  },
+  "notes": [
+    "This is a minimal Stage5 multi-step loop for the no-residual baseline route.",
+    "The loop currently optimizes one aligned train-target package repeatedly to verify optimizer/checkpoint/validation plumbing before dataset-level batching.",
+    "Validation can optionally reuse the train package or read a separate package, and may include aligned waveform/STFT bootstrap losses, but it is still not the final multi-resolution or adversarial vocoder objective."
+  ],
+  "next_steps": [
+    "Replace the single-package loop with dataset-level package sampling once multiple aligned target packages exist.",
+    "Decide whether the next Stage5 objective should keep using the bootstrap waveform/STFT path or move to a stronger multi-resolution decoder recipe.",
+    "Keep final-vocoder language disabled until decoder, validation, and audio export are truly added."
+  ]
+}

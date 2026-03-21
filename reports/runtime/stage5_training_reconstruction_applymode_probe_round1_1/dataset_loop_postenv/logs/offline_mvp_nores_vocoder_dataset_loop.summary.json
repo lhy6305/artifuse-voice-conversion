@@ -1,0 +1,507 @@
+{
+  "generated_at": "2026-03-21T17:26:41",
+  "dataset_index_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/offline_mvp_nores_vocoder_dataset_index.json",
+  "timing": {
+    "started_at": "2026-03-21T17:26:39",
+    "ended_at": "2026-03-21T17:26:41",
+    "duration_sec": 1.67361
+  },
+  "dataset": {
+    "train_package_count": 2,
+    "validation_package_count": 1
+  },
+  "model": {
+    "name": "no_residual_source_filter_vocoder_scaffold",
+    "hidden_dim": 64,
+    "harmonic_bins": 32,
+    "noise_bins": 32,
+    "decoder_frame_length": 400
+  },
+  "runtime": {
+    "device": "cpu"
+  },
+  "training": {
+    "num_steps": 3,
+    "packages_per_step": 2,
+    "validation_interval": 1,
+    "checkpoint_interval": 3,
+    "sampler_mode": "sequential",
+    "seed": 20260317,
+    "deterministic": false,
+    "learning_rate": 0.001,
+    "max_grad_norm": 5.0,
+    "loss_weights": {
+      "harmonic": 1.0,
+      "noise": 1.0,
+      "periodic_gate": 0.2,
+      "noise_gate": 0.2,
+      "activity_gate": 0.0,
+      "waveform": 0.5,
+      "stft": 0.5,
+      "rms_guard": 0.2,
+      "use_predicted_activity_gate": true,
+      "reconstruction_frame_gain_apply_mode": "post_ola_envelope"
+    }
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-21T17:26:40",
+      "ended_at": "2026-03-21T17:26:40",
+      "duration_sec": 0.086028,
+      "packages_per_step": 2,
+      "record_ids": [
+        "target::chapter3_22_firefly_105",
+        "target::chapter3_17_firefly_138"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.659015,
+        "loss_harmonic_envelope": 0.425694,
+        "loss_noise_envelope": 0.291961,
+        "loss_periodic_gate": 0.706916,
+        "loss_noise_gate": 0.66256,
+        "loss_activity_gate": 0.540291,
+        "loss_waveform": 0.264321,
+        "loss_stft": 1.046751,
+        "loss_rms_guard": 0.059638,
+        "periodic_gate_pred_mean": 0.548628,
+        "noise_gate_pred_mean": 0.640858,
+        "activity_gate_pred_mean": 0.640858,
+        "periodic_gate_target_mean": 0.575128,
+        "noise_gate_target_mean": 0.61971,
+        "activity_gate_target_mean": 0.828477,
+        "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+        "decoded_waveform_rms": 0.229605,
+        "target_waveform_rms": 0.242749,
+        "decoded_to_target_rms_ratio": 0.949364
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_22_firefly_105",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/train/target__chapter3_22_firefly_105/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 61,
+          "loss_metrics": {
+            "loss_total": 1.666429,
+            "loss_harmonic_envelope": 0.386838,
+            "loss_noise_envelope": 0.291312,
+            "loss_periodic_gate": 0.711681,
+            "loss_noise_gate": 0.667899,
+            "loss_activity_gate": 0.55771,
+            "loss_waveform": 0.273373,
+            "loss_stft": 1.106003,
+            "loss_rms_guard": 0.113378,
+            "periodic_gate_pred_mean": 0.549111,
+            "noise_gate_pred_mean": 0.640473,
+            "activity_gate_pred_mean": 0.640473,
+            "periodic_gate_target_mean": 0.566584,
+            "noise_gate_target_mean": 0.609333,
+            "activity_gate_target_mean": 0.797873,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.230188,
+            "target_waveform_rms": 0.257823,
+            "decoded_to_target_rms_ratio": 0.892813
+          }
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/train/target__chapter3_17_firefly_138/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 107,
+          "loss_metrics": {
+            "loss_total": 1.6516,
+            "loss_harmonic_envelope": 0.46455,
+            "loss_noise_envelope": 0.292611,
+            "loss_periodic_gate": 0.702151,
+            "loss_noise_gate": 0.657222,
+            "loss_activity_gate": 0.522872,
+            "loss_waveform": 0.25527,
+            "loss_stft": 0.987499,
+            "loss_rms_guard": 0.005897,
+            "periodic_gate_pred_mean": 0.548146,
+            "noise_gate_pred_mean": 0.641244,
+            "activity_gate_pred_mean": 0.641244,
+            "periodic_gate_target_mean": 0.583673,
+            "noise_gate_target_mean": 0.630087,
+            "activity_gate_target_mean": 0.859081,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.229022,
+            "target_waveform_rms": 0.227675,
+            "decoded_to_target_rms_ratio": 1.005915
+          }
+        }
+      ],
+      "grad_norm": 2.422746,
+      "status": "step_completed"
+    },
+    {
+      "step": 2,
+      "started_at": "2026-03-21T17:26:40",
+      "ended_at": "2026-03-21T17:26:40",
+      "duration_sec": 0.060719,
+      "packages_per_step": 2,
+      "record_ids": [
+        "target::chapter3_22_firefly_105",
+        "target::chapter3_17_firefly_138"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.501974,
+        "loss_harmonic_envelope": 0.373878,
+        "loss_noise_envelope": 0.238741,
+        "loss_periodic_gate": 0.69869,
+        "loss_noise_gate": 0.663567,
+        "loss_activity_gate": 0.599556,
+        "loss_waveform": 0.242411,
+        "loss_stft": 0.902203,
+        "loss_rms_guard": 0.222984,
+        "periodic_gate_pred_mean": 0.561246,
+        "noise_gate_pred_mean": 0.580356,
+        "activity_gate_pred_mean": 0.582572,
+        "periodic_gate_target_mean": 0.575128,
+        "noise_gate_target_mean": 0.61971,
+        "activity_gate_target_mean": 0.828477,
+        "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+        "decoded_waveform_rms": 0.193858,
+        "target_waveform_rms": 0.242749,
+        "decoded_to_target_rms_ratio": 0.801413
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_22_firefly_105",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/train/target__chapter3_22_firefly_105/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 61,
+          "loss_metrics": {
+            "loss_total": 1.498275,
+            "loss_harmonic_envelope": 0.321752,
+            "loss_noise_envelope": 0.23886,
+            "loss_periodic_gate": 0.702947,
+            "loss_noise_gate": 0.666278,
+            "loss_activity_gate": 0.609978,
+            "loss_waveform": 0.252216,
+            "loss_stft": 0.96356,
+            "loss_rms_guard": 0.279651,
+            "periodic_gate_pred_mean": 0.561566,
+            "noise_gate_pred_mean": 0.580087,
+            "activity_gate_pred_mean": 0.582779,
+            "periodic_gate_target_mean": 0.566584,
+            "noise_gate_target_mean": 0.609333,
+            "activity_gate_target_mean": 0.797873,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.194927,
+            "target_waveform_rms": 0.257823,
+            "decoded_to_target_rms_ratio": 0.756048
+          }
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/train/target__chapter3_17_firefly_138/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 107,
+          "loss_metrics": {
+            "loss_total": 1.505673,
+            "loss_harmonic_envelope": 0.426004,
+            "loss_noise_envelope": 0.238622,
+            "loss_periodic_gate": 0.694434,
+            "loss_noise_gate": 0.660856,
+            "loss_activity_gate": 0.589133,
+            "loss_waveform": 0.232605,
+            "loss_stft": 0.840845,
+            "loss_rms_guard": 0.166318,
+            "periodic_gate_pred_mean": 0.560926,
+            "noise_gate_pred_mean": 0.580625,
+            "activity_gate_pred_mean": 0.582365,
+            "periodic_gate_target_mean": 0.583673,
+            "noise_gate_target_mean": 0.630087,
+            "activity_gate_target_mean": 0.859081,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.19279,
+            "target_waveform_rms": 0.227675,
+            "decoded_to_target_rms_ratio": 0.846777
+          }
+        }
+      ],
+      "grad_norm": 1.702565,
+      "status": "step_completed"
+    },
+    {
+      "step": 3,
+      "started_at": "2026-03-21T17:26:40",
+      "ended_at": "2026-03-21T17:26:41",
+      "duration_sec": 0.071369,
+      "packages_per_step": 2,
+      "record_ids": [
+        "target::chapter3_22_firefly_105",
+        "target::chapter3_17_firefly_138"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.398099,
+        "loss_harmonic_envelope": 0.332298,
+        "loss_noise_envelope": 0.198416,
+        "loss_periodic_gate": 0.688845,
+        "loss_noise_gate": 0.669222,
+        "loss_activity_gate": 0.610085,
+        "loss_waveform": 0.23871,
+        "loss_stft": 0.853905,
+        "loss_rms_guard": 0.247322,
+        "periodic_gate_pred_mean": 0.577141,
+        "noise_gate_pred_mean": 0.546894,
+        "activity_gate_pred_mean": 0.577141,
+        "periodic_gate_target_mean": 0.575128,
+        "noise_gate_target_mean": 0.61971,
+        "activity_gate_target_mean": 0.828477,
+        "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+        "decoded_waveform_rms": 0.189197,
+        "target_waveform_rms": 0.242749,
+        "decoded_to_target_rms_ratio": 0.782162
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_22_firefly_105",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/train/target__chapter3_22_firefly_105/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 61,
+          "loss_metrics": {
+            "loss_total": 1.374952,
+            "loss_harmonic_envelope": 0.263927,
+            "loss_noise_envelope": 0.197336,
+            "loss_periodic_gate": 0.692397,
+            "loss_noise_gate": 0.670332,
+            "loss_activity_gate": 0.62072,
+            "loss_waveform": 0.248806,
+            "loss_stft": 0.911717,
+            "loss_rms_guard": 0.30441,
+            "periodic_gate_pred_mean": 0.577254,
+            "noise_gate_pred_mean": 0.546676,
+            "activity_gate_pred_mean": 0.577254,
+            "periodic_gate_target_mean": 0.566584,
+            "noise_gate_target_mean": 0.609333,
+            "activity_gate_target_mean": 0.797873,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.19016,
+            "target_waveform_rms": 0.257823,
+            "decoded_to_target_rms_ratio": 0.737559
+          }
+        },
+        {
+          "record_id": "target::chapter3_17_firefly_138",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/train/target__chapter3_17_firefly_138/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 107,
+          "loss_metrics": {
+            "loss_total": 1.421247,
+            "loss_harmonic_envelope": 0.400669,
+            "loss_noise_envelope": 0.199497,
+            "loss_periodic_gate": 0.685293,
+            "loss_noise_gate": 0.668112,
+            "loss_activity_gate": 0.599449,
+            "loss_waveform": 0.228613,
+            "loss_stft": 0.796093,
+            "loss_rms_guard": 0.190234,
+            "periodic_gate_pred_mean": 0.577029,
+            "noise_gate_pred_mean": 0.547112,
+            "activity_gate_pred_mean": 0.577029,
+            "periodic_gate_target_mean": 0.583673,
+            "noise_gate_target_mean": 0.630087,
+            "activity_gate_target_mean": 0.859081,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.188234,
+            "target_waveform_rms": 0.227675,
+            "decoded_to_target_rms_ratio": 0.826765
+          }
+        }
+      ],
+      "grad_norm": 1.553473,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 1,
+      "validation_source": "validation_packages",
+      "package_count": 1,
+      "record_ids": [
+        "target::chapter3_3_firefly_162"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.518548,
+        "loss_harmonic_envelope": 0.384656,
+        "loss_noise_envelope": 0.237715,
+        "loss_periodic_gate": 0.691749,
+        "loss_noise_gate": 0.653976,
+        "loss_activity_gate": 0.593853,
+        "loss_waveform": 0.192492,
+        "loss_stft": 0.935523,
+        "loss_rms_guard": 0.315121,
+        "periodic_gate_pred_mean": 0.559291,
+        "noise_gate_pred_mean": 0.579906,
+        "activity_gate_pred_mean": 0.582287,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+        "decoded_waveform_rms": 0.191682,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.370425
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 167,
+          "loss_metrics": {
+            "loss_total": 1.518548,
+            "loss_harmonic_envelope": 0.384656,
+            "loss_noise_envelope": 0.237715,
+            "loss_periodic_gate": 0.691749,
+            "loss_noise_gate": 0.653976,
+            "loss_activity_gate": 0.593853,
+            "loss_waveform": 0.192492,
+            "loss_stft": 0.935523,
+            "loss_rms_guard": 0.315121,
+            "periodic_gate_pred_mean": 0.559291,
+            "noise_gate_pred_mean": 0.579906,
+            "activity_gate_pred_mean": 0.582287,
+            "periodic_gate_target_mean": 0.596185,
+            "noise_gate_target_mean": 0.648318,
+            "activity_gate_target_mean": 0.847907,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.191682,
+            "target_waveform_rms": 0.13987,
+            "decoded_to_target_rms_ratio": 1.370425
+          }
+        }
+      ]
+    },
+    {
+      "step": 2,
+      "validation_source": "validation_packages",
+      "package_count": 1,
+      "record_ids": [
+        "target::chapter3_3_firefly_162"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.396189,
+        "loss_harmonic_envelope": 0.332154,
+        "loss_noise_envelope": 0.19856,
+        "loss_periodic_gate": 0.680485,
+        "loss_noise_gate": 0.663965,
+        "loss_activity_gate": 0.604005,
+        "loss_waveform": 0.188958,
+        "loss_stft": 0.887076,
+        "loss_rms_guard": 0.29284,
+        "periodic_gate_pred_mean": 0.57595,
+        "noise_gate_pred_mean": 0.546641,
+        "activity_gate_pred_mean": 0.57595,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+        "decoded_waveform_rms": 0.187458,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.340229
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 167,
+          "loss_metrics": {
+            "loss_total": 1.396189,
+            "loss_harmonic_envelope": 0.332154,
+            "loss_noise_envelope": 0.19856,
+            "loss_periodic_gate": 0.680485,
+            "loss_noise_gate": 0.663965,
+            "loss_activity_gate": 0.604005,
+            "loss_waveform": 0.188958,
+            "loss_stft": 0.887076,
+            "loss_rms_guard": 0.29284,
+            "periodic_gate_pred_mean": 0.57595,
+            "noise_gate_pred_mean": 0.546641,
+            "activity_gate_pred_mean": 0.57595,
+            "periodic_gate_target_mean": 0.596185,
+            "noise_gate_target_mean": 0.648318,
+            "activity_gate_target_mean": 0.847907,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.187458,
+            "target_waveform_rms": 0.13987,
+            "decoded_to_target_rms_ratio": 1.340229
+          }
+        }
+      ]
+    },
+    {
+      "step": 3,
+      "validation_source": "validation_packages",
+      "package_count": 1,
+      "record_ids": [
+        "target::chapter3_3_firefly_162"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.286661,
+        "loss_harmonic_envelope": 0.300759,
+        "loss_noise_envelope": 0.156769,
+        "loss_periodic_gate": 0.672976,
+        "loss_noise_gate": 0.668072,
+        "loss_activity_gate": 0.595812,
+        "loss_waveform": 0.183525,
+        "loss_stft": 0.836703,
+        "loss_rms_guard": 0.254046,
+        "periodic_gate_pred_mean": 0.575188,
+        "noise_gate_pred_mean": 0.531644,
+        "activity_gate_pred_mean": 0.575188,
+        "periodic_gate_target_mean": 0.596185,
+        "noise_gate_target_mean": 0.648318,
+        "activity_gate_target_mean": 0.847907,
+        "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+        "decoded_waveform_rms": 0.180325,
+        "target_waveform_rms": 0.13987,
+        "decoded_to_target_rms_ratio": 1.289231
+      },
+      "package_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_path_smoke_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 167,
+          "loss_metrics": {
+            "loss_total": 1.286661,
+            "loss_harmonic_envelope": 0.300759,
+            "loss_noise_envelope": 0.156769,
+            "loss_periodic_gate": 0.672976,
+            "loss_noise_gate": 0.668072,
+            "loss_activity_gate": 0.595812,
+            "loss_waveform": 0.183525,
+            "loss_stft": 0.836703,
+            "loss_rms_guard": 0.254046,
+            "periodic_gate_pred_mean": 0.575188,
+            "noise_gate_pred_mean": 0.531644,
+            "activity_gate_pred_mean": 0.575188,
+            "periodic_gate_target_mean": 0.596185,
+            "noise_gate_target_mean": 0.648318,
+            "activity_gate_target_mean": 0.847907,
+            "reconstruction_frame_gain_apply_mode": "post_ola_envelope",
+            "decoded_waveform_rms": 0.180325,
+            "target_waveform_rms": 0.13987,
+            "decoded_to_target_rms_ratio": 1.289231
+          }
+        }
+      ]
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_training_reconstruction_applymode_probe_round1_1/dataset_loop_postenv/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step3.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_training_reconstruction_applymode_probe_round1_1/dataset_loop_postenv/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step3.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 3,
+      "loss_total": 1.286661,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_training_reconstruction_applymode_probe_round1_1/dataset_loop_postenv/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step3.pt"
+    }
+  },
+  "notes": [
+    "This loop is the first dataset-level Stage5 path: each step now samples from multiple aligned target packages instead of reusing one package forever.",
+    "Current package batches are still Python-level lists of variable-length packages rather than a packed tensor dataloader.",
+    "Validation reflects the current objective mix, including optional aligned waveform/STFT bootstrap losses when enabled, and should not be confused with final vocoder generalization."
+  ],
+  "next_steps": [
+    "Scale the dataset index from tiny smoke subsets to a larger split-backed package pool once runtime cost is acceptable.",
+    "Decide whether to keep package-level sequential loading or move to a cached/packed dataset for throughput.",
+    "Decide whether the current bootstrap decoder objective should be scaled further or replaced by a stronger multi-resolution/adversarial waveform recipe."
+  ]
+}

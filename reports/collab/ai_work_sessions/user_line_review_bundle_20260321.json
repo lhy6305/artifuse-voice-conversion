@@ -1,0 +1,26 @@
+{
+  "session_id": "user_line_review_bundle_20260321",
+  "owner": "codex-main",
+  "lane": "user_line",
+  "status": "completed",
+  "objective": "completed terminal-user batch export and listening bundle on top of the teacher-first single-target runtime",
+  "created_at": "2026-03-21T17:30:34",
+  "updated_at": "2026-03-21T17:44:33",
+  "write_roots": [
+    "F:/proj_dev/tmp/workdir4/src/v5vc/teacher_first_vc_demo.py",
+    "F:/proj_dev/tmp/workdir4/src/v5vc/cli.py",
+    "F:/proj_dev/tmp/workdir4/scripts/run_teacher_first_single_target_vc_review_bundle.ps1",
+    "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_teacher_first_vc_demo_review_bundles"
+  ],
+  "read_roots": [],
+  "handoff_docs": [
+    "F:/proj_dev/tmp/workdir4/docs/239_teacher_first_single_target_multisource_smoke_and_wrapper_report.md",
+    "F:/proj_dev/tmp/workdir4/docs/241_stage5_step72_postenv_default_promotion_after_human_audit_report.md"
+  ],
+  "depends_on": [],
+  "notes": [
+    "Review bundle landed; latest confirmed output is reports/runtime/offline_mvp_teacher_first_vc_demo_review_bundles/review_bundle_20260321_173522."
+  ],
+  "write_root_conflicts": [],
+  "warnings": []
+}
