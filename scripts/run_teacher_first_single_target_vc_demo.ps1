@@ -6,6 +6,7 @@ param(
   [double]$MaxAudioSec = 0.0,
   [double]$ChunkMs = 33.333333,
   [switch]$UsePostEnv,
+  [switch]$UsePreOverlapAdd,
   [switch]$NoSaveIntermediates,
   [switch]$SkipFullPassVerify
 )
@@ -48,8 +49,14 @@ if ($MaxAudioSec -gt 0.0) {
   $command += @("--max-audio-sec", $MaxAudioSec.ToString($culture))
 }
 
+if ($UsePostEnv -and $UsePreOverlapAdd) {
+  throw "UsePostEnv and UsePreOverlapAdd cannot be set at the same time."
+}
+
 if ($UsePostEnv) {
   $command += @("--predicted-activity-gate-apply-mode", "post_ola_envelope")
+} elseif ($UsePreOverlapAdd) {
+  $command += @("--predicted-activity-gate-apply-mode", "pre_overlap_add")
 }
 
 if ($NoSaveIntermediates) {

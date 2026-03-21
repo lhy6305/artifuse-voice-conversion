@@ -7,6 +7,11 @@ from v5vc.ablation_eval import evaluate_offline_mvp_ablations
 from v5vc.anchor_route_analysis import analyze_offline_mvp_anchor_routes
 from v5vc.anchor_route_selector import select_offline_mvp_anchor_route
 from v5vc.anchor_selection_analysis import analyze_offline_mvp_anchor_selection
+from v5vc.ai_work_session_registry import (
+    VALID_SESSION_STATUSES,
+    materialize_ai_work_session_index,
+    register_ai_work_session,
+)
 from v5vc.b1_supervision_inventory import build_b1_supervision_inventory
 from v5vc.c1_weak_event_hints import build_c1_weak_event_hints
 from v5vc.checkpoint_anchor_materializer import materialize_offline_mvp_checkpoint_anchor
@@ -1599,7 +1604,7 @@ def build_parser() -> argparse.ArgumentParser:
     )
     teacher_first_vc_demo_parser.add_argument(
         "--predicted-activity-gate-apply-mode",
-        default="pre_overlap_add",
+        default="post_ola_envelope",
         help=(
             "How predicted activity gains are applied during waveform reconstruction: "
             "pre_overlap_add or post_ola_envelope."
@@ -2330,11 +2335,90 @@ def build_parser() -> argparse.ArgumentParser:
     )
     nores_vocoder_audio_export_parser.add_argument(
         "--predicted-activity-gate-apply-mode",
-        default="pre_overlap_add",
+        default="post_ola_envelope",
         help=(
             "How export-side predicted activity gains are applied during waveform reconstruction: "
             "pre_overlap_add or post_ola_envelope."
         ),
+    )
+    ai_work_session_parser = subparsers.add_parser(
+        "register-ai-work-session",
+        help="Register or update an AI work session for parallel collaboration.",
+    )
+    ai_work_session_parser.add_argument(
+        "--session-id",
+        required=True,
+        help="Stable session id used as the registry filename.",
+    )
+    ai_work_session_parser.add_argument(
+        "--owner",
+        required=True,
+        help="Short owner label, for example codex-a or user-line-worker.",
+    )
+    ai_work_session_parser.add_argument(
+        "--lane",
+        required=True,
+        help="Collaboration lane, for example experiment_line, user_line, or infra.",
+    )
+    ai_work_session_parser.add_argument(
+        "--status",
+        default="active",
+        choices=list(VALID_SESSION_STATUSES),
+        help="Session status used by the shared registry index.",
+    )
+    ai_work_session_parser.add_argument(
+        "--objective",
+        required=True,
+        help="Current concrete objective of this session.",
+    )
+    ai_work_session_parser.add_argument(
+        "--write-root",
+        type=Path,
+        action="append",
+        default=[],
+        help="Write root claimed by this session. Repeat the flag for multiple roots.",
+    )
+    ai_work_session_parser.add_argument(
+        "--read-root",
+        type=Path,
+        action="append",
+        default=[],
+        help="Read-only root relevant to this session. Repeat the flag for multiple roots.",
+    )
+    ai_work_session_parser.add_argument(
+        "--handoff-doc",
+        type=Path,
+        action="append",
+        default=[],
+        help="Handoff or status doc this session depends on. Repeat the flag for multiple docs.",
+    )
+    ai_work_session_parser.add_argument(
+        "--depends-on",
+        action="append",
+        default=[],
+        help="Upstream session id or blocker. Repeat the flag for multiple items.",
+    )
+    ai_work_session_parser.add_argument(
+        "--note",
+        action="append",
+        default=[],
+        help="Flat note captured in the session card. Repeat the flag for multiple notes.",
+    )
+    ai_work_session_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/collab/ai_work_sessions"),
+        help="Directory for AI work-session registry files.",
+    )
+    ai_work_session_index_parser = subparsers.add_parser(
+        "materialize-ai-work-session-index",
+        help="Rebuild the shared AI work-session index from existing session cards.",
+    )
+    ai_work_session_index_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/collab/ai_work_sessions"),
+        help="Directory containing AI work-session cards.",
     )
     nores_vocoder_low_activity_sensitivity_parser = subparsers.add_parser(
         "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity",
@@ -3458,6 +3542,26 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             template_path=args.template,
             title=args.title,
+        )
+        return 0
+    if args.command == "register-ai-work-session":
+        register_ai_work_session(
+            session_id=args.session_id,
+            owner=args.owner,
+            lane=args.lane,
+            status=args.status,
+            objective=args.objective,
+            output_dir=args.output_dir,
+            write_roots=list(args.write_root),
+            read_roots=list(args.read_root),
+            handoff_docs=list(args.handoff_doc),
+            depends_on=list(args.depends_on),
+            notes=list(args.note),
+        )
+        return 0
+    if args.command == "materialize-ai-work-session-index":
+        materialize_ai_work_session_index(
+            output_dir=args.output_dir,
         )
         return 0
     if args.command == "analyze-offline-mvp-checkpoint-selection":

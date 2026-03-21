@@ -14179,6 +14179,91 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/240_stage5_step72_glitch_smooth3_postenv_human_audit_reactivation_report.md`
   - 记录 bundle 恢复、脚本自愈、正式听审命令、输出目录与当前未完成状态
+## 2026-03-21 补充：`postenv` focused human audit 已完成，Stage5 默认 apply mode 正式提升
+### 当前结论
+- 当前
+  `step72__decode_gate_smooth3_postenv`
+  的 focused human audit
+  已完成
+- 人工听审结果：
+  - `10 / 10`
+    可比较记录全部打平
+  - 没有出现对旧默认
+    `pre_overlap_add`
+    的反向支持
+  - session note
+    仍轻微偏向
+    `postenv`
+    更柔和
+- 因此当前 Stage5 decode-side 默认 apply mode
+  已正式提升为：
+  - `post_ola_envelope`
+
+### 当前工程动作
+1. `src/v5vc/cli.py`
+   中：
+   - `export-offline-mvp-nores-vocoder-audio`
+     默认
+     `--predicted-activity-gate-apply-mode`
+     改为：
+     `post_ola_envelope`
+   - `run-offline-mvp-teacher-first-vc-demo`
+     默认
+     `--predicted-activity-gate-apply-mode`
+     改为：
+     `post_ola_envelope`
+2. `scripts/run_teacher_first_single_target_vc_demo.ps1`
+   当前默认自然继承新默认
+3. 同时保留显式回退：
+   - `--predicted-activity-gate-apply-mode pre_overlap_add`
+   - `-UsePreOverlapAdd`
+
+### 当前文档补充
+- `docs/241_stage5_step72_postenv_default_promotion_after_human_audit_report.md`
+  - 记录听审结果、默认提升依据、CLI 默认修改与回退口径
+## 2026-03-21 补充：当前仓库已补齐最小多 AI 并行协作登记机制
+### 当前结论
+- 当前仓库原本已经适合：
+  - 顺序接班
+  - 双线并行管理
+- 但在
+  “多 AI 同时写同一仓库”
+  上，
+  还缺：
+  - 活跃会话索引
+  - write roots
+    占坑
+  - 依赖 handoff docs
+    的正式登记
+- 本轮已补：
+  - `register-ai-work-session`
+  - `materialize-ai-work-session-index`
+
+### 当前正式目录
+- `reports/collab/ai_work_sessions/`
+
+### 当前建议
+1. 若用户线与实验线由不同 AI
+   并行推进，
+   默认先各自登记：
+   - `session_id`
+   - `lane`
+   - `write_roots`
+   - `handoff_docs`
+2. 同一时刻，
+   不让两个 AI
+   持有同一个 write root
+3. 共享
+   `docs/01`
+   与
+   `docs/02`
+   时，
+   优先在一轮尾声统一回写，
+   避免并行覆盖
+
+### 当前文档补充
+- `docs/242_multi_ai_parallel_collaboration_assessment_and_registry_report.md`
+  - 记录现有结构评估、新增 CLI、推荐使用方式与并行协作纪律
 
 ### 下一步
 1. 继续补：
@@ -14194,3 +14279,81 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/239_teacher_first_single_target_multisource_smoke_and_wrapper_report.md`
   - 记录本轮三条 smoke、包装脚本入口、默认输出目录与当前边界
+## 2026-03-21 补充：用户线 failure ladder 与协作线 write-root conflict warning 已落地
+### 当前结论
+- 当前终端用户线已补上：
+  - 失败分层 summary
+  - 流水线状态落盘
+- 当前并行协作线已补上：
+  - write-root
+    同路径冲突告警
+  - write-root
+    父子路径冲突告警
+- 因而两条线的当前状态分别变成：
+  - 用户线：
+    不只“能跑”，也开始“能定位失败层”
+  - 协作线：
+    不只“能登记”，也开始“能发现写域冲突”
+
+### 当前工程动作
+1. `src/v5vc/teacher_first_vc_demo.py`
+   中：
+   - 新增
+     `pipeline.layers`
+   - 新增
+     `failure.layer / stage_label / diagnostic_summary / likely_causes / recommended_actions`
+   - 运行成功与失败时，
+     都会写出更完整的流水线状态
+2. `src/v5vc/ai_work_session_registry.py`
+   中：
+   - 新增
+     write-root overlap
+     检测
+   - 会识别：
+     - 同路径
+     - 父子路径
+   - 会把冲突写入：
+     - 单会话卡
+     - 总索引
+   - 冲突存在时，
+     CLI
+     会打印显式
+     warning
+
+### 当前验证
+1. 用户线故意失败验证：
+   - `tmp/teacher_first_vc_demo_failure_missing_input/teacher_first_vc_demo.json`
+     已明确写出：
+     - `pipeline.current_stage = input_audio_load`
+     - `failure.layer = teacher_runtime`
+2. 用户线短成功 smoke：
+   - `tmp/teacher_first_vc_demo_success_short/teacher_first_vc_demo.json`
+     已明确写出：
+     - 全部 layer
+       `succeeded`
+     - `teacher_runtime_verification`
+       被列为
+       `skipped_stages`
+3. 协作线冲突验证：
+   - `tmp/ai_work_session_registry_validation_b/ai_work_sessions_index.json`
+     已写出：
+     - `conflict_count = 2`
+     - `conflicted_session_count = 2`
+
+### 更新后的下一步
+1. 用户线继续补：
+   - 更贴近真实误用的失败演练，
+     尤其是
+     calibration asset /
+     vocoder checkpoint
+     错配
+2. 协作线继续评估：
+   - 哪些高风险 write roots
+     只告警还不够，
+     是否需要升级成默认阻止
+
+### 文档补充
+- `docs/239_teacher_first_single_target_multisource_smoke_and_wrapper_report.md`
+  - 已补充失败分层 summary 与短成功 smoke
+- `docs/242_multi_ai_parallel_collaboration_assessment_and_registry_report.md`
+  - 已补充 write-root 冲突显式告警与临时冲突验证

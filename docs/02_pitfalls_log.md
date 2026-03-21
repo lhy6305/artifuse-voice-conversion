@@ -8467,3 +8467,124 @@
     还要重新生成 manifest/probe 产物，
     不能只做目录重命名，
     否则内部绝对路径仍会残留旧长路径
+### 308. 当项目已经支持“顺序接班”但还没有 live session registry 时，不要把它误当成已经支持多 AI 同时并行写同一仓库
+- 现象:
+  - 当前仓库早已具备：
+    - 强恢复文档
+    - 双线任务拆分
+    - handoff / stage report
+    - 大量正式 CLI
+  - 这些能力足以支持：
+    - 断线恢复
+    - 顺序接班
+  - 但在本轮之前，
+    还没有正式位置记录：
+    - 哪个 AI 正在做哪条线
+    - 哪些 write roots
+      已被占用
+    - 当前依赖哪些 handoff docs
+- 风险:
+  - 如果直接据此外推成
+    “多个 AI 可以放心同时开工”，
+    很容易出现：
+    - 两个 AI 同时改同一目录
+    - 两个 AI 都在改
+      `docs/01`
+      或
+      `docs/02`
+    - 一边重写 managed 输出目录，
+      另一边读取旧结果
+  - 最终表现为：
+    - git diff
+      变脏但责任边界不清
+    - 接班者看得懂阶段史，
+      但看不懂当前谁在改什么
+- 处理要求:
+  - 多 AI 并行时，
+    不要只依赖 handoff 文档；
+    还需要 live session registry
+  - 至少登记：
+    - `session_id`
+    - `lane`
+    - `write_roots`
+    - `handoff_docs`
+- 若没有这层登记，
+  仓库最多只能算：
+  - 强接班结构
+  - 不是强并行写入结构
+### 309. teacher-first 用户入口如果 failure summary 只落一个 `stage/error_message`，接班者仍很难快速判断到底是 teacher runtime、contract、scaffold、checkpoint 还是 waveform reconstruction 挂了
+- 现象:
+  - 用户线最小闭环已经能导出
+    `decoded.wav`
+  - 但在补本轮之前，
+    失败 summary
+    只有：
+    - `stage`
+    - `error_type`
+    - `error_message`
+- 风险:
+  - 一旦用户报：
+    “命令失败了”，
+    接班者还得继续翻：
+    - 临时目录
+    - traceback
+    - 中间产物是否存在
+  - 才能推断它卡在：
+    - teacher runtime
+    - contract
+    - scaffold
+    - checkpoint
+    - waveform reconstruction
+  - 这会让
+    “一站式入口”
+    仍然不够可排障
+- 处理要求:
+  - 用户线 summary
+    默认应同时写出：
+    - `pipeline.layers`
+    - `failure.layer`
+    - `failure.stage_label`
+    - `diagnostic_summary`
+    - `likely_causes`
+    - `recommended_actions`
+  - 成功态也应写完整流水线状态，
+    让接班者知道哪些层已完成、
+    哪些层是显式跳过
+
+### 310. 并行协作 registry 如果只登记 `write_roots` 但不计算 overlap，依然只能“占坑”，还不能真正“发现冲突”
+- 现象:
+  - 本轮之前，
+    registry
+    已能记录：
+    - `session_id`
+    - `lane`
+    - `write_roots`
+    - `handoff_docs`
+  - 但不会主动判断：
+    - 两个会话是否声明了同一路径
+    - 一个会话是否声明了另一个会话 write root 的父目录
+- 风险:
+  - 两个 AI
+    即使都认真登记，
+    仍可能在：
+    - `docs`
+    - `reports`
+    - `reports/runtime/...`
+    这类父子路径上互相踩写
+  - 接班者看到 registry，
+    也只能知道“有人登记过”，
+    不知道“是否已经冲突”
+- 处理要求:
+  - registry
+    默认必须计算：
+    - `same_path`
+    - 父子路径 overlap
+  - 冲突结果应同时写入：
+    - 单会话卡
+    - 总索引
+  - 若发现冲突，
+    CLI
+    至少打印显式
+    warning，
+    让操作者第一时间知道当前 write root
+    需要重新切分

@@ -1,0 +1,58 @@
+{
+  "generated_at": "2026-03-21T16:59:00",
+  "session_count": 2,
+  "active_session_count": 2,
+  "conflict_count": 0,
+  "conflicted_session_count": 0,
+  "write_root_conflicts": [],
+  "sessions": [
+    {
+      "session_id": "experiment_line_stage5_decode",
+      "owner": "codex-a",
+      "lane": "experiment_line",
+      "status": "active",
+      "objective": "continue Stage5 decode-side governance after postenv default promotion",
+      "created_at": "2026-03-21T16:33:02",
+      "updated_at": "2026-03-21T16:34:30",
+      "write_roots": [
+        "F:/proj_dev/tmp/workdir4/reports/audio",
+        "F:/proj_dev/tmp/workdir4/scripts/launch_stage5_step72_glitch_smooth3_postenv_validation12_audit.ps1"
+      ],
+      "read_roots": [],
+      "handoff_docs": [
+        "F:/proj_dev/tmp/workdir4/docs/240_stage5_step72_glitch_smooth3_postenv_human_audit_reactivation_report.md",
+        "F:/proj_dev/tmp/workdir4/docs/241_stage5_step72_postenv_default_promotion_after_human_audit_report.md"
+      ],
+      "depends_on": [],
+      "notes": [
+        "Avoid expanding new probes before current default-governance path is documented."
+      ],
+      "write_root_conflicts": [],
+      "warnings": []
+    },
+    {
+      "session_id": "user_line_minimal_runtime",
+      "owner": "codex-b",
+      "lane": "user_line",
+      "status": "active",
+      "objective": "continue terminal-user minimal source-to-target runtime hardening",
+      "created_at": "2026-03-21T16:33:01",
+      "updated_at": "2026-03-21T16:34:31",
+      "write_roots": [
+        "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_teacher_first_vc_demo_runs",
+        "F:/proj_dev/tmp/workdir4/scripts/run_teacher_first_single_target_vc_demo.ps1"
+      ],
+      "read_roots": [],
+      "handoff_docs": [
+        "F:/proj_dev/tmp/workdir4/docs/239_teacher_first_single_target_multisource_smoke_and_wrapper_report.md",
+        "F:/proj_dev/tmp/workdir4/docs/238_teacher_first_single_target_terminal_user_line_bootstrap_report.md"
+      ],
+      "depends_on": [],
+      "notes": [
+        "Prefer explicit output dirs or auto-generated run dirs."
+      ],
+      "write_root_conflicts": [],
+      "warnings": []
+    }
+  ]
+}

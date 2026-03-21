@@ -14,7 +14,7 @@
 - 当前默认仍沿正式 decode 主线：
   - `use_predicted_activity_gate = true`
   - `predicted_activity_gate_smoothing_frames = 3`
-  - `predicted_activity_gate_apply_mode = pre_overlap_add`
+  - `predicted_activity_gate_apply_mode = post_ola_envelope`
 - 待审实验分支
   `postenv`
   没有被写死成默认，
@@ -78,7 +78,7 @@
 - 默认 smoothing：
   - `3`
 - 默认 apply mode：
-  - `pre_overlap_add`
+  - `post_ola_envelope`
 
 ## 为什么当前默认不是 `stable_late_stop`
 - 当前最新正式 selection payload
@@ -120,7 +120,7 @@
   - `decoded_audio_sec = 1.998333`
   - `decoded_waveform_rms = 0.046524`
   - `selection_target = best_validation`
-  - `branch_label = stage5_best_validation_step72__decode_gate_smooth3`
+  - `branch_label = stage5_best_validation_step72__decode_gate_smooth3_postenv`
 
 ## 当前边界
 - 这条命令当前仍不是：
@@ -138,14 +138,13 @@
 
 ## 与实验线的关系
 - 当前实验线仍停在：
-  - `step72__decode_gate_smooth3_postenv`
-    focused human audit
-- 所以终端用户线当前只保留：
-  - `--predicted-activity-gate-apply-mode`
-    显式切换能力
-- 还不直接把
-  `post_ola_envelope`
-  升为默认
+  - `postenv`
+    已完成人工听审且不反转
+- 所以终端用户线当前默认已同步提升为：
+  - `post_ola_envelope`
+- 若需旧行为复现，
+  仍可显式传：
+  - `--predicted-activity-gate-apply-mode pre_overlap_add`
 
 ## 当前建议的下一步
 1. 用这条命令对更多真实源音频做 smoke

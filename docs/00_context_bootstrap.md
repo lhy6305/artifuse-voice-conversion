@@ -31,9 +31,11 @@
     `docs/237_teacher_first_single_target_terminal_user_line_design.md`
 - 当前实验线断点不是“继续做新 probe”，
   而是：
-  - 已有待审主分支
-    `step72__decode_gate_smooth3_postenv`
-  - 下一步应直接进入 focused human audit
+  - `step72__decode_gate_smooth3_postenv`
+    已完成 focused human audit
+  - 当前默认 decode apply mode
+    已提升为：
+    `post_ola_envelope`
 - 当前终端用户线断点不是“继续证明 Stage5 validation export 能导 wav”，
   而是：
   - 把现有
@@ -44,6 +46,21 @@
     接成真实
     `source audio -> target audio`
     最小闭环
+
+## 多 AI 并行协作入口
+- 若同一工作区需要多个 AI
+  同时推进不同任务，
+  默认先读：
+  - `docs/242_multi_ai_parallel_collaboration_assessment_and_registry_report.md`
+- 当前正式会话登记目录：
+  - `reports/collab/ai_work_sessions/`
+- 开新并行会话前，
+  先运行：
+  - `.\python.exe manage.py register-ai-work-session ...`
+- 最低要求：
+  - 声明当前 lane
+  - 声明 write roots
+  - 声明依赖的 handoff docs
 
 ## 强制规范
 ### 1. 编码规范

@@ -84,7 +84,7 @@
   - Stage5 `best_validation`
   - `step72`
   - `predicted activity gate smoothing = 3`
-  - apply mode = `pre_overlap_add`
+  - apply mode = `post_ola_envelope`
 
 ### 3. 当前能力
 - 若未显式提供
@@ -260,3 +260,86 @@
   - 多输入 smoke 继续稳定
   - 终端用户可直接调用的 PowerShell 包装脚本已具备
   - 默认也避免了重复运行时覆盖旧结果的问题
+
+## 2026-03-21 补充：用户线 summary 已补齐失败分层与流水线状态
+### 当前结论
+- `teacher_first_vc_demo.json/.md`
+  不再只写：
+  - `stage`
+  - `error_type`
+  - `error_message`
+- 现在还会显式写出：
+  - `pipeline.layers`
+  - 当前停在哪个
+    `layer`
+  - 当前停在哪个
+    `stage`
+  - 对应的
+    `diagnostic_summary`
+  - `likely_causes`
+  - `recommended_actions`
+- 用户线失败口径现在可直接区分：
+  - `teacher_runtime`
+  - `teacher_contract`
+  - `teacher_vocoder_input_scaffold`
+  - `vocoder_checkpoint`
+  - `waveform_reconstruction`
+
+### 本轮验证
+#### 1. 故意失败验证：缺失输入音频
+```powershell
+.\python.exe manage.py run-offline-mvp-teacher-first-vc-demo `
+  --input-audio tmp/does_not_exist.wav `
+  --output-dir tmp/teacher_first_vc_demo_failure_missing_input `
+  --device cpu
+```
+
+- 结果：
+  - 命令按预期失败
+  - 但仍成功写出：
+    - `tmp/teacher_first_vc_demo_failure_missing_input/teacher_first_vc_demo.json`
+    - `tmp/teacher_first_vc_demo_failure_missing_input/teacher_first_vc_demo.md`
+- summary 关键字段：
+  - `pipeline.current_stage = input_audio_load`
+  - `failure.layer = teacher_runtime`
+  - `failure.stage_label = Load input audio`
+  - `failure.diagnostic_summary = The input audio could not be read into the teacher runtime.`
+
+#### 2. 短成功 smoke：确认成功态也会写全流水线
+```powershell
+.\python.exe manage.py run-offline-mvp-teacher-first-vc-demo `
+  --input-audio data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav `
+  --output-dir tmp/teacher_first_vc_demo_success_short `
+  --max-audio-sec 0.1 `
+  --device cpu `
+  --no-save-intermediates `
+  --skip-full-pass-verify
+```
+
+- 结果：
+  - exit code `0`
+- summary 关键字段：
+  - `decoded_audio_sec = 0.098333`
+  - `pipeline.current_stage = null`
+  - `pipeline.skipped_stages = ["teacher_runtime_verification"]`
+  - `pipeline.layers[*].status`
+    全部为
+    `succeeded`
+
+### 当前意义
+- 终端用户线现在不仅能跑通，
+  还更接近“可排障入口”：
+  即使用户命令失败，
+  也能直接看 summary 判断：
+  - 是输入/teacher runtime 问题
+  - 是 conditioning / contract 问题
+  - 是 scaffold 问题
+  - 还是 Stage5 checkpoint / waveform reconstruction 问题
+
+### 下一步建议
+1. 补一轮更贴近真实用户误用的失败演练：
+   - 错 calibration asset
+   - 错 vocoder checkpoint
+2. 再决定是否把
+   `recommended_actions`
+   进一步压缩成更终端用户化的中文提示
