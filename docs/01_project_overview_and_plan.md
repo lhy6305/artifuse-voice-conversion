@@ -16538,3 +16538,220 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
     输出契约、
     以及最小 smoke
     验证结果
+## 2026-03-24 继续补充：decoded 只剩 buzz 的下一棒不应再停留在 inference 小修，当前已补出正式路线选项
+### 当前结论
+- 本轮已重新补读：
+  - `initial_design.md`
+  - `initial_design_judg.md`
+- 结合当前
+  `docs/250-259`
+  与
+  `docs/275-279`
+  的事实，
+  当前更准确的阶段判断应更新为：
+  1. 现有 Stage5
+     训练路线
+     已被正式 probe
+     坐实为：
+     `template-buzz + envelope-following`
+     假解稳定区
+  2. 当前 user-line
+     又额外偏离设计态 contract：
+     - 缺
+       `f0_hz`
+     - 缺
+       `r_res`
+     - `vuv/aper/E`
+       也仍只是 proxy 化语义
+  3. 因此若要继续解决
+     decoded 只剩 buzz，
+     主线不应再写成：
+     - inference 小修
+     - 或继续盲目拉长训练
+- 本轮已新增正式路线选项报告：
+  - `docs/280_teacher_first_buzz_recovery_route_options_report.md`
+
+### 当前推荐
+- 当前更推荐的主线是：
+  - 方案 C
+    即按设计稿
+    把 Stage5
+    拉回
+    `z_art + e_evt + F0/vuv/aper/E`
+    的无残差主干路线，
+    再重训 no-res baseline
+- 若只想先以更小成本验证
+  “当前 proxy contract
+  还有没有救”，
+  也可先走：
+  - 方案 B
+    即先不改 contract，
+    只先收紧
+    objective / waveform head
+
+### 更新后的下一步
+1. 由用户在
+   `方案 B`
+   与
+   `方案 C`
+   间拍板主线
+2. 若拍板
+   `方案 C`，
+   下一步应优先做：
+   - `teacher_downstream_control_contract_v2`
+     设计与代码落地
+3. 若拍板
+   `方案 B`，
+   下一步应优先做：
+   - anti-template /
+     frame-structure
+     训练目标收紧
+
+### 文档补充
+- `docs/280_teacher_first_buzz_recovery_route_options_report.md`
+  - 汇总当前 buzz
+    根因基线、
+    各路线优缺点、
+    以及当前推荐主线
+## 2026-03-24 继续补充：方案评估已结束，正式收口到 C-prime，下一轮默认直接进入实施
+### 当前结论
+- 本轮已完成：
+  - `1.md`
+  - `2.md`
+    两份临时方案文档的正式评估
+- 当前正式拍板路线已从：
+  - 宽泛的 `方案 C`
+  收紧为：
+  - `方案 C-prime`
+- 当前更准确的阶段表述应更新为：
+  1. 本轮方案探讨已经结束
+  2. 下次对话不再从：
+     - 选 B 还是 C
+       开始
+  3. 下次对话默认直接进入：
+     - `teacher_downstream_control_contract_v2`
+     - `v2-core`
+       实施拆解
+- 当前正式交接文档：
+  - `docs/281_teacher_first_v2_cprime_reconstruction_assessment_and_handoff.md`
+
+### 当前采纳的正式边界
+- 当前采纳：
+  - 源侧补
+    `f0_hz / vuv / aper / E`
+  - 但定位为
+    contract 补齐工程，
+    不是新研究线
+- 当前采纳：
+  - `v2-core / v2-optional / v2-diagnostic`
+    三层字段结构
+- 当前采纳：
+  - `F0`
+    第一版先用成熟方案，
+    后续再专用化
+- 当前采纳：
+  - `aper`
+    必须单独写死口径
+- 当前不采纳：
+  - inference 小修
+    继续作为主线
+  - `r_res`
+    提前打开
+  - contract 重构
+    与 waveform objective 大改
+    同时绑定推进
+
+### 更新后的下一步
+1. 下次对话开始后，
+   默认直接做：
+   - `teacher_downstream_control_contract_v2`
+     字段草案
+2. 紧接着做：
+   - `aper`
+     口径定义
+3. 再做：
+   - `f0_hz / vuv / aper / E`
+     的生成链梳理
+   - scaffold / package / Stage5 no-res baseline
+     的 v2-core
+     改造拆解
+
+### 文档补充
+- `docs/281_teacher_first_v2_cprime_reconstruction_assessment_and_handoff.md`
+  - 记录本轮
+    `C-prime`
+    正式评估结论、
+    采纳边界、
+    以及下一轮默认起步点
+## 2026-03-24 继续补充：v2-core 的三个最易发散点已单独钉死设计，避免下一轮实现时再次把范围做满
+### 当前结论
+- 本轮已把
+  `C-prime`
+  下最容易在实现时发散的三件事
+  单独收口成正式设计：
+  1. `aper-v1`
+     如何定义
+  2. 源侧第一版
+     应做成
+     可复现字段生成链，
+     而不是新研究模型
+  3. `C3`
+     为什么必须继续保持
+     `no-res baseline only`
+- 当前新增正式设计文档：
+  - `docs/282_teacher_first_v2_core_acoustic_state_and_c3_boundary_design.md`
+
+### 当前采纳的关键口径
+- `aper-v1`
+  当前固定为：
+  - `[0, 1]`
+  - 单标量 per-frame
+  - 与 Stage5 frame/hop
+    严格对齐
+  - 只进 noise / aperiodic branch
+- 源侧第一版
+  当前正式定位为：
+  - `source acoustic state extraction chain`
+  - 目标是稳定产出：
+    `f0_hz / vuv / aper / E`
+  - 不定义成新研究模型
+- `C3`
+  当前正式限定为：
+  - 只验证
+    `v2-core`
+    contract 修正后的
+    no-res baseline
+  - 不同步打开：
+    - `r_res`
+    - GAN / adversarial
+    - 大规模 waveform objective
+      重构
+
+### 更新后的下一步
+1. 下次实施时，
+   先以
+   `docs/282`
+   为约束，
+   设计：
+   - `contract_v2`
+   - `aper-v1`
+   - source acoustic state extraction
+     接口
+2. 在 C3
+   第一轮里，
+   继续把问题保持单纯：
+   - 只改 contract /
+     scaffold /
+     package
+   - 不把 waveform objective
+     大改绑定进来
+
+### 文档补充
+- `docs/282_teacher_first_v2_core_acoustic_state_and_c3_boundary_design.md`
+  - 记录
+    `aper-v1`
+    定义、
+    source-side
+    第一版定位、
+    以及 C3
+    的受控训练边界
