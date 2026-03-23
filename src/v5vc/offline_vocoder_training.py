@@ -1538,50 +1538,52 @@ def frame_waveform_sequence(
     frame_length: int,
     hop_length: int,
 ) -> torch.Tensor:
-    waveform_cpu = waveform.detach().cpu().to(torch.float32).view(-1)
+    waveform_tensor = waveform.to(torch.float32).view(-1)
     resolved_frame_length = max(1, int(frame_length))
     resolved_hop_length = max(1, int(hop_length))
-    if int(waveform_cpu.numel()) <= 0:
-        return waveform_cpu.new_zeros((0, resolved_frame_length))
-    if int(waveform_cpu.numel()) < resolved_frame_length:
-        pad_amount = resolved_frame_length - int(waveform_cpu.numel())
-        waveform_cpu = F.pad(waveform_cpu, (0, pad_amount))
-    frame_starts = list(range(0, max(1, int(waveform_cpu.numel()) - resolved_frame_length + 1), resolved_hop_length))
-    tail_start = max(0, int(waveform_cpu.numel()) - resolved_frame_length)
+    if int(waveform_tensor.numel()) <= 0:
+        return waveform_tensor.new_zeros((0, resolved_frame_length))
+    if int(waveform_tensor.numel()) < resolved_frame_length:
+        pad_amount = resolved_frame_length - int(waveform_tensor.numel())
+        waveform_tensor = F.pad(waveform_tensor, (0, pad_amount))
+    frame_starts = list(
+        range(0, max(1, int(waveform_tensor.numel()) - resolved_frame_length + 1), resolved_hop_length)
+    )
+    tail_start = max(0, int(waveform_tensor.numel()) - resolved_frame_length)
     if not frame_starts or frame_starts[-1] != tail_start:
         frame_starts.append(tail_start)
-    frames = [waveform_cpu[start : start + resolved_frame_length] for start in frame_starts]
+    frames = [waveform_tensor[start : start + resolved_frame_length] for start in frame_starts]
     return torch.stack(frames, dim=0)
 
 
 def compute_centered_frame_rms(frames: torch.Tensor) -> torch.Tensor:
-    frames_cpu = frames.detach().cpu().to(torch.float32)
-    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
+    frames_tensor = frames.to(torch.float32)
+    centered = frames_tensor - frames_tensor.mean(dim=1, keepdim=True)
     return centered.pow(2).mean(dim=1).sqrt()
 
 
 def normalize_frames_unit_rms(frames: torch.Tensor) -> torch.Tensor:
-    frames_cpu = frames.detach().cpu().to(torch.float32)
-    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
+    frames_tensor = frames.to(torch.float32)
+    centered = frames_tensor - frames_tensor.mean(dim=1, keepdim=True)
     frame_rms = centered.pow(2).mean(dim=1, keepdim=True).sqrt().clamp_min(1.0e-6)
     return centered / frame_rms
 
 
 def compute_adjacent_deltas(sequence: torch.Tensor) -> torch.Tensor:
-    sequence_cpu = sequence.detach().cpu().to(torch.float32)
-    if int(sequence_cpu.shape[0]) <= 1:
-        return sequence_cpu.new_zeros((1, *sequence_cpu.shape[1:]))
-    return sequence_cpu[1:] - sequence_cpu[:-1]
+    sequence_tensor = sequence.to(torch.float32)
+    if int(sequence_tensor.shape[0]) <= 1:
+        return sequence_tensor.new_zeros((1, *sequence_tensor.shape[1:]))
+    return sequence_tensor[1:] - sequence_tensor[:-1]
 
 
 def compute_frame_cosine_to_reference(*, frames: torch.Tensor, reference_index: int) -> torch.Tensor:
-    frames_cpu = frames.detach().cpu().to(torch.float32)
-    if int(frames_cpu.shape[0]) == 0:
-        return frames_cpu.new_zeros((0,))
-    resolved_reference_index = min(max(int(reference_index), 0), int(frames_cpu.shape[0]) - 1)
-    reference = frames_cpu[resolved_reference_index : resolved_reference_index + 1]
+    frames_tensor = frames.to(torch.float32)
+    if int(frames_tensor.shape[0]) == 0:
+        return frames_tensor.new_zeros((0,))
+    resolved_reference_index = min(max(int(reference_index), 0), int(frames_tensor.shape[0]) - 1)
+    reference = frames_tensor[resolved_reference_index : resolved_reference_index + 1]
     normalized_reference = reference / reference.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
-    normalized_frames = frames_cpu / frames_cpu.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
+    normalized_frames = frames_tensor / frames_tensor.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
     return (normalized_frames * normalized_reference).sum(dim=1)
 
 

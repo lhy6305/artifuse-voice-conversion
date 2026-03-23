@@ -43,7 +43,9 @@ from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teache
 from v5vc.teacher_first_vc_demo import (
     analyze_teacher_first_vc_applicability,
     analyze_teacher_first_vc_decoder_behavior,
+    build_teacher_first_vc_audible_smoke_bundle,
     build_teacher_first_vc_review_bundle,
+    DEFAULT_AUDIBLE_SMOKE_TARGET_REFERENCE_MAX_AUDIO_SEC,
     DEFAULT_CALIBRATION_ASSET_PATH,
     DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH,
     DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
@@ -1705,6 +1707,85 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-full-pass-verify",
         action="store_true",
         help="Skip the teacher full-pass verification stage for each bundle case.",
+    )
+    teacher_first_vc_audible_smoke_parser = subparsers.add_parser(
+        "build-offline-mvp-teacher-first-vc-audible-smoke-bundle",
+        help="Export a teacher-first audible smoke bundle with positive-control listening assets plus the current experimental decoded wav.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        default=[],
+        help="Input wav path to include in the audible smoke bundle. Can be passed multiple times.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--input-spec-jsonl",
+        type=Path,
+        default=None,
+        help="Optional jsonl spec with case_id, input_audio_path, max_audio_sec, and notes fields.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/offline_mvp_teacher_first_vc_audible_smoke_bundle"),
+        help="Directory for per-case runs, positive-control audio, and the aggregate audible smoke summary.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the audible smoke bundle. Defaults to cpu for reproducibility.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--max-audio-sec-default",
+        type=float,
+        default=None,
+        help="Fallback max duration when --input-audio is used directly without per-case max_audio_sec.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each audible smoke case.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--calibration-asset",
+        type=Path,
+        default=DEFAULT_CALIBRATION_ASSET_PATH,
+        help="Calibration asset used both for demo conditioning and default target-reference resolution.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--target-reference-audio",
+        type=Path,
+        default=None,
+        help="Optional explicit target-reference wav. Defaults to the first selected record from the calibration asset.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--target-reference-max-audio-sec",
+        type=float,
+        default=DEFAULT_AUDIBLE_SMOKE_TARGET_REFERENCE_MAX_AUDIO_SEC,
+        help="Optional max duration for the shared target-reference listening asset.",
+    )
+    teacher_first_vc_audible_smoke_parser.set_defaults(
+        save_intermediates=False,
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--save-intermediates",
+        dest="save_intermediates",
+        action="store_true",
+        help="Keep per-case teacher contract and vocoder scaffold intermediates.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--no-save-intermediates",
+        dest="save_intermediates",
+        action="store_false",
+        help="Remove per-case intermediates after decoded wav export.",
+    )
+    teacher_first_vc_audible_smoke_parser.add_argument(
+        "--skip-full-pass-verify",
+        action="store_true",
+        help="Skip the teacher full-pass verification stage for each audible smoke case.",
     )
     teacher_first_vc_applicability_parser = subparsers.add_parser(
         "analyze-offline-mvp-teacher-first-vc-applicability",
@@ -3867,6 +3948,21 @@ def main(argv: list[str] | None = None) -> int:
             save_intermediates=bool(args.save_intermediates),
             verify_against_full_pass=not bool(args.skip_full_pass_verify),
             chunk_ms=args.chunk_ms,
+        )
+        return 0
+    if args.command == "build-offline-mvp-teacher-first-vc-audible-smoke-bundle":
+        build_teacher_first_vc_audible_smoke_bundle(
+            output_dir=args.output_dir,
+            input_audio_paths=list(args.input_audio_list),
+            input_spec_jsonl_path=args.input_spec_jsonl,
+            device=args.device,
+            max_audio_sec_default=args.max_audio_sec_default,
+            save_intermediates=bool(args.save_intermediates),
+            verify_against_full_pass=not bool(args.skip_full_pass_verify),
+            chunk_ms=args.chunk_ms,
+            calibration_asset_path=args.calibration_asset,
+            target_reference_audio_path=args.target_reference_audio,
+            target_reference_max_audio_sec=args.target_reference_max_audio_sec,
         )
         return 0
     if args.command == "analyze-offline-mvp-teacher-first-vc-applicability":

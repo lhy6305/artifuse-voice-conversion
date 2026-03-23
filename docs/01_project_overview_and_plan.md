@@ -16184,3 +16184,292 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/273_stage5_active_template_delta_candidate_report.md`
   - 记录 active-template + frame-delta candidate grid 的 24/24 结果，以及 “当前 best point 已明显 delta-dominated” 的修正版阶段判断
+## 2026-03-24 继续补充：active-template + delta 最小 source-to-target 训练冒烟已落地，但当前只先明显改写了 anti-template 行为
+### 当前结论
+- 本轮已经把
+  `active_template_excess`
+  与
+  `frame_delta`
+  正式接进了
+  Stage5 训练主链，
+  包括：
+  - train-step
+  - dataset loop
+  - validation
+  - audio export metrics
+- 当前最小双臂 smoke
+  已实际跑通：
+  - baseline 臂
+  - `active_template + delta`
+    臂
+- step4 validation
+  的直接对照是：
+  1. candidate 臂
+     `loss_active_frame_template_excess_relu_0p02`
+     从
+     `0.485220`
+     降到
+     `0.344566`
+  2. 但
+     `loss_frame_delta_unit_rms_l1`
+     仍几乎不变：
+     - `0.936003`
+       -> `0.936355`
+  3. 当前
+     `waveform / stft`
+     还略差于 baseline
+- 训练后复查
+  waveform-collapse probe
+  也给出同方向结果：
+  - candidate checkpoint
+    的
+    `baseline_decode_route`
+    `active_template_excess`
+    已从
+    `0.485107`
+    降到
+    `0.344369`
+  - 但
+    `weighted_wave_objective`
+    反而从
+    `0.370979`
+    升到
+    `0.381877`
+- 当前更准确的阶段判断应更新为：
+  - 现在已经有了
+    真训练闭环，
+    不再只是 probe 推理
+  - candidate objective
+    也已经开始
+    真实改写模型行为
+  - 但当前主要改写到的是：
+    - anti-template 指标
+  - 还没有同时把变化
+    转成更好的
+    waveform/stft
+    路线
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先动作应是：
+   - 先回听新产生的
+     baseline / candidate
+     双 bundle
+2. 如果听感仍没有改善，
+   下一步不应直接放大训练步数，
+   而应先改 candidate 形式：
+   - 让 delta 更像
+     residual repair
+   - 而不是
+     大权重压总分
+3. 当前已有新试听产物：
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_baseline_smoke_round1_2/`
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_active_template_delta_smoke_round1_2/`
+
+### 文档补充
+- `docs/274_stage5_active_template_delta_minimal_smoke_report.md`
+  - 记录训练 plumbing、最小双臂 source-to-target smoke、并排试听包，以及 “candidate 已进入真实梯度但目前主要只改写 anti-template 行为” 的阶段结论
+## 2026-03-24 继续补充：此前那批 Stage5 smoke bundle 缺少真正的 source-to-target 中间变换段；补跑真实 source-driven path 后仍是高风险 buzz
+### 当前结论
+- 本轮重新核查后已确认：
+  之前这条
+  `dataset package -> training loop -> audio export`
+  Stage5 smoke
+  实际上不是
+  真正的
+  source-to-target
+  路径
+- 当前 dataset package
+  builder
+  是从：
+  - `target_train.jsonl`
+  - `target_validation.jsonl`
+  出发
+- 并且在 package 构建里，
+  同一条 target audio
+  同时被用于：
+  - teacher contract
+    `input_audio_path`
+  - 训练 target
+    `target_audio_path`
+- 所以之前那些
+  `offline_mvp_nores_vocoder_audio_export_*`
+  bundle，
+  更准确地说只是：
+  - target-derived control
+    的 self-reconstruction
+    审计包
+- 我本轮又补跑了
+  真正的
+  source-driven 命令：
+  - `run-offline-mvp-teacher-first-vc-demo`
+  分别挂 baseline smoke
+  和 candidate smoke
+  checkpoint
+- 结果是：
+  - 真 source-driven path
+    已确认可运行
+  - 但两条仍都落在
+    high-risk buzzing heuristics
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   不应再把
+   `export-offline-mvp-nores-vocoder-audio`
+   产物
+   当成
+   user-line / source-driven
+   结论依据
+2. 更合理的下一步是：
+   - 直接围绕
+     `run-offline-mvp-teacher-first-vc-demo`
+     做 baseline / candidate
+     多输入 review bundle
+3. 当前结论也同步收紧为：
+   - 之前 bundle
+     的确测错了路径
+   - 但真正路径
+     现在也仍然是 buzz
+   - 所以问题不只是
+     “漏了中间导出环节”
+
+### 文档补充
+- `docs/275_stage5_missing_source_to_target_middle_stage_report.md`
+  - 记录 “当前 Stage5 smoke bundle 缺少真正 source-to-target 中间变换段” 的代码级证据，以及补跑真实 source-driven demo 后仍为高风险 buzz 的运行级结论
+## 2026-03-24 继续补充：端到端 VC demo 的 buzz 来源已顺着代码收敛，下一版 smoke 应改成带可听正控制的真实听审包
+### 当前结论
+- 本轮已按
+  `teacher_first_vc_demo -> teacher contract -> scaffold -> Stage5 decode/export -> dataset builder/loss`
+  顺着代码走完一遍，
+  现在可以正式排除：
+  - wav 写盘问题
+  - export-side apply-mode 小差异
+  - predicted gate 开关
+    是主因
+- 当前更准确的根因链是：
+  1. 用户线 contract
+     缺少
+     `f0_hz / r_res / final_vocoder_waveform`
+     等设计态关键信号，
+     当前只能用 proxy 控制拼 scaffold
+  2. Stage5 训练 package
+     builder
+     当前用同一条 target audio
+     同时做 teacher 输入和训练 target，
+     不是 source-driven 训练口径
+  3. 当前 no-res waveform head
+     加上
+     `L1 + single-resolution log-STFT + RMS guard`
+     objective，
+     允许模型长期停在
+     `template-buzz + envelope-following`
+     假解
+- 所以当前
+  `run-offline-mvp-teacher-first-vc-demo`
+  导出的 buzz
+  不是 export bug，
+  而是当前
+  contract/scaffold/checkpoint/objective
+  的真实失败形态
+
+### 更新后的下一步
+1. 不再把
+   “命令成功 + 导出 wav”
+   记成 smoke 成功
+2. 下一版 smoke
+   应改成
+   `teacher-first audible smoke bundle`
+   固定同时导出：
+   - `source_input.wav`
+   - `target_reference.wav`
+   - `smoke_baseline_passthrough.wav`
+   - `decoded_experimental.wav`
+3. 后续只有当
+   `decoded_experimental.wav`
+   在固定 smoke triplet
+   上摆脱 buzz，
+   才允许把它升级为主听对象；
+   在那之前，
+   smoke 的首要价值
+   是交付真实可听正控制
+
+### 文档补充
+- `docs/276_teacher_first_vc_demo_buzz_root_cause_and_real_audible_smoke_plan.md`
+  - 记录本轮顺着代码收敛出的 buzz 根因，
+    以及下一版
+    “不是 buzz、真正能听”
+    的 smoke 设计
+## 2026-03-24 继续补充：teacher-first audible smoke bundle 已正式落地，先把 smoke 交付物变成真能听
+### 当前结论
+- 本轮已新增正式入口：
+  - CLI:
+    `build-offline-mvp-teacher-first-vc-audible-smoke-bundle`
+  - PowerShell:
+    `scripts/run_teacher_first_single_target_audible_smoke_bundle.ps1`
+- 当前 audible smoke
+  每个 case
+  固定导出：
+  - `source_input.wav`
+  - `target_reference.wav`
+  - `smoke_baseline_passthrough.wav`
+  - `decoded_experimental.wav`
+- 这样当前就算
+  decoded
+  仍是 buzz，
+  smoke bundle
+  本身也已经是
+  可真实试听的交付物，
+  不再只有一条失败音频
+- 最小 smoke
+  已在：
+  - `tmp/teacher_first_vc_audible_smoke_short/`
+  跑通，
+  结果是：
+  - pipeline 成功
+  - positive controls
+    齐全
+  - decoded
+    仍是
+    `high_risk`
+- 默认 triplet
+  已被进一步修正为：
+  - 默认主听包：
+    `reports/runtime/offline_mvp_teacher_first_vc_audible_smoke_bundle_main_listening_round1_1/`
+  - 边界 probe 包：
+    `reports/runtime/offline_mvp_teacher_first_vc_audible_smoke_bundle_boundary_probe_round1_1/`
+  - 主听包：
+    `case_count = 2`
+    `decoded_high_risk_count = 2`
+    `shared_target_reference.audio_sec = 3.0`
+  - 边界包：
+    `case_count = 1`
+    `decoded_high_risk_count = 1`
+    `shared_target_reference.audio_sec = 3.0`
+
+### 更新后的下一步
+1. 直接用新脚本
+   跑默认主听包
+   audible smoke；
+   若要看高静音边界，
+   单独切
+   `boundary_probe`
+2. 后续如果要做
+   baseline / candidate
+   并排 user-line
+   听审，
+   应基于这条 audible smoke
+   契约继续扩展，
+   不要再回退到
+   只有 `decoded.wav`
+   的单音频 smoke
+
+### 文档补充
+- `docs/277_teacher_first_audible_smoke_bundle_bootstrap_report.md`
+  - 记录新 CLI / 脚本、默认 target reference
+    解析方式、最小 smoke
+    命令与输出结果
+- `docs/278_teacher_first_main_listening_and_boundary_probe_split_report.md`
+  - 记录为什么把默认主听和高静音边界拆开，
+    以及新的
+    `main_listening / boundary_probe`
+    跑通结果

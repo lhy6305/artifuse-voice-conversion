@@ -56,6 +56,7 @@ DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH = Path(
 DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH = Path(
     "data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav"
 )
+DEFAULT_AUDIBLE_SMOKE_TARGET_REFERENCE_MAX_AUDIO_SEC = 3.0
 DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION = "teacher_first_runtime_risk_v1"
 HIGH_RISK_SPECTRAL_CENTROID_HZ = 3200.0
 HIGH_RISK_SPECTRAL_ROLLOFF95_HZ = 22000.0
@@ -1797,6 +1798,180 @@ def build_teacher_first_vc_review_bundle(
         )
 
 
+def build_teacher_first_vc_audible_smoke_bundle(
+    *,
+    output_dir: Path,
+    input_audio_paths: list[Path] | None,
+    input_spec_jsonl_path: Path | None,
+    device: str,
+    max_audio_sec_default: float | None,
+    save_intermediates: bool,
+    verify_against_full_pass: bool,
+    chunk_ms: float | None,
+    calibration_asset_path: Path | None,
+    target_reference_audio_path: Path | None,
+    target_reference_max_audio_sec: float | None,
+) -> None:
+    resolved_specs = resolve_review_bundle_input_specs(
+        input_audio_paths=input_audio_paths,
+        input_spec_jsonl_path=input_spec_jsonl_path,
+        max_audio_sec_default=max_audio_sec_default,
+    )
+    if not resolved_specs:
+        raise ValueError("Audible smoke bundle requires at least one input audio.")
+
+    resolved_calibration_asset_path = (
+        DEFAULT_CALIBRATION_ASSET_PATH if calibration_asset_path is None else calibration_asset_path.resolve()
+    )
+    resolved_target_reference_audio_path = resolve_audible_smoke_target_reference_audio_path(
+        calibration_asset_path=resolved_calibration_asset_path,
+        target_reference_audio_path=target_reference_audio_path,
+    )
+    resolved_target_reference_max_audio_sec = coerce_optional_float(target_reference_max_audio_sec)
+
+    output_dir = output_dir.resolve()
+    reset_managed_directory(output_dir)
+    runs_dir = output_dir / "runs"
+    listening_dir = output_dir / "listening"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    listening_dir.mkdir(parents=True, exist_ok=True)
+
+    persisted_specs_path = output_dir / "audible_smoke_input_specs.jsonl"
+    persisted_specs_path.write_text(
+        "\n".join(json.dumps(item, ensure_ascii=False) for item in resolved_specs) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    target_reference_asset_path = listening_dir / "_shared_target_reference.wav"
+    target_reference_asset = materialize_smoke_audio_asset(
+        source_audio_path=resolved_target_reference_audio_path,
+        output_audio_path=target_reference_asset_path,
+        max_audio_sec=resolved_target_reference_max_audio_sec,
+    )
+
+    case_results: list[dict[str, object]] = []
+    for index, spec in enumerate(resolved_specs, start=1):
+        case_id = build_review_bundle_case_id(
+            raw_case_id=spec.get("case_id"),
+            input_audio_path=Path(str(spec["input_audio_path"])),
+            index=index,
+        )
+        case_output_dir = runs_dir / case_id
+        listening_case_dir = listening_dir / case_id
+        listening_case_dir.mkdir(parents=True, exist_ok=True)
+        exception: Exception | None = None
+        try:
+            run_offline_mvp_teacher_first_vc_demo(
+                input_audio_path=Path(str(spec["input_audio_path"])),
+                output_dir=case_output_dir,
+                teacher_route_handoff_path=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+                teacher_checkpoint_path=None,
+                calibration_asset_path=resolved_calibration_asset_path,
+                vocoder_checkpoint_path=None,
+                vocoder_checkpoint_selection_path=DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+                selection_target="best_validation",
+                chunk_samples=None,
+                chunk_ms=chunk_ms,
+                device=device,
+                max_audio_sec=coerce_optional_float(spec.get("max_audio_sec")),
+                verify_against_full_pass=bool(verify_against_full_pass),
+                save_intermediates=bool(save_intermediates),
+                use_predicted_activity_gate=True,
+                predicted_activity_gate_floor=0.0,
+                predicted_activity_gate_smoothing_frames=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+                predicted_activity_gate_apply_mode="post_ola_envelope",
+            )
+        except Exception as exc:
+            exception = exc
+
+        summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
+        source_input_asset = materialize_smoke_audio_asset(
+            source_audio_path=Path(str(spec["input_audio_path"])),
+            output_audio_path=listening_case_dir / "source_input.wav",
+            max_audio_sec=coerce_optional_float(spec.get("max_audio_sec")),
+        )
+        passthrough_asset = materialize_smoke_audio_asset(
+            source_audio_path=Path(str(spec["input_audio_path"])),
+            output_audio_path=listening_case_dir / "smoke_baseline_passthrough.wav",
+            max_audio_sec=coerce_optional_float(spec.get("max_audio_sec")),
+        )
+        target_reference_case_path = listening_case_dir / "target_reference.wav"
+        shutil.copy2(target_reference_asset_path, target_reference_case_path)
+
+        decoded_asset_path = listening_case_dir / "decoded_experimental.wav"
+        decoded_audio_exists = bool(summary.get("decoded_audio_exists")) and Path(
+            str(summary.get("decoded_audio_path"))
+        ).is_file()
+        if decoded_audio_exists:
+            shutil.copy2(case_output_dir / "decoded.wav", decoded_asset_path)
+
+        applicability_risk = dict(summary.get("applicability_risk", {}))
+        controls_ready = (
+            source_input_asset["exists"]
+            and passthrough_asset["exists"]
+            and target_reference_case_path.is_file()
+        )
+        case_results.append(
+            {
+                "case_index": index,
+                "case_id": case_id,
+                "status": summary.get("status"),
+                "input_audio_path": summary.get("input_audio_path"),
+                "max_audio_sec": spec.get("max_audio_sec"),
+                "summary_path": (case_output_dir / "teacher_first_vc_demo.json").as_posix(),
+                "decoded_audio_path": summary.get("decoded_audio_path"),
+                "decoded_listening_audio_path": decoded_asset_path.as_posix() if decoded_audio_exists else None,
+                "source_input_audio_path": source_input_asset["output_audio_path"],
+                "smoke_baseline_passthrough_audio_path": passthrough_asset["output_audio_path"],
+                "target_reference_audio_path": target_reference_case_path.as_posix(),
+                "decoded_audio_sec": summary.get("decoded_audio_sec"),
+                "decoded_waveform_rms": summary.get("decoded_waveform_rms"),
+                "branch_label": dict(summary.get("vocoder", {})).get("branch_label"),
+                "applicability_risk": applicability_risk,
+                "positive_controls_ready": controls_ready,
+                "decoded_audio_exists": decoded_audio_exists,
+                "decoded_high_risk": str(applicability_risk.get("status")) == "high_risk",
+                "failure": summary.get("failure"),
+                "exception": None
+                if exception is None
+                else {
+                    "error_type": type(exception).__name__,
+                    "error_message": str(exception),
+                },
+                "notes": list(spec.get("notes", [])) if isinstance(spec.get("notes"), list) else [],
+            }
+        )
+
+    bundle_summary = build_audible_smoke_bundle_summary(
+        output_dir=output_dir,
+        device=device,
+        chunk_ms=chunk_ms,
+        save_intermediates=save_intermediates,
+        verify_against_full_pass=verify_against_full_pass,
+        case_results=case_results,
+        input_spec_jsonl_path=input_spec_jsonl_path,
+        persisted_specs_path=persisted_specs_path,
+        calibration_asset_path=resolved_calibration_asset_path,
+        target_reference_audio_path=resolved_target_reference_audio_path,
+        target_reference_asset=target_reference_asset,
+        target_reference_shared_audio_path=target_reference_asset_path,
+    )
+    write_audible_smoke_bundle_summary(
+        summary_json_path=output_dir / "teacher_first_vc_audible_smoke_bundle.json",
+        summary_md_path=output_dir / "teacher_first_vc_audible_smoke_bundle.md",
+        summary=bundle_summary,
+    )
+    if not bool(bundle_summary["all_cases_pipeline_succeeded"]):
+        raise ValueError(
+            "teacher-first VC audible smoke bundle contains failed demo cases; inspect teacher_first_vc_audible_smoke_bundle.json for details."
+        )
+    if not bool(bundle_summary["all_cases_positive_controls_ready"]):
+        raise ValueError(
+            "teacher-first VC audible smoke bundle is missing positive-control audio; inspect teacher_first_vc_audible_smoke_bundle.json for details."
+        )
+
+
 def resolve_review_bundle_input_specs(
     *,
     input_audio_paths: list[Path] | None,
@@ -1946,6 +2121,205 @@ def build_review_bundle_markdown(summary: dict[str, object]) -> str:
                 f"  decoded_audio_sec: {case.get('decoded_audio_sec')}",
                 f"  decoded_waveform_rms: {case.get('decoded_waveform_rms')}",
                 f"  branch_label: {case.get('branch_label')}",
+                f"  summary_path: {case.get('summary_path')}",
+                f"  failure: {json.dumps(case.get('failure'), ensure_ascii=False)}",
+                f"  exception: {json.dumps(case.get('exception'), ensure_ascii=False)}",
+                f"  notes: {json.dumps(case.get('notes'), ensure_ascii=False)}",
+            ]
+        )
+    lines.extend(["", "## Notes"])
+    for note in list(summary.get("notes", [])):
+        lines.append(f"- {note}")
+    return "\n".join(lines) + "\n"
+
+
+def resolve_audible_smoke_target_reference_audio_path(
+    *,
+    calibration_asset_path: Path,
+    target_reference_audio_path: Path | None,
+) -> Path:
+    if target_reference_audio_path is not None:
+        resolved = target_reference_audio_path.resolve()
+        if not resolved.is_file():
+            raise FileNotFoundError(f"Target reference audio does not exist: {resolved}")
+        return resolved
+    payload = json.loads(calibration_asset_path.resolve().read_text(encoding="utf-8"))
+    selected_record_ids = list(dict(payload.get("selection_summary", {})).get("selected_record_ids", []))
+    source_records_path = Path(str(dict(payload.get("estimation_metadata", {})).get("source_records_path", ""))).resolve()
+    if not selected_record_ids:
+        raise ValueError(
+            "Calibration asset does not expose selection_summary.selected_record_ids for audible smoke target reference."
+        )
+    if not source_records_path.is_file():
+        raise FileNotFoundError(
+            f"Calibration asset source_records_path is missing for audible smoke target reference: {source_records_path}"
+        )
+    record_map: dict[str, Path] = {}
+    for row in load_jsonl(source_records_path):
+        record_id = row.get("record_id")
+        audio_path = row.get("audio_path")
+        if record_id in {None, ""} or audio_path in {None, ""}:
+            continue
+        record_map[str(record_id)] = Path(str(audio_path)).resolve()
+    for record_id in selected_record_ids:
+        resolved = record_map.get(str(record_id))
+        if resolved is not None and resolved.is_file():
+            return resolved
+    raise FileNotFoundError(
+        "Could not resolve any selected calibration target audio for audible smoke bundle target reference."
+    )
+
+
+def materialize_smoke_audio_asset(
+    *,
+    source_audio_path: Path,
+    output_audio_path: Path,
+    max_audio_sec: float | None,
+) -> dict[str, object]:
+    waveform, sample_rate = load_waveform(source_audio_path.resolve(), max_duration_sec=max_audio_sec)
+    output_audio_path.parent.mkdir(parents=True, exist_ok=True)
+    write_waveform_int16(output_audio_path, waveform, sample_rate=int(sample_rate))
+    return {
+        "source_audio_path": source_audio_path.resolve().as_posix(),
+        "output_audio_path": output_audio_path.as_posix(),
+        "sample_rate": int(sample_rate),
+        "audio_sec": round(float(waveform.shape[0]) / float(sample_rate), 6) if int(sample_rate) > 0 else 0.0,
+        "waveform_rms": round(float(waveform.to(torch.float32).pow(2).mean().sqrt().item()), 6)
+        if waveform.numel() > 0
+        else 0.0,
+        "exists": output_audio_path.is_file(),
+    }
+
+
+def build_audible_smoke_bundle_summary(
+    *,
+    output_dir: Path,
+    device: str,
+    chunk_ms: float | None,
+    save_intermediates: bool,
+    verify_against_full_pass: bool,
+    case_results: list[dict[str, object]],
+    input_spec_jsonl_path: Path | None,
+    persisted_specs_path: Path,
+    calibration_asset_path: Path,
+    target_reference_audio_path: Path,
+    target_reference_asset: dict[str, object],
+    target_reference_shared_audio_path: Path,
+) -> dict[str, object]:
+    pipeline_succeeded_count = sum(1 for item in case_results if str(item.get("status")) == "succeeded")
+    positive_controls_ready_count = sum(1 for item in case_results if bool(item.get("positive_controls_ready")))
+    decoded_high_risk_count = sum(1 for item in case_results if bool(item.get("decoded_high_risk")))
+    decoded_present_count = sum(1 for item in case_results if bool(item.get("decoded_audio_exists")))
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "teacher_first_single_target_vc_audible_smoke_bundle_v1",
+        "output_dir": output_dir.as_posix(),
+        "input_spec_jsonl_path": safe_resolve_path(input_spec_jsonl_path),
+        "materialized_input_specs_path": persisted_specs_path.as_posix(),
+        "device": str(device),
+        "chunk_ms": chunk_ms,
+        "save_intermediates": bool(save_intermediates),
+        "verify_against_full_pass": bool(verify_against_full_pass),
+        "case_count": len(case_results),
+        "pipeline_succeeded_count": pipeline_succeeded_count,
+        "pipeline_failed_count": len(case_results) - pipeline_succeeded_count,
+        "positive_controls_ready_count": positive_controls_ready_count,
+        "decoded_present_count": decoded_present_count,
+        "decoded_high_risk_count": decoded_high_risk_count,
+        "all_cases_pipeline_succeeded": pipeline_succeeded_count == len(case_results),
+        "all_cases_positive_controls_ready": positive_controls_ready_count == len(case_results),
+        "shared_target_reference": {
+            "calibration_asset_path": calibration_asset_path.as_posix(),
+            "resolved_source_audio_path": target_reference_audio_path.as_posix(),
+            "shared_audio_path": target_reference_shared_audio_path.as_posix(),
+            "sample_rate": target_reference_asset["sample_rate"],
+            "audio_sec": target_reference_asset["audio_sec"],
+            "waveform_rms": target_reference_asset["waveform_rms"],
+        },
+        "listening_dir": (output_dir / "listening").as_posix(),
+        "runs_dir": (output_dir / "runs").as_posix(),
+        "cases": case_results,
+        "notes": [
+            "This bundle separates positive-control listening assets from the current experimental decoded output.",
+            "Each case exports source_input.wav, target_reference.wav, smoke_baseline_passthrough.wav, and decoded_experimental.wav when the demo run succeeds.",
+            "A case can be a valid audible smoke bundle even when decoded_experimental.wav remains high-risk buzzing; that condition is reported explicitly rather than hidden behind exit-code success.",
+        ],
+    }
+
+
+def write_audible_smoke_bundle_summary(
+    *,
+    summary_json_path: Path,
+    summary_md_path: Path,
+    summary: dict[str, object],
+) -> None:
+    summary_json_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    summary_md_path.write_text(
+        build_audible_smoke_bundle_markdown(summary),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def build_audible_smoke_bundle_markdown(summary: dict[str, object]) -> str:
+    shared_target_reference = dict(summary.get("shared_target_reference", {}))
+    lines = [
+        "# Teacher-First VC Audible Smoke Bundle",
+        "",
+        f"- generated_at: {summary['generated_at']}",
+        f"- mode: {summary['mode']}",
+        f"- output_dir: {summary['output_dir']}",
+        f"- input_spec_jsonl_path: {summary['input_spec_jsonl_path']}",
+        f"- materialized_input_specs_path: {summary['materialized_input_specs_path']}",
+        f"- device: {summary['device']}",
+        f"- chunk_ms: {summary['chunk_ms']}",
+        f"- save_intermediates: {summary['save_intermediates']}",
+        f"- verify_against_full_pass: {summary['verify_against_full_pass']}",
+        f"- case_count: {summary['case_count']}",
+        f"- pipeline_succeeded_count: {summary['pipeline_succeeded_count']}",
+        f"- pipeline_failed_count: {summary['pipeline_failed_count']}",
+        f"- positive_controls_ready_count: {summary['positive_controls_ready_count']}",
+        f"- decoded_present_count: {summary['decoded_present_count']}",
+        f"- decoded_high_risk_count: {summary['decoded_high_risk_count']}",
+        f"- all_cases_pipeline_succeeded: {summary['all_cases_pipeline_succeeded']}",
+        f"- all_cases_positive_controls_ready: {summary['all_cases_positive_controls_ready']}",
+        f"- listening_dir: {summary['listening_dir']}",
+        f"- runs_dir: {summary['runs_dir']}",
+        "",
+        "## Shared Target Reference",
+        f"- calibration_asset_path: {shared_target_reference.get('calibration_asset_path')}",
+        f"- resolved_source_audio_path: {shared_target_reference.get('resolved_source_audio_path')}",
+        f"- shared_audio_path: {shared_target_reference.get('shared_audio_path')}",
+        f"- sample_rate: {shared_target_reference.get('sample_rate')}",
+        f"- audio_sec: {shared_target_reference.get('audio_sec')}",
+        f"- waveform_rms: {shared_target_reference.get('waveform_rms')}",
+        "",
+        "## Cases",
+    ]
+    for case in list(summary.get("cases", [])):
+        if not isinstance(case, dict):
+            continue
+        lines.extend(
+            [
+                f"- case_index: {case.get('case_index')}",
+                f"  case_id: {case.get('case_id')}",
+                f"  status: {case.get('status')}",
+                f"  positive_controls_ready: {case.get('positive_controls_ready')}",
+                f"  decoded_audio_exists: {case.get('decoded_audio_exists')}",
+                f"  decoded_high_risk: {case.get('decoded_high_risk')}",
+                f"  input_audio_path: {case.get('input_audio_path')}",
+                f"  source_input_audio_path: {case.get('source_input_audio_path')}",
+                f"  target_reference_audio_path: {case.get('target_reference_audio_path')}",
+                f"  smoke_baseline_passthrough_audio_path: {case.get('smoke_baseline_passthrough_audio_path')}",
+                f"  decoded_listening_audio_path: {case.get('decoded_listening_audio_path')}",
+                f"  decoded_audio_sec: {case.get('decoded_audio_sec')}",
+                f"  decoded_waveform_rms: {case.get('decoded_waveform_rms')}",
+                f"  branch_label: {case.get('branch_label')}",
+                f"  applicability_risk: {json.dumps(case.get('applicability_risk'), ensure_ascii=False)}",
                 f"  summary_path: {case.get('summary_path')}",
                 f"  failure: {json.dumps(case.get('failure'), ensure_ascii=False)}",
                 f"  exception: {json.dumps(case.get('exception'), ensure_ascii=False)}",

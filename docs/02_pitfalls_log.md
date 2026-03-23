@@ -10141,3 +10141,220 @@
     作为阶段性负约束，
     防止把 probe 进展
     误当成可听进展
+### 343. 不能把 probe 里的 `detach().cpu()` helper 直接搬进训练 loss；这样新项看起来“已经接上”，但梯度实际上是断的
+- 现象:
+  - 本轮把
+    `active_template_excess`
+    和
+    `frame_delta`
+    接进训练时，
+    初版直接复用了
+    probe 风格的 helper
+  - helper 里保留了：
+    - `detach()`
+    - `.cpu()`
+  - 结果是：
+    - candidate 臂
+      的 `loss_total`
+      数值虽然变了
+    - 但和 baseline 臂相比，
+      validation sidecar
+      几乎完全一样
+  - 这暴露出：
+    - 新 loss
+      根本没有参与梯度
+- 风险:
+  - 这种错误
+    非常隐蔽：
+    - 代码能跑
+    - loss_total 会变
+    - checkpoint 也会产出
+  - 但训练行为
+    实际没有按新 objective
+    更新
+  - 如果不做对照检查，
+    很容易误以为：
+    - 新候选已经完成
+      training plumbing
+- 处理要求:
+  - 以后凡是把
+    probe 指标
+    接进训练 loss，
+    必须逐项检查：
+    - 是否还在
+      device 上
+    - 是否保留
+      autograd graph
+  - 最低限度要做：
+    - baseline / candidate
+      双臂最小 smoke
+    - 并核对
+      sidecar 指标
+      是否真的分叉
+### 344. 不能把 target self-reconstruction bundle 误当成真正的 source-to-target smoke；如果 dataset package 的 teacher 输入和训练 target 是同一条 target audio，这条线就只能回答“target-derived control 能否被当前 vocoder 重建”
+- 现象:
+  - 本轮重新检查
+    Stage5 dataset package
+    builder 时发现：
+    - package 来源
+      是
+      `target_train.jsonl`
+      和
+      `target_validation.jsonl`
+    - 同时在构建里，
+      同一条
+      `audio_path`
+      被用于：
+      - teacher contract
+        `input_audio_path`
+      - training package
+        `target_audio_path`
+  - 实际 package
+    产物里也已经坐实：
+    - `source_audio_path`
+      与
+      `target_audio_path`
+      完全相同
+- 风险:
+  - 如果这时继续把
+    `export-offline-mvp-nores-vocoder-audio`
+    的 bundle
+    当成
+    user-line / source-driven
+    试听依据，
+    很容易错判成：
+    - “source-to-target
+      仍然是 buzz”
+  - 但实际它只能证明：
+    - 当前 vocoder
+      连 target-derived controls
+      的重建也没做好
+    - 或者
+      target-derived controls
+      本身就不够
+- 处理要求:
+  - 以后凡是要判断
+    user-line / source-driven
+    听感，
+    必须优先确认：
+    - 输入给 teacher runtime
+      的是否是 source audio
+    - 最终 decoded
+      是否来自
+      `run-offline-mvp-teacher-first-vc-demo`
+      这类真 source-driven
+      路径
+  - 如果当前 bundle
+    来自 target split
+    package，
+    就必须显式标注为：
+    - target self-reconstruction audit
+    - 不能写成
+      source-to-target smoke
+### 345. 当当前 decoded 仍已知是 buzz 时，不能再把“导出成功”本身当成 smoke 成功；下一版 smoke 必须自带可听正控制，否则听审交付会持续失真
+- 现象:
+  - 本轮顺着
+    `teacher_first_vc_demo`
+    代码和最近运行产物
+    重新核查后，
+    已明确：
+    - 当前
+      `decoded.wav`
+      是否成功写出
+      不能代表
+      “当前 smoke 已可听”
+    - 即使命令
+      exit code = 0，
+      导出的主试听对象
+      仍可能只是
+      template-buzz
+  - 如果 smoke bundle
+    只包含
+    `decoded.wav`，
+    用户在 GUI
+    或 review bundle
+    里听到的就只有失败音频，
+    这会把：
+    - 工程闭环成立
+    - 听审入口可用
+    - 当前模型可听
+    三件事混成一件
+- 风险:
+  - 会持续误报：
+    - “smoke 成功”
+  - 但实际只是：
+    - 文件存在
+    - 路径正确
+    - 当前模型仍在 buzz
+  - 这会让后续 review
+    很难区分：
+    - bundle 工具链问题
+    - 还是模型本身问题
+- 处理要求:
+  - 以后凡是交付
+    teacher-first /
+    source-driven
+    smoke，
+    至少同时带上：
+    - `source_input.wav`
+    - `target_reference.wav`
+    - `smoke_baseline_passthrough.wav`
+    - `decoded_experimental.wav`
+  - 并在 summary
+    里显式区分：
+    - 工程成功
+    - 可听正控制成功
+    - 模型 decoded
+      是否成功脱离 buzz
+  - 在
+    `decoded_experimental.wav`
+    仍是 buzz
+    期间，
+    禁止把整轮 smoke
+    写成：
+    - 终端用户 demo 已可听
+### 346. 默认主听 bundle 不要混入“高静音/极短边界 case”；这会把模型持续 buzz 和边界样本本来就近静音两件事混在一起
+- 现象:
+  - 本轮初版 audible smoke
+    默认把：
+    - 常规 segment
+    - peak case
+    - 高静音边界 case
+    一起塞进主听包
+  - 用户试听后，
+    很容易直接得到：
+    - “这批输出要么静音要么极短且全 buzz”
+  - 复核后确认：
+    - buzz
+      当然是真问题
+    - 但
+      “极短/近静音”
+      有一部分
+      只是因为默认包里
+      混进了
+      `segment_0061`
+      这种近极端高静音样本
+- 风险:
+  - 会把：
+    - 模型主线听感失败
+    - 边界样本时长/静音特征
+    两类问题
+    混成一句模糊评价
+  - 导致后续主听包
+    本身就不适合做
+    快速人工判断
+- 处理要求:
+  - 默认主听 bundle
+    只保留：
+    - 常规可听 case
+    - peak / 能量较高 case
+  - 高静音、
+    极短、
+    近静音边界样本
+    单独放进：
+    - `boundary_probe`
+    - `applicability_probe`
+    之类的专门 bundle
+  - 不要再把
+    boundary case
+    混进默认主听入口
