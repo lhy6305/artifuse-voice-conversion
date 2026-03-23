@@ -16473,3 +16473,68 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
     以及新的
     `main_listening / boundary_probe`
     跑通结果
+## 2026-03-24 继续补充：teacher-first audible compare bundle 已正式落地，baseline / candidate 可在同一正控制包里并排试听
+### 当前结论
+- 本轮已新增正式入口：
+  - CLI:
+    `build-offline-mvp-teacher-first-vc-audible-compare-bundle`
+  - PowerShell:
+    `scripts/run_teacher_first_single_target_audible_compare_bundle.ps1`
+- 当前 compare bundle
+  每个 case
+  固定只保留一套：
+  - `source_input.wav`
+  - `target_reference.wav`
+  - `smoke_baseline_passthrough.wav`
+- 在这套共享正控制旁边，
+  再按 variant
+  并排导出：
+  - `decoded_baseline.wav`
+  - `decoded_candidate.wav`
+  - 或更一般的
+    `decoded_<variant>.wav`
+- summary
+  当前已按 variant
+  显式列出：
+  - `checkpoint_path`
+  - `applicability_risk_status`
+  - `decoded_listening_audio_path`
+  - 以及聚合后的
+    `decoded_high_risk_count`
+- compare bundle
+  默认 variant
+  来源当前两条 Stage5 smoke 训练 summary：
+  - baseline：
+    `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_baseline_smoke_round1_2/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json`
+  - candidate：
+    `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_active_template_delta_smoke_round1_2/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json`
+
+### 更新后的下一步
+1. 后续若需要 user-line
+   baseline / candidate
+   人工听审，
+   默认优先从 compare bundle
+   开始，
+   不再手工拼两份独立 smoke
+2. 如果后续继续扩 variant，
+   必须继续保持：
+   - 每 case
+     只保留一套共享正控制
+   - 每个 variant
+     单独写
+     `decoded_<variant>.wav`
+   - summary
+     显式列出
+     checkpoint /
+     风险标记 /
+     试听路径
+
+### 文档补充
+- `docs/279_teacher_first_audible_compare_bundle_bootstrap_report.md`
+  - 记录 compare bundle
+    的 CLI / 脚本、
+    默认 baseline / candidate
+    解析方式、
+    输出契约、
+    以及最小 smoke
+    验证结果

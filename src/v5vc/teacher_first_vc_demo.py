@@ -57,6 +57,12 @@ DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH = Path(
     "data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav"
 )
 DEFAULT_AUDIBLE_SMOKE_TARGET_REFERENCE_MAX_AUDIO_SEC = 3.0
+DEFAULT_AUDIBLE_COMPARE_BASELINE_SUMMARY_JSON_PATH = Path(
+    "reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_baseline_smoke_round1_2/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json"
+)
+DEFAULT_AUDIBLE_COMPARE_CANDIDATE_SUMMARY_JSON_PATH = Path(
+    "reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_active_template_delta_smoke_round1_2/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json"
+)
 DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION = "teacher_first_runtime_risk_v1"
 HIGH_RISK_SPECTRAL_CENTROID_HZ = 3200.0
 HIGH_RISK_SPECTRAL_ROLLOFF95_HZ = 22000.0
@@ -2014,13 +2020,17 @@ def build_review_bundle_case_id(
         base = str(raw_case_id)
     else:
         base = input_audio_path.stem
-    sanitized = "".join(
-        char if char.isalnum() or char in {"_", "-"} else "_"
-        for char in base
-    ).strip("_")
+    sanitized = sanitize_bundle_component(base)
     if not sanitized:
         sanitized = f"case_{index:03d}"
     return f"{index:03d}_{sanitized}"
+
+
+def sanitize_bundle_component(raw_value: object) -> str:
+    return "".join(
+        char if char.isalnum() or char in {"_", "-"} else "_"
+        for char in str(raw_value)
+    ).strip("_")
 
 
 def coerce_optional_float(value: object) -> float | None:
@@ -2326,6 +2336,556 @@ def build_audible_smoke_bundle_markdown(summary: dict[str, object]) -> str:
                 f"  notes: {json.dumps(case.get('notes'), ensure_ascii=False)}",
             ]
         )
+    lines.extend(["", "## Notes"])
+    for note in list(summary.get("notes", [])):
+        lines.append(f"- {note}")
+    return "\n".join(lines) + "\n"
+
+
+def build_teacher_first_vc_audible_compare_bundle(
+    *,
+    output_dir: Path,
+    input_audio_paths: list[Path] | None,
+    input_spec_jsonl_path: Path | None,
+    device: str,
+    max_audio_sec_default: float | None,
+    save_intermediates: bool,
+    verify_against_full_pass: bool,
+    chunk_ms: float | None,
+    calibration_asset_path: Path | None,
+    target_reference_audio_path: Path | None,
+    target_reference_max_audio_sec: float | None,
+    vocoder_spec_jsonl_path: Path | None,
+) -> None:
+    resolved_specs = resolve_review_bundle_input_specs(
+        input_audio_paths=input_audio_paths,
+        input_spec_jsonl_path=input_spec_jsonl_path,
+        max_audio_sec_default=max_audio_sec_default,
+    )
+    if not resolved_specs:
+        raise ValueError("Audible compare bundle requires at least one input audio.")
+
+    resolved_vocoder_specs = resolve_audible_compare_vocoder_specs(
+        vocoder_spec_jsonl_path=vocoder_spec_jsonl_path,
+    )
+    if not resolved_vocoder_specs:
+        raise ValueError("Audible compare bundle requires at least one vocoder variant.")
+
+    resolved_calibration_asset_path = (
+        DEFAULT_CALIBRATION_ASSET_PATH if calibration_asset_path is None else calibration_asset_path.resolve()
+    )
+    resolved_target_reference_audio_path = resolve_audible_smoke_target_reference_audio_path(
+        calibration_asset_path=resolved_calibration_asset_path,
+        target_reference_audio_path=target_reference_audio_path,
+    )
+    resolved_target_reference_max_audio_sec = coerce_optional_float(target_reference_max_audio_sec)
+
+    output_dir = output_dir.resolve()
+    reset_managed_directory(output_dir)
+    runs_dir = output_dir / "runs"
+    listening_dir = output_dir / "listening"
+    runs_dir.mkdir(parents=True, exist_ok=True)
+    listening_dir.mkdir(parents=True, exist_ok=True)
+
+    persisted_specs_path = output_dir / "audible_compare_input_specs.jsonl"
+    persisted_specs_path.write_text(
+        "\n".join(json.dumps(item, ensure_ascii=False) for item in resolved_specs) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+    persisted_vocoder_specs_path = output_dir / "audible_compare_vocoder_specs.jsonl"
+    persisted_vocoder_specs_path.write_text(
+        "\n".join(json.dumps(item, ensure_ascii=False) for item in resolved_vocoder_specs) + "\n",
+        encoding="utf-8",
+        newline="\n",
+    )
+
+    target_reference_asset_path = listening_dir / "_shared_target_reference.wav"
+    target_reference_asset = materialize_smoke_audio_asset(
+        source_audio_path=resolved_target_reference_audio_path,
+        output_audio_path=target_reference_asset_path,
+        max_audio_sec=resolved_target_reference_max_audio_sec,
+    )
+
+    case_results: list[dict[str, object]] = []
+    for index, spec in enumerate(resolved_specs, start=1):
+        case_id = build_review_bundle_case_id(
+            raw_case_id=spec.get("case_id"),
+            input_audio_path=Path(str(spec["input_audio_path"])),
+            index=index,
+        )
+        listening_case_dir = listening_dir / case_id
+        listening_case_dir.mkdir(parents=True, exist_ok=True)
+        source_input_asset = materialize_smoke_audio_asset(
+            source_audio_path=Path(str(spec["input_audio_path"])),
+            output_audio_path=listening_case_dir / "source_input.wav",
+            max_audio_sec=coerce_optional_float(spec.get("max_audio_sec")),
+        )
+        passthrough_asset = materialize_smoke_audio_asset(
+            source_audio_path=Path(str(spec["input_audio_path"])),
+            output_audio_path=listening_case_dir / "smoke_baseline_passthrough.wav",
+            max_audio_sec=coerce_optional_float(spec.get("max_audio_sec")),
+        )
+        target_reference_case_path = listening_case_dir / "target_reference.wav"
+        shutil.copy2(target_reference_asset_path, target_reference_case_path)
+
+        variant_results: list[dict[str, object]] = []
+        for variant_index, vocoder_spec in enumerate(resolved_vocoder_specs, start=1):
+            variant_id = build_compare_variant_id(
+                label=vocoder_spec["label"],
+                index=variant_index,
+            )
+            case_output_dir = runs_dir / case_id / variant_id
+            exception: Exception | None = None
+            try:
+                run_offline_mvp_teacher_first_vc_demo(
+                    input_audio_path=Path(str(spec["input_audio_path"])),
+                    output_dir=case_output_dir,
+                    teacher_route_handoff_path=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+                    teacher_checkpoint_path=None,
+                    calibration_asset_path=resolved_calibration_asset_path,
+                    vocoder_checkpoint_path=Path(str(vocoder_spec["checkpoint_path"])),
+                    vocoder_checkpoint_selection_path=None,
+                    selection_target="best_validation",
+                    chunk_samples=None,
+                    chunk_ms=chunk_ms,
+                    device=device,
+                    max_audio_sec=coerce_optional_float(spec.get("max_audio_sec")),
+                    verify_against_full_pass=bool(verify_against_full_pass),
+                    save_intermediates=bool(save_intermediates),
+                    use_predicted_activity_gate=True,
+                    predicted_activity_gate_floor=0.0,
+                    predicted_activity_gate_smoothing_frames=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+                    predicted_activity_gate_apply_mode="post_ola_envelope",
+                )
+            except Exception as exc:
+                exception = exc
+
+            summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
+            decoded_asset_path = listening_case_dir / f"decoded_{variant_id}.wav"
+            decoded_audio_exists = bool(summary.get("decoded_audio_exists")) and Path(
+                str(summary.get("decoded_audio_path"))
+            ).is_file()
+            if decoded_audio_exists:
+                shutil.copy2(case_output_dir / "decoded.wav", decoded_asset_path)
+            applicability_risk = dict(summary.get("applicability_risk", {}))
+            variant_results.append(
+                {
+                    "variant_index": variant_index,
+                    "variant_id": variant_id,
+                    "label": vocoder_spec["label"],
+                    "checkpoint_path": vocoder_spec["checkpoint_path"],
+                    "checkpoint_source_summary_path": vocoder_spec.get("checkpoint_source_summary_path"),
+                    "checkpoint_source_key": vocoder_spec.get("checkpoint_source_key"),
+                    "status": summary.get("status"),
+                    "summary_path": (case_output_dir / "teacher_first_vc_demo.json").as_posix(),
+                    "decoded_audio_path": summary.get("decoded_audio_path"),
+                    "decoded_listening_audio_path": decoded_asset_path.as_posix() if decoded_audio_exists else None,
+                    "decoded_audio_exists": decoded_audio_exists,
+                    "decoded_audio_sec": summary.get("decoded_audio_sec"),
+                    "decoded_waveform_rms": summary.get("decoded_waveform_rms"),
+                    "branch_label": dict(summary.get("vocoder", {})).get("branch_label"),
+                    "applicability_risk_status": applicability_risk.get("status"),
+                    "applicability_risk_summary": applicability_risk.get("summary"),
+                    "applicability_risk": applicability_risk,
+                    "decoded_high_risk": str(applicability_risk.get("status")) == "high_risk",
+                    "failure": summary.get("failure"),
+                    "exception": None
+                    if exception is None
+                    else {
+                        "error_type": type(exception).__name__,
+                        "error_message": str(exception),
+                    },
+                    "notes": list(vocoder_spec.get("notes", []))
+                    if isinstance(vocoder_spec.get("notes"), list)
+                    else [],
+                }
+            )
+
+        case_results.append(
+            {
+                "case_index": index,
+                "case_id": case_id,
+                "input_audio_path": safe_resolve_path(Path(str(spec["input_audio_path"]))),
+                "max_audio_sec": spec.get("max_audio_sec"),
+                "source_input_audio_path": source_input_asset["output_audio_path"],
+                "smoke_baseline_passthrough_audio_path": passthrough_asset["output_audio_path"],
+                "target_reference_audio_path": target_reference_case_path.as_posix(),
+                "positive_controls_ready": (
+                    source_input_asset["exists"]
+                    and passthrough_asset["exists"]
+                    and target_reference_case_path.is_file()
+                ),
+                "variants": variant_results,
+                "notes": list(spec.get("notes", [])) if isinstance(spec.get("notes"), list) else [],
+            }
+        )
+
+    bundle_summary = build_audible_compare_bundle_summary(
+        output_dir=output_dir,
+        device=device,
+        chunk_ms=chunk_ms,
+        save_intermediates=save_intermediates,
+        verify_against_full_pass=verify_against_full_pass,
+        case_results=case_results,
+        input_spec_jsonl_path=input_spec_jsonl_path,
+        persisted_specs_path=persisted_specs_path,
+        persisted_vocoder_specs_path=persisted_vocoder_specs_path,
+        calibration_asset_path=resolved_calibration_asset_path,
+        target_reference_audio_path=resolved_target_reference_audio_path,
+        target_reference_asset=target_reference_asset,
+        target_reference_shared_audio_path=target_reference_asset_path,
+    )
+    write_audible_compare_bundle_summary(
+        summary_json_path=output_dir / "teacher_first_vc_audible_compare_bundle.json",
+        summary_md_path=output_dir / "teacher_first_vc_audible_compare_bundle.md",
+        summary=bundle_summary,
+    )
+    if not bool(bundle_summary["all_cases_positive_controls_ready"]):
+        raise ValueError(
+            "teacher-first VC audible compare bundle is missing positive-control audio; inspect teacher_first_vc_audible_compare_bundle.json for details."
+        )
+    if not bool(bundle_summary["all_variant_runs_succeeded"]):
+        raise ValueError(
+            "teacher-first VC audible compare bundle contains failed variant runs; inspect teacher_first_vc_audible_compare_bundle.json for details."
+        )
+
+
+def default_audible_compare_vocoder_specs() -> list[dict[str, object]]:
+    return [
+        {
+            "label": "baseline",
+            "checkpoint_source_summary_path": DEFAULT_AUDIBLE_COMPARE_BASELINE_SUMMARY_JSON_PATH.resolve().as_posix(),
+            "checkpoint_source_key": "best_checkpoint",
+            "notes": [
+                "Default baseline variant resolved from the current dataset-level baseline smoke training summary.",
+            ],
+        },
+        {
+            "label": "candidate",
+            "checkpoint_source_summary_path": DEFAULT_AUDIBLE_COMPARE_CANDIDATE_SUMMARY_JSON_PATH.resolve().as_posix(),
+            "checkpoint_source_key": "best_checkpoint",
+            "notes": [
+                "Default candidate variant resolved from the current active-template plus frame-delta smoke training summary.",
+            ],
+        },
+    ]
+
+
+def resolve_audible_compare_vocoder_specs(
+    *,
+    vocoder_spec_jsonl_path: Path | None,
+) -> list[dict[str, object]]:
+    raw_specs: list[dict[str, object]] = []
+    if vocoder_spec_jsonl_path is None:
+        raw_specs = default_audible_compare_vocoder_specs()
+    else:
+        for row in load_jsonl(vocoder_spec_jsonl_path.resolve()):
+            raw_specs.append(dict(row))
+    resolved_specs: list[dict[str, object]] = []
+    seen_variant_ids: dict[str, int] = {}
+    for index, row in enumerate(raw_specs, start=1):
+        raw_variant_id = row.get("variant_id")
+        label = str(row.get("label") or raw_variant_id or f"variant_{index:02d}").strip()
+        variant_id_base = build_compare_variant_id(
+            label=str(raw_variant_id or label),
+            index=index,
+        )
+        duplicate_count = int(seen_variant_ids.get(variant_id_base, 0))
+        seen_variant_ids[variant_id_base] = duplicate_count + 1
+        variant_id = (
+            variant_id_base
+            if duplicate_count == 0
+            else f"{variant_id_base}_{duplicate_count + 1:02d}"
+        )
+        checkpoint_path_value = row.get("checkpoint_path")
+        checkpoint_source_summary_path_value = row.get("checkpoint_source_summary_path")
+        checkpoint_source_key = str(row.get("checkpoint_source_key") or "best_checkpoint").strip()
+        if checkpoint_path_value in {None, ""}:
+            if checkpoint_source_summary_path_value in {None, ""}:
+                raise ValueError(
+                    "Each audible compare vocoder spec row must include checkpoint_path or checkpoint_source_summary_path."
+                )
+            checkpoint_path = resolve_checkpoint_path_from_training_summary(
+                summary_json_path=Path(str(checkpoint_source_summary_path_value)),
+                checkpoint_source_key=checkpoint_source_key,
+            )
+            checkpoint_source_summary_path = safe_resolve_path(Path(str(checkpoint_source_summary_path_value)))
+        else:
+            checkpoint_path = safe_resolve_path(Path(str(checkpoint_path_value)))
+            checkpoint_source_summary_path = (
+                None
+                if checkpoint_source_summary_path_value in {None, ""}
+                else safe_resolve_path(Path(str(checkpoint_source_summary_path_value)))
+            )
+        resolved_specs.append(
+            {
+                "variant_index": index,
+                "variant_id": variant_id,
+                "label": label,
+                "checkpoint_path": checkpoint_path.as_posix(),
+                "checkpoint_source_summary_path": checkpoint_source_summary_path,
+                "checkpoint_source_key": checkpoint_source_key,
+                "notes": list(row.get("notes", [])) if isinstance(row.get("notes"), list) else [],
+            }
+        )
+    return resolved_specs
+
+
+def resolve_checkpoint_path_from_training_summary(
+    *,
+    summary_json_path: Path,
+    checkpoint_source_key: str,
+) -> Path:
+    resolved_summary_path = summary_json_path.resolve()
+    if not resolved_summary_path.is_file():
+        raise FileNotFoundError(f"Training summary json does not exist: {resolved_summary_path}")
+    payload = json.loads(resolved_summary_path.read_text(encoding="utf-8"))
+    artifacts = dict(payload.get("artifacts", {}))
+    key = str(checkpoint_source_key).strip().lower()
+    if key == "best_checkpoint":
+        checkpoint_value = dict(artifacts.get("best_checkpoint", {})).get("checkpoint_path")
+    elif key == "latest_checkpoint":
+        checkpoint_value = artifacts.get("latest_checkpoint_path")
+    else:
+        raise ValueError(f"Unsupported checkpoint_source_key: {checkpoint_source_key}")
+    if checkpoint_value in {None, ""}:
+        raise ValueError(
+            f"Training summary {resolved_summary_path} does not expose checkpoint for {checkpoint_source_key}."
+        )
+    resolved_checkpoint_path = Path(str(checkpoint_value)).resolve()
+    if not resolved_checkpoint_path.is_file():
+        raise FileNotFoundError(
+            f"Resolved compare-bundle checkpoint does not exist: {resolved_checkpoint_path}"
+        )
+    return resolved_checkpoint_path
+
+
+def build_compare_variant_id(*, label: str, index: int) -> str:
+    sanitized = sanitize_bundle_component(label)
+    if not sanitized:
+        sanitized = f"variant_{index:02d}"
+    return sanitized
+
+
+def build_audible_compare_bundle_summary(
+    *,
+    output_dir: Path,
+    device: str,
+    chunk_ms: float | None,
+    save_intermediates: bool,
+    verify_against_full_pass: bool,
+    case_results: list[dict[str, object]],
+    input_spec_jsonl_path: Path | None,
+    persisted_specs_path: Path,
+    persisted_vocoder_specs_path: Path,
+    calibration_asset_path: Path,
+    target_reference_audio_path: Path,
+    target_reference_asset: dict[str, object],
+    target_reference_shared_audio_path: Path,
+) -> dict[str, object]:
+    variant_run_count = 0
+    variant_succeeded_count = 0
+    variant_decoded_present_count = 0
+    variant_decoded_high_risk_count = 0
+    variant_rollups: dict[str, dict[str, object]] = {}
+    positive_controls_ready_count = 0
+    for case in case_results:
+        if bool(case.get("positive_controls_ready")):
+            positive_controls_ready_count += 1
+        for variant in list(case.get("variants", [])):
+            if not isinstance(variant, dict):
+                continue
+            variant_run_count += 1
+            if str(variant.get("status")) == "succeeded":
+                variant_succeeded_count += 1
+            if bool(variant.get("decoded_audio_exists")):
+                variant_decoded_present_count += 1
+            if bool(variant.get("decoded_high_risk")):
+                variant_decoded_high_risk_count += 1
+            variant_id = str(variant.get("variant_id"))
+            rollup = variant_rollups.setdefault(
+                variant_id,
+                {
+                    "variant_id": variant_id,
+                    "label": variant.get("label"),
+                    "checkpoint_path": variant.get("checkpoint_path"),
+                    "checkpoint_source_summary_path": variant.get("checkpoint_source_summary_path"),
+                    "checkpoint_source_key": variant.get("checkpoint_source_key"),
+                    "case_count": 0,
+                    "succeeded_count": 0,
+                    "decoded_present_count": 0,
+                    "decoded_high_risk_count": 0,
+                    "high_risk_case_ids": [],
+                    "notes": list(variant.get("notes", [])) if isinstance(variant.get("notes"), list) else [],
+                },
+            )
+            rollup["case_count"] = int(rollup["case_count"]) + 1
+            if str(variant.get("status")) == "succeeded":
+                rollup["succeeded_count"] = int(rollup["succeeded_count"]) + 1
+            if bool(variant.get("decoded_audio_exists")):
+                rollup["decoded_present_count"] = int(rollup["decoded_present_count"]) + 1
+            if bool(variant.get("decoded_high_risk")):
+                rollup["decoded_high_risk_count"] = int(rollup["decoded_high_risk_count"]) + 1
+                rollup["high_risk_case_ids"] = list(rollup.get("high_risk_case_ids", [])) + [
+                    str(case.get("case_id"))
+                ]
+    vocoder_variants = list(variant_rollups.values())
+    return {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "teacher_first_single_target_vc_audible_compare_bundle_v1",
+        "output_dir": output_dir.as_posix(),
+        "input_spec_jsonl_path": safe_resolve_path(input_spec_jsonl_path),
+        "materialized_input_specs_path": persisted_specs_path.as_posix(),
+        "materialized_vocoder_specs_path": persisted_vocoder_specs_path.as_posix(),
+        "device": str(device),
+        "chunk_ms": chunk_ms,
+        "save_intermediates": bool(save_intermediates),
+        "verify_against_full_pass": bool(verify_against_full_pass),
+        "case_count": len(case_results),
+        "variant_count": len(vocoder_variants),
+        "variant_run_count": variant_run_count,
+        "variant_succeeded_count": variant_succeeded_count,
+        "variant_failed_count": variant_run_count - variant_succeeded_count,
+        "variant_decoded_present_count": variant_decoded_present_count,
+        "variant_decoded_high_risk_count": variant_decoded_high_risk_count,
+        "positive_controls_ready_count": positive_controls_ready_count,
+        "all_cases_positive_controls_ready": positive_controls_ready_count == len(case_results),
+        "all_variant_runs_succeeded": variant_succeeded_count == variant_run_count,
+        "shared_target_reference": {
+            "calibration_asset_path": calibration_asset_path.as_posix(),
+            "resolved_source_audio_path": target_reference_audio_path.as_posix(),
+            "shared_audio_path": target_reference_shared_audio_path.as_posix(),
+            "sample_rate": target_reference_asset["sample_rate"],
+            "audio_sec": target_reference_asset["audio_sec"],
+            "waveform_rms": target_reference_asset["waveform_rms"],
+        },
+        "listening_dir": (output_dir / "listening").as_posix(),
+        "runs_dir": (output_dir / "runs").as_posix(),
+        "vocoder_variants": vocoder_variants,
+        "cases": case_results,
+        "notes": [
+            "smoke_baseline_passthrough.wav is an intentional positive control and should match the source input for each case.",
+            "This compare bundle keeps one shared source/target/passthrough trio per case, then exports one decoded_<variant>.wav per configured checkpoint.",
+            "A compare bundle can be structurally valid even when every decoded variant remains high-risk buzzing; that condition is surfaced explicitly in variant_decoded_high_risk_count.",
+        ],
+    }
+
+
+def write_audible_compare_bundle_summary(
+    *,
+    summary_json_path: Path,
+    summary_md_path: Path,
+    summary: dict[str, object],
+) -> None:
+    summary_json_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    summary_md_path.write_text(
+        build_audible_compare_bundle_markdown(summary),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def build_audible_compare_bundle_markdown(summary: dict[str, object]) -> str:
+    shared_target_reference = dict(summary.get("shared_target_reference", {}))
+    lines = [
+        "# Teacher-First VC Audible Compare Bundle",
+        "",
+        f"- generated_at: {summary['generated_at']}",
+        f"- mode: {summary['mode']}",
+        f"- output_dir: {summary['output_dir']}",
+        f"- input_spec_jsonl_path: {summary['input_spec_jsonl_path']}",
+        f"- materialized_input_specs_path: {summary['materialized_input_specs_path']}",
+        f"- materialized_vocoder_specs_path: {summary['materialized_vocoder_specs_path']}",
+        f"- device: {summary['device']}",
+        f"- chunk_ms: {summary['chunk_ms']}",
+        f"- save_intermediates: {summary['save_intermediates']}",
+        f"- verify_against_full_pass: {summary['verify_against_full_pass']}",
+        f"- case_count: {summary['case_count']}",
+        f"- variant_count: {summary['variant_count']}",
+        f"- variant_run_count: {summary['variant_run_count']}",
+        f"- variant_succeeded_count: {summary['variant_succeeded_count']}",
+        f"- variant_failed_count: {summary['variant_failed_count']}",
+        f"- variant_decoded_present_count: {summary['variant_decoded_present_count']}",
+        f"- variant_decoded_high_risk_count: {summary['variant_decoded_high_risk_count']}",
+        f"- positive_controls_ready_count: {summary['positive_controls_ready_count']}",
+        f"- all_cases_positive_controls_ready: {summary['all_cases_positive_controls_ready']}",
+        f"- all_variant_runs_succeeded: {summary['all_variant_runs_succeeded']}",
+        f"- listening_dir: {summary['listening_dir']}",
+        f"- runs_dir: {summary['runs_dir']}",
+        "",
+        "## Shared Target Reference",
+        f"- calibration_asset_path: {shared_target_reference.get('calibration_asset_path')}",
+        f"- resolved_source_audio_path: {shared_target_reference.get('resolved_source_audio_path')}",
+        f"- shared_audio_path: {shared_target_reference.get('shared_audio_path')}",
+        f"- sample_rate: {shared_target_reference.get('sample_rate')}",
+        f"- audio_sec: {shared_target_reference.get('audio_sec')}",
+        f"- waveform_rms: {shared_target_reference.get('waveform_rms')}",
+        "",
+        "## Variants",
+    ]
+    for variant in list(summary.get("vocoder_variants", [])):
+        if not isinstance(variant, dict):
+            continue
+        lines.extend(
+            [
+                f"- variant_id: {variant.get('variant_id')}",
+                f"  label: {variant.get('label')}",
+                f"  checkpoint_path: {variant.get('checkpoint_path')}",
+                f"  checkpoint_source_summary_path: {variant.get('checkpoint_source_summary_path')}",
+                f"  checkpoint_source_key: {variant.get('checkpoint_source_key')}",
+                f"  case_count: {variant.get('case_count')}",
+                f"  succeeded_count: {variant.get('succeeded_count')}",
+                f"  decoded_present_count: {variant.get('decoded_present_count')}",
+                f"  decoded_high_risk_count: {variant.get('decoded_high_risk_count')}",
+                f"  high_risk_case_ids: {json.dumps(variant.get('high_risk_case_ids'), ensure_ascii=False)}",
+                f"  notes: {json.dumps(variant.get('notes'), ensure_ascii=False)}",
+            ]
+        )
+    lines.extend(["", "## Cases"])
+    for case in list(summary.get("cases", [])):
+        if not isinstance(case, dict):
+            continue
+        lines.extend(
+            [
+                f"- case_index: {case.get('case_index')}",
+                f"  case_id: {case.get('case_id')}",
+                f"  input_audio_path: {case.get('input_audio_path')}",
+                f"  max_audio_sec: {case.get('max_audio_sec')}",
+                f"  positive_controls_ready: {case.get('positive_controls_ready')}",
+                f"  source_input_audio_path: {case.get('source_input_audio_path')}",
+                f"  smoke_baseline_passthrough_audio_path: {case.get('smoke_baseline_passthrough_audio_path')}",
+                f"  target_reference_audio_path: {case.get('target_reference_audio_path')}",
+                f"  notes: {json.dumps(case.get('notes'), ensure_ascii=False)}",
+            ]
+        )
+        for variant in list(case.get("variants", [])):
+            if not isinstance(variant, dict):
+                continue
+            lines.extend(
+                [
+                    f"  variant_id: {variant.get('variant_id')}",
+                    f"  variant_label: {variant.get('label')}",
+                    f"  variant_status: {variant.get('status')}",
+                    f"  variant_decoded_audio_exists: {variant.get('decoded_audio_exists')}",
+                    f"  variant_decoded_high_risk: {variant.get('decoded_high_risk')}",
+                    f"  variant_decoded_listening_audio_path: {variant.get('decoded_listening_audio_path')}",
+                    f"  variant_decoded_audio_sec: {variant.get('decoded_audio_sec')}",
+                    f"  variant_decoded_waveform_rms: {variant.get('decoded_waveform_rms')}",
+                    f"  variant_branch_label: {variant.get('branch_label')}",
+                    f"  variant_checkpoint_path: {variant.get('checkpoint_path')}",
+                    f"  variant_applicability_risk_status: {variant.get('applicability_risk_status')}",
+                    f"  variant_applicability_risk_summary: {variant.get('applicability_risk_summary')}",
+                    f"  variant_summary_path: {variant.get('summary_path')}",
+                    f"  variant_applicability_risk: {json.dumps(variant.get('applicability_risk'), ensure_ascii=False)}",
+                    f"  variant_failure: {json.dumps(variant.get('failure'), ensure_ascii=False)}",
+                    f"  variant_exception: {json.dumps(variant.get('exception'), ensure_ascii=False)}",
+                ]
+            )
     lines.extend(["", "## Notes"])
     for note in list(summary.get("notes", [])):
         lines.append(f"- {note}")

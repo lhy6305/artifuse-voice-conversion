@@ -10358,3 +10358,60 @@
   - 不要再把
     boundary case
     混进默认主听入口
+### 347. baseline / candidate 并排听审时，不能为每个 variant 各自再复制一套 source/target/passthrough；否则用户很难确认差异到底来自模型还是来自包结构
+- 现象:
+  - 当前 user-line
+    已从
+    单个 audible smoke
+    进入
+    baseline / candidate
+    并排 compare
+    阶段
+  - 如果这里继续沿用
+    “每个 variant
+    各自一整套 case 目录”
+    的输出方式，
+    听审时会出现：
+    - 正控制音频重复
+    - variant 映射靠人猜
+    - summary
+      里难以直接看到
+      checkpoint /
+      风险标记 /
+      试听路径
+- 风险:
+  - 用户听到差异后，
+    很难快速判断：
+    - 这是 baseline / candidate
+      真差异
+    - 还是两份 bundle
+      组织方式不同
+  - 同时也会让后续
+    多 variant
+    扩展时，
+    文件名和 summary
+    更容易混淆
+- 处理要求:
+  - compare bundle
+    必须固定为：
+    - 每个 case
+      只保留一套
+      `source_input.wav`
+      `target_reference.wav`
+      `smoke_baseline_passthrough.wav`
+    - 每个 variant
+      单独写
+      `decoded_<variant>.wav`
+  - summary
+    里必须按 variant
+    显式列出：
+    - `checkpoint_path`
+    - 风险标记
+    - 试听路径
+  - 如果 variant label
+    存在重复，
+    必须先做稳定去重，
+    不能让 run 目录、
+    输出 wav
+    和 summary
+    发生覆盖或并表混淆
