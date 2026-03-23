@@ -79,6 +79,8 @@ from v5vc.stage5_low_activity_probe import (
     analyze_stage5_low_activity_fragments,
 )
 from v5vc.stage5_low_activity_governance_report import materialize_stage5_low_activity_governance_report
+from v5vc.stage5_speech_emergence_probe import analyze_stage5_nores_speech_emergence
+from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_waveform_objective_collapse
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
     build_streaming_student_calibration_assets,
@@ -2030,6 +2032,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for frame-activity supervision derived from aligned target waveform energy.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for active-frame template-excess suppression on reconstructed waveform frames.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for unit-RMS adjacent-frame delta matching on reconstructed waveform frames.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
@@ -2164,6 +2178,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for frame-activity supervision derived from aligned target waveform energy.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for active-frame template-excess suppression on reconstructed waveform frames.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for unit-RMS adjacent-frame delta matching on reconstructed waveform frames.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--use-predicted-activity-gate",
@@ -2397,6 +2423,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for frame-activity supervision derived from aligned target waveform energy.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
+        "--active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for active-frame template-excess suppression on reconstructed waveform frames.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for unit-RMS adjacent-frame delta matching on reconstructed waveform frames.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
@@ -2575,6 +2613,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional activity-gate loss weight used when recomputing export metrics for newer Stage5 checkpoints.",
     )
     nores_vocoder_audio_export_parser.add_argument(
+        "--active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional active-template loss weight used when recomputing export metrics for newer Stage5 checkpoints.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional frame-delta loss weight used when recomputing export metrics for newer Stage5 checkpoints.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity during export-side waveform reconstruction for newer Stage5 checkpoints.",
@@ -2601,6 +2651,178 @@ def build_parser() -> argparse.ArgumentParser:
             "How export-side predicted activity gains are applied during waveform reconstruction: "
             "pre_overlap_add or post_ola_envelope."
         ),
+    )
+    stage5_speech_emergence_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-speech-emergence",
+        help="Run route-level Stage5 no-res speech-emergence root-cause probe variants over selected training packages.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 speech-emergence probe outputs.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path. When omitted, --checkpoint-selection must be provided.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used to resolve the probe checkpoint.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to probe from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Torch device used for the probe, for example cpu or cuda:0.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--use-predicted-activity-gate",
+        action="store_true",
+        help="Apply predicted frame activity during waveform reconstruction to match the heard Stage5 route.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Minimum frame gain applied after predicted activity gating.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help="Moving-average radius for predicted activity gate smoothing across neighboring frames.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--predicted-activity-gate-apply-mode",
+        default="post_ola_envelope",
+        help="How predicted activity gains are applied during waveform reconstruction: pre_overlap_add or post_ola_envelope.",
+    )
+    stage5_waveform_objective_collapse_parser = subparsers.add_parser(
+        "analyze-stage5-nores-waveform-objective-collapse",
+        help="Probe whether fixed-template counterexamples can still land at low Stage5 waveform objective on selected packages.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 waveform-objective collapse probe outputs.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path. When omitted, --checkpoint-selection must be provided.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used to resolve the probe checkpoint.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to probe from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Torch device used to decode the baseline route, for example cpu or cuda:0.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--use-predicted-activity-gate",
+        action="store_true",
+        help="Apply predicted frame activity during baseline waveform reconstruction to match the heard Stage5 route.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Minimum frame gain applied after predicted activity gating.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help="Moving-average radius for predicted activity gate smoothing across neighboring frames.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--predicted-activity-gate-apply-mode",
+        default="post_ola_envelope",
+        help="How predicted activity gains are applied during baseline waveform reconstruction: pre_overlap_add or post_ola_envelope.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--waveform-weight",
+        type=float,
+        default=0.5,
+        help="Waveform L1 weight used when materializing the weighted Stage5 waveform objective.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--stft-weight",
+        type=float,
+        default=0.5,
+        help="Log-STFT weight used when materializing the weighted Stage5 waveform objective.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--rms-guard-weight",
+        type=float,
+        default=0.2,
+        help="RMS guard weight used when materializing the weighted Stage5 waveform objective.",
     )
     ai_work_session_parser = subparsers.add_parser(
         "register-ai-work-session",
@@ -3712,6 +3934,8 @@ def main(argv: list[str] | None = None) -> int:
             waveform_weight=args.waveform_weight,
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
+            active_template_weight=args.active_template_weight,
+            frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
         )
@@ -3738,6 +3962,8 @@ def main(argv: list[str] | None = None) -> int:
             waveform_weight=args.waveform_weight,
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
+            active_template_weight=args.active_template_weight,
+            frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
         )
@@ -3784,6 +4010,8 @@ def main(argv: list[str] | None = None) -> int:
             waveform_weight=args.waveform_weight,
             stft_weight=args.stft_weight,
             rms_guard_weight=args.rms_guard_weight,
+            active_template_weight=args.active_template_weight,
+            frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
         )
@@ -3824,10 +4052,49 @@ def main(argv: list[str] | None = None) -> int:
             pitch_match_fmax_hz=args.pitch_match_fmax_hz,
             pitch_match_max_semitones=args.pitch_match_max_semitones,
             activity_gate_weight=args.activity_gate_weight,
+            active_template_weight=args.active_template_weight,
+            frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-speech-emergence":
+        analyze_stage5_nores_speech_emergence(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            device=args.device,
+            use_predicted_activity_gate=args.use_predicted_activity_gate,
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-waveform-objective-collapse":
+        analyze_stage5_nores_waveform_objective_collapse(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            device=args.device,
+            use_predicted_activity_gate=bool(args.use_predicted_activity_gate),
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+            waveform_weight=args.waveform_weight,
+            stft_weight=args.stft_weight,
+            rms_guard_weight=args.rms_guard_weight,
         )
         return 0
     if args.command == "analyze-offline-mvp-nores-vocoder-low-activity-sensitivity":

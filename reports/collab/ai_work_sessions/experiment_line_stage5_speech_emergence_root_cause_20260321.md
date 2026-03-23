@@ -6,13 +6,16 @@
 - status: active
 - objective: investigate why the entire Stage5 no-res route has never produced intelligible speech and isolate the most likely speech-emergence root cause
 - created_at: 2026-03-21T18:28:24
-- updated_at: 2026-03-21T18:28:24
+- updated_at: 2026-03-23T20:50:27
 
 ## Write Roots
-- F:/proj_dev/tmp/workdir4/src/v5vc/offline_vocoder_scaffold.py
-- F:/proj_dev/tmp/workdir4/src/v5vc/offline_vocoder_training.py
-- F:/proj_dev/tmp/workdir4/src/v5vc/nores_vocoder_audio_export.py
+- F:/proj_dev/tmp/workdir4/src/v5vc/cli.py
+- F:/proj_dev/tmp/workdir4/src/v5vc/stage5_speech_emergence_probe.py
 - F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_root_cause_probe_round1_1
+- F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step24_validation12_round1_1
+- F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step48_validation12_round1_1
+- F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step60_validation12_round1_1
+- F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step72_validation12_round1_1
 - F:/proj_dev/tmp/workdir4/docs
 - F:/proj_dev/tmp/workdir4/reports/collab/ai_work_sessions
 
@@ -27,8 +30,14 @@
 ## Handoff Docs
 - F:/proj_dev/tmp/workdir4/docs/253_stage5_nores_milestone_acceptance_partial_human_audit_fail_report.md
 - F:/proj_dev/tmp/workdir4/docs/254_stage5_nores_root_cause_question_refinement_report.md
+- F:/proj_dev/tmp/workdir4/docs/256_stage5_speech_emergence_root_cause_probe_report.md
+- F:/proj_dev/tmp/workdir4/docs/257_stage5_speech_emergence_temporal_structure_report.md
+- F:/proj_dev/tmp/workdir4/docs/258_stage5_speech_emergence_cross_step_template_collapse_report.md
 
 ## Depends On
 
 ## Notes
 - Focus only on experiment line. Root question is route-level speech emergence failure, not checkpoint ranking.
+- Formal CLI analyze-stage5-nores-speech-emergence is now wired and the route-aligned probe has completed.
+- Temporal-structure metrics now show near-fixed waveform-frame templates with high aligned-energy correlation, i.e. template-buzz plus envelope-following.
+- Cross-step step24/48/60/72 comparison confirms template collapse is route-level and not a late-checkpoint-only failure.

@@ -15128,3 +15128,1059 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 ### 文档补充
 - `docs/255_user_line_dynamic_control_family_isolation_report.md`
   - 记录本轮 family-level override probe、proxy 子族细分结果，以及“当前最强局部杠杆是 `noise_energy_proxy` 但不是唯一根因”的正式理由
+## 2026-03-23 补充：实验线 speech-emergence root-cause probe 已接成正式 CLI 并完成首轮运行
+### 当前结论
+- 本轮只接实验线。
+- 当前已把
+  `src/v5vc/stage5_speech_emergence_probe.py`
+  接成正式命令：
+  - `analyze-stage5-nores-speech-emergence`
+- 并已对齐
+  当前 milestone acceptance
+  失败的正式 route
+  完成首轮 probe：
+  - `step72`
+  - `validation12`
+  - predicted gate on
+  - `smooth3 + post_ola_envelope`
+- 当前 probe 结果显示：
+  1. 最强外层杠杆是
+     `conditioning_zero`
+  2. 最强内容侧杠杆是
+     `z_art_zero`
+  3. `event_probs_zero`
+     与
+     `noise_proxies_zero`
+     也会明显改输出，
+     但弱于前两者
+  4. 多数组控制在
+     `frame_mean`
+     下的影响显著弱于
+     `zero`
+     下的影响，
+     说明当前 route
+     更像在吃
+     coarse presence / level，
+     而不是稳定使用逐帧动态去形成可辨识语音
+- 但当前也必须明确：
+  - baseline 的粗粒度频谱统计
+    并不表现成明显高频塌穿
+  - 所以这轮 probe
+    还没有把
+    “为什么人耳仍听成 buzzing”
+    单独解释完
+
+### 当前新增工程事实
+1. `manage.py`
+   已新增正式入口：
+   - `analyze-stage5-nores-speech-emergence`
+2. 首次接通后，
+   发现 probe 自身有一个 bug：
+   - 非 baseline
+     变体的
+     `waveform_mean_abs_delta_vs_baseline`
+     错误地恒为 `0`
+3. 当前已修复：
+   - 每个变体都使用自己的 decoded waveform
+     参与 delta 计算
+4. 当前正式输出目录已存在：
+   - `reports/runtime/stage5_speech_emergence_root_cause_probe_round1_1/`
+
+### 更新后的下一步
+1. 当前实验线不回退去继续做：
+   - checkpoint 排名
+   - decode-side 小 tweak
+   - milestone session
+     穷举补打分
+2. 若继续实验线，
+   下一题应优先转向：
+   - 更细粒度的
+     `conditioning / z_art / event_probs / proxy`
+     时间轨迹与语义核对
+   - 为什么粗粒度频谱指标不坏，
+     但人耳仍稳定听成
+     buzzing / 非语音
+3. 当前不应把首轮 probe
+   误写成：
+   - 根因已锁定
+   - 或某一个 family
+     已可单点修复
+
+### 文档补充
+- `docs/256_stage5_speech_emergence_root_cause_probe_report.md`
+  - 记录正式 CLI 接入、probe bug 修复、首轮 ranking 结果与当前 root-cause 判断边界
+## 2026-03-23 继续补充：实验线 temporal-structure 结果已把 root cause 收敛到 `template-buzz + envelope-following`
+### 当前结论
+- 在首轮 family-level
+  probe
+  基础上，
+  本轮继续把
+  `stage5_speech_emergence_probe`
+  扩成 temporal-structure
+  视角。
+- 当前 baseline
+  的关键 aggregate
+  已明确显示：
+  - `waveform_frames_adjacent_cosine_mean = 0.999994`
+  - `waveform_frames_template_cosine_mean = 0.999649`
+  - `decoded_frame_adjacent_cosine_mean = 0.997967`
+  - `decoded_frame_template_cosine_mean = 0.994838`
+  - 而
+    `aligned_frame_adjacent_cosine_mean = 0.121139`
+  - `aligned_frame_template_cosine_mean = 0.022486`
+- 同时：
+  - `predicted_activity_to_aligned_frame_rms_corr = 0.816000`
+  - `decoded_frame_rms_to_aligned_frame_rms_corr = 0.825703`
+- 当前更准确的工程解释已更新为：
+  - waveform head
+    几乎输出固定模板
+  - controls / gate
+    主要驱动包络和强弱
+  - 当前 route
+    学到的是
+    `template-buzz + envelope-following`
+    假解，
+    而不是可辨识语音结构
+
+### 更新后的下一步
+1. 当前实验线不再优先继续扩：
+   - 更多 family-level
+     `zero / frame_mean`
+     小变体
+2. 下一题更值得转向：
+   - 跨训练步长的
+     template-collapse
+     对照，
+     例如
+     `step24 / step48 / step60 / step72`
+3. 当前更应优先审视：
+   - waveform head
+   - reconstruction target / loss
+   - 而不是 decode-side
+     小参数
+
+### 文档补充
+- `docs/257_stage5_speech_emergence_temporal_structure_report.md`
+  - 记录 temporal-structure 指标、baseline template collapse 证据，以及“当前最像 template-buzz 假解”的正式结论
+## 2026-03-23 继续补充：cross-step 对照已确认 template collapse 贯穿整条当前 no-res 训练路线
+### 当前结论
+- 本轮继续沿
+  `speech-emergence`
+  主轴，
+  对
+  `step24 / step48 / step60 / step72`
+  逐个跑同口径 probe。
+- 当前结果已确认：
+  - `waveform_frames_adjacent_cosine_mean`
+    在四个 step
+    上都约等于
+    `0.999986 ~ 0.999994`
+  - `decoded_frame_template_cosine_mean`
+    在四个 step
+    上都约等于
+    `0.994838 ~ 0.996885`
+  - 而 aligned target
+    仍是
+    `0.022486`
+- 当前更准确的阶段结论应写成：
+  - template collapse
+    不是
+    `step72`
+    才有的后期问题
+  - 而是从
+    `step24`
+    开始就稳定存在
+- 同时：
+  - `decoded_spectral_high_band_energy_ratio`
+    确实沿训练下降：
+    `0.455890 -> 0.162925 -> 0.118253 -> 0.064479`
+- 这说明：
+  - 训练不是从非语音跨到语音
+  - 而是在同一类
+    `template-buzz + envelope-following`
+    假解里逐步变得没那么尖锐
+
+### 更新后的下一步
+1. 当前实验线不再把主问题写成：
+   - `step72`
+     选错
+   - 或 late checkpoint
+     局部退化
+2. 下一题更应直接转向：
+   - waveform head
+   - reconstruction target / loss
+   - 为什么它们允许
+     固定模板假解
+3. 当前更不建议回退去做：
+   - checkpoint 排名
+   - decode-side
+     小 tweak
+
+### 文档补充
+- `docs/258_stage5_speech_emergence_cross_step_template_collapse_report.md`
+  - 记录 `step24/48/60/72` 的同口径对照结果，以及“template collapse 贯穿整条当前 no-res 训练路线”的正式结论
+## 2026-03-23 继续补充：waveform-objective collapse probe 已正式接成 CLI，并确认固定模板 counterexample 可拿到低 objective
+### 当前结论
+- 本轮继续只接实验线。
+- 当前已把
+  `src/v5vc/stage5_waveform_objective_collapse_probe.py`
+  接成正式命令：
+  - `analyze-stage5-nores-waveform-objective-collapse`
+- 并已对齐
+  当前 milestone acceptance
+  失败的正式 route，
+  在
+  `waveform=0.5 + stft=0.5 + rms_guard=0.2`
+  口径下，
+  完成首轮 objective-collapse probe。
+- 当前结果明确显示：
+  1. `oracle_active_frame_target_rms`
+     aggregate
+     `weighted_wave_objective = 0.141467`
+  2. `oracle_sine_target_rms`
+     aggregate
+     `weighted_wave_objective = 0.147455`
+  3. baseline decode route
+     aggregate
+     `weighted_wave_objective = 0.150852`
+- 这说明：
+  - 不只是“某个更像 target 的模板”
+    能拿低分
+  - 连
+    `固定正弦模板 + 目标帧 RMS 包络`
+    都能在 aggregate 上
+    打到低于 baseline 的 objective
+- 同时：
+  - 这两个 fixed-template 变体的
+    `decoded_frame_template_cosine_mean`
+    仍约为
+    `0.923 ~ 0.925`
+  - 远高于 aligned target
+    的
+    `0.022486`
+- 当前更准确的阶段判断应更新为：
+  - 现有 waveform objective
+    对
+    `template + envelope`
+    假解是宽容的
+  - 它没有强力惩罚
+    fixed-template
+    结构塌缩
+
+### 当前新增工程事实
+1. `manage.py`
+   已新增正式入口：
+   - `analyze-stage5-nores-waveform-objective-collapse`
+2. 当前 probe
+   已固定输出：
+   - `loss_waveform`
+   - `loss_stft`
+   - `loss_rms_guard`
+   - `weighted_wave_objective`
+   - frame-template / frame-RMS
+     结构指标
+3. 当前正式输出目录已存在：
+   - `reports/runtime/stage5_waveform_objective_collapse_probe_round1_1/`
+
+### 更新后的下一步
+1. 当前实验线不再把主问题只写成：
+   - waveform head
+     输出为什么像 buzz
+2. 更准确的下一题应直接转向：
+   - 为什么
+     `L1 + single-resolution STFT + RMS guard`
+     允许
+     fixed-template counterexample
+     拿到低 objective
+3. 当前不建议回退去优先做：
+   - checkpoint 排名
+   - decode-side
+     小 tweak
+   - control-family
+     小扫尾
+
+### 文档补充
+- `docs/259_stage5_waveform_objective_collapse_probe_report.md`
+  - 记录独立 probe 模块、正式 CLI、首轮固定模板 counterexample 结果，以及“当前 waveform objective 对 template-collapse 假解约束不足”的正式结论
+## 2026-03-23 继续补充：short-window MRSTFT 与去包络 frame-shape sidecar 也没有把 baseline 拉回 fixed-template 之前
+### 当前结论
+- 本轮继续沿
+  `docs/259`
+  的
+  waveform-objective collapse
+  主轴，
+  不改样本与 checkpoint，
+  只给现有 probe
+  补两个 sidecar：
+  - `loss_mrstft_short_256_512_1024`
+  - `loss_frame_unit_rms_l1`
+- 当前 aggregate 结果显示：
+  - `loss_mrstft_short_256_512_1024`
+    - `oracle_active_frame_target_rms = 0.109326`
+    - `oracle_sine_target_rms = 0.135768`
+    - `baseline_decode_route = 0.162566`
+  - `loss_frame_unit_rms_l1`
+    - `oracle_active_frame_target_rms = 1.071623`
+    - `oracle_sine_target_rms = 1.073684`
+    - `baseline_decode_route = 1.119374`
+- 这说明：
+  - 问题不只是
+    single-resolution STFT
+    太宽
+  - 当前 baseline
+    本身就比这两个
+    fixed-template oracle
+    更接近结构塌缩端
+
+### 更新后的下一步
+1. 当前实验线不建议把下一题简化成：
+   - 先把
+     single-resolution STFT
+     换成 short-window MRSTFT
+2. 更合理的下一题应继续上移到：
+   - 更直接针对
+     speech-structure emergence
+     的约束
+   - 或 frame-structure
+     supervision / target
+     为什么缺位
+3. 当前不建议回退去优先做：
+   - decode-side 小 tweak
+   - checkpoint 排名
+   - 单纯的
+     short-window STFT
+     小替换假设
+
+### 文档补充
+- `docs/260_stage5_waveform_objective_sidecar_diagnostic_report.md`
+  - 记录 short-window MRSTFT 与去包络 frame-shape sidecar 的补充结果，以及“baseline 比 fixed-template oracle 更塌”的新增边界
+## 2026-03-23 继续补充：frame-structure candidate loss probe 已出现第一个对 baseline 更有利的 transition 信号
+### 当前结论
+- 本轮继续沿
+  waveform-objective
+  root-cause
+  主轴，
+  给现有 probe
+  再补三类 frame-structure sidecar：
+  - `loss_frame_unit_rms_logspec_l1`
+  - `loss_frame_delta_unit_rms_l1`
+  - `loss_frame_spectral_flux_l1`
+- 当前 aggregate 结果显示：
+  - 静态 frame-shape / logspec
+    仍然更偏向 oracle
+  - 但
+    `loss_frame_delta_unit_rms_l1`
+    已第一次把
+    baseline 排到两个 oracle 前面：
+    - baseline
+      `0.960329`
+    - sine oracle
+      `0.973493`
+    - active-frame oracle
+      `0.974862`
+- 同时，
+  若把
+  `frame_delta_unit_rms_l1`
+  当作 sidecar penalty，
+  当前按 aggregate
+  估算的排序翻转门槛约为：
+  - 压过
+    `oracle_sine_target_rms`
+    需
+    `λ >= 0.258052`
+  - 压过
+    `oracle_active_frame_target_rms`
+    需
+    `λ >= 0.645772`
+- 当前更准确的阶段判断应更新为：
+  - 如果继续找
+    对 speech emergence
+    更敏感的候选约束，
+    当前最像突破口的
+    不是静态 frame resemblance，
+    而是
+    adjacent-frame transition
+
+### 更新后的下一步
+1. 当前实验线不建议优先押注：
+   - 更静态的 frame-shape loss
+   - 更静态的 frame-spectrum loss
+2. 更合理的下一题应转向：
+   - transition / delta
+     类 supervision / loss
+     的候选构造
+3. 当前仍不建议回退去优先做：
+   - checkpoint 排名
+   - decode-side 小 tweak
+   - 单纯把
+     single-resolution STFT
+     替换成 MRSTFT
+
+### 文档补充
+- `docs/261_stage5_frame_structure_candidate_loss_probe_report.md`
+  - 记录 frame-logspec、frame-delta、spectral-flux sidecar 结果，以及“第一个对 baseline 更有利的信号来自 adjacent-frame delta”的新增结论
+## 2026-03-23 继续补充：transition-delta candidate objective 已量化出弱翻转区与稳翻转区
+### 当前结论
+- 本轮继续沿
+  `frame_delta_unit_rms_l1`
+  主轴，
+  把它正式写成：
+  - `score = weighted_wave_objective + λ * loss_frame_delta_unit_rms_l1`
+  的 candidate-objective
+  诊断
+- 当前 aggregate 结果显示：
+  - baseline 压过
+    `oracle_sine_target_rms`
+    需：
+    - `λ >= 0.258052`
+  - baseline 压过
+    `oracle_active_frame_target_rms`
+    需：
+    - `λ >= 0.645772`
+- 当前更准确的阶段判断应更新为：
+  - `frame_delta`
+    方向已经不只是
+    定性上更对
+  - 而是可以量化成：
+    - 弱翻转区：
+      `0.258 ~ 0.646`
+    - 稳翻转区：
+      `0.646+`
+
+### 更新后的下一步
+1. 当前若继续做
+   objective-level
+   候选设计，
+   最合理的两档参考点应是：
+   - `λ = 0.3`
+   - `λ = 0.75`
+2. 当前不建议回退去优先做：
+   - 静态 frame-shape
+     小修小补
+   - 单纯 MRSTFT
+     替换假设
+3. 当前仍不建议直接把
+   这组结果
+   误写成：
+   - 已可无条件进训练主线
+
+### 文档补充
+- `docs/262_stage5_transition_delta_candidate_objective_report.md`
+  - 记录 `weighted + λ * frame_delta` 的 candidate-objective 排序、翻转门槛，以及 `0.3 / 0.75` 两档推荐参考点
+## 2026-03-23 继续补充：transition-side 组合已出现 hard-failure 子集，下一步应转 targeted diagnosis
+### 当前结论
+- 本轮继续沿
+  `transition-side candidate objective`
+  主轴，
+  把：
+  - `frame_delta + spectral_flux`
+    组合网格
+  正式接进 probe，
+  并把视角从 aggregate
+  提升到 per-record robustness。
+- 当前最好组合是：
+  - `delta_lambda = 1.5`
+  - `flux_lambda = 2.0`
+  - `total_wins = 16 / 24`
+- 但它仍只做到：
+  - 对
+    `oracle_sine_target_rms`
+    赢
+    `9 / 12`
+  - 对
+    `oracle_active_frame_target_rms`
+    赢
+    `7 / 12`
+- 同时，
+  已出现重复 hard-failure
+  records：
+  - `target::chapter3_3_firefly_245`
+  - `target::chapter3_2_firefly_163`
+  - `target::chapter3_2_firefly_155`
+  - `target::chapter3_26_firefly_107`
+- 当前更准确的阶段判断应更新为：
+  - 继续盲扫权重
+    的收益已经下降
+  - 下一步更值钱的是
+    targeted diagnosis
+    这些 hard cases
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先题应转向：
+   - hard-failure records
+     的 targeted structure diagnosis
+2. 当前不建议回退去优先做：
+   - 更大范围的
+     无目的权重扫网格
+   - 直接把现有组合
+     写成“可进训练主线”
+
+### 文档补充
+- `docs/263_stage5_transition_combo_robustness_report.md`
+  - 记录 `frame_delta + spectral_flux` 组合网格、per-record robustness，以及重复 hard-failure records 子集
+## 2026-03-23 继续补充：修正 sign 口径后，hard-failure 子集已收紧到 3 条更模板友好的记录
+### 当前结论
+- 本轮先修正了：
+  - `margin = baseline_score - other_score`
+    的符号口径
+  - 其中
+    `margin < 0`
+    才表示 baseline 赢
+- 修正后，
+  在当前 best combo：
+  - `delta_lambda = 1.5`
+  - `flux_lambda = 2.0`
+  下，
+  重复 hard-failure 子集已收紧为：
+  - `target::chapter3_17_firefly_133`
+  - `target::chapter3_3_firefly_162`
+  - `target::chapter3_6_firefly_106`
+- 当前组间对照还显示：
+  - hard failures
+    的
+    `baseline loss_frame_delta_unit_rms_l1`
+    更高：
+    - `1.024148`
+    vs easy 的
+      `0.920796`
+  - 但 target 自身又更平滑：
+    - `aligned_frame_template_cosine_mean`
+      更高
+    - `aligned_frame_adjacent_cosine_mean`
+      更低
+- 当前更准确的阶段判断应更新为：
+  - 这些 hard cases
+    不是“特别乱”
+  - 更像是：
+    - target 更模板友好
+    - baseline 在这些样本上的
+      transition mismatch
+      又偏大
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先题应改成：
+   - 对这 3 条 hard failures
+     做 per-record structure breakdown
+2. 当前不建议回退去优先做：
+   - 更大范围的权重扫网格
+   - 继续只看 aggregate
+
+### 文档补充
+- `docs/264_stage5_hard_failure_targeted_diagnosis_report.md`
+  - 记录修正后的 hard/easy 子集、组间对照结果，以及“hard cases 更模板友好”的 targeted diagnosis 结论
+## 2026-03-23 继续补充：hard-case 已细分成 boundary-dominated 与 isolated-window 两类
+### 当前结论
+- 本轮继续沿
+  corrected hard-failure
+  子集推进，
+  已把
+  per-record structure breakdown
+  正式接进 probe。
+- 当前 3 条 hard cases
+  已细分成两类：
+  1. boundary-dominated：
+     - `target::chapter3_17_firefly_133`
+     - `target::chapter3_3_firefly_162`
+  2. isolated high-leverage window：
+     - `target::chapter3_6_firefly_106`
+- 当前关键时间窗包括：
+  - `chapter3_17_firefly_133`
+    - 句首
+      `0.000000s ~ 0.007256s`
+    - 句尾
+      `12.455329s ~ 12.469841s`
+  - `chapter3_3_firefly_162`
+    - 句首
+      `0.000000s ~ 0.018141s`
+    - 末段
+      `0.595011s ~ 0.602268s`
+  - `chapter3_6_firefly_106`
+    - 极短高杠杆窗口
+      `5.333333s ~ 5.340590s`
+      且 oracle 的
+      `delta/flux error = 0`
+- 当前更准确的阶段判断应更新为：
+  - 下一步 targeted diagnosis
+    不能再把这三条记录
+    当成同一类失败模式处理
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   优先应分两条子题：
+   - boundary transition
+     hard cases
+   - isolated steady-window
+     hard case
+2. 当前不建议回退去优先做：
+   - 更泛的 aggregate 总结
+   - 或再把三条记录揉成同类
+
+### 文档补充
+- `docs/265_stage5_hard_case_transition_window_breakdown_report.md`
+  - 记录 hard-case 的 reference oracle、top failure windows，以及“boundary-dominated vs isolated-window”两类新边界
+## 2026-03-23 继续补充：自动 pattern summary 已把 hard-case 分型再收紧一步
+### 当前结论
+- 本轮继续沿
+  hard-case breakdown
+  主轴，
+  给现有 probe
+  补了：
+  - `pattern_summary`
+- 当前修正后的模式划分应更新为：
+  1. `target::chapter3_3_firefly_162`
+     - `boundary_dominated`
+  2. `target::chapter3_17_firefly_133`
+     - `mixed_failure`
+       with edge anchors
+  3. `target::chapter3_6_firefly_106`
+     - `mixed_failure`
+       with interior / steady-window dominance
+- 关键量化包括：
+  - `chapter3_3_firefly_162`
+    - `boundary_share = 0.848822`
+  - `chapter3_17_firefly_133`
+    - `boundary_share = 0.090681`
+    - `interior_share = 0.909319`
+  - `chapter3_6_firefly_106`
+    - `boundary_share = 0.248664`
+    - `interior_share = 0.751336`
+- 当前更准确的阶段判断应更新为：
+  - 只有一条是纯 boundary case
+  - 另外两条不能再简单并到边界型里
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   应把 3 条 hard cases
+   分成 3 种跟进口径：
+   - pure boundary
+   - mixed with edge anchors
+   - mixed with steady-window dominance
+2. 当前不建议再把它们
+   粗暴压成两类
+
+### 文档补充
+- `docs/266_stage5_hard_case_pattern_summary_report.md`
+  - 记录 `pattern_summary` 结果，以及 “只有 `chapter3_3_firefly_162` 是纯 boundary case” 的修正版结论
+## 2026-03-23 继续补充：hard-case failure signature 已把问题收紧到 flux-dominated + target-motion regime
+### 当前结论
+- 本轮继续沿
+  corrected hard-case
+  主轴，
+  给现有 probe
+  补了：
+  - `failure_signature`
+- 当前 3 条 hard cases
+  的共同点已收紧成：
+  - 都是
+    `flux-dominated`
+    failure
+- 当前更准确的差异划分应更新为：
+  1. `chapter3_3_firefly_162`
+     - `boundary_high_motion_flux_gap`
+  2. `chapter3_17_firefly_133`
+     - `interior_high_motion_flux_gap`
+  3. `chapter3_6_firefly_106`
+     - `steady_zero_target_jitter`
+- 关键量化包括：
+  - `chapter3_3_firefly_162`
+    - `flux_dominant_advantage_share = 0.980406`
+  - `chapter3_17_firefly_133`
+    - `flux_dominant_advantage_share = 0.889372`
+    - `interior_high_motion_advantage_share_q75 = 0.340417`
+  - `chapter3_6_firefly_106`
+    - `flux_dominant_advantage_share = 0.818928`
+    - `near_zero_target_advantage_share_0p1 = 0.161233`
+- 当前更准确的阶段判断应更新为：
+  - 问题不该再简化成
+    “delta-side 不够强”
+  - 下一步应直接转向：
+    - flux-side targeted diagnosis
+    - 且按 target-motion regime 分开做
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先题应改成：
+   - `chapter3_3_firefly_162`
+     的 boundary high-motion flux diagnosis
+   - `chapter3_17_firefly_133`
+     的 interior high-motion flux diagnosis
+   - `chapter3_6_firefly_106`
+     的 near-zero plateau jitter diagnosis
+2. 当前不建议回退去优先做：
+   - 更大范围的
+     `delta/flux`
+     权重扫网格
+   - 或继续把 hard cases
+     粗暴写成同一种 transition failure
+
+### 文档补充
+- `docs/267_stage5_hard_case_failure_signature_report.md`
+  - 记录 `failure_signature` 结果，以及 “hard cases 的共性是 flux-dominated，差异在 target-motion regime” 的修正版结论
+## 2026-03-23 继续补充：flux-side 失败已进一步收紧到 direction gap，而不是单纯 magnitude gap
+### 当前结论
+- 本轮继续沿
+  flux-side targeted diagnosis
+  主轴，
+  给现有 probe
+  补了：
+  - `flux_alignment_summary`
+- 当前 corrected hard cases
+  的更深一层共性应更新为：
+  - baseline 和 oracle
+    在正失败窗口里
+    的 flux magnitude
+    都显著低于 target
+  - 但 oracle 的
+    signed flux direction
+    明显更接近 target，
+    baseline 则接近
+    `0`
+    或略负相关
+- 关键量化包括：
+  - `chapter3_3_firefly_162`
+    - `baseline_cos = -0.017303`
+    - `oracle_cos = 0.337721`
+    - `cos_gap = 0.355024`
+  - `chapter3_17_firefly_133`
+    - `baseline_cos = -0.010065`
+    - `oracle_cos = 0.271186`
+    - `cos_gap = 0.281250`
+  - `chapter3_6_firefly_106`
+    - `baseline_cos = -0.006861`
+    - `oracle_cos = 0.274894`
+    - `cos_gap = 0.281754`
+- 当前更准确的阶段判断应更新为：
+  - 下一步不该优先押注：
+    - 单纯继续抬
+      `flux L1`
+      权重
+  - 更该优先转向：
+    - signed / directional
+      flux-side candidate supervision
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先题应改成：
+   - 离线诊断
+     directional flux
+     候选 supervision
+2. 当前不建议回退去优先做：
+   - 纯 magnitude 型
+     flux penalty
+     加权
+   - 或泛化成
+     “high-band 噪点”
+     单一问题
+
+### 文档补充
+- `docs/268_stage5_flux_alignment_directionality_report.md`
+  - 记录 `flux_alignment_summary` 结果，以及 “hard cases 的更深一层共性是 direction gap” 的修正版结论
+## 2026-03-23 继续补充：naive directional flux candidate 已被 probe 否证
+### 当前结论
+- 本轮继续沿
+  directional flux
+  候选主轴，
+  给现有 probe
+  补了：
+  - `loss_frame_spectral_flux_direction_cosine_all`
+  - `loss_frame_spectral_flux_direction_cosine_active_0p05`
+  - `loss_frame_spectral_flux_zero_target_jitter_0p05`
+  - `directional_flux_candidate_grid_summary`
+- 当前更准确的结论应更新为：
+  1. `active-target directional flux cosine`
+     aggregate 上
+     仍更偏向
+     fixed-template oracle
+  2. `zero-target jitter`
+     aggregate 上
+     的确更偏向 baseline
+  3. 但二者组合后的
+     candidate grid
+     最优点只有：
+     - `direction_lambda = 0.0`
+     - `zero_jitter_lambda = 1.0`
+     - `total_wins = 15 / 24`
+  4. 当前 best transition combo
+     仍更强：
+     - `16 / 24`
+- 关键量化包括：
+  - directional-active:
+    - sine oracle `0.946695`
+    - active oracle `0.972199`
+    - baseline `1.002153`
+  - zero-target jitter:
+    - baseline `0.123427`
+    - active oracle `0.134759`
+    - sine oracle `0.138986`
+- 当前更准确的阶段判断应更新为：
+  - “direction gap”
+    是有效诊断，
+    但 naive directional flux loss
+    不是当前最优训练候选
+  - 下一步应保留：
+    - zero-target jitter
+      这条支线
+  - 同时另找：
+    - active-target 区域里
+      不再偏向 fixed-template oracle 的
+      structure candidate
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先题应改成：
+   - 保留
+     zero-target jitter
+     suppression
+   - 另做一轮
+     non-template-friendly
+     active-region structure candidate
+2. 当前不建议回退去优先做：
+   - 直接把
+     directional flux cosine
+     写进训练 loss
+   - 或继续把
+     “direction gap”
+     和
+     “training candidate”
+     直接画等号
+
+### 文档补充
+- `docs/269_stage5_directional_flux_candidate_negation_report.md`
+  - 记录 directional sidecars 与 candidate grid 结果，以及 “naive directional flux supervision 已被 probe 否证” 的修正版结论
+## 2026-03-23 继续补充：active-template anti-collapse candidate 已出现实质突破
+### 当前结论
+- 本轮继续沿
+  non-template-friendly
+  active-region candidate
+  主轴，
+  给现有 probe
+  补了：
+  - `loss_active_frame_template_excess_relu_0p02`
+  - `active_template_candidate_grid_summary`
+- 当前更准确的结论应更新为：
+  1. `loss_active_frame_template_excess_relu_0p02`
+     aggregate 上
+     已明显偏向 baseline：
+     - baseline `0.465671`
+     - active oracle `0.611023`
+     - sine oracle `0.669643`
+  2. 当前最简有效 candidate
+     已达到：
+     - `template_lambda = 0.25`
+     - `zero_jitter_lambda = 0.0`
+     - `total_wins = 20 / 24`
+  3. 这已经明确超过
+     旧 best transition combo：
+     - `16 / 24`
+  4. 当前 residual hard cases
+     已收紧成：
+     - `target::chapter3_2_firefly_155`
+     - `target::chapter3_2_firefly_212`
+- 当前更准确的阶段判断应更新为：
+  - 下一步最该押注的候选家族，
+    已从
+    transition / directional flux
+    改成：
+    - active-template anti-collapse
+      supervision
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先题应改成：
+   - 围绕
+     `chapter3_2_firefly_155`
+     与
+     `chapter3_2_firefly_212`
+     做新的 residual targeted diagnosis
+2. 同时应优先验证：
+   - `active_template_excess`
+     是否会误伤
+     genuinely stationary
+     target
+3. 当前不建议回退去优先做：
+   - naive directional flux
+   - 或继续把主题压回
+     transition-side
+     权重扫网格
+
+### 文档补充
+- `docs/270_stage5_active_template_candidate_breakthrough_report.md`
+  - 记录 active-template sidecar 与 candidate grid 结果，以及 “active-template anti-collapse candidate 已出现实质突破” 的修正版结论
+## 2026-03-23 继续补充：active-template residual 已收紧成 stationary-friendly subset，而不是全局误伤
+### 当前结论
+- 本轮继续沿
+  active-template candidate
+  主轴，
+  给现有 probe
+  补了：
+  - `active_template_targeted_summary`
+- 当前更准确的结论应更新为：
+  1. simplest best combo
+     仍是：
+     - `template_lambda = 0.25`
+     - `zero_jitter_lambda = 0.0`
+     - `20 / 24`
+  2. residual hard cases
+     仍只有：
+     - `target::chapter3_2_firefly_212`
+     - `target::chapter3_2_firefly_155`
+  3. residual 组
+     相比 win 组
+     更偏：
+     - `aligned_adjacent_cosine`
+       更高
+     - `aligned_rms_cv`
+       更低
+  4. 但 residual 组
+     的 baseline
+     `active_template_excess`
+     并没有更高：
+     - residual `0.462258`
+     - win `0.466354`
+- 当前更准确的阶段判断应更新为：
+  - 当前没有证据表明
+    `active_template_excess`
+    会广泛误伤
+    stationary-ish targets
+  - 更准确的写法应是：
+    - 它当前还缺一块
+      stationary-friendly residual
+      补充项
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   最优先题应改成：
+   - 围绕
+     `chapter3_2_firefly_155`
+     和
+     `chapter3_2_firefly_212`
+     做 residual-specific
+     candidate diagnosis
+2. 当前更值得补的方向是：
+   - 不推翻
+     `active_template_excess`
+     主轴
+   - 只追加一个
+     能处理
+     stationary-friendly residual
+     的补充项
+
+### 文档补充
+- `docs/271_stage5_active_template_residual_stationarity_report.md`
+  - 记录 active-template residual targeted summary 与 stationary-risk 对照，以及 “residual 已收紧成 stationary-friendly subset，而不是全局误伤” 的修正版结论
+## 2026-03-23 继续补充：residual listening bundle 已落盘，避免再次出现“数值推进太远但试听滞后”的状态
+### 当前结论
+- 本轮在继续沿
+  active-template residual
+  主轴推进时，
+  先把 residual-focused
+  listening bundle
+  真正落出来了。
+- 当前 bundle
+  已覆盖：
+  - `target::chapter3_2_firefly_155`
+  - `target::chapter3_2_firefly_212`
+- 当前主听源口径为：
+  - `decoded_pitch_matched`
+  - reference:
+    `aligned_target`
+- 当前产物目录：
+  - `reports/runtime/offline_mvp_nores_vocoder_audio_export_active_template_residual_round1_1/`
+- 当前更准确的阶段判断应更新为：
+  - residual-specific
+    人耳回查入口
+    已经具备
+  - 后续若继续补 residual candidate，
+    应默认同步更新这份 bundle，
+    而不是再拖后
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   residual-specific
+   candidate diagnosis
+   应直接结合：
+   - `chapter3_2_firefly_155`
+   - `chapter3_2_firefly_212`
+     的现有试听包
+2. 当前不建议回到：
+   - 先继续纯数值推进
+   - 听感入口之后再补
+
+### 文档补充
+- `docs/272_stage5_active_template_residual_listening_bundle_report.md`
+  - 记录 residual bundle 导出结果，以及 “residual-specific 试听入口已落盘” 的状态更新
+## 2026-03-24 继续补充：active-template + frame-delta 已能打到 24/24，但当前最优点本质上是 delta-dominated，而不是轻量 residual repair
+### 当前结论
+- 本轮把
+  `active_template_excess`
+  后面叠
+  `frame_delta`
+  的候选家族
+  正式接进了
+  waveform-objective collapse probe。
+- 当前新 family
+  已确认：
+  1. `template_lambda = 0.05`
+     `delta_lambda = 8.0`
+     可达到：
+     - `24 / 24`
+  2. 更温和的点里，
+     `template_lambda = 0.1`
+     `delta_lambda = 4.0`
+     已达到：
+     - `23 / 24`
+     - 仅剩
+       `target::chapter3_2_firefly_212`
+       对
+       `oracle_active_frame_target_rms`
+       一条 residual
+  3. 但当前 best point
+     的 aggregate
+     贡献已经明显是：
+     - `delta_term`
+       主导
+     - 而不是
+       `template_term`
+       主导
+- 当前更准确的阶段判断应更新为：
+  - `frame_delta`
+    确实能补掉
+    `active_template_excess`
+    留下的
+    stationary-friendly residual blind spot
+  - 但当前还不能把它写成：
+    - “active-template 主轴
+      后面补一个很小的 delta 项
+      就可以直接进训练”
+  - 更准确的写法应是：
+    - 当前 best 24/24
+      更像
+      delta-dominated
+      排序解
+
+### 更新后的下一步
+1. 当前实验线若继续推进，
+   不该直接把
+   `template=0.05`
+   `delta=8.0`
+   写进训练主线
+2. 更合理的下一步是：
+   - 继续停留在 offline probe 层
+   - 找一种
+     只补 residual blind spot、
+     又不让 delta 接管主轴
+     的 candidate 形式
+3. 当前应继续把试听结论
+   当成负约束：
+   - 现有 residual bundle
+     仍全部是 buzz
+   - 所以不能把 probe 上的
+     candidate-objective 翻排序
+     误写成
+     可听质量进展
+
+### 文档补充
+- `docs/273_stage5_active_template_delta_candidate_report.md`
+  - 记录 active-template + frame-delta candidate grid 的 24/24 结果，以及 “当前 best point 已明显 delta-dominated” 的修正版阶段判断

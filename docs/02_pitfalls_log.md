@@ -9208,3 +9208,936 @@
     “局部杠杆最大”
     误写成
     “唯一根因已定”
+### 322. 当新的 root-cause probe 依赖 `delta_vs_baseline` 做 impact ranking 时，不能只校验频谱指标；必须确认每个变体真的拿自己的 decoded waveform 参与了波形差分
+- 现象:
+  - 首次把
+    `Stage5 no-res speech-emergence probe`
+    接成正式 CLI
+    并运行后，
+    发现所有非 baseline
+    变体的：
+    - `waveform_mean_abs_delta_vs_baseline`
+    都错误地等于
+    `0`
+  - 但同一批变体的：
+    - centroid
+    - HF ratio
+    - predicted activity
+    明明已经明显变化
+- 风险:
+  - 如果这时只看
+    频谱指标或只看命令能跑通，
+    很容易误以为：
+    - ranking 已可信
+  - 实际上：
+    - 波形差分口径已经失真
+    - 会把最关键的
+      impact ordering
+      悄悄拖偏
+- 处理要求:
+  - 任何新 probe
+    一旦把
+    `waveform delta`
+    作为排序主轴，
+    首轮必须额外核对：
+    - 非 baseline
+      变体的波形差分
+      是否真的非零
+    - 是否确实用的是各自 decoded waveform
+      而不是 baseline waveform
+  - 不能把
+    “命令跑通”
+    直接当成
+    “ranking 可信”
+### 323. 在 Stage5 no-res 的 control-family root-cause probe 里，`zero` 和 `frame_mean` 不是同一类信号；前者更接近“有没有在用”，后者更接近“有没有在用逐帧动态”
+- 现象:
+  - 本轮 Stage5
+    `speech-emergence`
+    probe
+    中，
+    多个 family
+    都表现出：
+    - `zero`
+      变化明显
+    - `frame_mean`
+      变化明显更弱
+  - 代表性结果包括：
+    - `z_art_zero`
+      明显强于
+      `z_art_frame_mean`
+    - `event_probs_zero`
+      明显强于
+      `event_probs_frame_mean`
+    - `periodic_proxies_zero`
+      明显强于
+      `periodic_proxies_frame_mean`
+- 风险:
+  - 如果把这两类 probe
+    都混写成
+    “family 有作用”
+  - 就会遗漏更关键的信息：
+    - 当前模型到底是在使用
+      family 的存在/总量
+    - 还是在使用
+      family 的逐帧动态
+  - 这会直接影响：
+    - 对 speech emergence
+      缺失原因的判断层级
+- 处理要求:
+  - 后续凡是继续做
+    Stage5 no-res
+    control-family
+    root-cause probe，
+    正式结论里必须把
+    `zero`
+    与
+    `frame_mean`
+    分开解释
+  - 当
+    `zero`
+    强而
+    `frame_mean`
+    弱时，
+    更准确的口径应写成：
+    - family 被用到了，
+      但逐帧动态使用证据偏弱
+  - 不能直接外推成：
+    - family 的时序语义已经被健康地学会
+### 324. 在 Stage5 no-res 这条线里，粗粒度频谱均值看起来“不算太坏”并不代表已经接近语音；固定短时模板配上正确包络，也能骗过整段统计
+- 现象:
+  - 本轮
+    Stage5
+    `speech-emergence`
+    probe
+    显示：
+    - baseline 的
+      `decoded_spectral_high_band_energy_ratio`
+      约为
+      `0.064479`
+    - 粗看并不表现成
+      典型高频塌穿
+  - 但同一批结果又显示：
+    - `waveform_frames_adjacent_cosine_mean ≈ 0.999994`
+    - `waveform_frames_template_cosine_mean ≈ 0.999649`
+    - `decoded_frame_template_cosine_mean ≈ 0.994838`
+    - 与 aligned target
+      的短时结构差距极大
+- 风险:
+  - 如果这时只盯着：
+    - centroid
+    - bandwidth
+    - HF ratio
+    这类整段 summary
+  - 很容易误判成：
+    - 当前 route
+      至少已经接近某种
+      “粗糙但像语音”的状态
+  - 实际上它可能只是：
+    - 固定模板
+    - 再跟着目标包络起伏
+    的假解
+- 处理要求:
+  - 当任务目标是：
+    - speech emergence
+    - 或“是不是已经像语音”
+  - 不能只看整段频谱均值；
+    必须补看：
+    - 短时帧结构多样性
+    - frame-template collapse
+    - 与 aligned target
+      的帧级能量相关
+### 325. 当 decoded 短时帧几乎全都贴着同一个模板、但帧级 RMS 又与 aligned target 高相关时，优先把根因写成 `template-buzz + envelope-following` 假解，而不是继续围绕 decode-side 或单一 control family 打转
+- 现象:
+  - 当前 Stage5
+    baseline
+    已出现：
+    - `decoded_frame_adjacent_cosine_mean ≈ 0.997967`
+    - `decoded_frame_template_cosine_mean ≈ 0.994838`
+    - `predicted_activity_to_aligned_frame_rms_corr ≈ 0.816`
+    - `decoded_frame_rms_to_aligned_frame_rms_corr ≈ 0.826`
+  - 这说明：
+    - 输出模板几乎不变
+    - 但强弱起伏又在跟着目标走
+- 风险:
+  - 如果这时还继续默认：
+    - 是 decode-side
+      smoothing / apply mode
+      的问题
+    - 或某一个 control family
+      配错了
+  - 很容易继续围绕局部杠杆打转，
+    却错过：
+    - waveform head / reconstruction loss
+      已经收敛到假解
+    这一层
+- 处理要求:
+  - 一旦同时看到：
+    - 极高模板相似度
+    - 高包络相关
+  - 当前主问题应优先升级成：
+    - waveform-level template collapse
+  - 后续实验优先题应转向：
+    - 跨训练步长比较
+    - waveform head / loss 诊断
+  - 不再优先把时间花在：
+    - decode-side 小 tweak
+    - checkpoint 排名
+    - 单 family 微调
+### 326. 当 cross-step 对照显示 `step24/48/60/72` 全都维持极高的短时模板相似度时，不要再把问题解释成“late checkpoint 选错了”或“只有当前 best route 退化”
+- 现象:
+  - 本轮对
+    `step24 / step48 / step60 / step72`
+    跑同口径
+    speech-emergence probe
+    后发现：
+    - `waveform_frames_adjacent_cosine_mean`
+      全都约为
+      `0.999986 ~ 0.999994`
+    - `decoded_frame_template_cosine_mean`
+      全都约为
+      `0.994838 ~ 0.996885`
+  - 同时：
+    - `decoded_spectral_high_band_energy_ratio`
+      确实在下降
+- 风险:
+  - 如果只看
+    HF ratio
+    在改善，
+    很容易继续误判成：
+    - 训练已经在向语音逼近
+    - 只是当前选中的 late checkpoint
+      还不够理想
+  - 但 cross-step
+    结构指标已经说明：
+    - 整条当前训练路线
+      都停留在同类假解里
+- 处理要求:
+  - 一旦 cross-step
+    已确认模板塌缩贯穿全程，
+    正式问题定义必须升级成：
+    - 训练级假解
+  - 不再优先把主问题表述成：
+    - checkpoint 排名
+    - late step 选择
+    - 局部 decode 行为
+### 327. 当 fixed-template counterexample 在正式 waveform objective 下打到不高于 baseline 的分数时，不能再把 “objective 下降” 直接当成 speech emergence 证据
+- 现象:
+  - 本轮新增的
+    `Stage5 waveform-objective collapse probe`
+    显示：
+    - `oracle_active_frame_target_rms`
+      aggregate
+      `weighted_wave_objective = 0.141467`
+    - `oracle_sine_target_rms`
+      aggregate
+      `0.147455`
+    - baseline decode route
+      aggregate
+      `0.150852`
+  - 同时这两个
+    fixed-template
+    变体的：
+    - `decoded_frame_template_cosine_mean`
+      仍约为
+      `0.923 ~ 0.925`
+    - 远高于 aligned target
+      的
+      `0.022486`
+- 风险:
+  - 如果这时仍把：
+    - validation objective 更低
+    - waveform/STFT loss 更低
+    直接解读成：
+    - 更接近语音
+    - 或 speech emergence
+      正在发生
+  - 就会把
+    `template + envelope`
+    这类假解，
+    误认成健康进展
+- 处理要求:
+  - 以后只要实验题目涉及：
+    - 当前 waveform objective
+      是否真的在逼近语音
+  - 不能只看：
+    - `loss_waveform`
+    - `loss_stft`
+    - `weighted_wave_objective`
+  - 必须同时补看：
+    - frame-template collapse
+    - frame-level RMS / envelope 跟随
+    - 与 aligned target
+      的短时结构差距
+  - 一旦 constructive counterexample
+    已证明 fixed-template
+    也能拿低分，
+    后续主问题应优先转向：
+    - objective / loss
+      为什么没有惩罚掉这类假解
+### 328. 当 short-window MRSTFT 和去包络 frame-shape sidecar 也仍把 baseline 排在 fixed-template oracle 后面时，不能把问题继续简化成“把 single-resolution STFT 换成 MRSTFT 就够了”
+- 现象:
+  - 在
+    `docs/259`
+    之后，
+    本轮继续补看：
+    - `loss_mrstft_short_256_512_1024`
+    - `loss_frame_unit_rms_l1`
+  - aggregate 结果是：
+    - `loss_mrstft_short_256_512_1024`
+      上，
+      baseline
+      仍高于两个 oracle
+    - `loss_frame_unit_rms_l1`
+      上，
+      baseline
+      也仍高于两个 oracle
+- 风险:
+  - 如果这时继续把主问题写成：
+    - 当前只差一个
+      short-window MRSTFT
+  - 就会忽略更关键的事实：
+    - baseline 自己
+      已经比这些
+      fixed-template oracle
+      更塌
+  - 这样容易把后续工作
+    继续引向：
+    - 轻量 loss replacement
+    - 小修小补
+    而不是结构级约束缺口
+- 处理要求:
+  - 一旦 sidecar
+    也确认 baseline
+    排不回去，
+    后续主问题应升级成：
+    - 当前 route
+      缺的不是
+      “稍微更灵敏一点的
+      waveform loss”
+    - 而是：
+      - 更直接的
+        speech-structure emergence
+        约束
+      - 或更贴近目标 frame structure
+        的 supervision / target
+  - 不再优先把时间花在：
+    - 只替换
+      single-resolution STFT
+      为短窗 MRSTFT
+    - 或只补一个
+      去包络 frame L1
+### 329. 在 Stage5 waveform route 里，静态 frame-shape 相似度和相邻帧变化不是同一类信号；当前第一个把 baseline 排到 fixed-template oracle 前面的候选来自 `frame delta`，不是 static frame resemblance
+- 现象:
+  - 本轮继续补看：
+    - `loss_frame_unit_rms_logspec_l1`
+    - `loss_frame_delta_unit_rms_l1`
+    - `loss_frame_spectral_flux_l1`
+  - 结果是：
+    - static frame-shape / logspec
+      仍然更偏向 oracle
+    - 但
+      `loss_frame_delta_unit_rms_l1`
+      已把 baseline
+      排到两个 oracle 前面
+- 风险:
+  - 如果这时把所有
+    frame-level loss
+    都混写成
+    “结构约束”
+  - 就会漏掉更关键的层级差别：
+    - static frame resemblance
+      仍可能奖励固定模板
+    - transition / delta
+      才开始对 baseline
+      更有利
+  - 这会直接把后续探索方向
+    又拉回：
+    - 更静态的 frame shape
+    - 更静态的 frame spectrum
+- 处理要求:
+  - 后续凡是继续做
+    Stage5 waveform
+    structure-loss 诊断，
+    正式结论里必须分开解释：
+    - static frame resemblance
+    - adjacent-frame transition
+  - 一旦两者给出不同排序，
+    不要把它们揉成
+    “frame-level loss
+    大体都一样”
+  - 当前若继续推进，
+    优先级应先放在：
+    - delta / transition
+      类 supervision / loss
+    而不是
+    - static frame-shape
+      微调
+### 330. 当 transition-side candidate objective 已量化出明确翻转门槛时，不要继续只说“这个方向看起来更对”；要把后续权重探索分成弱翻转区和稳翻转区
+- 现象:
+  - 本轮已把：
+    - `score = weighted_wave_objective + λ * loss_frame_delta_unit_rms_l1`
+    做成正式 aggregate 诊断
+  - 并得到：
+    - 压过
+      `oracle_sine_target_rms`
+      需
+      `λ >= 0.258052`
+    - 压过
+      `oracle_active_frame_target_rms`
+      需
+      `λ >= 0.645772`
+- 风险:
+  - 如果这时还只把结论写成：
+    - `frame delta`
+      大概更对
+  - 就会失去最重要的执行价值：
+    - 下一轮应该先试多大权重
+    - 哪个权重只够弱翻转
+    - 哪个权重才够稳翻转
+  - 这样后续实验很容易：
+    - 权重取太小，
+      看不到效果
+    - 或取值无序，
+      结论继续发散
+- 处理要求:
+  - 以后只要某个 candidate objective
+    已能量化出翻转门槛，
+    正式文档里必须分开写清：
+    - 弱翻转区
+    - 稳翻转区
+  - 当前若继续沿
+    transition-side
+    推进，
+    默认先把：
+    - `λ ≈ 0.3`
+      当弱翻转参考点
+    - `λ ≈ 0.75`
+      当稳翻转参考点
+### 331. 当 transition-side 组合网格已经暴露出重复 hard-failure records 时，下一步不要继续盲扫权重；应直接转 targeted diagnosis 这些 hard cases
+- 现象:
+  - 本轮对
+    `frame_delta + spectral_flux`
+    做 per-record robustness
+    网格后发现：
+    - 最优组合
+      也只到
+      `16 / 24` wins
+    - 且有一组记录
+      在两类 oracle
+      下重复出现在失败名单里，
+      包括：
+      - `target::chapter3_3_firefly_245`
+      - `target::chapter3_2_firefly_163`
+      - `target::chapter3_2_firefly_155`
+      - `target::chapter3_26_firefly_107`
+- 风险:
+  - 如果这时还继续默认：
+    - 再多扫一些权重，
+      大概就能收口
+  - 很容易把时间耗在：
+    - 小数点级别调参
+    - aggregate 继续微幅改善
+  - 却错过更关键的信息：
+    - 当前已经出现
+      可复查的 hard-failure 子集
+- 处理要求:
+  - 一旦 hard-failure
+    记录已重复出现，
+    下一步优先题应直接改成：
+    - targeted diagnosis
+      这些 records
+  - 不再优先把时间花在：
+    - 更大范围的无目的权重扫网格
+    - 或过早把现有组合写成
+      “已可进训练”
+### 332. 在 per-record candidate-objective 诊断里，必须先固定好 margin 的符号定义；`baseline_score - other_score < 0` 才表示 baseline 赢，别把 hard-failure 和 best-win 名单写反
+- 现象:
+  - 本轮对
+    transition-side combo
+    做 targeted diagnosis
+    时，
+    初版自动汇总里把：
+    - `worst_losses`
+    - `best_wins`
+    的方向写反了
+  - 根因是：
+    - `margin = baseline_score - other_score`
+    - 但后续阅读时
+      临时把“更负”
+      误当成“输得更惨”
+- 风险:
+  - 如果这里符号一旦看反，
+    会直接把：
+    - 真 hard-failure 子集
+    - 真 easy-win 子集
+    互换
+  - 这会让下一步 targeted diagnosis
+    盯错记录，
+    连带把文档结论一起带偏
+- 处理要求:
+  - 以后凡是做：
+    - per-record candidate-objective
+      margin 排名
+  - 正式文档里必须先写清：
+    - `margin < 0`
+      baseline 赢
+    - `margin > 0`
+      baseline 输
+  - 输出字段名
+    也必须和这个定义一致，
+    不要靠上下文猜
+### 333. 当 hard-case 已经细分成 boundary-dominated 和 isolated-window 两类时，不要再把它们混成“transition-side 不够强”的单一失败模式
+- 现象:
+  - 本轮对 3 条 corrected hard cases
+    做 time-window breakdown 后发现：
+    - `chapter3_17_firefly_133`
+      和
+      `chapter3_3_firefly_162`
+      主要输在句首/句尾边界
+    - `chapter3_6_firefly_106`
+      则主要输在一个极短、
+      但高杠杆的稳态窗口
+- 风险:
+  - 如果这时还把三条记录
+    一起写成：
+    - transition-side 约束还不够强
+  - 就会错过更关键的差异：
+    - 边界问题
+      和稳态窗口问题
+      不一定需要同一种后续诊断
+  - 这样后续很容易：
+    - 问错问题
+    - 合并掉真正有用的模式差异
+- 处理要求:
+  - 一旦 per-record
+    breakdown
+    已暴露出不同失败模式，
+    后续文档与实验题目
+    必须按模式分开写
+  - 当前至少要分成：
+    - boundary-dominated hard cases
+    - isolated high-leverage window hard case
+### 334. 在 hard-case 模式分型里，不能只看最显眼的 1-2 个窗口；必须补看全局 share，否则会把 “mixed with edge anchors” 误写成纯 boundary case
+- 现象:
+  - 本轮给 hard cases
+    补了
+    `pattern_summary`
+    之后发现：
+    - `chapter3_17_firefly_133`
+      虽然句首/句尾窗口很显眼，
+      但
+      `boundary_share = 0.090681`
+      实际上仍应归到
+      `mixed_failure`
+    - 只有
+      `chapter3_3_firefly_162`
+      才是真正的
+      `boundary_dominated`
+- 风险:
+  - 如果只看
+    top 1-2 个窗口，
+    很容易把：
+    - 有边界锚点的 mixed case
+      误写成
+      pure boundary case
+  - 这会让后续 targeted diagnosis
+    继续过度聚焦边界，
+    漏掉 interior 贡献
+- 处理要求:
+  - 以后凡是做
+    hard-case 模式分型，
+    不能只看：
+    - dominant window
+    - top failure windows
+  - 还必须同时补看：
+    - boundary share
+    - interior share
+    - max window share
+  - 只有 share 也支持时，
+    才把记录正式写成：
+    - `boundary_dominated`
+### 335. 当 transition hard cases 已显示出统一的 flux-dominant 迹象时，不要再把问题继续写成 “delta-side 不够强”；必须同时补看失败优势的 component 和 target-motion regime
+- 现象:
+  - 本轮给 corrected hard cases
+    补了
+    `failure_signature`
+    后发现：
+    - 3 条 hard cases
+      都是
+      `flux_dominated`
+    - 但它们分布在不同 regime：
+      - `chapter3_3_firefly_162`
+        是
+        `boundary_high_motion_flux_gap`
+      - `chapter3_17_firefly_133`
+        是
+        `interior_high_motion_flux_gap`
+      - `chapter3_6_firefly_106`
+        是
+        `steady_zero_target_jitter`
+- 风险:
+  - 如果这时还继续把问题
+    粗暴写成：
+    - `frame_delta`
+      还不够强
+  - 会漏掉更关键的信息：
+    - 当前 hard failures
+      的主导差异
+      不在
+      `delta vs flux`
+      的抽象口号，
+      而在：
+      - flux 主导
+      - 边界高运动 /
+        interior 高运动 /
+        near-zero plateau
+        这几种不同 regime
+  - 这样后续很容易：
+    - 问错下一题
+    - 又回到无目的权重扫网格
+- 处理要求:
+  - 以后凡是继续做
+    transition hard-case
+    targeted diagnosis，
+    不能只看：
+    - `pattern_summary`
+    - top windows
+  - 还必须同时补看：
+    - `flux_dominant_advantage_share`
+    - `delta_dominant_advantage_share`
+    - high-motion share
+    - near-zero share
+  - 只有 component
+    和 regime
+    都看清后，
+    才决定下一步该追：
+    - boundary flux
+    - interior flux
+    - 还是 plateau jitter
+### 336. 当 flux-side hard cases 已显示 baseline 与 oracle 都远低于 target flux magnitude 时，不要把问题继续误写成 “baseline flux 太大”；必须补看 signed flux direction coherence
+- 现象:
+  - 本轮给 corrected hard cases
+    补了
+    `flux_alignment_summary`
+    后发现：
+    - baseline 与 oracle
+      在正失败窗口里的
+      `flux magnitude`
+      都明显低于 target
+    - 但 oracle 的
+      `flux alignment cosine`
+      明显更高，
+      baseline 则接近
+      `0`
+      或略负相关
+- 风险:
+  - 如果这时还继续把问题
+    粗暴写成：
+    - baseline flux 太大
+    - 再加大一点
+      flux L1
+      就行
+  - 会直接漏掉更关键的信息：
+    - 当前 fixed-template oracle
+      赢的关键
+      不只是 magnitude 更小，
+      而是
+      signed spectral-change
+      方向更 coherent
+  - 这样后续很容易：
+    - 继续押错 supervision 形态
+    - 在 magnitude penalty
+      上反复扫权重
+- 处理要求:
+  - 以后凡是继续做
+    flux-side hard-case
+    targeted diagnosis，
+    不能只看：
+    - flux error
+    - flux magnitude
+  - 还必须同时补看：
+    - `baseline_flux_alignment_cosine_mean_positive`
+    - `reference_oracle_flux_alignment_cosine_mean_positive`
+    - `flux_alignment_cosine_gap_positive`
+  - 只有 magnitude
+    和 direction
+    都拆开后，
+    才决定下一步该追：
+    - directional flux supervision
+    - 还是 zero-target jitter suppression
+### 337. 当 probe 已经证明 “direction gap” 存在时，不要直接把它抄成 naive directional flux loss；fixed-template oracle 也可能在这种 metric 上更优
+- 现象:
+  - 本轮继续把
+    direction gap
+    往 candidate objective
+    推时发现：
+    - `active-target directional flux cosine`
+      aggregate 上
+      仍更偏向
+      fixed-template oracle
+    - directional candidate grid
+      的最优点
+      反而是：
+      - `direction_lambda = 0.0`
+      - 只剩
+        `zero-target jitter`
+        在起作用
+- 风险:
+  - 如果这时把
+    “baseline direction 更不对”
+    直接翻译成：
+    - 给训练再加一个
+      directional flux loss
+  - 会把
+    诊断现象
+    误当成
+    可训练候选
+  - 这样后续很容易：
+    - 把 template-friendly 的 metric
+      再次写进训练
+    - 在错误目标上继续扫权重
+- 处理要求:
+  - 以后凡是从
+    root-cause diagnosis
+    往 candidate loss
+    过渡，
+    不仅要证明：
+    - 某个现象存在
+  - 还必须额外证明：
+    - 把它写成 loss 后，
+      baseline 至少不会继续输给
+      fixed-template oracle
+  - 如果最优 grid
+    已经把某个新项
+    自动退成
+    `0`
+    权重，
+    就应把它正式写成：
+    - 当前 naive 候选
+      已被否证
+### 338. 当离线抽样里某个新候选看起来有效时，正式接进 probe 时必须先锁死定义口径；尤其是 reference frame 的选法一旦变了，结论可能直接翻转
+- 现象:
+  - 本轮把
+    `active_template_excess`
+    从临时脚本接进 probe 时，
+    初版把 reference
+    从“首帧”
+    改成了“首个 active frame”
+  - 结果马上从：
+    - baseline 明显更优
+  - 退回成：
+    - oracle 更优
+  - 后来改回与离线抽样一致的
+    “首帧 reference”
+    口径后，
+    才恢复到：
+    - `20 / 24`
+      的 candidate breakthrough
+- 风险:
+  - 如果这里不先锁死
+    metric definition，
+    很容易把：
+    - 真有效候选
+      误写成无效
+    - 或反过来
+  - 这会直接污染：
+    - probe 产物
+    - 文档判断
+    - 下一步训练候选排序
+- 处理要求:
+  - 以后凡是把
+    离线抽样里有效的新指标
+    接进正式 probe，
+    必须先把下面这些定义写死：
+    - reference 的选法
+    - active / zero 的阈值
+    - mask 的时域口径
+    - 是否对 silence 做排除
+  - 如果正式实现
+    与临时抽样
+    口径不同，
+    就不能直接拿结果对比，
+    必须先回到同一口径再判断
+### 339. 当一个新 candidate 已经达到明显更好的总 wins 时，不要因为 residual 还存在就立刻把它写成“可能会全局误伤 stationary target”；必须先做 residual-vs-win 组间对照
+- 现象:
+  - 本轮
+    `active_template_excess`
+    已把 candidate objective
+    推到
+    `20 / 24`
+  - 但 residual 里
+    `chapter3_2_firefly_155`
+    和
+    `chapter3_2_firefly_212`
+    看起来都更平滑，
+    容易让人第一反应写成：
+    - 这个候选会误伤
+      stationary target
+- 风险:
+  - 如果这时不做组间对照，
+    很容易把：
+    - 局部 residual
+  - 误写成：
+    - 全局 candidate 风险
+  - 这样会过早否掉
+    当前最强候选，
+    让实验线重新退回
+    次优方向
+- 处理要求:
+  - 以后凡是某个新 candidate
+    已经明显超过旧 best combo，
+    又仍留少量 residual，
+    必须先补做：
+    - residual vs win
+      group summary
+  - 至少同时比较：
+    - target stationarity 指标
+    - baseline candidate penalty
+      是否真的更高
+  - 如果 residual 组
+    只是 target 更偏稳态，
+    但 baseline penalty
+    并未整体升高，
+    就应写成：
+    - residual blind spot
+    而不是
+    - candidate 全局误伤
+### 340. 当训练侧 loss 签名变更后，现有音频导出链路也要同步补参数；否则最需要回听的时候，导出命令会直接在 runtime 崩掉
+- 现象:
+  - 本轮准备导出
+    active-template residual
+    listening bundle
+    时发现：
+    - `export-offline-mvp-nores-vocoder-audio`
+      仍在调用
+      `compute_nores_vocoder_losses`
+    - 但没有补上训练侧后来新增的
+      `reconstruction_frame_gain_apply_mode`
+      参数
+  - 结果命令直接在 runtime
+    报错：
+    - missing required positional argument
+- 风险:
+  - 这种回归
+    平时不一定会马上暴露，
+    但一到最该尽快回听
+    residual hard cases
+    的时候，
+    就会把试听入口卡死
+  - 这会很容易重演：
+    - 数值推进很久
+    - 回听却跟不上
+    的旧坑
+- 处理要求:
+  - 以后凡是训练侧
+    core loss
+    或 reconstruction
+    参数签名发生变化，
+    必须同步检查：
+    - `nores_vocoder_audio_export`
+    - 以及其他复用训练 loss
+      的导出/审计链路
+  - 如果某条导出命令
+    本轮已经被用于 residual audit，
+    就应该在同轮里
+    实际跑通一次，
+    不要只看静态代码
+### 341. 当某个 candidate family 在 probe 上第一次打到 24/24 时，不能只看 total_wins；必须同步检查分项量级，否则很容易把“某个补项已经接管主轴”误写成“找到了轻量修正”
+- 现象:
+  - 本轮
+    `active_template + frame_delta`
+    家族
+    第一次把当前
+    `12 x 2`
+    probe
+    打到：
+    - `24 / 24`
+  - 但 best point
+    是：
+    - `template_lambda = 0.05`
+    - `delta_lambda = 8.0`
+  - 实际分项量级里：
+    - baseline
+      `template_term = 0.023284`
+    - baseline
+      `delta_term = 7.682632`
+  - 也就是：
+    - 真正接管排序的
+      已经是
+      `delta`
+    - 而不是
+      `active_template`
+      主轴
+- 风险:
+  - 如果这时只看
+    `24 / 24`
+    就直接下结论，
+    很容易把：
+    - “补项有效，
+      但已明显主导”
+  - 误写成：
+    - “找到了可直接进训练的
+      轻量 residual repair”
+  - 这样后续一旦上训练，
+    很可能把 objective
+    又带回
+    transition/delta 主导，
+    偏离当前
+    anti-template 主轴
+- 处理要求:
+  - 以后凡是某个新家族
+    首次达到
+    `24 / 24`
+    或明显超过旧 best，
+    必须同步写出：
+    - objective 基项量级
+    - 新增各 sidecar 的项量级
+    - 谁在主导最终排序
+  - 如果新增项的量级
+    已远大于主项，
+    就应明确写成：
+    - 当前是
+      dominated regime
+    - 不是
+      轻量修正
+### 342. 当试听包已经确认“仍全是 buzz”时，后续所有 probe 改善都必须明确标记为 objective-side 诊断进展，不能暗示成可听质量进展
+- 现象:
+  - 本轮用户已实际回听
+    `reports/runtime/offline_mvp_nores_vocoder_audio_export_active_template_residual_round1_1`
+  - 并确认：
+    - 除
+      `aligned_target`
+      之外，
+      全部仍是
+      与原方案一致的 buzz
+  - 同时本轮
+    `active_template + frame_delta`
+    在 offline probe
+    上达到了
+    `24 / 24`
+- 风险:
+  - 如果这时文档或口头更新里
+    不把两件事
+    明确分开，
+    很容易让人误读成：
+    - objective 排序改好了
+    - 听感也已经开始变好
+  - 这会重演：
+    - 离线数值推进很快
+    - 但真实可听结果
+      仍停在 buzz
+    的错判
+- 处理要求:
+  - 以后只要当轮没有
+    新训练结果
+    或新试听产物，
+    所有这类更新
+    都必须显式标记为：
+    - objective-side candidate diagnosis
+  - 如果当前试听入口
+    已明确仍是 buzz，
+    还应把这条事实
+    写进对应报告，
+    作为阶段性负约束，
+    防止把 probe 进展
+    误当成可听进展

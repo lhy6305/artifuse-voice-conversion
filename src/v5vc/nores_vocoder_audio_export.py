@@ -11,6 +11,7 @@ import torch
 from v5vc.nores_vocoder_checkpoint_selection import select_offline_mvp_nores_vocoder_checkpoint
 from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
 from v5vc.offline_vocoder_training import (
+    DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
     compute_nores_vocoder_losses,
     extract_training_batch,
     extract_training_runtime,
@@ -38,6 +39,8 @@ def export_offline_mvp_nores_vocoder_audio(
     pitch_match_fmax_hz: float,
     pitch_match_max_semitones: float,
     activity_gate_weight: float,
+    active_template_weight: float,
+    frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
@@ -119,7 +122,10 @@ def export_offline_mvp_nores_vocoder_audio(
                 waveform_weight=0.5,
                 stft_weight=0.5,
                 rms_guard_weight=0.2,
+                active_template_weight=float(active_template_weight),
+                frame_delta_weight=float(frame_delta_weight),
                 use_predicted_activity_gate=bool(use_predicted_activity_gate),
+                reconstruction_frame_gain_apply_mode=DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
             )
             predicted_activity = torch.maximum(outputs["periodic_gate"], outputs["noise_gate"])
             decoded_waveform = reconstruct_waveform_from_frames(
@@ -210,6 +216,8 @@ def export_offline_mvp_nores_vocoder_audio(
         "waveform_decode": {
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "activity_gate_weight_for_metrics": float(activity_gate_weight),
+            "active_template_weight_for_metrics": float(active_template_weight),
+            "frame_delta_weight_for_metrics": float(frame_delta_weight),
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_predicted_activity_gate_apply_mode,

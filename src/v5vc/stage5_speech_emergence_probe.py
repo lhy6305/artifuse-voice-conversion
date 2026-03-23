@@ -159,6 +159,7 @@ def analyze_stage5_nores_speech_emergence(
             feature_layout = build_stage5_scaffold_feature_layout(scaffold_payload)
 
             variant_runs = []
+            variant_waveforms: dict[str, torch.Tensor] = {}
             baseline_waveform = None
             baseline_metrics = None
             for variant in STANDARD_ROOT_CAUSE_VARIANTS:
@@ -190,6 +191,7 @@ def analyze_stage5_nores_speech_emergence(
                 if variant["label"] == reference_variant_label:
                     baseline_waveform = decoded_waveform
                     baseline_metrics = scalar_metrics
+                variant_waveforms[str(variant["label"])] = decoded_waveform
                 variant_runs.append(variant_row)
 
             if baseline_waveform is None or baseline_metrics is None:
@@ -199,7 +201,7 @@ def analyze_stage5_nores_speech_emergence(
                 variant_row["delta_vs_baseline"] = summarize_probe_delta_vs_baseline(
                     candidate_metrics=variant_row["scalar_metrics"],
                     baseline_metrics=baseline_metrics,
-                    candidate_waveform=baseline_waveform if variant_row["label"] == reference_variant_label else None,
+                    candidate_waveform=variant_waveforms.get(str(variant_row["label"])),
                     baseline_waveform=baseline_waveform,
                 )
 
@@ -366,6 +368,14 @@ def run_probe_variant(
     predicted_activity_cpu = predicted_activity.detach().cpu().to(torch.float32).view(-1)
     waveform_frames = outputs["waveform_frames"].detach().cpu().to(torch.float32)
     decoded_spectral = compute_waveform_spectral_summary(decoded_waveform, int(sample_rate))
+    waveform_frame_metrics = summarize_frame_sequence_metrics(waveform_frames)
+    decoded_analysis_frames = frame_waveform_sequence(
+        waveform=decoded_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        target_frame_count=int(waveform_frames.shape[0]),
+    )
+    decoded_frame_metrics = summarize_frame_sequence_metrics(decoded_analysis_frames)
     metrics = {
         "periodic_gate_mean": round(float(periodic_gate.mean().item()), 6),
         "noise_gate_mean": round(float(noise_gate.mean().item()), 6),
@@ -385,11 +395,36 @@ def run_probe_variant(
         "decoded_spectral_bandwidth_hz": float(decoded_spectral["bandwidth_hz"]),
         "decoded_spectral_rolloff95_hz": float(decoded_spectral["rolloff95_hz"]),
         "decoded_spectral_high_band_energy_ratio": float(decoded_spectral["high_band_energy_ratio"]),
+        "waveform_frames_rms_cv": float(waveform_frame_metrics["frame_rms_cv"]),
+        "waveform_frames_adjacent_cosine_mean": float(waveform_frame_metrics["adjacent_cosine_mean"]),
+        "waveform_frames_adjacent_cosine_abs_mean": float(waveform_frame_metrics["adjacent_cosine_abs_mean"]),
+        "waveform_frames_template_cosine_mean": float(waveform_frame_metrics["template_cosine_mean"]),
+        "decoded_frame_rms_cv": float(decoded_frame_metrics["frame_rms_cv"]),
+        "decoded_frame_adjacent_cosine_mean": float(decoded_frame_metrics["adjacent_cosine_mean"]),
+        "decoded_frame_adjacent_cosine_abs_mean": float(decoded_frame_metrics["adjacent_cosine_abs_mean"]),
+        "decoded_frame_template_cosine_mean": float(decoded_frame_metrics["template_cosine_mean"]),
     }
     if aligned_waveform is not None:
         aligned_waveform_cpu = aligned_waveform.detach().cpu().to(torch.float32)[: decoded_waveform.shape[0]]
         aligned_spectral = compute_waveform_spectral_summary(aligned_waveform_cpu, int(sample_rate))
         aligned_rms = float(aligned_waveform_cpu.pow(2).mean().sqrt().item())
+        aligned_analysis_frames = frame_waveform_sequence(
+            waveform=aligned_waveform_cpu,
+            frame_length=int(frame_length),
+            hop_length=int(hop_length),
+            target_frame_count=int(waveform_frames.shape[0]),
+        )
+        aligned_frame_metrics = summarize_frame_sequence_metrics(aligned_analysis_frames)
+        decoded_frame_rms = decoded_analysis_frames.pow(2).mean(dim=1).sqrt()
+        aligned_frame_rms = aligned_analysis_frames.pow(2).mean(dim=1).sqrt()
+        predicted_to_aligned_activity_corr = compute_pearson_correlation(
+            predicted_activity_cpu,
+            aligned_frame_rms,
+        )
+        decoded_to_aligned_activity_corr = compute_pearson_correlation(
+            decoded_frame_rms,
+            aligned_frame_rms,
+        )
         metrics.update(
             {
                 "aligned_waveform_rms": round(aligned_rms, 6),
@@ -416,9 +451,89 @@ def run_probe_variant(
                     ),
                     6,
                 ),
+                "aligned_frame_rms_cv": float(aligned_frame_metrics["frame_rms_cv"]),
+                "aligned_frame_adjacent_cosine_mean": float(aligned_frame_metrics["adjacent_cosine_mean"]),
+                "aligned_frame_adjacent_cosine_abs_mean": float(aligned_frame_metrics["adjacent_cosine_abs_mean"]),
+                "aligned_frame_template_cosine_mean": float(aligned_frame_metrics["template_cosine_mean"]),
+                "decoded_frame_template_cosine_gap_vs_aligned": round(
+                    float(decoded_frame_metrics["template_cosine_mean"]) - float(aligned_frame_metrics["template_cosine_mean"]),
+                    6,
+                ),
+                "decoded_frame_adjacent_cosine_gap_vs_aligned": round(
+                    float(decoded_frame_metrics["adjacent_cosine_mean"]) - float(aligned_frame_metrics["adjacent_cosine_mean"]),
+                    6,
+                ),
+                "predicted_activity_to_aligned_frame_rms_corr": float(predicted_to_aligned_activity_corr),
+                "decoded_frame_rms_to_aligned_frame_rms_corr": float(decoded_to_aligned_activity_corr),
             }
         )
     return metrics, decoded_waveform
+
+
+def frame_waveform_sequence(
+    *,
+    waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    target_frame_count: int | None = None,
+) -> torch.Tensor:
+    waveform_cpu = waveform.detach().cpu().to(torch.float32).view(-1)
+    if int(target_frame_count or 0) <= 0:
+        target_frame_count = max(1, ((max(0, int(waveform_cpu.shape[0]) - int(frame_length))) // int(hop_length)) + 1)
+    total_length = int(frame_length + max(0, int(target_frame_count) - 1) * int(hop_length))
+    if int(waveform_cpu.shape[0]) < total_length:
+        waveform_cpu = torch.nn.functional.pad(waveform_cpu, (0, total_length - int(waveform_cpu.shape[0])))
+    else:
+        waveform_cpu = waveform_cpu[:total_length]
+    return waveform_cpu.unfold(0, int(frame_length), int(hop_length)).contiguous()
+
+
+def summarize_frame_sequence_metrics(frames: torch.Tensor) -> dict[str, float]:
+    if frames.ndim != 2:
+        raise ValueError(f"Expected frames shape [frames, samples], got {tuple(frames.shape)}")
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    frame_rms = frames_cpu.pow(2).mean(dim=1).sqrt()
+    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
+    normalized = centered / centered.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
+    adjacent_cosine = frames_cpu.new_zeros((0,), dtype=torch.float32)
+    if int(normalized.shape[0]) > 1:
+        adjacent_cosine = (normalized[:-1] * normalized[1:]).sum(dim=1)
+    template = centered.mean(dim=0)
+    template_norm = template.norm().clamp_min(1.0e-6)
+    template_direction = template / template_norm
+    template_cosine = (normalized * template_direction.unsqueeze(0)).sum(dim=1)
+    frame_rms_mean = float(frame_rms.mean().item())
+    frame_rms_std = float(frame_rms.std(unbiased=False).item())
+    return {
+        "frame_rms_mean": round(frame_rms_mean, 6),
+        "frame_rms_std": round(frame_rms_std, 6),
+        "frame_rms_cv": round(0.0 if abs(frame_rms_mean) <= 1.0e-8 else frame_rms_std / frame_rms_mean, 6),
+        "adjacent_cosine_mean": round(
+            0.0 if int(adjacent_cosine.numel()) <= 0 else float(adjacent_cosine.mean().item()),
+            6,
+        ),
+        "adjacent_cosine_abs_mean": round(
+            0.0 if int(adjacent_cosine.numel()) <= 0 else float(adjacent_cosine.abs().mean().item()),
+            6,
+        ),
+        "template_cosine_mean": round(float(template_cosine.mean().item()), 6),
+    }
+
+
+def compute_pearson_correlation(left: torch.Tensor, right: torch.Tensor) -> float:
+    left_cpu = left.detach().cpu().to(torch.float32).view(-1)
+    right_cpu = right.detach().cpu().to(torch.float32).view(-1)
+    common_length = min(int(left_cpu.shape[0]), int(right_cpu.shape[0]))
+    if common_length <= 1:
+        return 0.0
+    left_slice = left_cpu[:common_length]
+    right_slice = right_cpu[:common_length]
+    left_centered = left_slice - left_slice.mean()
+    right_centered = right_slice - right_slice.mean()
+    denominator = left_centered.norm() * right_centered.norm()
+    if float(denominator.item()) <= 1.0e-8:
+        return 0.0
+    return round(float((left_centered * right_centered).sum().item() / denominator.item()), 6)
 
 
 def summarize_probe_delta_vs_baseline(

@@ -1,6 +1,6 @@
 # AI Work Sessions Index
 
-- generated_at: 2026-03-21T18:48:36
+- generated_at: 2026-03-23T20:50:27
 - session_count: 20
 - active_session_count: 2
 - conflict_count: 0
@@ -14,7 +14,7 @@
 
 ## active
 - experiment_line_stage5_speech_emergence_root_cause_20260321: owner=codex-main lane=experiment_line objective=investigate why the entire Stage5 no-res route has never produced intelligible speech and isolate the most likely speech-emergence root cause
-  write_roots=['F:/proj_dev/tmp/workdir4/src/v5vc/offline_vocoder_scaffold.py', 'F:/proj_dev/tmp/workdir4/src/v5vc/offline_vocoder_training.py', 'F:/proj_dev/tmp/workdir4/src/v5vc/nores_vocoder_audio_export.py', 'F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_root_cause_probe_round1_1', 'F:/proj_dev/tmp/workdir4/docs', 'F:/proj_dev/tmp/workdir4/reports/collab/ai_work_sessions']
+  write_roots=['F:/proj_dev/tmp/workdir4/src/v5vc/cli.py', 'F:/proj_dev/tmp/workdir4/src/v5vc/stage5_speech_emergence_probe.py', 'F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_root_cause_probe_round1_1', 'F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step24_validation12_round1_1', 'F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step48_validation12_round1_1', 'F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step60_validation12_round1_1', 'F:/proj_dev/tmp/workdir4/reports/runtime/stage5_speech_emergence_probe_step72_validation12_round1_1', 'F:/proj_dev/tmp/workdir4/docs', 'F:/proj_dev/tmp/workdir4/reports/collab/ai_work_sessions']
 - user_line_minimal_runtime: owner=codex-b lane=user_line objective=continue terminal-user minimal source-to-target runtime hardening
   write_roots=['F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_teacher_first_vc_demo_runs', 'F:/proj_dev/tmp/workdir4/scripts/run_teacher_first_single_target_vc_demo.ps1']
 

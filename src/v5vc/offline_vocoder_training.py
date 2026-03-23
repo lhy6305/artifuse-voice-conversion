@@ -20,6 +20,7 @@ from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teache
 from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
 
 DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE = "pre_overlap_add"
+DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD = 0.02
 
 
 def normalize_training_reconstruction_frame_gain_apply_mode(frame_gain_apply_mode: str) -> str:
@@ -184,6 +185,8 @@ def run_offline_mvp_nores_vocoder_training_step(
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    active_template_weight: float,
+    frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
 ) -> None:
@@ -253,6 +256,8 @@ def run_offline_mvp_nores_vocoder_training_step(
         waveform_weight=waveform_weight,
         stft_weight=stft_weight,
         rms_guard_weight=rms_guard_weight,
+        active_template_weight=active_template_weight,
+        frame_delta_weight=frame_delta_weight,
         use_predicted_activity_gate=use_predicted_activity_gate,
         reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
     )
@@ -291,6 +296,8 @@ def run_offline_mvp_nores_vocoder_training_step(
             "waveform": float(waveform_weight),
             "stft": float(stft_weight),
             "rms_guard": float(rms_guard_weight),
+            "active_template": float(active_template_weight),
+            "frame_delta": float(frame_delta_weight),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
@@ -362,6 +369,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    active_template_weight: float,
+    frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
 ) -> None:
@@ -452,6 +461,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
             waveform_weight=waveform_weight,
             stft_weight=stft_weight,
             rms_guard_weight=rms_guard_weight,
+            active_template_weight=active_template_weight,
+            frame_delta_weight=frame_delta_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
         )
@@ -497,6 +508,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 waveform_weight=waveform_weight,
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
+                active_template_weight=active_template_weight,
+                frame_delta_weight=frame_delta_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                 frame_length=int(validation_runtime["frame_length"]),
@@ -571,6 +584,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "waveform": float(waveform_weight),
                 "stft": float(stft_weight),
                 "rms_guard": float(rms_guard_weight),
+                "active_template": float(active_template_weight),
+                "frame_delta": float(frame_delta_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -761,6 +776,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    active_template_weight: float,
+    frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
 ) -> None:
@@ -877,6 +894,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 waveform_weight=waveform_weight,
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
+                active_template_weight=active_template_weight,
+                frame_delta_weight=frame_delta_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
             )
@@ -938,6 +957,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     waveform_weight=waveform_weight,
                     stft_weight=stft_weight,
                     rms_guard_weight=rms_guard_weight,
+                    active_template_weight=active_template_weight,
+                    frame_delta_weight=frame_delta_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     validation_source="validation_packages",
@@ -956,6 +977,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     waveform_weight=waveform_weight,
                     stft_weight=stft_weight,
                     rms_guard_weight=rms_guard_weight,
+                    active_template_weight=active_template_weight,
+                    frame_delta_weight=frame_delta_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     validation_source="train_packages_reused",
@@ -1021,6 +1044,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "waveform": float(waveform_weight),
                 "stft": float(stft_weight),
                 "rms_guard": float(rms_guard_weight),
+                "active_template": float(active_template_weight),
+                "frame_delta": float(frame_delta_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1508,6 +1533,102 @@ def compute_stft_reconstruction_loss(
     return F.l1_loss(torch.log1p(predicted_spec.abs()), torch.log1p(target_spec.abs()))
 
 
+def frame_waveform_sequence(
+    waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+) -> torch.Tensor:
+    waveform_cpu = waveform.detach().cpu().to(torch.float32).view(-1)
+    resolved_frame_length = max(1, int(frame_length))
+    resolved_hop_length = max(1, int(hop_length))
+    if int(waveform_cpu.numel()) <= 0:
+        return waveform_cpu.new_zeros((0, resolved_frame_length))
+    if int(waveform_cpu.numel()) < resolved_frame_length:
+        pad_amount = resolved_frame_length - int(waveform_cpu.numel())
+        waveform_cpu = F.pad(waveform_cpu, (0, pad_amount))
+    frame_starts = list(range(0, max(1, int(waveform_cpu.numel()) - resolved_frame_length + 1), resolved_hop_length))
+    tail_start = max(0, int(waveform_cpu.numel()) - resolved_frame_length)
+    if not frame_starts or frame_starts[-1] != tail_start:
+        frame_starts.append(tail_start)
+    frames = [waveform_cpu[start : start + resolved_frame_length] for start in frame_starts]
+    return torch.stack(frames, dim=0)
+
+
+def compute_centered_frame_rms(frames: torch.Tensor) -> torch.Tensor:
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
+    return centered.pow(2).mean(dim=1).sqrt()
+
+
+def normalize_frames_unit_rms(frames: torch.Tensor) -> torch.Tensor:
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
+    frame_rms = centered.pow(2).mean(dim=1, keepdim=True).sqrt().clamp_min(1.0e-6)
+    return centered / frame_rms
+
+
+def compute_adjacent_deltas(sequence: torch.Tensor) -> torch.Tensor:
+    sequence_cpu = sequence.detach().cpu().to(torch.float32)
+    if int(sequence_cpu.shape[0]) <= 1:
+        return sequence_cpu.new_zeros((1, *sequence_cpu.shape[1:]))
+    return sequence_cpu[1:] - sequence_cpu[:-1]
+
+
+def compute_frame_cosine_to_reference(*, frames: torch.Tensor, reference_index: int) -> torch.Tensor:
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    if int(frames_cpu.shape[0]) == 0:
+        return frames_cpu.new_zeros((0,))
+    resolved_reference_index = min(max(int(reference_index), 0), int(frames_cpu.shape[0]) - 1)
+    reference = frames_cpu[resolved_reference_index : resolved_reference_index + 1]
+    normalized_reference = reference / reference.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
+    normalized_frames = frames_cpu / frames_cpu.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
+    return (normalized_frames * normalized_reference).sum(dim=1)
+
+
+def compute_active_template_and_frame_delta_losses(
+    *,
+    decoded_waveform: torch.Tensor,
+    aligned_waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    decoded_analysis_frames = frame_waveform_sequence(
+        waveform=decoded_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    aligned_analysis_frames = frame_waveform_sequence(
+        waveform=aligned_waveform[: decoded_waveform.shape[0]],
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    decoded_normalized_frames = normalize_frames_unit_rms(decoded_analysis_frames)
+    aligned_normalized_frames = normalize_frames_unit_rms(aligned_analysis_frames)
+    aligned_frame_rms = compute_centered_frame_rms(aligned_analysis_frames)
+    decoded_frame_deltas = compute_adjacent_deltas(decoded_normalized_frames)
+    aligned_frame_deltas = compute_adjacent_deltas(aligned_normalized_frames)
+    frame_delta_loss = F.l1_loss(decoded_frame_deltas, aligned_frame_deltas)
+
+    active_mask = aligned_frame_rms >= float(active_frame_rms_threshold)
+    if bool(active_mask.any()):
+        decoded_template_cosine = compute_frame_cosine_to_reference(
+            frames=decoded_normalized_frames,
+            reference_index=0,
+        )
+        aligned_template_cosine = compute_frame_cosine_to_reference(
+            frames=aligned_normalized_frames,
+            reference_index=0,
+        )
+        active_template_excess = (
+            decoded_template_cosine[active_mask] - aligned_template_cosine[active_mask]
+        ).clamp_min(0.0)
+        active_template_loss = active_template_excess.mean()
+    else:
+        active_template_loss = decoded_waveform.new_zeros(())
+    return active_template_loss, frame_delta_loss
+
+
 def compute_rms_guard_loss(
     predicted_waveform: torch.Tensor,
     target_waveform: torch.Tensor,
@@ -1536,6 +1657,8 @@ def compute_nores_vocoder_losses(
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    active_template_weight: float,
+    frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
 ) -> tuple[torch.Tensor, dict[str, float]]:
@@ -1569,16 +1692,24 @@ def compute_nores_vocoder_losses(
     waveform_loss = harmonic_loss.new_zeros(())
     stft_loss = harmonic_loss.new_zeros(())
     rms_guard_loss = harmonic_loss.new_zeros(())
+    active_template_loss = harmonic_loss.new_zeros(())
+    frame_delta_loss = harmonic_loss.new_zeros(())
     decoded_waveform_rms = 0.0
     target_waveform_rms = 0.0
-    if float(waveform_weight) > 0.0 or float(stft_weight) > 0.0 or float(rms_guard_weight) > 0.0:
+    if (
+        float(waveform_weight) > 0.0
+        or float(stft_weight) > 0.0
+        or float(rms_guard_weight) > 0.0
+        or float(active_template_weight) > 0.0
+        or float(frame_delta_weight) > 0.0
+    ):
         if aligned_waveform is None:
-            raise ValueError("aligned_waveform is required when waveform/STFT losses are enabled.")
+            raise ValueError("aligned_waveform is required when waveform/structure losses are enabled.")
         if frame_length is None or hop_length is None:
-            raise ValueError("frame_length and hop_length are required when waveform/STFT losses are enabled.")
+            raise ValueError("frame_length and hop_length are required when waveform/structure losses are enabled.")
         waveform_frames = outputs.get("waveform_frames")
         if waveform_frames is None:
-            raise ValueError("Model did not emit waveform_frames while waveform/STFT losses are enabled.")
+            raise ValueError("Model did not emit waveform_frames while waveform/structure losses are enabled.")
         decoded_waveform = reconstruct_waveform_from_frames(
             waveform_frames=waveform_frames,
             frame_length=int(frame_length),
@@ -1598,6 +1729,12 @@ def compute_nores_vocoder_losses(
             predicted_waveform=decoded_waveform,
             target_waveform=target_waveform,
         )
+        active_template_loss, frame_delta_loss = compute_active_template_and_frame_delta_losses(
+            decoded_waveform=decoded_waveform,
+            aligned_waveform=target_waveform,
+            frame_length=int(frame_length),
+            hop_length=int(hop_length),
+        )
         decoded_waveform_rms = float(decoded_rms_tensor.detach().cpu().item())
         target_waveform_rms = float(target_rms_tensor.detach().cpu().item())
     total_loss = (
@@ -1609,6 +1746,8 @@ def compute_nores_vocoder_losses(
         + waveform_loss * float(waveform_weight)
         + stft_loss * float(stft_weight)
         + rms_guard_loss * float(rms_guard_weight)
+        + active_template_loss * float(active_template_weight)
+        + frame_delta_loss * float(frame_delta_weight)
     )
     metrics = {
         "loss_total": round(float(total_loss.detach().cpu().item()), 6),
@@ -1620,6 +1759,8 @@ def compute_nores_vocoder_losses(
         "loss_waveform": round(float(waveform_loss.detach().cpu().item()), 6),
         "loss_stft": round(float(stft_loss.detach().cpu().item()), 6),
         "loss_rms_guard": round(float(rms_guard_loss.detach().cpu().item()), 6),
+        "loss_active_frame_template_excess_relu_0p02": round(float(active_template_loss.detach().cpu().item()), 6),
+        "loss_frame_delta_unit_rms_l1": round(float(frame_delta_loss.detach().cpu().item()), 6),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
         "noise_gate_pred_mean": round(float(outputs["noise_gate"].detach().mean().cpu().item()), 6),
         "activity_gate_pred_mean": round(float(predicted_activity.detach().mean().cpu().item()), 6),
@@ -1649,6 +1790,8 @@ def run_nores_vocoder_validation_pass(
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    active_template_weight: float,
+    frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     frame_length: int,
@@ -1678,6 +1821,8 @@ def run_nores_vocoder_validation_pass(
             waveform_weight=waveform_weight,
             stft_weight=stft_weight,
             rms_guard_weight=rms_guard_weight,
+            active_template_weight=active_template_weight,
+            frame_delta_weight=frame_delta_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
         )
@@ -1726,6 +1871,8 @@ def run_nores_vocoder_dataset_validation_pass(
     waveform_weight: float,
     stft_weight: float,
     rms_guard_weight: float,
+    active_template_weight: float,
+    frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     validation_source: str,
@@ -1761,6 +1908,8 @@ def run_nores_vocoder_dataset_validation_pass(
                 waveform_weight=waveform_weight,
                 stft_weight=stft_weight,
                 rms_guard_weight=rms_guard_weight,
+                active_template_weight=active_template_weight,
+                frame_delta_weight=frame_delta_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
             )
