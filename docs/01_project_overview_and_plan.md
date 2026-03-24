@@ -17891,3 +17891,317 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
     备份路径、
     以及 smoke
     复跑结果
+## 2026-03-24 继续补充：audible smoke / compare 默认 `target_reference` 已从 calibration 隐式首条切到显式 clean target，并完成 clean-reference 复跑
+- 当前正式修正：
+  - audible smoke /
+    compare
+    不再默认把
+    calibration asset
+    的
+    `selected_record_ids[0]`
+    当成听审 target reference
+- 当前显式默认改为：
+  - `data_convert/dataset_firefly_raw/chapter3_3_firefly_135.wav`
+- 选择理由：
+  - 位于
+    `hybrid_stratified_blocked_target_clean_no_reverb`
+    clean split
+  - 不属于
+    `chapter3_5 / chapter3_6`
+    已标注
+    `reverb_like`
+    章节
+  - 时长约
+    `3.000998s`
+    适合作为 shared target reference
+
+### 本轮 clean-reference 复跑
+- 已执行：
+  - `powershell -ExecutionPolicy Bypass -File scripts/run_teacher_first_single_target_audible_compare_bundle.ps1 -OutputDir tmp/teacher_first_audible_compare_bundle_cleanref_repaired_parallel -Device cuda -SkipFullPassVerify`
+  - `powershell -ExecutionPolicy Bypass -File scripts/run_teacher_first_single_target_audible_smoke_bundle.ps1 -OutputDir tmp/teacher_first_audible_smoke_bundle_cleanref_repaired_parallel -Device cuda -SkipFullPassVerify`
+- 当前两份 summary
+  都已确认：
+  - `shared_target_reference.resolved_source_audio_path = chapter3_3_firefly_135.wav`
+- 新目录：
+  - `tmp/teacher_first_audible_compare_bundle_cleanref_repaired_parallel/`
+  - `tmp/teacher_first_audible_smoke_bundle_cleanref_repaired_parallel/`
+
+### 当前结果解释
+- 这次 clean-reference
+  复跑的价值是：
+  - 去掉听审参照物不干净
+    这个混淆项
+- 但它没有改变一个更核心的事实：
+  - 默认链路
+    仍然是 buzz
+  - `affine_events_refmean_gateoff`
+    在当前 repaired parallel
+    输入上，
+    也没有把系统明确拉出
+    buzz 区
+- 换句话说，
+  当前问题已经不再优先是：
+  - source 过静
+  - 或 target reference
+    不干净
+- 更像是：
+  - decoder /
+    waveform head /
+    objective
+    仍容许
+    buzz 假解
+
+### 当前阶段结论补充
+1. source 侧：
+   - repaired parallel
+     输入
+     已可继续保留
+2. listening 侧：
+   - shared target reference
+     已切到 clean target，
+     以后默认不再走
+     calibration 隐式首条
+3. 系统侧：
+   - 在 clean reference
+     下重听后，
+     若用户仍判断
+     decoded 是 buzz，
+     那么下一阶段就不该再优先做
+     source/reference
+     修修补补
+
+### 更新后的下一步
+1. 认可当前 front-side
+   清障已基本完成：
+   - repaired source
+   - clean target reference
+2. 下一条高价值主线转为：
+   - `decoder behavior`
+   - `waveform head`
+   - `objective permissiveness`
+     诊断
+3. 若要继续听审，
+   以当前 clean-reference
+   compare bundle
+   为准，
+   不再回退到旧 calibration
+   reference 包
+
+### 文档补充
+- `docs/292_clean_target_reference_promotion_and_bundle_rerun_report.md`
+  - 记录
+    clean target
+    默认提升、
+    smoke / compare
+    复跑结果、
+    以及为什么这一步之后应转入
+    decoder/objective
+    主线
+## 2026-03-24 继续补充：`contractv2_normfix` 的 waveform objective 复查已补登记，结论是 validation 回升并没有修掉 template-buzz 假解
+- 已补登记此前只存在于
+  `reports/runtime/`
+  的 objective probe：
+  - `docs/293_stage5_contractv2_normfix_waveform_objective_recheck_report.md`
+- 对应 runtime 目录：
+  - `reports/runtime/stage5_waveform_objective_collapse_probe_contractv2_normfix_round1_1/`
+
+### 当前 probe 结论
+1. 即使
+   `contractv2_normfix`
+   已把
+   `best_validation`
+   拉到
+   `0.554104`，
+   当前 baseline decode route
+   在正式
+   `waveform + STFT + rms_guard`
+   加权目标下，
+   仍输给两个
+   fixed-template oracle：
+   - `oracle_active_frame_target_rms = 0.141467`
+   - `oracle_sine_target_rms = 0.147455`
+   - `baseline_decode_route = 0.149037`
+2. 当前 baseline
+   仍表现出明显
+   frame-template collapse：
+   - `decoded_frame_template_cosine_mean ≈ 0.993590`
+3. 纯
+   `frame_delta`
+   是第一个有能力
+   把 aggregate 排序翻回来的项，
+   但单独仍不稳
+4. 当前最强 objective
+   候选是：
+   - `active_template_weight = 0.05`
+   - `frame_delta_weight = 6.0`
+   - probe 中
+     `24 / 24`
+     matchups
+     全赢
+
+### 当前阶段解释更新
+- 现在已经不能把：
+  - validation 回升
+  - clean reference
+  - repaired source
+  这些前端/接口层进展，
+  写成
+  “系统后端发声问题也已缓解”
+- 更准确的写法是：
+  - front-side
+    混淆项
+    已基本清掉
+  - remaining buzz
+    仍主要指向：
+    - decoder behavior
+    - waveform head
+    - objective permissiveness
+
+### 更新后的下一步
+1. 默认不再优先回到：
+   - source/reference
+     修补
+   - inference-only
+     小 tweak
+2. 下一条最值得做的最小实验是：
+   - 在
+     `contractv2_normfix`
+     recipe
+     上，
+     仅追加：
+     - `active_template = 0.05`
+     - `frame_delta = 6.0`
+3. 保持：
+   - `contract_v2_normfix`
+     package
+   - decoder head
+   - predicted gate
+   - apply mode
+   先不变，
+   让 objective 的作用单独可判
+## 2026-03-24 继续补充：`contractv2_normfix` 上的 `active_template=0.05 + frame_delta=6.0` 最小 objective smoke 已完成，当前 first-order gain 主要来自 anti-template，不是 frame-delta
+- 已完成正式双臂 smoke：
+  - baseline
+  - `active_template = 0.05`
+    `frame_delta = 6.0`
+- 文档：
+  - `docs/294_stage5_contractv2_normfix_active_template005_delta6_minimal_smoke_report.md`
+
+### 当前关键结果
+1. step4 validation
+   对比：
+   - baseline：
+     - `loss_waveform = 0.125092`
+     - `loss_stft = 0.601828`
+     - `loss_active_template = 0.503176`
+     - `loss_frame_delta = 0.936750`
+   - candidate：
+     - `loss_waveform = 0.123751`
+     - `loss_stft = 0.594695`
+     - `loss_active_template = 0.391574`
+     - `loss_frame_delta = 0.936771`
+2. 固定 6 条试听记录 aggregate：
+   - baseline：
+     - `active_template = 0.497106`
+     - `frame_delta = 0.898516`
+   - candidate：
+     - `active_template = 0.379029`
+     - `frame_delta = 0.898558`
+3. 当前解释：
+   - candidate
+     确实显著压低了
+     anti-template
+     项
+   - `waveform / stft`
+     也有轻微改善
+   - 但
+     `frame_delta`
+     目前几乎不变
+
+### 当前阶段判断更新
+- 这轮 smoke
+  说明：
+  - `docs/293`
+    给出的 objective 主线方向是对的
+- 但当前最先起作用的，
+  明显是：
+  - `active_template`
+    这一轴
+- 因此当前不能急着写成：
+  - `active_template + frame_delta`
+    已经整体站稳
+- 更准确的写法是：
+  - 当前 objective
+    已开始把模型往
+    anti-template
+    拉
+  - 但 transition-side
+    修正
+    还没有真正进入
+    可见增益区
+
+### 当前默认下一步
+1. 先基于以下目录做人工回听：
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_baseline_smoke_round1_2/`
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_active_template005_delta6_smoke_round1_1/`
+2. 在没有听感证据前，
+   先不要直接把训练步数放大
+3. 若继续 objective
+   调整，
+   下一轮更应聚焦：
+   - 怎么让
+     `frame_delta`
+     真正开始动起来
+   - 而不是继续重复证明
+     `active_template`
+     能下降
+## 2026-03-24 继续补充：`active_template=0.05 + frame_delta=6.0` 最小 smoke 已被人工听审正式判定为纯 buzz 失败
+- 用户已完成对以下两组 fixed-record
+  导出包的人工试听：
+  - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_baseline_smoke_round1_2/`
+  - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_active_template005_delta6_smoke_round1_1/`
+- 正式主观结论：
+  - 两臂都仍是
+    **彻底的 buzz**
+  - **不带任何人声成分**
+- 文档：
+  - `docs/295_stage5_contractv2_normfix_active_template005_delta6_human_audit_fail_report.md`
+
+### 当前阶段判断更新
+1. `docs/294`
+   的结果仍然成立：
+   - candidate
+     主要改写了
+     `active_template`
+     指标
+   - `frame_delta`
+     基本没动
+2. 但在人工听审结论加入后，
+   当前这条 objective smoke
+   的正式定位必须收紧为：
+   - objective-side
+     方向验证
+   - 可听结果失败
+3. 现在不应再把这条线写成：
+   - 接近 speech emergence
+   - 或“再训久一点可能就出来”
+
+### 更新后的下一步
+1. 当前不建议直接继续：
+   - 放大这条 recipe 的训练步数
+   - 或围绕同类小权重再细调
+2. 当前更应默认转向：
+   - decoder / waveform head
+     结构级诊断
+   - 或更强形态的
+     objective
+     重构
+3. 若继续做实验，
+   应把问题表述成：
+   - 为什么当前 no-res
+     waveform route
+     仍完全没有
+     speech emergence
+   而不是：
+   - 这条 objective
+     还差多少就能转正

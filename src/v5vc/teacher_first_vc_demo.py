@@ -56,6 +56,9 @@ DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH = Path(
 DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH = Path(
     "data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav"
 )
+DEFAULT_EXPLICIT_CLEAN_TARGET_REFERENCE_AUDIO_PATH = Path(
+    "data_convert/dataset_firefly_raw/chapter3_3_firefly_135.wav"
+)
 DEFAULT_AUDIBLE_SMOKE_TARGET_REFERENCE_MAX_AUDIO_SEC = 3.0
 DEFAULT_AUDIBLE_COMPARE_BASELINE_SUMMARY_JSON_PATH = Path(
     "reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_baseline_smoke_round1_2/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json"
@@ -2229,6 +2232,8 @@ def resolve_audible_smoke_target_reference_audio_path(
         if not resolved.is_file():
             raise FileNotFoundError(f"Target reference audio does not exist: {resolved}")
         return resolved
+    if DEFAULT_EXPLICIT_CLEAN_TARGET_REFERENCE_AUDIO_PATH.is_file():
+        return DEFAULT_EXPLICIT_CLEAN_TARGET_REFERENCE_AUDIO_PATH.resolve()
     payload = json.loads(calibration_asset_path.resolve().read_text(encoding="utf-8"))
     selected_record_ids = list(dict(payload.get("selection_summary", {})).get("selected_record_ids", []))
     source_records_path = Path(str(dict(payload.get("estimation_metadata", {})).get("source_records_path", ""))).resolve()

@@ -11231,3 +11231,186 @@
       的真实语音输入
     - same-content
       或其他主听样例
+### 365. calibration asset 的 `selected_record_ids[0]` 适合做“校准资产来源”，不等于适合直接充当默认听审 target reference；如果不显式换成 clean target，听审会混入参照物污染
+- 现象:
+  - 旧 audible smoke / compare
+    默认逻辑里，
+    若用户不传
+    `--target-reference-audio`，
+    就会直接取：
+    - calibration asset
+      的
+      `selected_record_ids[0]`
+  - 这条逻辑虽然工程上方便，
+    但它只说明：
+    - 该条目在 calibration
+      资产里被选中
+  - 不说明：
+    - 它一定是当前最干净、
+      最适合人工听审参照的 target
+- 风险:
+  - 人工听审很容易把：
+    - target reference
+      自身的声学特征
+    和
+    - decoded 的问题
+    混在一起
+  - 一旦参照物本身不够干净，
+    后续就会错误怀疑：
+    - compare 包
+    - source 修复
+    - decoded 风险判断
+    全都不可信
+- 处理要求:
+  - 只要当前任务进入：
+    - user-line 听审
+    - compare bundle
+    - smoke bundle
+    阶段，
+    就应优先使用：
+  - 显式指定的 clean target reference
+  - calibration asset
+    的隐式首条
+    只能作为：
+    - fallback
+    - 不是默认主听基线
+### 366. `contractv2_normfix` 把 validation 拉回到旧 baseline 之上，并不等于 waveform objective 已经摆脱 template-buzz；如果 fixed-template oracle 仍在当前 objective 下压过 baseline，就必须把下一步写成 objective 主线，而不是继续在前端混淆项上打转
+- 现象:
+  - 当前
+    `contractv2_normfix`
+    已把
+    `best_validation`
+    拉到：
+    - `0.554104`
+  - 略优于旧 baseline：
+    - `0.564671`
+  - 但同一主线上的
+    waveform objective
+    collapse probe
+    仍显示：
+    - `oracle_active_frame_target_rms = 0.141467`
+    - `oracle_sine_target_rms = 0.147455`
+    - `baseline_decode_route = 0.149037`
+- 风险:
+  - 很容易误把：
+    - contract 消费修正
+    - validation 数值回升
+    当成：
+    - decoder / objective
+      也已经同步转正
+  - 这样会导致后续继续反复修：
+    - source 电平
+    - target reference
+    - inference-only 小参数
+    却错过真正的后端主矛盾
+- 处理要求:
+  - 只要当前 objective probe
+    仍显示：
+    - fixed-template oracle
+      不高于 baseline
+  - 就应明确把下一步写成：
+    - decoder / waveform objective
+      主线
+  - 不要再把：
+    - validation 变好
+    直接等同于：
+    - speech emergence
+      或
+      user-line 可听转正
+### 367. 当 baseline 和 candidate 使用了不同的 objective 组成项时，不能再直接横向比较 `loss_total`；必须转去比较共享子项和新增项是否按预期变化
+- 现象:
+  - 在本轮
+    `contractv2_normfix`
+    最小 smoke
+    里，
+    candidate 追加了：
+    - `0.05 * active_template`
+    - `6.0 * frame_delta`
+  - 于是：
+    - baseline
+      `loss_total = 1.229178`
+    - candidate
+      `loss_total = 6.866590`
+  - 但共享子项同时表现为：
+    - `loss_waveform`
+      轻微下降
+    - `loss_stft`
+      轻微下降
+    - `loss_active_template`
+      明显下降
+    - `loss_frame_delta`
+      基本不变
+- 风险:
+  - 如果继续直接拿
+    `loss_total`
+    横向比较，
+    很容易误写成：
+    - candidate
+      比 baseline
+      “更差很多”
+  - 实际上这只说明：
+    - 新 objective
+      项真的进了总分
+  - 不说明：
+    - 共享重建质量
+      一定更差
+- 处理要求:
+  - 只要当前是在：
+    - baseline
+    - candidate objective
+    跨配方比较
+  - 默认主比较口径应改为：
+    - `loss_waveform`
+    - `loss_stft`
+    - `loss_rms_guard`
+    - 新增 objective
+      对应项
+      是否按预期变化
+  - `loss_total`
+    只适合在
+    **同一 objective 配方内部**
+    做 checkpoint / step
+    比较，
+    不适合作为跨配方好坏结论
+### 368. 当 objective-side candidate 已经显著改写某个结构指标，但人工听审仍明确给出“彻底的 buzz、没有任何人声成分”时，不要再把这条线当成近成功路线继续靠增加步数或小权重微调硬推
+- 现象:
+  - 本轮
+    `contractv2_normfix`
+    objective smoke
+    中，
+    candidate
+    把：
+    - `loss_active_template`
+      明显压低
+  - 但用户完成固定 6 条记录试听后，
+    给出的正式结论是：
+    - 彻底的 buzz
+    - 不带任何人声成分
+- 风险:
+  - 很容易把：
+    - objective 指标开始变好
+    误读成：
+    - 已经接近 speech emergence
+  - 然后继续在同一 recipe 上：
+    - 盲目加步数
+    - 反复扫小权重
+    实际只是在 buzz-only
+    失败区内打转
+- 处理要求:
+  - 只要人工听审已经明确给出：
+    - 没有任何人声成分
+  - 当前这条 candidate
+    就应被正式写成：
+    - objective-side 方向验证
+    - 可听失败
+  - 后续默认应升级问题层级：
+    - 转到
+      decoder / waveform head
+      结构诊断
+    - 或更强 objective
+      形态重构
+  - 不要再把它写成：
+    - “再训久一点”
+      或
+      “再细调一点”
+      就可能转正
