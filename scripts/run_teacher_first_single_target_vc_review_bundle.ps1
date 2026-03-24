@@ -25,19 +25,19 @@ if ([string]::IsNullOrWhiteSpace($specPath)) {
       notes = @("Front 2 seconds of the long raw source recording.")
     },
     @{
-      case_id = "regular_segment_0001"
-      input_audio_path = (Resolve-Path "data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav").Path
-      notes = @("Regular source segment used in earlier user-line smoke tests.")
+      case_id = "parallel_firefly_107"
+      input_audio_path = (Resolve-Path "data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav").Path
+      notes = @("Parallel source utterance matching target chapter3_17_firefly_107 content.")
+    },
+    @{
+      case_id = "parallel_firefly_132"
+      input_audio_path = (Resolve-Path "data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav").Path
+      notes = @("Parallel source utterance matching target chapter3_17_firefly_132 content.")
     },
     @{
       case_id = "high_silence_segment_0061"
       input_audio_path = (Resolve-Path "data_prep/round1/source_segments/segments/segment_0061_0000300400_0000300910.wav").Path
       notes = @("Near-extreme high-silence source segment.")
-    },
-    @{
-      case_id = "peak_011"
-      input_audio_path = (Resolve-Path "data_prep/round1/source_segments/peaks/peak_011_0002370615_top_peak.wav").Path
-      notes = @("Peak-energy source clip from the round1 peak export.")
     }
   )
   $specDir = Join-Path "tmp/teacher_first_vc_review_bundle_specs" $timestamp

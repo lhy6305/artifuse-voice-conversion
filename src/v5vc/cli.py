@@ -40,6 +40,7 @@ from v5vc.nores_vocoder_audio_export import (
 from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_downstream_contract
 from v5vc.offline_teacher_runtime import run_offline_mvp_teacher_runtime
 from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
+from v5vc.source_acoustic_state_audit import audit_source_acoustic_state_extraction
 from v5vc.teacher_first_vc_demo import (
     analyze_teacher_first_vc_applicability,
     analyze_teacher_first_vc_decoder_behavior,
@@ -1491,6 +1492,41 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("reports/runtime/offline_mvp_teacher_vocoder_input_scaffold"),
         help="Directory for consumer-side scaffold outputs.",
     )
+    source_acoustic_state_audit_parser = subparsers.add_parser(
+        "audit-source-acoustic-state",
+        help="Audit the v2-core source acoustic state extraction chain on real short-form inputs.",
+    )
+    source_acoustic_state_audit_parser.add_argument(
+        "--input-audio",
+        type=Path,
+        nargs="*",
+        default=[],
+        help="Optional wav paths to audit. Defaults to the fixed short smoke triplet when omitted.",
+    )
+    source_acoustic_state_audit_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/source_acoustic_state_audit"),
+        help="Directory for audit summaries and per-case outputs.",
+    )
+    source_acoustic_state_audit_parser.add_argument(
+        "--route-handoff",
+        type=Path,
+        default=Path("reports/eval/offline_mvp_route_handoff_round1_1_longwindow_final/route_handoff.json"),
+        help="Route handoff used to resolve the formal teacher checkpoint when --checkpoint is omitted.",
+    )
+    source_acoustic_state_audit_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit teacher checkpoint override.",
+    )
+    source_acoustic_state_audit_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from each input wav.",
+    )
     teacher_first_vc_demo_parser = subparsers.add_parser(
         "run-offline-mvp-teacher-first-vc-demo",
         help="Run the teacher-first single-target source-to-target demo path and export decoded audio.",
@@ -1619,6 +1655,40 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "How predicted activity gains are applied during waveform reconstruction: "
             "pre_overlap_add or post_ola_envelope."
+        ),
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--reference-package",
+        dest="reference_package_list",
+        action="append",
+        type=Path,
+        default=[],
+        help="Optional Stage5 training-package path used for inference-only normalization. Can be passed multiple times.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--reference-package-limit",
+        type=int,
+        default=32,
+        help="When inference-only normalization is enabled without explicit reference packages, use up to this many default Stage5 train packages.",
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--normalization-strategy",
+        default="none",
+        help=(
+            "Optional inference-only scaffold normalization strategy: none, conditioning_reference_mean, "
+            "reference_q01_q99_clip, reference_affine_match, or "
+            "conditioning_reference_mean_plus_reference_q01_q99_clip."
+        ),
+    )
+    teacher_first_vc_demo_parser.add_argument(
+        "--control-family-override",
+        dest="control_family_overrides",
+        action="append",
+        default=[],
+        help=(
+            "Optional inference-only family-level override. "
+            "Format: family=mode, for example event_probs=reference_mean. "
+            "Can be passed multiple times."
         ),
     )
     teacher_first_vc_demo_self_check_parser = subparsers.add_parser(
@@ -1851,7 +1921,12 @@ def build_parser() -> argparse.ArgumentParser:
         "--vocoder-spec-jsonl",
         type=Path,
         default=None,
-        help="Optional jsonl spec with label, optional variant_id, checkpoint_path or checkpoint_source_summary_path, checkpoint_source_key, and notes fields.",
+        help=(
+            "Optional jsonl spec with label, optional variant_id, checkpoint_path or checkpoint_selection_path "
+            "or checkpoint_source_summary_path, plus optional selection_target, use_predicted_activity_gate, "
+            "predicted_activity_gate_apply_mode, normalization_strategy, control_family_overrides, "
+            "checkpoint_source_key, and notes fields."
+        ),
     )
     teacher_first_vc_audible_compare_parser.set_defaults(
         save_intermediates=False,
@@ -3988,6 +4063,15 @@ def main(argv: list[str] | None = None) -> int:
             verify_against_full_pass=not bool(args.skip_full_pass_verify),
         )
         return 0
+    if args.command == "audit-source-acoustic-state":
+        audit_source_acoustic_state_extraction(
+            input_audio_paths=list(args.input_audio),
+            output_dir=args.output_dir,
+            route_handoff_path=args.route_handoff,
+            checkpoint_path=args.checkpoint,
+            max_audio_sec=args.max_audio_sec,
+        )
+        return 0
     if args.command == "build-offline-mvp-teacher-vocoder-input-scaffold":
         build_offline_mvp_teacher_vocoder_input_scaffold(
             contract_path=args.contract,
@@ -4014,6 +4098,10 @@ def main(argv: list[str] | None = None) -> int:
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+            reference_package_paths=list(args.reference_package_list),
+            reference_package_limit=int(args.reference_package_limit),
+            normalization_strategy=str(args.normalization_strategy),
+            control_family_overrides=list(args.control_family_overrides),
         )
         return 0
     if args.command == "self-check-offline-mvp-teacher-first-vc-demo":

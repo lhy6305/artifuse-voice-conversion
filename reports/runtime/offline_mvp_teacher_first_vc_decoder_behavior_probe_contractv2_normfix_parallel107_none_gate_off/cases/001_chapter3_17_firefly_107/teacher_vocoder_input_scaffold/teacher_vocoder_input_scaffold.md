@@ -1,0 +1,17 @@
+# Offline MVP Teacher Vocoder Input Scaffold
+
+- generated_at: 2026-03-24T09:41:41
+- contract_path: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_teacher_first_vc_decoder_behavior_probe_contractv2_normfix_parallel107_none_gate_off/cases/001_chapter3_17_firefly_107/teacher_contract/teacher_downstream_control_contract.pt
+- scaffold_version: offline_teacher_vocoder_input_scaffold_v2
+- source_audio_path: F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav
+- source_runtime: {"sample_rate": 44100, "frame_length": 400, "hop_length": 160, "chunk_samples": 1470}
+- frame_count: 825
+- periodic_branch_feature_dim: 36
+- noise_branch_feature_dim: 36
+- available_controls: {"z_art_dim": 8, "event_dim": 8, "speaker_dim": 16, "geom_dim": 8, "f0_hz_dim": 1, "f0_hz_log_norm_dim": 1, "vuv_dim": 1, "aper_dim": 1, "E_dim": 1, "E_log_rms_norm_dim": 1}
+- missing_design_keys: {"periodic_branch": [], "noise_branch": ["r_res"], "global": ["final_vocoder_waveform"]}
+
+## Notes
+- This scaffold is a consumer-side adapter for the C-prime v2-core contract rather than a final vocoder implementation.
+- periodic_branch_features now consume explicit f0_hz / vuv / E semantics through bounded consumer-side normalizations rather than raw Hz/log-RMS magnitudes.
+- noise_branch_features now consume aper / vuv / normalized E together with event_probs, while r_res remains intentionally absent on the no-res baseline route.

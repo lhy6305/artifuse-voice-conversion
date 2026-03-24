@@ -189,11 +189,16 @@ def build_record_delta_review(
     }
 
 
-def round_loss_metrics(loss_metrics: dict[str, object]) -> dict[str, float]:
-    return {
-        str(key): round(float(value), 6)
-        for key, value in loss_metrics.items()
-    }
+def round_loss_metrics(loss_metrics: dict[str, object]) -> dict[str, object]:
+    rounded: dict[str, object] = {}
+    for key, value in loss_metrics.items():
+        if isinstance(value, bool):
+            rounded[str(key)] = bool(value)
+        elif isinstance(value, (int, float)):
+            rounded[str(key)] = round(float(value), 6)
+        else:
+            rounded[str(key)] = str(value)
+    return rounded
 
 
 def build_checkpoint_output_row(checkpoint: dict[str, object]) -> dict[str, object]:

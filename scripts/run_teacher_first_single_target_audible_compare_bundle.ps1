@@ -26,19 +26,19 @@ if ([string]::IsNullOrWhiteSpace($specPath)) {
   if ($BundleProfile -eq "main_listening") {
     $defaultSpecs = @(
       @{
-        case_id = "regular_segment_0001"
-        input_audio_path = (Resolve-Path "data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav").Path
+        case_id = "parallel_firefly_107"
+        input_audio_path = (Resolve-Path "data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav").Path
         notes = @(
-          "Regular source segment used in earlier user-line smoke tests.",
-          "Included in the default main-listening compare bundle because duration and speech density are suitable for quick human review."
+          "Parallel source utterance matching target chapter3_17_firefly_107 content.",
+          "Preferred default main-listening compare case because it is same-content with the target while preserving real source-to-target timing mismatch."
         )
       },
       @{
-        case_id = "peak_011"
-        input_audio_path = (Resolve-Path "data_prep/round1/source_segments/peaks/peak_011_0002370615_top_peak.wav").Path
+        case_id = "parallel_firefly_132"
+        input_audio_path = (Resolve-Path "data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav").Path
         notes = @(
-          "Peak-energy source clip from the round1 peak export.",
-          "Included in the default main-listening compare bundle because it is a compact audible case rather than a silence-heavy boundary."
+          "Parallel source utterance matching target chapter3_17_firefly_132 content.",
+          "Preferred default main-listening compare case because it keeps the smoke bundle on real same-content source-to-target transfer instead of generic segment coverage."
         )
       }
     )

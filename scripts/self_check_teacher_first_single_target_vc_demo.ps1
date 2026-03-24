@@ -1,5 +1,5 @@
 param(
-  [string]$InputAudio = "data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav",
+  [string]$InputAudio = "data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav",
   [string]$OutputDir = "",
   [string]$Device = "cpu",
   [double]$MaxAudioSec = 0.1

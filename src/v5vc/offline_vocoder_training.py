@@ -16,11 +16,22 @@ from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import load_waveform
 from v5vc.offline_teacher_runtime import resolve_runtime_device
 from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_downstream_contract
-from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
+from v5vc.offline_teacher_vocoder_input_scaffold import (
+    build_offline_mvp_teacher_vocoder_input_scaffold,
+    normalize_energy_log_rms_for_stage5,
+)
 from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
 
 DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE = "pre_overlap_add"
 DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD = 0.02
+SUPPORTED_TEACHER_VOCODER_SCAFFOLD_VERSIONS = {
+    "offline_teacher_vocoder_input_scaffold_v1",
+    "offline_teacher_vocoder_input_scaffold_v2",
+}
+SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
+    "offline_mvp_nores_vocoder_train_targets_v1",
+    "offline_mvp_nores_vocoder_train_targets_v2",
+}
 
 
 def normalize_training_reconstruction_frame_gain_apply_mode(frame_gain_apply_mode: str) -> str:
@@ -48,7 +59,8 @@ def build_offline_mvp_nores_vocoder_training_package(
     payload = torch.load(scaffold_path, map_location="cpu", weights_only=False)
     if not isinstance(payload, dict):
         raise TypeError(f"Unsupported scaffold payload type: {type(payload)!r}")
-    if str(payload.get("scaffold_version")) != "offline_teacher_vocoder_input_scaffold_v1":
+    scaffold_version = str(payload.get("scaffold_version"))
+    if scaffold_version not in SUPPORTED_TEACHER_VOCODER_SCAFFOLD_VERSIONS:
         raise ValueError(
             "Unsupported scaffold_version for no-residual vocoder training package: "
             f"{payload.get('scaffold_version')!r}"
@@ -76,6 +88,7 @@ def build_offline_mvp_nores_vocoder_training_package(
     noise_branch_features = branch_scaffold["noise_branch_features"].to(torch.float32)
     available_controls = dict(payload["available_controls"])
     frame_count = int(payload["frame_count"])
+    has_v2_core = scaffold_version == "offline_teacher_vocoder_input_scaffold_v2"
 
     waveform, actual_sample_rate = load_waveform(target_audio_path)
     if int(actual_sample_rate) != int(resolved_sample_rate):
@@ -101,12 +114,41 @@ def build_offline_mvp_nores_vocoder_training_package(
     voiced_proxy = available_controls["voiced_proxy"].to(torch.float32)
     aperiodicity_proxy = available_controls["aperiodicity_proxy"].to(torch.float32)
     event_presence_proxy = available_controls["event_presence_proxy"].to(torch.float32)
-    energy_proxy = available_controls["energy_proxy"].to(torch.float32)
-    noise_gate_target = torch.maximum(aperiodicity_proxy, event_presence_proxy).clamp(0.0, 1.0)
+    if has_v2_core:
+        vuv = available_controls["vuv"].to(torch.float32)
+        aper = available_controls["aper"].to(torch.float32)
+        energy_control = available_controls["E"].to(torch.float32)
+        normalized_energy_control = available_controls.get("E_log_rms_norm")
+        if isinstance(normalized_energy_control, torch.Tensor):
+            normalized_energy_control = normalized_energy_control.to(torch.float32)
+        else:
+            normalized_energy_control = normalize_energy_log_rms_for_stage5(energy_control)
+        periodic_gate_target = vuv.clamp(0.0, 1.0)
+        noise_gate_target = torch.maximum(aper * normalized_energy_control, event_presence_proxy).clamp(0.0, 1.0)
+        energy_proxy = normalized_energy_control.clamp(0.0, 1.0)
+        training_package_version = "offline_mvp_nores_vocoder_train_targets_v2"
+        notes = [
+            "This package provides a minimal Stage5 spectral reconstruction target set for the no-residual baseline route.",
+            "Targets are frame-aligned to the teacher runtime semantics and remain a proxy objective, not the final waveform/GAN training contract from the design doc.",
+            "periodic_gate_target now uses explicit vuv, while noise_gate_target uses max(aper * E_log_rms_norm, event_presence_proxy) so unvoiced low-energy frames do not force the noise branch fully open.",
+            "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
+        ]
+    else:
+        periodic_gate_target = voiced_proxy.clamp(0.0, 1.0)
+        noise_gate_target = torch.maximum(aperiodicity_proxy, event_presence_proxy).clamp(0.0, 1.0)
+        energy_proxy = available_controls["energy_proxy"].to(torch.float32)
+        training_package_version = "offline_mvp_nores_vocoder_train_targets_v1"
+        notes = [
+            "This package provides a minimal Stage5 spectral reconstruction target set for the no-residual baseline route.",
+            "Targets are frame-aligned to the teacher runtime semantics and remain a proxy objective, not the final waveform/GAN training contract from the design doc.",
+            "periodic_gate_target uses voiced_proxy, and noise_gate_target uses max(aperiodicity_proxy, event_presence_proxy).",
+            "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
+        ]
 
     training_payload = {
-        "training_package_version": "offline_mvp_nores_vocoder_train_targets_v1",
+        "training_package_version": training_package_version,
         "source_scaffold_path": scaffold_path.as_posix(),
+        "source_scaffold_version": scaffold_version,
         "target_audio_path": target_audio_path.as_posix(),
         "source_audio_path": payload.get("source_audio_path"),
         "frame_count": frame_count,
@@ -122,23 +164,19 @@ def build_offline_mvp_nores_vocoder_training_package(
         "targets": {
             "harmonic_envelope_target": harmonic_target,
             "noise_envelope_target": noise_target,
-            "periodic_gate_target": voiced_proxy.clamp(0.0, 1.0),
+            "periodic_gate_target": periodic_gate_target,
             "noise_gate_target": noise_gate_target,
             "energy_proxy_target": energy_proxy.clamp(0.0, 1.0),
         },
         "aligned_waveform": aligned_waveform.to(torch.float32),
-        "notes": [
-            "This package provides a minimal Stage5 spectral reconstruction target set for the no-residual baseline route.",
-            "Targets are frame-aligned to the teacher runtime semantics and remain a proxy objective, not the final waveform/GAN training contract from the design doc.",
-            "periodic_gate_target uses voiced_proxy, and noise_gate_target uses max(aperiodicity_proxy, event_presence_proxy).",
-            "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
-        ],
+        "notes": notes,
     }
 
     summary = {
         "generated_at": datetime.now().isoformat(timespec="seconds"),
-        "training_package_version": "offline_mvp_nores_vocoder_train_targets_v1",
+        "training_package_version": training_package_version,
         "source_scaffold_path": scaffold_path.as_posix(),
+        "source_scaffold_version": scaffold_version,
         "target_audio_path": target_audio_path.as_posix(),
         "source_audio_path": payload.get("source_audio_path"),
         "runtime": training_payload["runtime"],
@@ -1111,7 +1149,7 @@ def load_training_package_payload(training_package_path: Path) -> dict[str, obje
     payload = torch.load(training_package_path, map_location="cpu", weights_only=False)
     if not isinstance(payload, dict):
         raise TypeError(f"Unsupported training package payload type: {type(payload)!r}")
-    if str(payload.get("training_package_version")) != "offline_mvp_nores_vocoder_train_targets_v1":
+    if str(payload.get("training_package_version")) not in SUPPORTED_TRAINING_PACKAGE_VERSIONS:
         raise ValueError(
             "Unsupported training_package_version for no-residual vocoder training: "
             f"{payload.get('training_package_version')!r}"
@@ -1255,7 +1293,13 @@ def build_dataset_packages_for_split(
                 "duration_sec": float(dict(record.get("audio", {})).get("duration_sec", 0.0)),
                 "split_name": split_name,
                 "training_package_path": package_path.as_posix(),
+                "training_package_version": str(package_payload.get("training_package_version", "unknown")),
+                "source_scaffold_version": str(package_payload.get("source_scaffold_version", "unknown")),
                 "frame_count": int(package_payload["frame_count"]),
+                "periodic_input_dim": int(package_payload["inputs"]["periodic_branch_features"].shape[-1]),
+                "noise_input_dim": int(package_payload["inputs"]["noise_branch_features"].shape[-1]),
+                "harmonic_target_dim": int(package_payload["targets"]["harmonic_envelope_target"].shape[-1]),
+                "noise_target_dim": int(package_payload["targets"]["noise_envelope_target"].shape[-1]),
                 "package_size_bytes": int(package_size_bytes),
                 "package_build_sec": round(package_build_sec, 6),
                 "package_status": "reused_existing" if package_reused else "built_now",
@@ -1288,6 +1332,12 @@ def summarize_dataset_package_index(
         total_package_build_sec = sum(float(entry.get("package_build_sec", 0.0)) for entry in entries)
         built_now_count = sum(1 for entry in entries if str(entry.get("package_status")) == "built_now")
         reused_existing_count = sum(1 for entry in entries if str(entry.get("package_status")) == "reused_existing")
+        training_package_versions = sorted({str(entry.get("training_package_version", "unknown")) for entry in entries})
+        source_scaffold_versions = sorted({str(entry.get("source_scaffold_version", "unknown")) for entry in entries})
+        periodic_input_dims = sorted({int(entry.get("periodic_input_dim", 0)) for entry in entries}) if entries else []
+        noise_input_dims = sorted({int(entry.get("noise_input_dim", 0)) for entry in entries}) if entries else []
+        harmonic_target_dims = sorted({int(entry.get("harmonic_target_dim", 0)) for entry in entries}) if entries else []
+        noise_target_dims = sorted({int(entry.get("noise_target_dim", 0)) for entry in entries}) if entries else []
         return {
             "package_count": len(entries),
             "total_audio_duration_sec": round(total_audio_duration_sec, 6),
@@ -1304,6 +1354,19 @@ def summarize_dataset_package_index(
             ),
             "built_now_count": int(built_now_count),
             "reused_existing_count": int(reused_existing_count),
+            "training_package_versions": training_package_versions,
+            "source_scaffold_versions": source_scaffold_versions,
+            "periodic_input_dims": periodic_input_dims,
+            "noise_input_dims": noise_input_dims,
+            "harmonic_target_dims": harmonic_target_dims,
+            "noise_target_dims": noise_target_dims,
+            "versions_consistent": len(training_package_versions) <= 1 and len(source_scaffold_versions) <= 1,
+            "dims_consistent": (
+                len(periodic_input_dims) <= 1
+                and len(noise_input_dims) <= 1
+                and len(harmonic_target_dims) <= 1
+                and len(noise_target_dims) <= 1
+            ),
         }
 
     train_summary = summarize_split(train_packages)
@@ -2095,6 +2158,10 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         lines.append(
             f"- record_id={entry['record_id']} frame_count={entry['frame_count']} "
             f"duration_sec={round(float(entry['duration_sec']), 6)} "
+            f"training_package_version={entry.get('training_package_version', 'unknown')} "
+            f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
+            f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "
+            f"noise_input_dim={entry.get('noise_input_dim', 'unknown')} "
             f"package_size_bytes={entry.get('package_size_bytes', 0)} "
             f"package_build_sec={entry.get('package_build_sec', 0)} "
             f"package_status={entry.get('package_status', 'unknown')} "
@@ -2105,6 +2172,10 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         lines.append(
             f"- record_id={entry['record_id']} frame_count={entry['frame_count']} "
             f"duration_sec={round(float(entry['duration_sec']), 6)} "
+            f"training_package_version={entry.get('training_package_version', 'unknown')} "
+            f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
+            f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "
+            f"noise_input_dim={entry.get('noise_input_dim', 'unknown')} "
             f"package_size_bytes={entry.get('package_size_bytes', 0)} "
             f"package_build_sec={entry.get('package_build_sec', 0)} "
             f"package_status={entry.get('package_status', 'unknown')} "

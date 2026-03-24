@@ -10566,3 +10566,668 @@
     一边临时口头解释
     `aper`
     到底是什么
+### 351. 当 `contract_v2` 第一次落地时，不能为了“语义更干净”就把旧 proxy 诊断层一次性删光；否则很多现有检查、compare 与回归入口会直接失明
+- 现象:
+  - 本轮开始把
+    `teacher_downstream_control_contract_v2`
+    接入代码后，
+    experiment 线
+    确实已经开始正式产出：
+    - `f0_hz`
+    - `vuv`
+    - `aper`
+    - `E`
+  - 但仓库里已有不少现成检查、
+    summary、
+    user-line probe
+    仍会读：
+    - `energy_proxy`
+    - `voiced_proxy`
+    - `aperiodicity_proxy`
+    - `event_presence_proxy`
+    - `energy_change_proxy`
+- 风险:
+  - 如果第一次上
+    `contract_v2`
+    时，
+    直接把这些旧 proxy
+    全删掉，
+    那很多下游脚本虽然不一定立刻报错，
+    但会失去：
+    - 横向对比基线
+    - 旧 bundle
+      的可比解释
+    - 快速诊断入口
+  - 这样会把
+    “新语义是否真更好”
+    和
+    “诊断体系突然失明”
+    两件事混在一起
+- 处理要求:
+  - `contract_v2`
+    第一批落地时，
+    必须：
+    - 正式新增
+      `f0_hz / vuv / aper / E`
+    - 同时保留旧 proxy
+      作为诊断兼容层
+  - 等真实导出、
+    dataset smoke、
+    首轮重训都站稳后，
+    再决定哪些旧 proxy
+    可以退役
+### 352. `vuv` 第一版若直接用过高阈值去硬清零 `f0_hz / aper`，真实短句里会把大部分周期结构一并抹掉，导致 `contract_v2` 名义补齐但 periodic branch 仍实际缺血
+- 现象:
+  - 本轮
+    `contract_v2`
+    首次接到真实短音频
+    smoke 时，
+    最初用较高
+    voiced 阈值
+    去决定：
+    - 哪些帧保留
+      `f0_hz`
+    - 哪些帧把
+      `aper`
+      置成
+      unvoiced
+  - 结果出现：
+    - `voiced_frame_count`
+      过低
+    - 绝大多数帧
+      `f0_hz = 0`
+  - 这说明：
+    - `vuv`
+      连续概率
+      可以先保守，
+      但
+      `f0_hz`
+      的硬清零阈值
+      不能同样保守
+- 风险:
+  - 表面上看，
+    `contract_v2`
+    已经有了
+    `f0_hz / vuv / aper / E`
+  - 实际送进
+    periodic branch
+    的
+    `f0_hz`
+    却几乎始终为空
+  - 这会让后续重训失败时，
+    又很难分清：
+    - 是 v2-core
+      无效
+    - 还是第一版
+      硬门限
+      直接把周期信息抹掉了
+- 处理要求:
+  - `vuv`
+    与
+    `f0_hz`
+    的口径必须拆开看：
+    - `vuv`
+      保留连续概率
+    - `f0_hz / aper`
+      的硬门限
+      应先用更宽松阈值
+      或单独校准
+  - 真实短样例 smoke
+    必须检查：
+    - voiced_ratio
+    - 非零
+      `f0_hz`
+      占比
+    - `f0_hz`
+      的范围与均值
+### 353. 当 teacher runtime 的帧长只有约 `8.3ms` 时，不能直接把这一个单帧当成 `f0 / vuv / aper` 的分析窗；时间轴可以保持不变，但分析窗必须更宽
+- 现象:
+  - 本轮开始做
+    source acoustic state
+    真正校准时，
+    发现 teacher checkpoint
+    当前：
+    - `frame_length = 400`
+    - `sample_rate = 48000`
+  - 这意味着单帧只有：
+    - 约 `8.3ms`
+  - 如果直接拿这一个单帧
+    去做：
+    - 自相关找 `f0`
+    - `vuv`
+      判定
+    - `aper`
+      估计
+  - 就很容易出现：
+    - 低频周期信息不够
+    - 高 F0
+      偏选
+    - voiced 判定
+      过于保守
+- 风险:
+  - 即使字段名字已经对了，
+    实际统计仍会发虚，
+    尤其会把：
+    - `f0_hz`
+      拉到不可信高位
+    - 或把大量帧
+      判成
+      non-voiced
+  - 这样继续做
+    `contract_v2`
+    重训，
+    等于把错误的 source state
+    正式喂进主干
+- 处理要求:
+  - 必须区分：
+    - 对齐时间轴
+    - 分析窗长度
+  - 当前正确做法应是：
+    - 仍按 teacher runtime
+      的 frame/hop
+      产出每帧字段
+    - 但允许
+      `f0 / vuv / aper`
+      在更宽的中心分析窗上估计
+  - 校准报告里
+    必须同时记录：
+    - `frame_length`
+    - `analysis_frame_length`
+### 354. 当 target 提取 / 去噪 / 背景音处理已经转交到别的项目后，本项目不能悄悄把“重去混响 / 重降噪”重新吸回实验线范围
+- 现象:
+  - 本轮继续核对数据边界时，
+    已明确：
+    target 提取、
+    噪音 / 背景音去除、
+    较重混响治理
+    已由另一项目接管
+  - 本项目当前真正要解的是：
+    在较清晰 source
+    前提下，
+    把
+    `contract_v2`
+    和后续 no-res
+    路线站稳
+- 风险:
+  - 如果这里不写死边界，
+    很容易因为听到：
+    - `chapter3_5`
+    - `chapter3_6`
+      这类较重混响样本
+    就把注意力重新拖回：
+    - 重去噪
+    - 重去混响
+    - 大幅背景音剥离
+  - 这样会把
+    source-to-target
+    合同问题
+    和前处理资产问题
+    再次混成一团
+- 处理要求:
+  - 当前实验线默认只接受：
+    - 清晰人声
+    - 少量规律底噪
+    - 极轻微混响
+  - 若遇到较重混响 /
+    明显背景音，
+    默认记为上游资产治理问题，
+    不在本项目里扩 scope
+### 355. 一旦拿到与 target 同名同内容的平行 source 语料，就不该继续把泛化 segment/peak 样例长期挂在默认 end-to-end smoke 主入口上
+- 现象:
+  - 本轮用户补入了两条
+    同内容平行 source：
+    - `chapter3_17_firefly_107.wav`
+    - `chapter3_17_firefly_132.wav`
+  - 它们与 target
+    内容一致，
+    但时间轴 / 语速不对齐，
+    正适合作为真实
+    source-to-target
+    smoke 输入
+  - 仓内旧默认入口却仍主要使用：
+    - `segment_0001`
+    - `peak_011`
+    这类泛化样例
+- 风险:
+  - 如果默认 smoke
+    继续长期停在泛化 segment，
+    后续很容易把：
+    - “能否处理一段任意 source”
+    和
+    - “能否对同内容平行 source
+      跑通最基本 source-to-target”
+    混为一谈
+  - 这样即使真正的平行 source
+    已经在仓里，
+    默认回归入口仍然看不到它
+- 处理要求:
+  - 一旦存在同内容平行 source，
+    默认主听 /
+    默认 compare /
+    默认 audit
+    入口应优先切到它们
+  - 高静音 /
+    极端边界样例
+    保留在单独
+    boundary probe
+    入口，
+    不再混入默认主听 bundle
+### 356. 在 `contract_v2 / scaffold_v2` 已接上线、但还没有 `v2-compatible` no-res checkpoint 之前，teacher-first demo 的 success path 若卡在 `vocoder_checkpoint_load`，不能误判成“新平行 source 不可用”
+- 现象:
+  - 本轮把默认 self-check
+    与主听 smoke
+    输入切到新的平行 source
+    后，
+    `teacher_first_vc_demo`
+    的上游链路已能走到：
+    - teacher runtime
+    - contract write
+    - teacher vocoder input scaffold
+  - 但 success path
+    仍会在
+    `vocoder_checkpoint_load`
+    失败，
+    因为当前推荐 no-res checkpoint
+    还是旧 scaffold
+    维度
+- 风险:
+  - 如果不把这点写清楚，
+    很容易把
+    “checkpoint 维度不兼容”
+    误说成
+    “新的 parallel source
+    本身不适合作 smoke”
+  - 这样会把真正该保留的默认输入
+    又错误回切到旧 segment
+- 处理要求:
+  - 当前应明确区分：
+    - 输入选择问题
+    - checkpoint 兼容性问题
+  - 在
+    `v2-compatible`
+    checkpoint
+    出来前，
+    允许：
+    - 用新平行 source
+      做 audit / contract / scaffold
+      校准
+    - 并把 decoded success path
+      的失败正式记为
+      checkpoint 阻塞
+### 357. checkpoint review / checkpoint selection 不能默认把 `loss_metrics` 中所有字段都当成纯浮点；一旦训练 summary 混入字符串元数据，后处理会在训练已跑完后才崩掉
+- 现象:
+  - 本轮
+    `contract_v2`
+    正式训练完成后，
+    summary
+    里的
+    `loss_metrics`
+    继续保留了：
+    `reconstruction_frame_gain_apply_mode = pre_overlap_add`
+  - 这导致：
+    - `review-offline-mvp-nores-vocoder-checkpoints`
+    - `select-offline-mvp-nores-vocoder-checkpoint`
+    首次运行时
+    都在
+    `round(float(value), 6)`
+    这里报错
+- 风险:
+  - 训练本体明明已经跑完，
+    但如果后处理工具
+    还假设
+    `loss_metrics`
+    全是数值，
+    就会把问题拖到
+    训练完成之后
+    才暴露
+  - 这样很容易误判成：
+    - checkpoint 坏了
+    - summary 坏了
+    - 训练没真正成功
+- 处理要求:
+  - checkpoint review /
+    selection
+    这类后处理工具
+    必须容忍：
+    - float / int
+    - bool
+    - str
+    混合字段
+  - 真正需要做数值排序的地方，
+    只读取显式数值键，
+    不要对整个 dict
+    一把梭转换
+### 358. `selected_stable_late_stop = null` 不一定意味着 selector 失效；如果晚窗 checkpoint 全在进步、但 RMS 偏差始终没进阈值，正确结论是“当前没有稳定晚停点”
+- 现象:
+  - 本轮
+    `contract_v2`
+    正式训练中，
+    validation checkpoint
+    从
+    `step12 -> 72`
+    持续单调改善，
+    且每次 pairwise
+    都是
+    `66/66 improved`
+  - 但 selection
+    结果仍然给出：
+    `selected_stable_late_stop = null`
+  - 原因不是工具坏了，
+    而是：
+    - `step60`
+      `rms_ratio_deviation = 0.058748`
+    - `step72`
+      `rms_ratio_deviation = 0.085782`
+    都高于当前
+    `0.03`
+    硬阈值
+- 风险:
+  - 如果只看
+    “没有 stable late stop”，
+    很容易误判为：
+    - selector 逻辑坏了
+    - summary 没写全
+    - checkpoint review
+      不可信
+  - 但真实情况可能只是：
+    晚窗候选没有一个同时满足
+    validation / pairwise / RMS
+    三条治理要求
+- 处理要求:
+  - 当
+    `selected_stable_late_stop = null`
+    时，
+    默认先检查：
+    - validation_guard
+    - pairwise worsened ratio
+    - RMS deviation
+    到底是哪条卡住
+  - 若只是治理阈值未满足，
+    应保留：
+    - `best_validation`
+    - `best_rms`
+    作为有效产物，
+    不要把整轮训练误写成
+    “没有可用 checkpoint”
+### 359. `contract_v2` 的 `f0_hz` 虽然应该作为正式字段落盘，但不能把原始 `Hz` 数值直接喂给 Stage5 periodic branch；否则新字段一接入就会把输入尺度打爆
+- 现象:
+  - 原始
+    `contract_v2`
+    首轮正式训练里，
+    periodic branch
+    直接消费：
+    - `f0_hz`
+    - `vuv`
+    - `E`
+  - 后续对 validation package
+    统计时发现：
+    - 旧 `v1`
+      `periodic_mean_abs ≈ 0.416`
+    - 原始 `v2`
+      `periodic_mean_abs ≈ 6.122`
+  - 8 条样例并排对比里，
+    原始 `v2`
+    仍有：
+    - `periodic_mean_abs = 5.987897`
+    而旧 `v1`
+    仅：
+    - `0.426505`
+- 风险:
+  - 如果把
+    `f0_hz`
+    的“正式字段存在”
+    等同于
+    “训练里直接吃原始 Hz
+     就更语义正确”，
+    就会把 Stage5
+    consumer-side
+    从旧 proxy
+    的近 `0~1`
+    区间，
+    突然推到
+    数百 `Hz`
+    量级
+  - 这样即使
+    `contract_v2`
+    设计方向正确，
+    也会先被输入尺度失衡
+    拖坏训练
+- 处理要求:
+  - 保留
+    `f0_hz`
+    作为正式 raw 字段
+  - 但在
+    scaffold / Stage5
+    consumer-side
+    必须先做：
+    - bounded normalization
+    - 推荐
+      `log-norm`
+  - 禁止再把
+    “raw field 已存在”
+    误写成
+    “训练侧已正确消费”
+### 360. 当 `aper-v1` 约定对 unvoiced 直接写 `1.0` 时，不能再把 `noise_gate_target = max(aper, event_presence_proxy)` 原样用于 Stage5；否则 noise branch 会被系统性推向常开
+- 现象:
+  - 当前
+    `source_acoustic_state_extraction`
+    在 unvoiced
+    帧上写：
+    - `aper = 1`
+  - 原始
+    `contract_v2`
+    package
+    又写：
+    - `noise_gate_target = max(aper, event_presence_proxy)`
+  - 结果是：
+    - 旧 `v1`
+      `noise_gate_mean ≈ 0.598`
+    - 原始 `v2`
+      `noise_gate_mean ≈ 0.814`
+- 风险:
+  - 这会把
+    noise gate
+    从“指导非周期能量”
+    误变成
+    “只要不是 voiced
+     就默认大开门”
+  - 后续再叠加
+    predicted activity
+    去做 waveform
+    reconstruction gate，
+    很容易把整体输出
+    往
+    buzz / noisy-active
+    方向推
+- 处理要求:
+  - 若 `aper`
+    在 unvoiced
+    上仍采用
+    `1.0`
+    口径，
+    那么 training target
+    里必须再乘上：
+    - 能量或活动约束
+  - 当前最小可接受做法是：
+    - `noise_gate_target = max(aper * E_norm, event_presence_proxy)`
+  - 禁止再把
+    `aper`
+    单独当作
+    “noise gate 直接监督”
+    的充分条件
+### 361. 当 decoder-behavior probe 的 reference 健康分布本身已经长期高于旧 user-line 高频阈值时，不能再把固定 `high_risk` 规则直接等同于“仍然是 buzz”
+- 现象:
+  - 在
+    `contractv2_normfix`
+    当前 best checkpoint
+    下，
+    decoder-behavior probe
+    的 reference
+    健康分布本身已接近：
+    - `decoded_spectral_centroid_hz ≈ 5859`
+    - `decoded_spectral_high_band_energy_ratio ≈ 0.345`
+  - 但旧
+    `teacher_first_runtime_risk_v1`
+    仍使用：
+    - `centroid >= 3200`
+    - `high_band_energy_ratio >= 0.25`
+    作为高风险阈值
+- 风险:
+  - 若继续把这套旧阈值
+    直接用于新 checkpoint
+    家族，
+    就会把：
+    - “与当前 reference
+       已接近”
+      和
+    - “仍然明显 buzz”
+    混成一件事
+  - 这会误导：
+    - 最小链路验收
+    - inference-only
+      适配判断
+    - 人工听审优先级
+- 处理要求:
+  - 对新的 Stage5
+    checkpoint
+    家族，
+    user-line 风险判断
+    应优先参考：
+    - 同 checkpoint
+      的 in-distribution
+      decoder 行为分布
+  - 固定阈值只能继续作为：
+    - 历史预警 sidecar
+  - 禁止再把
+    `status = high_risk`
+    单独写成
+    “当前仍一定是 buzz”
+### 362. 当当前实验问题已经转成 inference-only 适配对比时，compare bundle 不能继续被设计成“只能换 checkpoint”；否则默认听审入口会沿用旧 variant，导致人工时间花在错误对比上
+- 现象:
+  - 到
+    `contractv2_normfix`
+    + 最小链路适配阶段，
+    当前真正要听的是：
+    - 默认链路
+    - `reference_affine_match + event_probs=reference_mean + gate_off`
+  - 但旧
+    teacher-first
+    audible compare bundle
+    variant
+    只支持：
+    - 换 checkpoint
+  - 默认 variant
+    也仍停在更早期
+    smoke baseline / candidate
+- 风险:
+  - 即使代码和产物都在继续推进，
+    人工听审仍会默认听错对象
+  - 这会把：
+    - 当前最有价值的
+      inference-only
+      候选
+    和
+    - 历史 smoke
+      checkpoint 对比
+    混成同一个入口
+  - 结果就是：
+    - 对话里说“下一步该听 A/B”
+    - 实际磁盘默认入口
+      却还在导出旧 A/B
+- 处理要求:
+  - compare bundle
+    的 variant
+    至少要能显式携带：
+    - checkpoint source
+    - gate on/off
+    - apply mode
+    - normalization strategy
+    - control-family override
+  - 当前实验线切题后，
+    默认 compare
+    也必须同步切到
+    当前真实待判问题
+  - 禁止只在文档里更新
+    “现在该听什么”，
+    却让默认 bundle
+    继续导出旧 variant
+### 363. 当一条输入音频的 RMS 低到普通播放器里近似静音时，不能把它直接判成“坏文件/全静音”；先看峰值、波形编辑器和边界静段，再决定是删文件还是做电平修复
+- 现象:
+  - `chapter3_17_firefly_107.wav`
+    与
+    `chapter3_17_firefly_132.wav`
+    初看几乎听不见，
+    一度被误判成：
+    - “整段全静音”
+  - 但后续复核发现：
+    - 它们并非空文件
+    - 只是：
+      - 有效语音极低电平
+      - 前后带静段
+      - 边界可能混有瞬态
+- 风险:
+  - 若在这一层直接删文件，
+    会把本来仍可修复的
+    same-content
+    source 输入
+    白白丢掉
+  - 同时也会让后续误以为：
+    - 输入问题来自
+      内容无效
+    - 而不是
+      电平和边界治理
+- 处理要求:
+  - 先至少检查：
+    - RMS
+    - peak
+    - 波形编辑器中的真实包络
+    - 是否只是前后静段过长
+  - 若有效内容存在，
+    优先做：
+    - 裁切
+    - 归一化
+    - 必要的短淡入淡出
+  - 禁止在
+    “近似静音”
+    还未被进一步核实前，
+    直接把文件定性成
+    “损坏或无内容”
+### 364. 近静音输入下 decoded 仍出现高频 buzz，只能说明系统在极端低能量输入上可能不稳；不能单独拿它去证明“正常输入也一定异常”
+- 现象:
+  - 在 user-line
+    诊断里，
+    near-silence
+    或极低能量输入
+    下，
+    decoded
+    仍可能出现高频 buzz
+- 风险:
+  - 如果把这类 case
+    直接当作
+    正常输入的代表，
+    就会把：
+    - 极端输入稳定性问题
+    和
+    - 正常语音输入的
+      主体行为
+    混为一谈
+  - 这会让：
+    - 风险判断
+    - 听审优先级
+    - root-cause
+      解释
+    全部被极端 case
+    带偏
+- 处理要求:
+  - 这类 case
+    只能作为：
+    - 边界样例
+    - 稳定性 sidecar
+  - 不能单独写成：
+    - “因此正常输入也不正常”
+  - 若要判断主链是否可接受，
+    仍应优先看：
+    - 正常电平
+      的真实语音输入
+    - same-content
+      或其他主听样例

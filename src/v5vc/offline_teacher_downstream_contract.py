@@ -16,8 +16,13 @@ from v5vc.offline_teacher_runtime import (
     run_streaming_pass,
 )
 from v5vc.offline_mvp.data import load_waveform
+from v5vc.source_acoustic_state_extraction import extract_source_acoustic_state
 from v5vc.streaming_student.teacher_labels import resolve_teacher_source
 from v5vc.train_entry import instantiate_offline_mvp_model
+
+
+CONTRACT_VERSION_V1 = "offline_teacher_downstream_control_v1"
+CONTRACT_VERSION_V2 = "offline_teacher_downstream_control_v2"
 
 
 def export_offline_mvp_teacher_downstream_contract(
@@ -102,6 +107,7 @@ def export_offline_mvp_teacher_downstream_contract(
     contract_payload = build_contract_payload(
         input_audio_path=input_audio_path,
         resolved_source=resolved_source,
+        waveform=waveform,
         sample_rate=sample_rate,
         frame_length=frame_length,
         hop_length=hop_length,
@@ -114,6 +120,7 @@ def export_offline_mvp_teacher_downstream_contract(
     tensor_payload = build_tensor_payload(
         input_audio_path=input_audio_path,
         resolved_source=resolved_source,
+        waveform=waveform,
         sample_rate=sample_rate,
         frame_length=frame_length,
         hop_length=hop_length,
@@ -163,6 +170,7 @@ def load_conditioning_asset(calibration_asset_path: Path | None) -> dict[str, ob
 def build_contract_payload(
     input_audio_path: Path,
     resolved_source: dict[str, object],
+    waveform: torch.Tensor,
     sample_rate: int,
     frame_length: int,
     hop_length: int,
@@ -173,11 +181,21 @@ def build_contract_payload(
     verification: dict[str, object] | None,
 ) -> dict[str, object]:
     frame_count = int(streaming_outputs["frame_count"])
+    source_acoustic_state = extract_source_acoustic_state(
+        waveform=waveform,
+        sample_rate=sample_rate,
+        frame_start_samples=streaming_outputs["frame_start_samples"].to(torch.long),
+        frame_length=frame_length,
+    )
+    f0_hz = source_acoustic_state["f0_hz"]
+    vuv = source_acoustic_state["vuv"]
+    aper = source_acoustic_state["aper"]
+    energy_control = source_acoustic_state["E"]
     energy_log = streaming_outputs["acoustic"][:, 0]
     zero_cross_rate = streaming_outputs["acoustic"][:, 2]
     event_probs = streaming_outputs["event_probs"]
     return {
-        "contract_version": "offline_teacher_downstream_control_v1",
+        "contract_version": CONTRACT_VERSION_V2,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "input_audio_path": input_audio_path.resolve().as_posix(),
         "teacher": {
@@ -207,21 +225,35 @@ def build_contract_payload(
             "geom_dim": int(conditioning["geom_dim"]),
             "alpha": round(float(conditioning["alpha"]), 6),
         },
-        "provided_keys": [
-            "frame_start_ms",
-            "z_art",
-            "event_logits",
-            "event_probs",
-            "hidden",
-            "fused_hidden",
-            "acoustic.energy_log",
-            "acoustic.abs_mean",
-            "acoustic.zero_cross_rate",
-            "acoustic.delta_energy",
-            "conditioning.s_spk_target",
-            "conditioning.s_geom_target",
-            "conditioning.alpha",
-        ],
+        "source_acoustic_state": {
+            "version": source_acoustic_state["version"],
+            "aper_version": source_acoustic_state["aper_version"],
+            "stats": dict(source_acoustic_state["stats"]),
+        },
+        "provided_keys": {
+            "v2_core": [
+                "frame_start_ms",
+                "z_art",
+                "event_probs",
+                "f0_hz",
+                "vuv",
+                "aper",
+                "E",
+                "conditioning.s_spk_target",
+                "conditioning.s_geom_target",
+                "conditioning.alpha",
+            ],
+            "v2_optional": [],
+            "v2_diagnostic": [
+                "event_logits",
+                "hidden",
+                "fused_hidden",
+                "acoustic.energy_log",
+                "acoustic.abs_mean",
+                "acoustic.zero_cross_rate",
+                "acoustic.delta_energy",
+            ],
+        },
         "derived_proxy_keys": [
             "energy_proxy",
             "voiced_proxy",
@@ -230,23 +262,26 @@ def build_contract_payload(
             "energy_change_proxy",
         ],
         "missing_design_keys": [
-            "f0_hz",
             "r_res",
             "final_vocoder_waveform",
         ],
         "summary_stats": {
+            "f0_hz": summarize_tensor(f0_hz),
+            "vuv": summarize_tensor(vuv),
+            "aper": summarize_tensor(aper),
+            "E": summarize_tensor(energy_control),
             "energy_log": summarize_tensor(energy_log),
             "zero_cross_rate": summarize_tensor(zero_cross_rate),
             "event_presence_proxy": summarize_tensor(event_probs[:, 0]),
-            "voiced_proxy": summarize_tensor(event_probs[:, 3]),
-            "energy_proxy": summarize_tensor(torch.sigmoid((energy_log + 4.0) * 2.0)),
+            "voiced_proxy": summarize_tensor(vuv),
+            "energy_proxy": summarize_tensor(torch.sigmoid((energy_control + 4.0) * 2.0)),
         },
         "verification": verification,
         "notes": [
-            "This contract is a teacher-first downstream control packet, not the final Stage5 vocoder contract from the design doc.",
-            "aperiodicity_proxy is currently derived from acoustic.zero_cross_rate and should be treated as a provisional noise-control proxy only.",
-            "voiced_proxy currently maps to event_probs[:, 3], which is the teacher's voiced-like event channel rather than a dedicated vuv head.",
-            "No explicit f0_hz or r_res is available in the current offline teacher; downstream modules must treat those as missing or optional.",
+            "This contract upgrades the teacher-first downstream packet to the C-prime v2-core baseline for the experimental Stage5 route.",
+            "f0_hz / vuv / aper / E are produced by a deterministic source acoustic state extraction chain aligned to the teacher runtime frame grid.",
+            "aper-v1 is a single scalar per frame in [0, 1], where 0 is more periodic and 1 is more aperiodic; it is intended for the noise branch only.",
+            "r_res and final_vocoder_waveform remain intentionally absent because Phase C3 stays on the no-res baseline route.",
         ],
     }
 
@@ -254,6 +289,7 @@ def build_contract_payload(
 def build_tensor_payload(
     input_audio_path: Path,
     resolved_source: dict[str, object],
+    waveform: torch.Tensor,
     sample_rate: int,
     frame_length: int,
     hop_length: int,
@@ -261,14 +297,24 @@ def build_tensor_payload(
     streaming_outputs: dict[str, object],
     conditioning: dict[str, object],
 ) -> dict[str, object]:
+    source_acoustic_state = extract_source_acoustic_state(
+        waveform=waveform,
+        sample_rate=sample_rate,
+        frame_start_samples=streaming_outputs["frame_start_samples"].to(torch.long),
+        frame_length=frame_length,
+    )
     acoustic = streaming_outputs["acoustic"].to(torch.float32)
     energy_log = acoustic[:, 0:1]
     abs_mean = acoustic[:, 1:2]
     zero_cross_rate = acoustic[:, 2:3]
     delta_energy = acoustic[:, 3:4]
     event_probs = streaming_outputs["event_probs"].to(torch.float32)
+    f0_hz = source_acoustic_state["f0_hz"].to(torch.float32)
+    vuv = source_acoustic_state["vuv"].to(torch.float32)
+    aper = source_acoustic_state["aper"].to(torch.float32)
+    energy_control = source_acoustic_state["E"].to(torch.float32)
     return {
-        "contract_version": "offline_teacher_downstream_control_v1",
+        "contract_version": CONTRACT_VERSION_V2,
         "input_audio_path": input_audio_path.resolve().as_posix(),
         "teacher": {
             "experiment_id": str(resolved_source["teacher_anchor"]["experiment_id"]),
@@ -287,6 +333,15 @@ def build_tensor_payload(
         "z_art": streaming_outputs["z_art"].to(torch.float32),
         "event_logits": streaming_outputs["event_logits"].to(torch.float32),
         "event_probs": event_probs,
+        "f0_hz": f0_hz,
+        "vuv": vuv,
+        "aper": aper,
+        "E": energy_control,
+        "source_acoustic_state_meta": {
+            "version": source_acoustic_state["version"],
+            "aper_version": source_acoustic_state["aper_version"],
+            "stats": dict(source_acoustic_state["stats"]),
+        },
         "acoustic": {
             "energy_log": energy_log,
             "abs_mean": abs_mean,
@@ -294,9 +349,9 @@ def build_tensor_payload(
             "delta_energy": delta_energy,
         },
         "derived_proxies": {
-            "energy_proxy": torch.sigmoid((energy_log + 4.0) * 2.0),
-            "voiced_proxy": event_probs[:, 3:4],
-            "aperiodicity_proxy": zero_cross_rate.clamp(0.0, 1.0),
+            "energy_proxy": torch.sigmoid((energy_control + 4.0) * 2.0),
+            "voiced_proxy": vuv,
+            "aperiodicity_proxy": aper,
             "event_presence_proxy": event_probs[:, 0:1],
             "energy_change_proxy": event_probs[:, 1:2],
         },
@@ -329,6 +384,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- teacher: {json.dumps(summary['teacher'], ensure_ascii=False)}",
         f"- runtime: {json.dumps(summary['runtime'], ensure_ascii=False)}",
         f"- conditioning: {json.dumps(summary['conditioning'], ensure_ascii=False)}",
+        f"- source_acoustic_state: {json.dumps(summary.get('source_acoustic_state', {}), ensure_ascii=False)}",
         "",
         "## Keys",
         f"- provided_keys: {json.dumps(summary['provided_keys'], ensure_ascii=False)}",

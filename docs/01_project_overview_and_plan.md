@@ -16755,3 +16755,1139 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
     第一版定位、
     以及 C3
     的受控训练边界
+## 2026-03-24 继续补充：`contract_v2` 的 Phase C1 已进入代码落地，当前断点从“方案已定”推进到“真实导出验证前”
+### 当前结论
+- `C-prime`
+  的第一批实验线代码已开始落地，
+  当前不再是
+  “方案敲定但尚未动代码”
+  的状态。
+- 当前已完成：
+  - `teacher_downstream_control_contract_v2`
+    首版导出
+  - `source acoustic state extraction`
+    首版接入，
+    可产出：
+    `f0_hz / vuv / aper / E`
+  - scaffold / training package
+    对
+    `v2-core`
+    的首版消费
+- 当前仍未开始：
+  - 真实 teacher checkpoint
+    的正式导出验收
+  - dataset 级 package smoke
+  - Stage5 no-res baseline
+    重训
+
+### 当前代码状态
+- `src/v5vc/source_acoustic_state_extraction.py`
+  已新增，
+  作为
+  `f0_hz / vuv / aper / E`
+  的确定性提取链。
+- `src/v5vc/offline_teacher_downstream_contract.py`
+  已默认导出：
+  - `offline_teacher_downstream_control_v2`
+- `src/v5vc/offline_teacher_vocoder_input_scaffold.py`
+  已开始真正拼装：
+  - periodic:
+    `z_art + f0_hz + vuv + E + alpha + s_spk_target + s_geom_target`
+  - noise:
+    `event_probs + aper + vuv + E + alpha + s_spk_target + s_geom_target`
+- `src/v5vc/offline_vocoder_training.py`
+  与
+  `src/v5vc/offline_vocoder_scaffold.py`
+  已支持
+  `scaffold_v2 / training_package_v2`
+  的首版读写，
+  同时保留
+  `v1`
+  兼容。
+
+### 当前验证状态
+- 已完成：
+  - `compileall`
+    编译检查
+  - 人工构造
+    `contract_v2`
+    最小 payload
+    的
+    `contract -> scaffold -> training package`
+    链路 smoke
+- 当前 smoke
+  已确认：
+  - `offline_teacher_vocoder_input_scaffold_v2`
+  - `offline_mvp_nores_vocoder_train_targets_v2`
+    都能成功生成
+- 另已完成：
+  - 真实短音频
+    `segment_0001_0000020110_0000021640.wav`
+    上的直接函数链路 smoke
+  - 已确认真实
+    `contract_v2 -> scaffold_v2 -> training_package_v2`
+    能连续生成
+- 当前真实 smoke
+  也暴露出：
+  - `vuv / f0`
+    的第一版校准仍偏粗，
+    还需要在多条短样例上继续调口径，
+    不能把“已经生成字段”
+    误写成
+    “声学口径已经站稳”
+
+### 更新后的下一步
+1. 用真实 teacher checkpoint
+   扩到多条短样例，
+   继续检查
+   `f0_hz / vuv / aper / E`
+   的统计、
+   特别是
+   `vuv / f0`
+   的校准。
+2. 跑最小 dataset package smoke，
+   确认真实数据上
+   `v2`
+   包稳定生成。
+3. 保持
+   `C3 = no-res baseline only`
+   不变，
+   在
+   `v2-core`
+   contract
+   下启动第一轮重训准备。
+
+### 文档补充
+- `docs/283_stage5_contract_v2_phase_c1_code_bootstrap_report.md`
+  - 记录
+    `contract_v2`
+    首批代码落点、
+    最小 smoke
+    结果、
+    以及下一步真实验收入口
+## 2026-03-24 继续补充：`contract_v2` 已完成首轮校准 smoke 与重训前 package 预检，当前断点转入“扩样例校准”
+### 当前结论
+- 本轮按
+  “先校准、暂缓重训”
+  执行后，
+  当前已完成：
+  - `v2-core`
+    source acoustic state
+    的固定短样例审计
+  - Stage5 dataset package
+    的最小预检
+- 当前新的断点不是：
+  - `contract_v2`
+    还没接好
+- 而是：
+  - 继续扩大
+    `vuv / f0`
+    的真实样例校准覆盖，
+    然后再进重训
+
+### 当前校准状态
+- 已新增正式审计入口：
+  - `src/v5vc/source_acoustic_state_audit.py`
+  - CLI:
+    `audit-source-acoustic-state`
+- 当前固定审计样例：
+  - `segment_0001_0000020110_0000021640.wav`
+  - `segment_0061_0000300400_0000300910.wav`
+  - `peak_011_0002370615_top_peak.wav`
+- 当前关键修正：
+  - `f0 / vuv / aper`
+    仍对齐
+    teacher runtime
+    frame/hop
+  - 但分析窗已扩到：
+    `analysis_frame_length = 2880`
+- 当前这三条样例上：
+  - `voiced_ratio`
+    与
+    `f0_p90`
+    已回到可接受区间，
+    没再出现上一版那种
+    “大面积清零 + 偏高 F0”
+    问题
+
+### 当前重训前准备状态
+- 已直接跑通：
+  - `build_offline_mvp_nores_vocoder_dataset_packages(...)`
+    的最小 smoke
+- 已确认真实产物可连续生成：
+  - `offline_teacher_vocoder_input_scaffold_v2`
+  - `offline_mvp_nores_vocoder_train_targets_v2`
+  - dataset index
+    也可正常写出
+
+### 当前仍需处理
+1. 继续扩大
+   source acoustic state
+   审计样例数量，
+   重点观察：
+   - `voiced_ratio`
+   - `f0_p90`
+   - `high_f0_ratio`
+2. 再跑更接近正式训练规模的
+   package smoke，
+   检查：
+   - 速度
+   - 版本一致性
+   - 样本统计分布
+3. 当前暂缓：
+   - `C3`
+     no-res baseline
+     重训
+
+### 文档补充
+- `docs/284_stage5_contract_v2_calibration_and_prep_smoke_report.md`
+  - 记录
+    本轮校准 smoke、
+    package 预检结果、
+    以及当前剩余阻塞项
+## 2026-03-24 继续补充：实验线输入边界与平行语料 smoke 默认入口已正式固化
+### 当前结论
+- `chapter3_5 / chapter3_6`
+  的 target
+  存在较重混响，
+  这一事实已经成立且无需重复争论；
+  当前只是继续沿用既有
+  sidecar / split
+  治理口径。
+- 本项目当前不再承担：
+  - target 提取
+  - 重去噪
+  - 背景音大幅去除
+  - 重去混响
+- 这些前处理边界已转交到另一项目；
+  本项目实验线默认只假设：
+  - 输入是清晰人声
+  - 可容忍少量规律底噪
+  - 可容忍极轻微混响
+- 用户补入的两条平行语料已经核对通过，
+  并已切成当前默认
+  end-to-end smoke
+  主听输入：
+  - `data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav`
+  - `data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav`
+
+### 已核对事实
+- `chapter3_5 / chapter3_6`
+  的混响事实此前已正式落盘：
+  - 主文档已有章节级结论
+  - pitfalls
+    已有：
+    `294 / 295 / 296`
+  - sidecar
+    已存在：
+    `data_prep/round1_1/annotations/target_quality_annotations_chapter3_5_3_6_reverb.jsonl`
+- 两条新增平行语料与 target
+  同名内容匹配：
+  - `chapter3_17_firefly_107`
+    target 文本：
+    `我可未必，还是开慢点吧。`
+  - `chapter3_17_firefly_132`
+    target 文本：
+    `这就是此前发生的一切。`
+- 两条 source 平行语料都比 target
+  更长，
+  符合
+  “内容一致但时间轴 / 语速不对齐”
+  的预期：
+  - `107`
+    source
+    约 `3.881s`，
+    target
+    约 `2.629s`
+  - `132`
+    source
+    约 `3.519s`，
+    target
+    约 `2.520s`
+
+### 本次代码落点
+- 默认主听
+  smoke
+  入口已改用这两条平行语料：
+  - `scripts/run_teacher_first_single_target_audible_smoke_bundle.ps1`
+  - `scripts/run_teacher_first_single_target_audible_compare_bundle.ps1`
+  - `scripts/run_teacher_first_single_target_vc_review_bundle.ps1`
+- 默认单条 self-check
+  输入已切到：
+  - `chapter3_17_firefly_107.wav`
+- source acoustic state
+  默认审计样例已切成：
+  - `chapter3_17_firefly_107.wav`
+  - `chapter3_17_firefly_132.wav`
+  - `segment_0061_0000300400_0000300910.wav`
+    作为边界样例保留
+
+### 当前阻塞项
+- 这次切换只解决了
+  “默认 smoke
+  应该喂什么输入”
+  的问题，
+  没有假装已经解决
+  “当前实验 vocoder checkpoint
+  是否兼容 `contract_v2 / scaffold_v2`”
+  的问题。
+- 现状是：
+  `teacher_first_vc_demo`
+  已补齐
+  `contract_v2`
+  所需
+  `waveform`
+  传参，
+  但成功路径仍会在
+  `vocoder_checkpoint_load`
+  失败，
+  因为当前推荐 no-res checkpoint
+  仍对应旧 scaffold 维度，
+  尚未有
+  v2-compatible
+  重训产物。
+- 因此当前可成立的说法是：
+  - 默认 smoke 输入已经升级成同内容平行 source
+  - 上游 audit / contract / scaffold
+    可继续用这两条样例校准
+  - 真正 decoded success path
+    仍等待后续
+    v2-compatible
+    checkpoint
+
+### 更新后的下一步
+1. 继续用
+   `chapter3_17_firefly_107 / 132`
+   做 source acoustic state
+   校准主样例，
+   把
+   `segment_0061`
+   保留为边界补充。
+2. 继续坚持：
+   本项目不承接重去噪 /
+   重去混响，
+   只在清晰人声假设下推进
+   `contract_v2`
+   与重训前准备。
+3. 等
+   v2-compatible
+   no-res checkpoint
+   出来后，
+   再把这两条平行语料作为默认
+   end-to-end audible smoke
+   成功路径复验。
+
+### 文档补充
+- `docs/285_stage5_parallel_source_smoke_inputs_and_scope_boundary_report.md`
+  - 记录
+    本轮三项核对结果、
+    平行语料与 target
+    的匹配关系、
+    默认 smoke
+    入口切换位置、
+    以及当前
+    v2 checkpoint
+    阻塞
+## 2026-03-24 继续补充：`contract_v2` 已完成 full-split 导出、正式 no-res baseline 训练与产物落盘
+### 当前结论
+- 本轮已经不再停在
+  “重训前准备”；
+  `contract_v2`
+  的第一版正式 no-res baseline
+  已完整跑完，
+  并已产出：
+  - full-split dataset index
+  - checkpoint review
+  - checkpoint selection
+  - validation audio export
+  - teacher-first source-to-target
+    demo smoke
+- 但当前结论不能写成：
+  - `v2-core`
+    已优于旧主线
+- 因为本轮
+  `best_validation loss_total`
+  仍落后于旧
+  `gate72 deterministic`
+  baseline。
+
+### 一、训练前核验结果
+- 扩覆盖 source acoustic state
+  审计已完成：
+  - 共 `9`
+    条样例
+  - 当前 aggregate：
+    - `mean_voiced_ratio = 0.686053`
+    - `mean_f0_p90_hz_nonzero = 366.739877`
+    - `warning_case_count = 3`
+- warning
+  样例集中在：
+  - `chapter3_17_firefly_143`
+  - `archive_firefly_5`
+  - `chapter3_6_firefly_106`
+- 这说明：
+  `v2-core`
+  校准已足够支撑正式训练启动，
+  但高 `f0_p90`
+  边界仍未彻底清空。
+
+### 二、full-split `contract_v2` package 导出
+- 已完成正式 full-split
+  导出：
+  - output:
+    `reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_round1_1/`
+- 首次导出结果：
+  - `train = 592`
+  - `validation = 66`
+  - `total = 658`
+  - `duration_sec = 935.744984`
+- 当前 package
+  一致性已经显式成立：
+  - `training_package_version`
+    全部为
+    `offline_mvp_nores_vocoder_train_targets_v2`
+  - `source_scaffold_version`
+    全部为
+    `offline_teacher_vocoder_input_scaffold_v2`
+  - `periodic_input_dim = 36`
+  - `noise_input_dim = 36`
+  - train / validation
+    都是
+    `versions_consistent = true`
+    且
+    `dims_consistent = true`
+- 复用态再次确认可接受：
+  - `--skip-existing`
+    复跑仅
+    `3.840896s`
+
+### 三、正式 no-res baseline 训练
+- 已执行：
+  - dataset index:
+    `offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_round1_1`
+  - output:
+    `reports/runtime/offline_mvp_nores_vocoder_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_round1_1/`
+- 训练配置沿用旧主线：
+  - `cuda`
+  - `72 step`
+  - `packages_per_step = 4`
+  - `validation_interval = 12`
+  - `checkpoint_interval = 12`
+  - `seed = 20260318`
+  - `deterministic = true`
+  - `waveform = 0.5`
+  - `stft = 0.5`
+  - `rms_guard = 0.2`
+  - `activity_gate = 0.2`
+  - `use_predicted_activity_gate = true`
+  - `reconstruction_frame_gain_apply_mode = pre_overlap_add`
+- 训练总耗时：
+  - `duration_sec = 245.251286`
+- 当前 best checkpoint：
+  - `step72`
+  - `loss_total = 0.658881`
+- 与旧主线
+  `gate72 deterministic`
+  相比：
+  - 旧：
+    `0.564671`
+  - 新：
+    `0.658881`
+  - 新版暂时更差
+    `+0.094210`
+
+### 四、checkpoint 后处理与最小产物
+- checkpoint review
+  已完成：
+  - `reports/runtime/offline_mvp_nores_vocoder_checkpoint_review_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_round1_1/`
+- checkpoint selection
+  已完成：
+  - `reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_round1_1/`
+- selection
+  结果：
+  - `best_validation = step72`
+  - `best_rms = step48`
+  - `selected_stable_late_stop = null`
+- 当前没有
+  `stable_late_stop`
+  不是工具失败；
+  而是晚窗 checkpoint
+  虽然持续改进，
+  但都未同时满足当前
+  RMS deviation
+  硬阈值。
+- validation audio export
+  已落盘：
+  - `reports/runtime/offline_mvp_nores_vocoder_audio_export_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_bestval_validation6_round1_1/`
+
+### 五、teacher-first source-to-target smoke
+- 用新训练出的
+  `best_validation`
+  checkpoint
+  重新跑：
+  - `chapter3_17_firefly_107`
+    平行 source
+- 结果：
+  - pipeline status =
+    `succeeded`
+  - `decoded.wav`
+    已生成
+  - 默认 self-check
+    也已恢复到
+    `7/7 passed`
+- 但当前 decoded
+  仍被标为：
+  - `applicability_risk = high_risk`
+- 所以当前应写成：
+  - end-to-end path
+    已被新 checkpoint
+    真正打通
+  - 但用户线音质仍是诊断态，
+    不能宣称已经脱离
+    buzz / 高频风险
+
+### 当前判断
+1. `contract_v2`
+   已从设计与准备阶段推进到：
+   - full export
+   - full training
+   - checkpoint selection
+   - source-to-target smoke
+     都已成立
+2. 当前主阻塞已不再是：
+   - 训练还没跑
+   - v2 checkpoint
+     还没出
+3. 当前真正结论是：
+   - `v2-core`
+     第一轮正式重训已完成，
+     但数值上暂未胜过旧主线；
+     下一轮应进入
+     “为什么更差”
+     的诊断阶段，
+     而不是继续争论
+     能不能开训
+
+### 文档补充
+- `docs/286_stage5_contract_v2_full_training_and_output_report.md`
+  - 记录
+    本轮扩覆盖审计、
+    full-split v2
+    导出、
+    正式训练、
+    checkpoint selection、
+    音频导出、
+    以及 teacher-first
+    smoke 恢复结果
+## 2026-03-24 继续补充：`contract_v2` 首轮落后旧 baseline 的主要问题已收敛到消费层分布错位，并已完成最小热修
+- 本轮不再停留在
+  “v2 为什么更差”
+  的口头怀疑，
+  而是已经用旧 `v1` /
+  原始 `v2` /
+  修正后 `v2`
+  的同样本 package
+  对比，
+  把问题收敛到两个消费层实现点：
+  1. `f0_hz`
+     以原始 `Hz`
+     直接进入 Stage5
+     periodic branch，
+     使输入尺度严重偏离旧 recipe
+  2. `noise_gate_target = max(aper, event_presence_proxy)`
+     与
+     `unvoiced -> aper = 1`
+     叠加后，
+     把噪声门目标整体抬成近似常开
+
+### 当前阶段结论补充
+- 当前应明确区分：
+  - `contract_v2`
+    原始字段定义本身
+    没有被推翻
+  - 真正出问题的是：
+    Stage5 consumer-side
+    对这些字段的
+    直接消费方式
+- 本轮已落地的最小热修是：
+  - scaffold 侧
+    对
+    `f0_hz`
+    改用
+    `log-norm`
+    消费
+  - scaffold / package
+    对
+    `E`
+    改用
+    bounded
+    `log-RMS norm`
+    消费
+  - package 侧把
+    `noise_gate_target`
+    改成：
+    `max(aper * E_log_rms_norm, event_presence_proxy)`
+- 这条热修的目标是：
+  - 保留
+    `contract_v2`
+    原始落盘语义
+  - 只把
+    Stage5
+    的输入/目标分布
+    拉回可训练区间
+- 当前 8 条 validation
+  样例上的并排对比已显示：
+  - `old_v1`
+    `periodic_mean_abs = 0.426505`
+    `noise_gate_mean = 0.629192`
+    `energy_target_mean = 0.684512`
+  - 原始
+    `v2`
+    `periodic_mean_abs = 5.987897`
+    `noise_gate_mean = 0.797156`
+    `energy_target_mean = 0.889977`
+  - 修正后
+    `v2`
+    `periodic_mean_abs = 0.427962`
+    `noise_gate_mean = 0.633375`
+    `energy_target_mean = 0.688073`
+- 这说明当前更合理的结论是：
+  - `contract_v2`
+    首轮正式训练落后，
+    主要不是因为
+    package / checkpoint / smoke
+    没打通，
+    而是因为
+    Stage5 consumer-side
+    把新字段以不合适的尺度和门控方式接进去了
+
+### 更新后的下一步
+1. 以新的 consumer-side
+   热修代码，
+   重新导出一份新的
+   full-split
+   `contract_v2`
+   package
+2. 沿用同一套
+   `72-step`
+   no-res baseline
+   recipe
+   重训，
+   先判断这轮数值能否回到
+   旧 baseline
+   附近
+3. 若修正后
+   `v2`
+   仍明显落后，
+   再继续追：
+   - source acoustic state
+     字段质量
+   - `aper-v1`
+     口径
+   - waveform objective
+     与新字段的耦合
+
+### 文档补充
+- `docs/287_stage5_contract_v2_consumer_side_distribution_mismatch_hotfix_report.md`
+  - 记录
+    原始 `v2`
+    首轮落后旧 baseline
+    的数据级证据、
+    热修代码范围、
+    以及抽样重建验证结果
+## 2026-03-24 继续补充：`contractv2_normfix` 已完成 full-split 重导与正式重训，数值已回升并略超旧 baseline
+- 在上一条
+  consumer-side
+  热修完成后，
+  本轮已继续把它落到正式实验：
+  - full-split package
+    重导
+  - `72-step`
+    no-res baseline
+    重训
+  - checkpoint review /
+    selection /
+    validation audio export /
+    teacher-first smoke
+    再跑一轮
+
+### 当前阶段结论补充
+- 当前正式结论已更新为：
+  - consumer-side
+    热修
+    不只是把分布拉回“看起来合理”
+  - 它已经在正式训练里
+    把
+    `contract_v2`
+    从
+    首轮落后旧主线，
+    拉回到
+    略优于旧主线
+- 当前关键结果：
+  - 原始
+    `contract_v2`
+    `best_validation = 0.658881`
+  - 旧主线
+    `gate72 deterministic`
+    `best_validation = 0.564671`
+  - 本轮
+    `contractv2_normfix`
+    `best_validation = 0.554104`
+- 因此当前数值比较为：
+  - 相比原始
+    `contract_v2`
+    改善
+    `-0.104777`
+  - 相比旧主线
+    改善
+    `-0.010567`
+- checkpoint review
+  继续显示：
+  - `step12 -> 72`
+    总体
+    `66/66 improved`
+- 但当前仍不能写成：
+  - checkpoint 治理已全部转正
+- 因为 selection
+  结果仍是：
+  - `best_validation_checkpoint = step72`
+  - `best_rms_checkpoint = step12`
+  - `selected_stable_late_stop = null`
+- 当前 `step72`
+  没进 stable late stop
+  的直接原因是：
+  - `worsened_ratio = 24/66 = 0.363636`
+    高于当前
+    `0.2`
+    硬阈值
+  - 同时
+    `rms_ratio_deviation = 0.090012`
+    也高于当前
+    `0.03`
+    阈值
+
+### teacher-first smoke 当前状态
+- `parallel107`
+  source-to-target demo
+  已再次成功：
+  - `status = succeeded`
+  - `decoded_audio_exists = true`
+  - `decoded_audio_sec = 2.998639`
+- 当前 user-line
+  仍然只能写成：
+  - 风险显著下降
+  - 但仍是诊断态
+- 相比上一轮原始
+  `contract_v2`
+  demo：
+  - `high_band_energy_ratio`
+    从
+    `0.895873`
+    降到
+    `0.352201`
+  - `spectral_centroid`
+    从
+    `6187.811 Hz`
+    降到
+    `6004.709 Hz`
+- 这说明：
+  - 修正后的 Stage5
+    不再像原始
+    `contract_v2`
+    那样明显塌向
+    高频噪声态
+  - 但当前 heuristic
+    仍给：
+    `high_risk`
+
+### 更新后的下一步
+1. 围绕
+   `best_validation step72`
+   与旧主线
+   做 validation
+   试听对比，
+   先确认：
+   - 数值回升
+   - 是否真的对应
+     主观改善
+2. 同时保留当前治理判断：
+   - `step72`
+     是 best validation
+   - 但不是 stable late stop
+3. 若听感也确认改善，
+   下一步应转向：
+   - 为什么
+     user-line
+     仍停在
+     `high_risk`
+   - 重点继续追：
+     - decode / user-line
+       适配
+     - remaining
+       高频风险
+       是否仍属
+       out-of-distribution
+
+### 文档补充
+- `docs/288_stage5_contractv2_normfix_full_training_recovery_report.md`
+  - 记录
+    full-split 重导、
+    正式重训、
+    review /
+    selection /
+    validation export /
+    teacher-first smoke
+    的恢复结果
+## 2026-03-24 继续补充：最小 user-line 链路已进入 inference-only 适配探针阶段，当前最有价值候选不是继续扫 loss，而是围绕 `affine + event_probs refmean + gate_off`
+- 当前已经补完两类 probe：
+  - applicability probe
+  - decoder-behavior probe
+- 结论不是：
+  - 上游 scaffold
+    还严重离谱
+- 而是：
+  - `parallel107`
+    在 `contractv2_normfix`
+    下，
+    scaffold-level
+    偏移其实不大，
+    更像是 decoder
+    在把中等偏移
+    放大成 user-line
+    高频风险
+
+### 当前阶段结论补充
+- applicability probe
+  已显示：
+  - periodic
+    `mean_abs_z_median = 0.059605`
+  - noise
+    `mean_abs_z_median = 0.044703`
+  - 两边
+    `out_of_q01_q99_fraction_mean`
+    都约
+    `0.02`
+- 这说明当前
+  `contractv2_normfix`
+  下的 source scaffold
+  并不是
+  “一眼就完全 OOD”
+- 但 decoder-behavior probe
+  已显示：
+  - 默认最小链路
+    `abs_z_median = 6.129032`
+    `outside_frac = 0.952381`
+  - 明显是 decoder-side
+    行为偏离更严重
+- 本轮扫过的 inference-only
+  变体里，
+  当前最有价值候选是：
+  - `reference_affine_match`
+  - `event_probs=reference_mean`
+  - `gate_off`
+- 其 probe 结果：
+  - `abs_z_median = 1.302657`
+  - `outside_frac = 0.333333`
+  - 已明显优于：
+    - 默认链路
+    - 单纯 gate off
+    - 单纯 clip
+    - 单纯 affine
+- 当前已把这套适配
+  直接接进
+  `run-offline-mvp-teacher-first-vc-demo`
+  主命令的可选参数，
+  并跑出正式产物：
+  - `reports/runtime/offline_mvp_teacher_first_vc_demo_contractv2_normfix_parallel107_affine_events_refmean_gateoff_round1_1/`
+
+### 当前还不能过度下结论的点
+- 现在还不能写成：
+  - 这套链路已经被证明
+    “彻底不 buzz”
+- 因为当前还没有
+  正式人工听审结论
+- 但可以明确写成：
+  - 它是目前最接近
+    in-distribution decoder
+    行为的最小 user-line
+    实验候选
+
+### 关于当前 `high_risk` 的制度判断
+- 当前需要明确保留一个警告：
+  - 现有
+    `teacher_first_runtime_risk_v1`
+    的固定阈值，
+    很可能仍停留在
+    旧 user-line /
+    旧 checkpoint
+    阶段
+- 因为当前 decoder-behavior
+  probe 的 reference
+  健康分布本身就接近：
+  - `centroid ≈ 5859 Hz`
+  - `high_band_energy_ratio ≈ 0.345`
+- 这已经高于当前
+  固定阈值：
+  - `3200 Hz`
+  - `0.25`
+- 所以从现在开始，
+  不能再把：
+  - `heuristic = high_risk`
+  直接等同于：
+  - “当前仍一定是 buzz”
+
+### 更新后的下一步
+1. 围绕这两个最小链路
+   做直接听审对比：
+   - 默认
+     `contractv2_normfix`
+     `parallel107`
+   - `affine + event_probs refmean + gate_off`
+     候选
+2. 若候选听感
+   的确首次脱离 buzz，
+   就把它整理成：
+   - 实验线临时最小 user-line
+     适配口径
+3. 同时补一版新的
+   applicability/risk
+   判断制度，
+   不再只靠旧固定阈值
+
+### 文档补充
+- `docs/289_teacher_first_minimal_chain_inference_adaptation_probe_report.md`
+  - 记录
+    applicability /
+    decoder-behavior
+    probe 结果、
+    当前最优最小链路候选、
+    以及旧 risk heuristic
+    过时的证据
+## 2026-03-24 继续补充：audible compare bundle 已升级为可承载 inference-only variant，默认听审入口正式切到 `contractv2_normfix` 默认链路 vs `affine_events_refmean_gateoff`
+- 当前已补齐：
+  - compare bundle
+    variant 级参数支持：
+    - `checkpoint_selection_path`
+    - `selection_target`
+    - `use_predicted_activity_gate`
+    - `predicted_activity_gate_apply_mode`
+    - `normalization_strategy`
+    - `control_family_overrides`
+- 这次修正的直接原因是：
+  - 旧 compare bundle
+    默认只会切 checkpoint
+  - 且默认 variant
+    仍停在更早期
+    smoke baseline / candidate
+  - 已不能回答当前实验线
+    真正要听的对比：
+    - `contractv2_normfix`
+      默认链路
+    - `reference_affine_match + event_probs=reference_mean + gate_off`
+
+### 当前默认 compare 口径
+- 默认 variant 1：
+  - `normfix_default`
+  - checkpoint 解析自：
+    `reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_normfix_round1_1/nores_vocoder_checkpoint_selection.json`
+  - 参数：
+    - predicted gate `on`
+    - apply mode `post_ola_envelope`
+    - normalization `none`
+- 默认 variant 2：
+  - `affine_events_refmean_gateoff`
+  - 使用同一
+    `contractv2_normfix`
+    `best_validation`
+    checkpoint
+  - 参数：
+    - predicted gate `off`
+    - normalization
+      `reference_affine_match`
+    - control override
+      `event_probs=reference_mean`
+
+### 本轮 smoke 验证
+- 已执行：
+  - `powershell -ExecutionPolicy Bypass -File scripts/run_teacher_first_single_target_audible_compare_bundle.ps1 -OutputDir tmp/teacher_first_audible_compare_bundle_normfix_adaptation_smoke -Device cuda -SkipFullPassVerify`
+- 结果：
+  - `case_count = 2`
+  - `variant_count = 2`
+  - `variant_runs_succeeded = 4 / 4`
+  - `positive_controls_ready = 2 / 2`
+- 当前 listening 目录已落盘：
+  - `tmp/teacher_first_audible_compare_bundle_normfix_adaptation_smoke/listening/`
+- 当前默认主听样例仍是：
+  - `parallel_firefly_107`
+  - `parallel_firefly_132`
+
+### 当前 smoke 观察
+- `parallel107`
+  上：
+  - `normfix_default`
+    `centroid = 6002.995`
+    `high_band = 0.352024`
+  - `affine_events_refmean_gateoff`
+    `centroid = 5906.304`
+    `high_band = 0.346510`
+- `parallel132`
+  上：
+  - `normfix_default`
+    `centroid = 6010.095`
+    `high_band = 0.352541`
+  - `affine_events_refmean_gateoff`
+    `centroid = 5915.599`
+    `high_band = 0.346928`
+- 这说明：
+  - compare bundle
+    现在已经能把当前候选
+    并排导出
+  - 候选在两条默认样例上
+    都继续呈现
+    高频指标下降
+  - 但旧
+    `teacher_first_runtime_risk_v1`
+    仍把两条 variant
+    都判成
+    `high_risk`
+
+### 当前阶段结论补充
+- 这轮工作的价值不是：
+  - 证明候选已经正式转正
+- 而是：
+  - 把“当前最该听什么”
+    变成默认可执行入口
+- 从现在开始，
+  若继续这条实验线，
+  默认不该再听旧
+  smoke baseline / candidate，
+  而应直接听：
+  - `normfix_default`
+  - `affine_events_refmean_gateoff`
+
+### 更新后的下一步
+1. 直接基于：
+   - `tmp/teacher_first_audible_compare_bundle_normfix_adaptation_smoke/listening/`
+   做人工听审，
+   判断候选是否第一次明确脱离 buzz
+2. 若听感确认改善，
+   将该候选固化为：
+   - 当前实验线最小 user-line
+     适配口径
+3. 同时继续重做
+   user-line
+   risk 制度，
+   使其从旧固定阈值
+   转向 reference-aware
+   判断
+
+### 文档补充
+- `docs/290_teacher_first_audible_compare_inference_variant_bundle_report.md`
+  - 记录
+    compare bundle
+    variant 扩展、
+    新默认听审入口、
+    smoke 结果、
+    以及当前人工听审入口路径
+## 2026-03-24 继续补充：两条平行 source 不是坏文件，而是“有效语音极小音量 + 前后静段/瞬态”问题；现已完成裁切与归一化修复并重跑 smoke
+- 用户用外部音频软件复核后，
+  当前正式更正：
+  - `chapter3_17_firefly_107.wav`
+  - `chapter3_17_firefly_132.wav`
+  不是“整段全静音损坏文件”
+- 真正问题是：
+  - 整体电平极低，
+    在普通试听下近似静音
+  - 开头结尾还混有
+    前后静段或瞬态，
+    会误导人工判断
+
+### 本轮资产修复
+- 已对两条音频就地修复，
+  并保留原始备份：
+  - 备份目录：
+    `tmp/parallel_source_repair_backup_20260324_104026/`
+- 修复策略：
+  - 依据持续能量段
+    自动裁切前后静段/瞬态
+  - 再做峰值归一化
+    到约
+    `0.89`
+  - 额外加很短淡入淡出，
+    防止新边界点击
+
+### 修复结果
+- `chapter3_17_firefly_107.wav`
+  - 原始：
+    `rms = 0.00037839`
+    `duration = 3.881224s`
+  - 修复后：
+    `trim = 0.600s -> 2.990s`
+    `duration = 2.390000s`
+    `rms = 0.17538661`
+    `peak = 0.889984`
+- `chapter3_17_firefly_132.wav`
+  - 原始：
+    `rms = 0.00030798`
+    `duration = 3.518730s`
+  - 修复后：
+    `trim = 0.750s -> 3.150s`
+    `duration = 2.400000s`
+    `rms = 0.15504410`
+    `peak = 0.889984`
+
+### 修复后 smoke
+- 已执行：
+  - `powershell -ExecutionPolicy Bypass -File scripts/run_teacher_first_single_target_audible_smoke_bundle.ps1 -OutputDir tmp/teacher_first_audible_smoke_bundle_repaired_parallel_sources -Device cuda -SkipFullPassVerify`
+- 结果：
+  - `case_count = 2`
+  - `pipeline_succeeded = 2 / 2`
+  - `positive_controls_ready = 2 / 2`
+  - `decoded_present = 2 / 2`
+- 当前试听目录：
+  - `tmp/teacher_first_audible_smoke_bundle_repaired_parallel_sources/listening/`
+
+### 当前 smoke 观察
+- 修复后两条输入都已正常穿过主链，
+  decoded RMS
+  也回到正常可听量级：
+  - `parallel107 decoded_rms = 0.122387`
+  - `parallel132 decoded_rms = 0.112753`
+- 当前 heuristic
+  仍给出：
+  - `decoded_high_risk_count = 2`
+  - `centroid ≈ 5842~5848`
+  - `high_band ≈ 0.3426~0.3431`
+- 但这次必须明确补一句大白话：
+  - 之前“近似静音输入下 decoded 仍有高频 buzz”
+    只能说明：
+    系统在极端低能量输入上
+    仍可能产生 buzz
+  - 不能单独推出：
+    正常输入也一定异常
+
+### 更新后的下一步
+1. 后续所有默认
+   main-listening
+   smoke / compare
+   继续沿用这两条修复后的平行 source
+2. 解释 user-line
+   buzz 时，
+   不再把
+   “近静音输入下仍有 buzz”
+   当作对正常输入的直接证据
+3. 若继续听审，
+   优先基于：
+   - `tmp/teacher_first_audible_smoke_bundle_repaired_parallel_sources/listening/`
+   - 以及当前
+     compare bundle
+     入口
+
+### 文档补充
+- `docs/291_parallel_source_level_repair_and_smoke_rerun_report.md`
+  - 记录
+    本轮平行 source
+    修复前后统计、
+    备份路径、
+    以及 smoke
+    复跑结果

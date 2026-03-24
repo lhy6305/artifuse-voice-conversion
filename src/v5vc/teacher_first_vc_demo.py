@@ -51,10 +51,10 @@ DEFAULT_CALIBRATION_ASSET_PATH = Path(
     "data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
 )
 DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH = Path(
-    "reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_rmsguard02_activitygate02_gate72_deterministic_lowactivity4way_validation12_waveformrms_round1_1/nores_vocoder_checkpoint_selection.json"
+    "reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_normfix_round1_1/nores_vocoder_checkpoint_selection.json"
 )
 DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH = Path(
-    "data_prep/round1/source_segments/segments/segment_0001_0000020110_0000021640.wav"
+    "data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav"
 )
 DEFAULT_AUDIBLE_SMOKE_TARGET_REFERENCE_MAX_AUDIO_SEC = 3.0
 DEFAULT_AUDIBLE_COMPARE_BASELINE_SUMMARY_JSON_PATH = Path(
@@ -62,6 +62,9 @@ DEFAULT_AUDIBLE_COMPARE_BASELINE_SUMMARY_JSON_PATH = Path(
 )
 DEFAULT_AUDIBLE_COMPARE_CANDIDATE_SUMMARY_JSON_PATH = Path(
     "reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_active_template_delta_smoke_round1_2/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json"
+)
+DEFAULT_AUDIBLE_COMPARE_ACTIVE_CHECKPOINT_SELECTION_PATH = Path(
+    "reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_normfix_round1_1/nores_vocoder_checkpoint_selection.json"
 )
 DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION = "teacher_first_runtime_risk_v1"
 HIGH_RISK_SPECTRAL_CENTROID_HZ = 3200.0
@@ -76,6 +79,17 @@ DECODER_PROBE_CONTROL_FAMILY_ALIASES = {
     "event_probs": "event_probs",
     "event_probs_family": "event_probs",
     "events": "event_probs",
+    "f0": "f0_hz_log_norm",
+    "f0_hz": "f0_hz_log_norm",
+    "f0_hz_log_norm": "f0_hz_log_norm",
+    "vuv": "vuv",
+    "aper": "aper",
+    "energy_control": "E_log_rms_norm",
+    "energy_log_rms_norm": "E_log_rms_norm",
+    "e_log_rms_norm": "E_log_rms_norm",
+    "e": "E_log_rms_norm",
+    "conditioning_family": "conditioning_family",
+    "acoustic_state_family": "acoustic_state_family",
     "proxy_family": "proxy_family",
     "proxies": "proxy_family",
     "all_proxies": "proxy_family",
@@ -97,6 +111,26 @@ DECODER_PROBE_CONTROL_OVERRIDE_MODE_ALIASES = {
 DECODER_PROBE_CONTROL_FAMILY_TARGETS = {
     "z_art": (("periodic", "z_art"),),
     "event_probs": (("noise", "event_probs"),),
+    "f0_hz_log_norm": (("periodic", "f0_hz_log_norm"),),
+    "vuv": (("periodic", "vuv"), ("noise", "vuv")),
+    "aper": (("noise", "aper"),),
+    "E_log_rms_norm": (("periodic", "E_log_rms_norm"), ("noise", "E_log_rms_norm")),
+    "conditioning_family": (
+        ("periodic", "alpha"),
+        ("periodic", "s_spk_target"),
+        ("periodic", "s_geom_target"),
+        ("noise", "alpha"),
+        ("noise", "s_spk_target"),
+        ("noise", "s_geom_target"),
+    ),
+    "acoustic_state_family": (
+        ("periodic", "f0_hz_log_norm"),
+        ("periodic", "vuv"),
+        ("periodic", "E_log_rms_norm"),
+        ("noise", "aper"),
+        ("noise", "vuv"),
+        ("noise", "E_log_rms_norm"),
+    ),
     "voiced_proxy": (("periodic", "voiced_proxy"),),
     "energy_proxy": (("periodic", "energy_proxy"), ("noise", "energy_proxy")),
     "periodic_energy_proxy": (("periodic", "energy_proxy"),),
@@ -352,12 +386,18 @@ def run_offline_mvp_teacher_first_vc_demo(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    reference_package_paths: list[Path] | None = None,
+    reference_package_limit: int = 32,
+    normalization_strategy: str = "none",
+    control_family_overrides: list[str] | None = None,
 ) -> None:
     if float(predicted_activity_gate_floor) < 0.0 or float(predicted_activity_gate_floor) > 1.0:
         raise ValueError("predicted_activity_gate_floor must be within [0.0, 1.0].")
     if int(predicted_activity_gate_smoothing_frames) < 0:
         raise ValueError("predicted_activity_gate_smoothing_frames must be >= 0.")
     resolved_apply_mode = normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_mode)
+    resolved_normalization_strategy = normalize_decoder_probe_normalization_strategy(normalization_strategy)
+    resolved_control_family_overrides = parse_decoder_probe_control_family_overrides(control_family_overrides)
 
     output_dir = output_dir.resolve()
     reset_managed_directory(output_dir)
@@ -377,6 +417,14 @@ def run_offline_mvp_teacher_first_vc_demo(
     teacher_summary: dict[str, object] = {}
     conditioning_summary: dict[str, object] = {}
     selection_summary: dict[str, object] | None = None
+    normalization_summary: dict[str, object] = {
+        "strategy": resolved_normalization_strategy,
+        "transformations": [],
+        "control_family_overrides": serialize_decoder_probe_control_family_overrides(
+            resolved_control_family_overrides
+        ),
+        "reference_package_count": 0,
+    }
     resolved_vocoder_checkpoint_path: Path | None = None
     resolved_conditioning: dict[str, object] | None = None
     checkpoint_payload: dict[str, object] | None = None
@@ -452,6 +500,22 @@ def run_offline_mvp_teacher_first_vc_demo(
         scaffold_payload = torch.load(scaffold_tensor_path, map_location="cpu", weights_only=False)
         if not isinstance(scaffold_payload, dict):
             raise TypeError(f"Unsupported scaffold payload type: {type(scaffold_payload)!r}")
+        if resolved_normalization_strategy != "none" or resolved_control_family_overrides:
+            resolved_reference_packages = resolve_reference_package_paths(
+                reference_package_paths=list(reference_package_paths or []),
+                reference_package_limit=int(reference_package_limit),
+            )
+            reference_feature_summary = build_reference_distribution_summary(resolved_reference_packages)
+            scaffold_payload, normalization_summary = normalize_scaffold_payload_for_decoder_probe(
+                scaffold_payload=scaffold_payload,
+                reference_feature_summary=reference_feature_summary,
+                normalization_strategy=resolved_normalization_strategy,
+                control_family_overrides=resolved_control_family_overrides,
+            )
+            normalization_summary = {
+                **normalization_summary,
+                "reference_package_count": len(resolved_reference_packages),
+            }
 
         set_stage(stage_state, "vocoder_checkpoint_load")
         model = build_vocoder_model_from_checkpoint(
@@ -524,6 +588,7 @@ def run_offline_mvp_teacher_first_vc_demo(
             predicted_activity_gate_floor=predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=resolved_apply_mode,
+            normalization_summary=normalization_summary,
             contract_tensor_path=contract_tensor_path if bool(save_intermediates) else None,
             scaffold_tensor_path=scaffold_tensor_path if bool(save_intermediates) else None,
             contract_runtime=contract_runtime,
@@ -565,6 +630,7 @@ def run_offline_mvp_teacher_first_vc_demo(
             predicted_activity_gate_floor=predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=resolved_apply_mode,
+            normalization_summary=normalization_summary,
             contract_tensor_path=contract_tensor_path if contract_tensor_path.exists() else None,
             scaffold_tensor_path=scaffold_tensor_path if scaffold_tensor_path.exists() else None,
             contract_runtime=contract_runtime,
@@ -821,6 +887,7 @@ def export_teacher_contract_with_stage_tracking(
     contract_payload = build_contract_payload(
         input_audio_path=input_audio_path,
         resolved_source=resolved_source,
+        waveform=waveform,
         sample_rate=sample_rate,
         frame_length=frame_length,
         hop_length=hop_length,
@@ -833,6 +900,7 @@ def export_teacher_contract_with_stage_tracking(
     tensor_payload = build_tensor_payload(
         input_audio_path=input_audio_path,
         resolved_source=resolved_source,
+        waveform=waveform,
         sample_rate=sample_rate,
         frame_length=frame_length,
         hop_length=hop_length,
@@ -901,6 +969,7 @@ def build_summary_payload(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    normalization_summary: dict[str, object],
     contract_tensor_path: Path | None,
     scaffold_tensor_path: Path | None,
     contract_runtime: dict[str, object],
@@ -939,6 +1008,12 @@ def build_summary_payload(
     if risk_status in {"high_risk", "elevated_risk"}:
         notes.append(
             "applicability_risk flags that decoded spectral behavior may sit outside the currently known healthy Stage5 user-line range; treat the output as diagnostic rather than product-grade audio."
+        )
+    if str(normalization_summary.get("strategy", "none")) != "none" or list(
+        normalization_summary.get("control_family_overrides", [])
+    ):
+        notes.append(
+            "normalization is an inference-only experimental adaptation applied after scaffold export; it does not modify the saved teacher contract or Stage5 checkpoint."
         )
     if failure is not None:
         notes.append(
@@ -984,6 +1059,7 @@ def build_summary_payload(
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": predicted_activity_gate_apply_mode,
+            "normalization": normalization_summary,
             "decoded_spectral_summary": decoded_spectral_summary,
         },
         "applicability_risk": applicability_risk,
@@ -2431,10 +2507,7 @@ def build_teacher_first_vc_audible_compare_bundle(
 
         variant_results: list[dict[str, object]] = []
         for variant_index, vocoder_spec in enumerate(resolved_vocoder_specs, start=1):
-            variant_id = build_compare_variant_id(
-                label=vocoder_spec["label"],
-                index=variant_index,
-            )
+            variant_id = str(vocoder_spec["variant_id"])
             case_output_dir = runs_dir / case_id / variant_id
             exception: Exception | None = None
             try:
@@ -2444,19 +2517,27 @@ def build_teacher_first_vc_audible_compare_bundle(
                     teacher_route_handoff_path=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
                     teacher_checkpoint_path=None,
                     calibration_asset_path=resolved_calibration_asset_path,
-                    vocoder_checkpoint_path=Path(str(vocoder_spec["checkpoint_path"])),
-                    vocoder_checkpoint_selection_path=None,
-                    selection_target="best_validation",
+                    vocoder_checkpoint_path=None
+                    if vocoder_spec.get("checkpoint_selection_path")
+                    else Path(str(vocoder_spec["checkpoint_path"])),
+                    vocoder_checkpoint_selection_path=None
+                    if not vocoder_spec.get("checkpoint_selection_path")
+                    else Path(str(vocoder_spec["checkpoint_selection_path"])),
+                    selection_target=str(vocoder_spec.get("selection_target") or "best_validation"),
                     chunk_samples=None,
                     chunk_ms=chunk_ms,
                     device=device,
                     max_audio_sec=coerce_optional_float(spec.get("max_audio_sec")),
                     verify_against_full_pass=bool(verify_against_full_pass),
                     save_intermediates=bool(save_intermediates),
-                    use_predicted_activity_gate=True,
+                    use_predicted_activity_gate=bool(vocoder_spec.get("use_predicted_activity_gate", True)),
                     predicted_activity_gate_floor=0.0,
                     predicted_activity_gate_smoothing_frames=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
-                    predicted_activity_gate_apply_mode="post_ola_envelope",
+                    predicted_activity_gate_apply_mode=str(
+                        vocoder_spec.get("predicted_activity_gate_apply_mode") or "post_ola_envelope"
+                    ),
+                    normalization_strategy=str(vocoder_spec.get("normalization_strategy") or "none"),
+                    control_family_overrides=list(vocoder_spec.get("control_family_overrides", [])),
                 )
             except Exception as exc:
                 exception = exc
@@ -2475,8 +2556,10 @@ def build_teacher_first_vc_audible_compare_bundle(
                     "variant_id": variant_id,
                     "label": vocoder_spec["label"],
                     "checkpoint_path": vocoder_spec["checkpoint_path"],
+                    "checkpoint_selection_path": vocoder_spec.get("checkpoint_selection_path"),
                     "checkpoint_source_summary_path": vocoder_spec.get("checkpoint_source_summary_path"),
                     "checkpoint_source_key": vocoder_spec.get("checkpoint_source_key"),
+                    "selection_target": vocoder_spec.get("selection_target"),
                     "status": summary.get("status"),
                     "summary_path": (case_output_dir / "teacher_first_vc_demo.json").as_posix(),
                     "decoded_audio_path": summary.get("decoded_audio_path"),
@@ -2485,6 +2568,15 @@ def build_teacher_first_vc_audible_compare_bundle(
                     "decoded_audio_sec": summary.get("decoded_audio_sec"),
                     "decoded_waveform_rms": summary.get("decoded_waveform_rms"),
                     "branch_label": dict(summary.get("vocoder", {})).get("branch_label"),
+                    "use_predicted_activity_gate": vocoder_spec.get("use_predicted_activity_gate"),
+                    "predicted_activity_gate_apply_mode": vocoder_spec.get(
+                        "predicted_activity_gate_apply_mode"
+                    ),
+                    "normalization_strategy": vocoder_spec.get("normalization_strategy"),
+                    "control_family_overrides": list(vocoder_spec.get("control_family_overrides", [])),
+                    "control_family_override_summary": list(
+                        vocoder_spec.get("control_family_override_summary", [])
+                    ),
                     "applicability_risk_status": applicability_risk.get("status"),
                     "applicability_risk_summary": applicability_risk.get("summary"),
                     "applicability_risk": applicability_risk,
@@ -2554,19 +2646,24 @@ def build_teacher_first_vc_audible_compare_bundle(
 def default_audible_compare_vocoder_specs() -> list[dict[str, object]]:
     return [
         {
-            "label": "baseline",
-            "checkpoint_source_summary_path": DEFAULT_AUDIBLE_COMPARE_BASELINE_SUMMARY_JSON_PATH.resolve().as_posix(),
-            "checkpoint_source_key": "best_checkpoint",
+            "label": "normfix_default",
+            "checkpoint_selection_path": DEFAULT_AUDIBLE_COMPARE_ACTIVE_CHECKPOINT_SELECTION_PATH.resolve().as_posix(),
+            "selection_target": "best_validation",
             "notes": [
-                "Default baseline variant resolved from the current dataset-level baseline smoke training summary.",
+                "Current experiment-line default user-line chain on the contractv2_normfix Stage5 checkpoint.",
+                "This keeps predicted activity gate enabled with post_ola_envelope and does not apply inference-only normalization.",
             ],
         },
         {
-            "label": "candidate",
-            "checkpoint_source_summary_path": DEFAULT_AUDIBLE_COMPARE_CANDIDATE_SUMMARY_JSON_PATH.resolve().as_posix(),
-            "checkpoint_source_key": "best_checkpoint",
+            "label": "affine_events_refmean_gateoff",
+            "checkpoint_selection_path": DEFAULT_AUDIBLE_COMPARE_ACTIVE_CHECKPOINT_SELECTION_PATH.resolve().as_posix(),
+            "selection_target": "best_validation",
+            "normalization_strategy": "reference_affine_match",
+            "control_family_overrides": ["event_probs=reference_mean"],
+            "use_predicted_activity_gate": False,
             "notes": [
-                "Default candidate variant resolved from the current active-template plus frame-delta smoke training summary.",
+                "Current best inference-only candidate from the 2026-03-24 decoder-behavior probe.",
+                "Uses reference_affine_match plus event_probs=reference_mean with the predicted activity gate disabled.",
             ],
         },
     ]
@@ -2599,33 +2696,83 @@ def resolve_audible_compare_vocoder_specs(
             else f"{variant_id_base}_{duplicate_count + 1:02d}"
         )
         checkpoint_path_value = row.get("checkpoint_path")
+        checkpoint_selection_path_value = row.get("checkpoint_selection_path")
         checkpoint_source_summary_path_value = row.get("checkpoint_source_summary_path")
         checkpoint_source_key = str(row.get("checkpoint_source_key") or "best_checkpoint").strip()
-        if checkpoint_path_value in {None, ""}:
+        selection_target = str(row.get("selection_target") or "best_validation").strip()
+        if checkpoint_path_value not in {None, ""}:
+            checkpoint_path = Path(str(checkpoint_path_value)).resolve()
+            checkpoint_selection_path = (
+                None
+                if checkpoint_selection_path_value in {None, ""}
+                else Path(str(checkpoint_selection_path_value)).resolve()
+            )
+            checkpoint_source_summary_path = (
+                None
+                if checkpoint_source_summary_path_value in {None, ""}
+                else Path(str(checkpoint_source_summary_path_value)).resolve()
+            )
+        elif checkpoint_selection_path_value not in {None, ""}:
+            checkpoint_selection_path = Path(str(checkpoint_selection_path_value)).resolve()
+            checkpoint_path, _ = resolve_checkpoint_path_from_inputs(
+                checkpoint_path=None,
+                checkpoint_selection_path=checkpoint_selection_path,
+                selection_target=selection_target,
+            )
+            checkpoint_source_summary_path = (
+                None
+                if checkpoint_source_summary_path_value in {None, ""}
+                else Path(str(checkpoint_source_summary_path_value)).resolve()
+            )
+        else:
             if checkpoint_source_summary_path_value in {None, ""}:
                 raise ValueError(
-                    "Each audible compare vocoder spec row must include checkpoint_path or checkpoint_source_summary_path."
+                    "Each audible compare vocoder spec row must include checkpoint_path, checkpoint_selection_path, or checkpoint_source_summary_path."
                 )
             checkpoint_path = resolve_checkpoint_path_from_training_summary(
                 summary_json_path=Path(str(checkpoint_source_summary_path_value)),
                 checkpoint_source_key=checkpoint_source_key,
             )
-            checkpoint_source_summary_path = safe_resolve_path(Path(str(checkpoint_source_summary_path_value)))
+            checkpoint_source_summary_path = Path(str(checkpoint_source_summary_path_value)).resolve()
+            checkpoint_selection_path = None
+        use_predicted_activity_gate = bool(row.get("use_predicted_activity_gate", True))
+        predicted_activity_gate_apply_mode = normalize_predicted_activity_gate_apply_mode(
+            str(row.get("predicted_activity_gate_apply_mode") or "post_ola_envelope")
+        )
+        normalization_strategy = normalize_decoder_probe_normalization_strategy(
+            str(row.get("normalization_strategy") or "none")
+        )
+        raw_control_family_overrides = row.get("control_family_overrides")
+        if raw_control_family_overrides is None or raw_control_family_overrides == "":
+            control_family_overrides = []
+        elif isinstance(raw_control_family_overrides, list):
+            control_family_overrides = [str(item) for item in raw_control_family_overrides if str(item).strip()]
         else:
-            checkpoint_path = safe_resolve_path(Path(str(checkpoint_path_value)))
-            checkpoint_source_summary_path = (
-                None
-                if checkpoint_source_summary_path_value in {None, ""}
-                else safe_resolve_path(Path(str(checkpoint_source_summary_path_value)))
-            )
+            control_family_overrides = [str(raw_control_family_overrides)]
+        parsed_control_family_overrides = parse_decoder_probe_control_family_overrides(
+            control_family_overrides
+        )
         resolved_specs.append(
             {
                 "variant_index": index,
                 "variant_id": variant_id,
                 "label": label,
                 "checkpoint_path": checkpoint_path.as_posix(),
-                "checkpoint_source_summary_path": checkpoint_source_summary_path,
+                "checkpoint_selection_path": None
+                if checkpoint_selection_path is None
+                else checkpoint_selection_path.as_posix(),
+                "checkpoint_source_summary_path": None
+                if checkpoint_source_summary_path is None
+                else checkpoint_source_summary_path.as_posix(),
                 "checkpoint_source_key": checkpoint_source_key,
+                "selection_target": selection_target,
+                "use_predicted_activity_gate": use_predicted_activity_gate,
+                "predicted_activity_gate_apply_mode": predicted_activity_gate_apply_mode,
+                "normalization_strategy": normalization_strategy,
+                "control_family_overrides": control_family_overrides,
+                "control_family_override_summary": serialize_decoder_probe_control_family_overrides(
+                    parsed_control_family_overrides
+                ),
                 "notes": list(row.get("notes", [])) if isinstance(row.get("notes"), list) else [],
             }
         )
@@ -2710,8 +2857,17 @@ def build_audible_compare_bundle_summary(
                     "variant_id": variant_id,
                     "label": variant.get("label"),
                     "checkpoint_path": variant.get("checkpoint_path"),
+                    "checkpoint_selection_path": variant.get("checkpoint_selection_path"),
                     "checkpoint_source_summary_path": variant.get("checkpoint_source_summary_path"),
                     "checkpoint_source_key": variant.get("checkpoint_source_key"),
+                    "selection_target": variant.get("selection_target"),
+                    "use_predicted_activity_gate": variant.get("use_predicted_activity_gate"),
+                    "predicted_activity_gate_apply_mode": variant.get("predicted_activity_gate_apply_mode"),
+                    "normalization_strategy": variant.get("normalization_strategy"),
+                    "control_family_overrides": list(variant.get("control_family_overrides", [])),
+                    "control_family_override_summary": list(
+                        variant.get("control_family_override_summary", [])
+                    ),
                     "case_count": 0,
                     "succeeded_count": 0,
                     "decoded_present_count": 0,
@@ -2836,8 +2992,15 @@ def build_audible_compare_bundle_markdown(summary: dict[str, object]) -> str:
                 f"- variant_id: {variant.get('variant_id')}",
                 f"  label: {variant.get('label')}",
                 f"  checkpoint_path: {variant.get('checkpoint_path')}",
+                f"  checkpoint_selection_path: {variant.get('checkpoint_selection_path')}",
                 f"  checkpoint_source_summary_path: {variant.get('checkpoint_source_summary_path')}",
                 f"  checkpoint_source_key: {variant.get('checkpoint_source_key')}",
+                f"  selection_target: {variant.get('selection_target')}",
+                f"  use_predicted_activity_gate: {variant.get('use_predicted_activity_gate')}",
+                f"  predicted_activity_gate_apply_mode: {variant.get('predicted_activity_gate_apply_mode')}",
+                f"  normalization_strategy: {variant.get('normalization_strategy')}",
+                f"  control_family_overrides: {json.dumps(variant.get('control_family_overrides'), ensure_ascii=False)}",
+                f"  control_family_override_summary: {json.dumps(variant.get('control_family_override_summary'), ensure_ascii=False)}",
                 f"  case_count: {variant.get('case_count')}",
                 f"  succeeded_count: {variant.get('succeeded_count')}",
                 f"  decoded_present_count: {variant.get('decoded_present_count')}",
@@ -2878,6 +3041,13 @@ def build_audible_compare_bundle_markdown(summary: dict[str, object]) -> str:
                     f"  variant_decoded_waveform_rms: {variant.get('decoded_waveform_rms')}",
                     f"  variant_branch_label: {variant.get('branch_label')}",
                     f"  variant_checkpoint_path: {variant.get('checkpoint_path')}",
+                    f"  variant_checkpoint_selection_path: {variant.get('checkpoint_selection_path')}",
+                    f"  variant_selection_target: {variant.get('selection_target')}",
+                    f"  variant_use_predicted_activity_gate: {variant.get('use_predicted_activity_gate')}",
+                    f"  variant_predicted_activity_gate_apply_mode: {variant.get('predicted_activity_gate_apply_mode')}",
+                    f"  variant_normalization_strategy: {variant.get('normalization_strategy')}",
+                    f"  variant_control_family_overrides: {json.dumps(variant.get('control_family_overrides'), ensure_ascii=False)}",
+                    f"  variant_control_family_override_summary: {json.dumps(variant.get('control_family_override_summary'), ensure_ascii=False)}",
                     f"  variant_applicability_risk_status: {variant.get('applicability_risk_status')}",
                     f"  variant_applicability_risk_summary: {variant.get('applicability_risk_summary')}",
                     f"  variant_summary_path: {variant.get('summary_path')}",
@@ -2998,7 +3168,7 @@ def resolve_reference_package_paths(
     if reference_package_paths:
         return [path.resolve() for path in reference_package_paths]
     default_root = Path(
-        "reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_round1_1/packages/train"
+        "reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/packages/train"
     )
     candidates = sorted(default_root.rglob("offline_mvp_nores_vocoder_train_targets.pt"))
     if reference_package_limit > 0:
@@ -3658,48 +3828,66 @@ def match_feature_distribution_to_reference(
 def build_branch_feature_layout(scaffold_payload: dict[str, object]) -> dict[str, dict[str, tuple[int, int]]]:
     available_controls = dict(scaffold_payload["available_controls"])
     conditioning = dict(scaffold_payload["conditioning"])
+    branch_scaffold = dict(scaffold_payload["branch_scaffold"])
 
-    z_art_dim = int(available_controls["z_art"].shape[-1])
-    event_dim = int(available_controls["event_probs"].shape[-1])
-    energy_proxy_dim = int(available_controls["energy_proxy"].shape[-1])
-    voiced_proxy_dim = int(available_controls["voiced_proxy"].shape[-1])
-    aperiodicity_proxy_dim = int(available_controls["aperiodicity_proxy"].shape[-1])
-    event_presence_proxy_dim = int(available_controls["event_presence_proxy"].shape[-1])
-    energy_change_proxy_dim = int(available_controls["energy_change_proxy"].shape[-1])
-    speaker_dim = int(conditioning["s_spk_target"].shape[-1])
-    geom_dim = int(conditioning["s_geom_target"].shape[-1])
-    alpha_dim = int(conditioning["alpha"].numel())
-
-    periodic_start = 0
-    periodic = {}
-    for semantic, dim in (
-        ("z_art", z_art_dim),
-        ("voiced_proxy", voiced_proxy_dim),
-        ("energy_proxy", energy_proxy_dim),
-        ("alpha", alpha_dim),
-        ("s_spk_target", speaker_dim),
-        ("s_geom_target", geom_dim),
-    ):
-        periodic[semantic] = (periodic_start, periodic_start + dim)
-        periodic_start += dim
-
-    noise_start = 0
-    noise = {}
-    for semantic, dim in (
-        ("event_probs", event_dim),
-        ("aperiodicity_proxy", aperiodicity_proxy_dim),
-        ("event_presence_proxy", event_presence_proxy_dim),
-        ("energy_change_proxy", energy_change_proxy_dim),
-        ("energy_proxy", energy_proxy_dim),
-        ("alpha", alpha_dim),
-        ("s_spk_target", speaker_dim),
-    ):
-        noise[semantic] = (noise_start, noise_start + dim)
-        noise_start += dim
+    periodic = build_branch_feature_semantic_layout(
+        feature_semantics=list(branch_scaffold.get("periodic_feature_semantics", [])),
+        available_controls=available_controls,
+        conditioning=conditioning,
+    )
+    noise = build_branch_feature_semantic_layout(
+        feature_semantics=list(branch_scaffold.get("noise_feature_semantics", [])),
+        available_controls=available_controls,
+        conditioning=conditioning,
+    )
     return {
         "periodic": periodic,
         "noise": noise,
     }
+
+
+def build_branch_feature_semantic_layout(
+    *,
+    feature_semantics: list[object],
+    available_controls: dict[str, object],
+    conditioning: dict[str, object],
+) -> dict[str, tuple[int, int]]:
+    layout: dict[str, tuple[int, int]] = {}
+    start = 0
+    for raw_semantic in feature_semantics:
+        semantic = str(raw_semantic)
+        dim = resolve_branch_semantic_dim(
+            semantic=semantic,
+            available_controls=available_controls,
+            conditioning=conditioning,
+        )
+        layout[semantic] = (start, start + dim)
+        start += dim
+    return layout
+
+
+def resolve_branch_semantic_dim(
+    *,
+    semantic: str,
+    available_controls: dict[str, object],
+    conditioning: dict[str, object],
+) -> int:
+    if semantic == "alpha":
+        value = conditioning.get("alpha")
+        if isinstance(value, torch.Tensor):
+            return int(value.numel())
+        return 1
+    if semantic in {"s_spk_target", "s_geom_target"}:
+        value = conditioning.get(semantic)
+        if not isinstance(value, torch.Tensor):
+            raise KeyError(f"Conditioning semantic is missing for decoder probe layout: {semantic}")
+        return int(value.shape[-1])
+    if semantic in available_controls:
+        value = available_controls[semantic]
+        if not isinstance(value, torch.Tensor):
+            raise KeyError(f"Available control semantic is not tensor-valued for decoder probe layout: {semantic}")
+        return int(value.shape[-1])
+    raise KeyError(f"Unsupported branch semantic for decoder probe layout: {semantic}")
 
 
 def build_decoder_behavior_case_summary(
