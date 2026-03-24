@@ -45,11 +45,14 @@ def export_offline_mvp_nores_vocoder_audio(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    decoder_branch_mean_mix_alpha: float = 0.0,
 ) -> None:
     if float(predicted_activity_gate_floor) < 0.0 or float(predicted_activity_gate_floor) > 1.0:
         raise ValueError("predicted_activity_gate_floor must be within [0.0, 1.0].")
     if int(predicted_activity_gate_smoothing_frames) < 0:
         raise ValueError("predicted_activity_gate_smoothing_frames must be >= 0.")
+    if float(decoder_branch_mean_mix_alpha) < 0.0 or float(decoder_branch_mean_mix_alpha) > 1.0:
+        raise ValueError("decoder_branch_mean_mix_alpha must be within [0.0, 1.0].")
     output_dir = output_dir.resolve()
     reset_managed_directory(output_dir)
     resolved_listening_audio_source = normalize_listening_audio_source(listening_audio_source)
@@ -92,6 +95,7 @@ def export_offline_mvp_nores_vocoder_audio(
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
         predicted_activity_gate_apply_mode=resolved_predicted_activity_gate_apply_mode,
+        decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
     )
 
     exported_records: list[dict[str, object]] = []
@@ -104,6 +108,7 @@ def export_offline_mvp_nores_vocoder_audio(
             outputs = model(
                 periodic_branch_features=batch["periodic_branch_features"],
                 noise_branch_features=batch["noise_branch_features"],
+                decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
             )
             _, loss_metrics = compute_nores_vocoder_losses(
                 outputs=outputs,
@@ -221,6 +226,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_predicted_activity_gate_apply_mode,
+            "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
         },
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "checkpoint_selection_path": None if selection_summary is None else checkpoint_selection_path.resolve().as_posix(),
@@ -400,6 +406,7 @@ def build_model_from_checkpoint(
     hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
     harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
     noise_bins = int(state_dict["noise_envelope.weight"].shape[0])
+    waveform_decoder_mode = infer_waveform_decoder_mode_from_state_dict(state_dict)
     model = NoResidualSourceFilterVocoderScaffold(
         periodic_input_dim=int(first_batch["periodic_branch_features"].shape[-1]),
         noise_input_dim=int(first_batch["noise_branch_features"].shape[-1]),
@@ -407,9 +414,26 @@ def build_model_from_checkpoint(
         harmonic_bins=harmonic_bins,
         noise_bins=noise_bins,
         frame_length=int(first_runtime["frame_length"]),
+        waveform_decoder_mode=waveform_decoder_mode,
     )
     model.load_state_dict(state_dict)
     return model
+
+
+def infer_waveform_decoder_mode_from_state_dict(state_dict: dict[str, torch.Tensor]) -> str:
+    if "periodic_temporal_gru.weight_ih_l0" in state_dict:
+        return "periodic_plus_noise_residual_shape_recurrent"
+    if "periodic_temporal_refiner.0.weight" in state_dict:
+        return "periodic_plus_noise_residual_shape_temporal"
+    if "noise_residual_gain_head.0.weight" in state_dict:
+        return "periodic_plus_noise_factorized_residual"
+    if "noise_residual_shape_head.0.weight" in state_dict:
+        return "periodic_plus_noise_residual_shape"
+    if "noise_residual_decoder.0.weight" in state_dict:
+        return "periodic_plus_noise_residual"
+    if "periodic_waveform_decoder.0.weight" in state_dict:
+        return "dual_branch_mix"
+    return "fused_single"
 
 
 def reset_managed_directory(path: Path) -> None:
@@ -643,12 +667,14 @@ def infer_branch_label(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    decoder_branch_mean_mix_alpha: float,
 ) -> str:
     suffix = describe_waveform_decode_variant(
         use_predicted_activity_gate=bool(use_predicted_activity_gate),
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
         predicted_activity_gate_apply_mode=str(predicted_activity_gate_apply_mode),
+        decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
     )
     if selection_summary is not None:
         selected_step = selection_summary.get("step")
@@ -662,10 +688,15 @@ def describe_waveform_decode_variant(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    decoder_branch_mean_mix_alpha: float,
 ) -> str:
-    if not bool(use_predicted_activity_gate):
-        return "__decode_gate_off"
     parts: list[str] = []
+    if float(decoder_branch_mean_mix_alpha) > 1.0e-9:
+        mix_tag = int(round(float(decoder_branch_mean_mix_alpha) * 1000.0))
+        parts.append(f"mix{mix_tag:03d}")
+    if not bool(use_predicted_activity_gate):
+        parts.append("gateoff")
+        return "__decode_" + "_".join(parts)
     if int(predicted_activity_gate_smoothing_frames) > 0:
         parts.append(f"smooth{int(predicted_activity_gate_smoothing_frames)}")
     if float(predicted_activity_gate_floor) > 1.0e-9:
@@ -676,7 +707,7 @@ def describe_waveform_decode_variant(
         parts.append("postenv")
     if not parts:
         return ""
-    return "__decode_gate_" + "_".join(parts)
+    return "__decode_" + "_".join(parts)
 
 
 def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, object]:

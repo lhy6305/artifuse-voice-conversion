@@ -18369,3 +18369,746 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
      `fusion`
    - 但还没有拿到
      足够有力的武器
+## 2026-03-24 继续补充：`active_template=0.25 + frame_adjacent_cosine=0.25` 量化候选能小幅压低 adjacent cosine，但会明显拖坏共享重建指标
+- 已完成有效实验：
+  - `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_contractv2_normfix_active_template025_adjcos025_smoke_round1_1/`
+- 文档：
+  - `docs/298_stage5_contractv2_normfix_active_template025_adjcos025_quant_only_candidate_report.md`
+
+### 当前关键结果
+1. 本轮 candidate
+   summary
+   已确认透传：
+   - `active_template = 0.25`
+   - `frame_adjacent_cosine = 0.25`
+2. 以当前 validation helper
+   同口径复算 step4：
+   - `active_template=0.25`
+     的
+     `loss_frame_adjacent_cosine`
+     为
+     `329.727118`
+   - `active_template=0.25 + adjcos=0.25`
+     为
+     `321.258283`
+   - 相对降幅约
+     `-2.57%`
+3. 但共享重建指标同步变差：
+   - `loss_waveform`
+     `0.130195 -> 0.152367`
+   - `loss_stft`
+     `0.659763 -> 0.801631`
+   - `loss_rms_guard`
+     `0.106174 -> 0.197122`
+   - `decoded_to_target_rms_ratio`
+     `0.990619 -> 1.225243`
+
+### 当前阶段判断更新
+1. `adjacent cosine`
+   这条量化约束
+   不是完全无效，
+   它确实能推低
+   当前过高的
+   stationarity
+2. 但当前权重和进入方式下，
+   它更像是：
+   - 用明显更差的
+     `waveform / stft / rms`
+     去换
+     一个很有限的
+     adjacent-cosine
+     下降
+3. 因而当前不能把这条候选写成：
+   - 已拿到新的可晋级
+     quant-only
+     主线
+
+### 更新后的下一步
+1. 不建议把
+   `active_template=0.25 + frame_adjacent_cosine=0.25`
+   直接升级成长训
+2. 若继续使用
+   `adjacent cosine`
+   信号，
+   应优先重做：
+   - 进入方式
+   - gating 位置
+   - 或更局部的约束设计
+3. 当前主线仍应优先放在：
+   - `fusion / fused_hidden`
+     级反坍缩设计
+## 2026-03-24 继续补充：fusion-bypass 结构探针已确认 decoder 不是纯常模板器件，但直接喂 branch hidden 会把输出推到高频、过响、非语音区域
+- 已完成有效探针：
+  - `reports/runtime/stage5_waveform_decoder_structure_probe_contractv2_normfix_bypass_round1_1/`
+- 文档：
+  - `docs/299_stage5_contractv2_normfix_fusion_bypass_probe_report.md`
+
+### 当前关键结果
+1. baseline 仍维持原判断：
+   - `fused_hidden_template_cosine_mean = 0.991105`
+   - `decoded_frames_template_cosine_mean = 0.993590`
+   - 主坍缩不定位在
+     `waveform_decoder`
+     单点
+2. 但新 bypass 变体说明：
+   - `fused_hidden_from_periodic_hidden`
+     可把
+     `decoded_template`
+     从
+     `0.993590`
+     拉到
+     `0.588111`
+   - `fused_hidden_from_noise_hidden`
+     拉到
+     `0.700063`
+   - `fused_hidden_from_branch_mean`
+     拉到
+     `0.675008`
+3. 同时 bypass
+   也会把输出推到明显异常区：
+   - `decoded_spectral_centroid_hz`
+     从约
+     `5857`
+     抬到
+     `10264 ~ 10702`
+   - `decoded_to_aligned_rms_ratio`
+     从
+     `0.928302`
+     抬到
+     `1.888971 ~ 1.960894`
+
+### 当前阶段判断更新
+1. 这说明 decoder
+   并不是
+   “无论输入什么都只会输出固定 buzz”
+2. 更准确的判断是：
+   - decoder
+     有能力对更动态 hidden
+     作出响应
+   - 但当前它已被
+     collapsed fused manifold
+     充分驯化
+   - 所以直接把 branch hidden
+     硬喂进去，
+     不会自然变成 speech，
+     而会先掉进
+     高频、过响、非语音区
+
+### 更新后的下一步
+1. 当前最值得投资源的
+   最小训练实验，
+   不再是 decode-side
+   quant-only
+   小调参
+2. 应改为：
+   - 做一轮
+     `fusion / fused_hidden`
+     侧最小 smoke
+   - 让
+     `fused_hidden`
+     更接近 branch-side
+     动态结构
+   - 同时继续保留
+     `waveform / stft / rms_guard`
+     作为输出稳定锚点
+3. 当前不建议先做：
+   - decoder-only
+     大改
+   - 或继续磨
+     `active_template / adjacent cosine`
+     这类 decode-side
+     小 loss
+## 2026-03-24 继续补充：`fused_hidden_branch_mean=0.25` 最小 smoke 已完成，当前是第一条值得进入人工听审的 fusion-side 候选
+- 已完成有效实验：
+  - `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_contractv2_normfix_fusedhidden_branchmean025_smoke_round1_1/`
+- 文档：
+  - `docs/300_stage5_contractv2_normfix_fusedhidden_branchmean025_minimal_smoke_report.md`
+- 候选试听包：
+  - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_fusedhidden_branchmean025_smoke_round1_1/`
+
+### 当前关键结果
+1. step4 validation
+   相比 baseline：
+   - `loss_waveform`
+     `0.125092 -> 0.124456`
+   - `loss_stft`
+     `0.601828 -> 0.612116`
+   - `loss_rms_guard`
+     `0.155673 -> 0.152025`
+   - `loss_active_template`
+     `0.503176 -> 0.465209`
+   - `loss_fused_hidden_to_branch_mean_unit_rms_l1`
+     `1.143996 -> 0.862593`
+2. fixed 6 条 aggregate
+   也保持同方向：
+   - `loss_waveform`
+     `0.125503 -> 0.124739`
+   - `loss_stft`
+     `0.602313 -> 0.615690`
+   - `loss_rms_guard`
+     `0.107393 -> 0.103738`
+   - `loss_active_template`
+     `0.497106 -> 0.457772`
+   - `loss_fused_hidden_to_branch_mean_unit_rms_l1`
+     `1.144644 -> 0.861832`
+3. `frame_adjacent_cosine`
+   仍基本不动，
+   说明这条候选的价值
+   主要不在 decode-side
+   stationarity，
+   而在 fusion-side
+   表征校正
+
+### 当前阶段判断更新
+1. 这条候选比
+   早先
+   `fused_hidden_template / delta`
+   轻量 penalty
+   更像是
+   真正触达了有用问题层级
+2. 当前不能直接写成：
+   - 可长训 recipe
+3. 但已经足够写成：
+   - 目前第一条值得进入
+     人工听审的
+     fusion-side
+     候选
+
+### 更新后的下一步
+1. 第一优先不是再开新训，
+   而是先听：
+   - baseline 包
+     `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_baseline_smoke_round1_2/`
+   - candidate 包
+     `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_fusedhidden_branchmean025_smoke_round1_1/`
+2. 若听感有正向信号，
+   再做：
+   - `branch_mean_weight`
+     小 sweep
+3. 若听感仍无正向信号，
+   也不建议先退回
+   decode-side
+   小 loss，
+   应继续沿
+   fusion-side
+   加稳定锚点
+## 2026-03-24 继续补充：`fused_hidden_branch_mean=0.25` 已被人工听审正式判定为失败，当前应升级为更大的 forward-path 或 loss 形态变化
+- 听审结论文档：
+  - `docs/301_stage5_contractv2_normfix_fusedhidden_branchmean025_human_audit_fail_report.md`
+
+### 当前关键结果
+1. 用户已确认：
+   - baseline 包中的
+     `decode_*.wav`
+     仍是 pure buzz
+   - `branchmean025`
+     包中的
+     `decode_*.wav`
+     也仍是 pure buzz
+   - 没有可标记人声
+2. 因而：
+   - `docs/300`
+     里这条候选
+     的量化改善
+     不能再写成：
+     - 接近转正
+     - 只差长训
+
+### 当前阶段判断更新
+1. `fusion`
+   问题层级判断仍正确
+2. 但
+   `branch_mean`
+   这种轻量
+   loss-only
+   拉近，
+   仍不足以把系统推出
+   buzz-only
+   失败区
+3. 当前更合理的路线升级是：
+   - 不再继续做同类小权重 loss sweep
+   - 改做更大的
+     forward-path
+     干预
+
+### 更新后的下一步
+1. 当前最值得做的单个实验，
+   不是
+   `branch_mean_weight`
+   小 sweep
+2. 应改为：
+   - 训练时直接让 decoder
+     看到部分
+     `branch_mean`
+     混入后的
+     `fused_hidden`
+   - 例如：
+     `fused_for_decoder = (1-mix) * fused_hidden + mix * branch_mean`
+3. 这条实验的价值在于：
+   - 它直接测试
+     “只靠 loss 拉近不够时，
+     是否需要真正改变 decoder 的输入分布”
+## 2026-03-24 继续补充：decoder-side `branch_mean` forward-path mix 微扫已完成，`alpha=0.30` 是当前最有价值点，但仍未证明已脱离 buzz-only 区域
+- 正式报告：
+  - `docs/302_stage5_contractv2_normfix_decoder_branchmean_mix_sweep_report.md`
+
+### 当前关键结果
+1. 已完成：
+   - `alpha = 0.15`
+   - `alpha = 0.30`
+   - `alpha = 0.50`
+   的
+   4-step smoke
+2. 当前最佳点为：
+   - `alpha = 0.30`
+3. step4 validation
+   相比 baseline：
+   - `loss_waveform`
+     `0.125092 -> 0.121521`
+   - `loss_stft`
+     `0.601828 -> 0.588136`
+   - `loss_active_template`
+     `0.503176 -> 0.434199`
+   - 但
+     `loss_rms_guard`
+     `0.155673 -> 0.185487`
+   - `decoded_to_target_rms_ratio`
+     `0.899397 -> 0.864195`
+   - `loss_frame_adjacent_cosine`
+     基本不动
+4. fixed 6 条 aggregate
+   也保持同方向：
+   - `loss_waveform`
+     `0.125503 -> 0.121969`
+   - `loss_stft`
+     `0.602313 -> 0.590654`
+   - `loss_active_template`
+     `0.497106 -> 0.426038`
+   - 但
+     `loss_rms_guard`
+     `0.107393 -> 0.139043`
+
+### 当前阶段判断更新
+1. 这轮结果比
+   `branch_mean`
+   loss-only
+   更明确支持：
+   - 主突破口在
+     forward-path
+     而不是再磨同类 loss
+2. 但当前线性 mix
+   还不能写成：
+   - 已出现语音萌芽
+   - 或已能进入长训
+3. 更准确的判断是：
+   - 直接改 decoder 输入
+     确实有效
+   - 但这仍只是
+     “更强地推动系统”
+     而非
+     “已经把系统推出失败区”
+
+### 当前挂起的听审包
+1. baseline：
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_baseline_smoke_round1_2/`
+2. candidate：
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_decoder_mix030_smoke_round1_1/`
+
+### 更新后的下一步
+1. 先听
+   `decoder_mix030`
+   对照 baseline
+2. 如果听感仍是 pure buzz，
+   默认不建议继续做：
+   - `alpha`
+     小范围微扫
+3. 下一主线应升级到：
+   - 更强的
+     forward-path
+     结构变化
+   - 或 decoder
+     训练范式级改造
+## 2026-03-24 继续补充：`decoder_mix030` 已被人工听审正式判定为失败，下一步应升级为真正的结构级改动
+- 听审结论文档：
+  - `docs/303_stage5_contractv2_normfix_decoder_mix030_human_audit_fail_report.md`
+
+### 当前关键结果
+1. 用户已确认：
+   - baseline 包中的
+     `decode_*.wav`
+     仍是 pure buzz
+   - `decoder_mix030`
+     包中的
+     `decode_*.wav`
+     也仍是 pure buzz
+   - 没有可标记人声
+2. 因而：
+   - `docs/302`
+     里这条候选的
+     量化改善
+     不能再写成：
+     - 已接近转正
+     - 或只差长训
+
+### 当前阶段判断更新
+1. `forward-path`
+   方向判断仍正确
+2. 但当前
+   `decoder_mix030`
+   这种
+   static linear mix，
+   仍不足以把系统推出
+   buzz-only
+   失败区
+3. 当前更合理的路线升级是：
+   - 不再继续做
+     `alpha`
+     微扫
+   - 改做真正的
+     结构级 decoder
+     改动
+
+### 更新后的下一步
+1. 当前最值得做的单个结构实验，
+   不是再试
+   `alpha`
+   新数值
+2. 应改为：
+   - 把当前单路
+     `waveform_decoder(fused_hidden)`
+     升级成
+     双路 waveform decoder
+   - 让：
+     - periodic 路
+       直接消费
+       `periodic_hidden`
+     - noise 路
+       直接消费
+       `noise_hidden`
+     - 再用轻量 gate
+       在帧级融合
+3. 这条实验的价值在于：
+   - 它不再要求
+     `fusion`
+     先把一切信息压进
+     单个 hidden manifold
+   - 而是直接测试：
+     - 现有 decoder 失败，
+       是否本质上来自
+       “单路 fused-hidden bottleneck”
+## 2026-03-24 继续补充：双路 waveform decoder 最小 smoke 已完成，结构方向成立，但当前实现仍不值得进入听审
+- 正式报告：
+  - `docs/304_stage5_contractv2_normfix_dual_branch_decoder_minimal_smoke_report.md`
+
+### 当前关键结果
+1. 已完成：
+   - `waveform_decoder_mode = dual_branch_mix`
+   的
+   4-step smoke
+2. step4 validation
+   相比 baseline：
+   - `loss_waveform`
+     `0.125092 -> 0.115348`
+   - `loss_stft`
+     `0.601828 -> 0.529199`
+   - `loss_active_template`
+     `0.503176 -> 0.386726`
+   - 但
+     `loss_rms_guard`
+     `0.155673 -> 0.253930`
+   - `decoded_to_target_rms_ratio`
+     `0.899397 -> 0.792719`
+   - `loss_frame_adjacent_cosine`
+     仍基本不动
+3. fixed 6 条 aggregate
+   也保持同方向：
+   - `loss_waveform`
+     `0.125503 -> 0.116400`
+   - `loss_stft`
+     `0.602313 -> 0.535268`
+   - `loss_active_template`
+     `0.497106 -> 0.363578`
+   - 但
+     `loss_rms_guard`
+     `0.107393 -> 0.216017`
+   - `decoded_to_target_rms_ratio`
+     `0.908930 -> 0.808070`
+
+### 当前阶段判断更新
+1. 这是到目前为止，
+   第一条在结构级上
+   明显强于：
+   - loss-only
+   - linear mix
+   的路线
+2. 它进一步支持：
+   - 主问题确实已经升级为
+     decoder 结构问题
+3. 但当前这版
+   frame-level
+   标量 mixer，
+   仍没有同时解决：
+   - stationarity
+   - 能量稳态
+4. 因而当前不能进入：
+   - 人工听审
+   - 长训
+
+### 更新后的下一步
+1. 不导听审包，
+   因为当前信号仍不够强
+2. 下一条最值得做的结构升级是：
+   - 把
+     frame-level
+     标量 mixer
+     升级成
+     更细粒度的 mixing
+   - 或让
+     `noise`
+     路退化为残差注入，
+     避免粗糙线性合成
+## 2026-03-24 继续补充：`periodic_plus_noise_residual` 最小 smoke 已完成，方向更合理，但当前仍不值得进入听审
+- 正式报告：
+  - `docs/305_stage5_contractv2_normfix_periodic_plus_noise_residual_minimal_smoke_report.md`
+
+### 当前关键结果
+1. 已完成：
+   - `waveform_decoder_mode = periodic_plus_noise_residual`
+   的
+   4-step smoke
+2. 相比 baseline，
+   它依旧明显改善：
+   - `loss_waveform`
+   - `loss_stft`
+   - `loss_active_template`
+3. 相比上一轮
+   `dual_branch_mix`
+   ：
+   - `active_template`
+     更好
+   - `adjacent cosine`
+     也略好
+   - `waveform`
+     基本持平
+   - 但
+     `stft`
+     略差
+   - `rms_guard`
+     仍更差
+   - `decoded_to_target_rms_ratio`
+     仍进一步偏低
+
+### 当前阶段判断更新
+1. 当前已经可以更明确地写成：
+   - `noise`
+     作为残差注入
+     比对称双路混合
+     更符合方向
+2. 但这条结构候选仍然没有突破：
+   - frame-level
+     标量 gate
+     这个粗粒度瓶颈
+3. 因而当前最真实的判断是：
+   - 结构方向继续被验证
+   - 但实现粒度还不够细
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 下一条最值得做的结构实验应升级到：
+   - 更细粒度的
+     residual 注入
+   - 而不是继续扫
+     residual scale
+     或 gate
+     小参数
+## 2026-03-24 继续补充：`residual_shape / factorized / temporal` follow-up 已完成，当前最平衡的仍是 `periodic_plus_noise_residual_shape`
+- 正式报告：
+  - `docs/306_stage5_contractv2_normfix_residual_shape_factorized_temporal_followup_report.md`
+
+### 当前关键结果
+1. `residual_shape`
+   仍是当前最平衡点：
+   - `active_template`
+     最低
+   - `decoded_to_target_rms_ratio`
+     明显优于
+     `dual_branch_mix`
+2. `factorized_residual`
+   没有把
+   RMS
+   拉稳，
+   不成立
+3. `shape_temporal`
+   也没有把
+   `adjacent cosine`
+   实质打下来，
+   不成立
+
+### 当前阶段判断更新
+1. 当前已经可以把一个结论写死：
+   - 仅靠 decoder 结构微调，
+     并不会自然把
+     `adjacent cosine`
+     主失败项
+     压下来
+2. 因而当前最有价值的下一步，
+   不再是继续换
+   decoder
+   小结构
+3. 而是要引入：
+   - 显式 temporal behavior
+     约束
+
+### 更新后的下一步
+1. 默认不再继续做
+   decoder 小结构微扫
+2. 下一条主线应切到：
+   - 在当前最好结构
+     `periodic_plus_noise_residual_shape`
+     上，
+     重新引入更强的
+     `frame_adjacent / frame_delta`
+     显式约束
+   - 但目标对象不再是旧的
+     单路 decode route，
+     而是新结构下的
+     waveform frames
+## 2026-03-24 继续补充：recurrent decoder + temporal follow-up 已完成，当前最接近有效信号的是 `recurrent + explicit temporal loss`
+- 正式报告：
+  - `docs/307_stage5_contractv2_normfix_recurrent_temporal_followup_report.md`
+
+### 当前关键结果
+1. `periodic_plus_noise_residual_shape_recurrent`
+   本身已经能把：
+   - `active_template`
+     继续拉低
+   - `adjacent cosine`
+     再压一点
+   但
+   RMS
+   继续恶化
+2. 在 recurrent 上叠加：
+   - `periodic_waveform_frame_delta_weight = 0.25`
+   - `periodic_waveform_frame_adjacent_cosine_weight = 0.01`
+   后，
+   `adjacent cosine`
+   会进一步下降，
+   说明：
+   - `recurrent temporal path`
+     与
+     显式 temporal objective
+     之间是有协同的
+3. 但如果直接把：
+   - `rms_guard_weight: 0.2 -> 0.3`
+   来补能量，
+   会把：
+   - `waveform`
+   - `stft`
+   - 部分 `adjacent cosine`
+   一起拉差
+
+### 当前阶段判断更新
+1. 当前最准确的判断已经从：
+   - “结构是否有效”
+   进一步收敛到：
+   - “结构 + temporal objective 已开始生效，
+      但稳态锚点还不对”
+2. 因而下一步不再优先：
+   - 换 decoder 大结构
+   - 或继续纯扫
+     `rms_guard`
+3. 下一条最值钱的主线应转到：
+   - 在
+     `recurrent + temporal`
+     当前最好组合上，
+     做更细粒度的能量稳态修正，
+     而不是粗暴提高全局
+     `rms_guard`
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 下一条最值得做的实验应是：
+   - 在
+     `periodic_plus_noise_residual_shape_recurrent`
+     基础上，
+     保留
+     `periodic temporal losses`
+   - 但把稳态修正改成：
+     - 更局部的 periodic-path RMS / gain 约束
+     - 或更可控的 residual scale 稳态锚点
+## 2026-03-24 继续补充：periodic-gate local RMS-floor follow-up 已完成，当前最平衡点是 `periodic_gate rms_floor = 0.5`
+- 正式报告：
+  - `docs/308_stage5_contractv2_normfix_periodicgate_rmsfloor_followup_report.md`
+
+### 当前关键结果
+1. 全局
+   `rms_guard`
+   不是最对问题的修正位点
+2. 改成：
+   - `periodic_waveform_frame_log_rms_floor`
+   这种更局部的 periodic-path 稳态锚点后，
+   首次出现：
+   - `adjacent cosine`
+     继续改善
+   - `active_template`
+     继续改善
+   - `decoded_to_target_rms_ratio`
+     也明显回升
+3. 这条线一开始曾踩到一个漏洞：
+   - 若 floor 用
+     `max(periodic_gate, noise_gate)`
+     做 gain，
+     模型会抬
+     `noise_gate`
+     来钻空子
+4. 修成：
+   - 只用
+     `periodic_gate`
+     后，
+     `weight = 0.5`
+     成为当前最平衡点：
+     - fixed6
+       `adjacent cosine: 313.810717 -> 313.599436`
+     - fixed6
+       `active_template: 0.245094 -> 0.154763`
+     - fixed6
+       `rms_ratio: 0.801979 -> 0.851549`
+     - 但
+       `waveform / stft`
+       仍有代价
+
+### 当前阶段判断更新
+1. 当前最可信的方向已经不再是：
+   - 再换 decoder 结构
+2. 而是：
+   - 在
+     `recurrent + temporal`
+     主线上，
+     用更局部的 periodic-path 能量锚点做 Pareto 调整
+3. 当前最平衡点不是：
+   - `rms_floor = 1.0`
+   因为它虽然把能量几乎拉回 baseline，
+   但会明显拉差
+   `waveform / stft`
+4. 因此当前最真实的结论是：
+   - `periodic_gate rms_floor = 0.5`
+     值得继续围绕它窄扫，
+     但还没有强到值得导听审包
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 下一条最值得做的实验应是：
+   - 围绕
+     `periodic_gate rms_floor = 0.5`
+     做一个极窄权重微扫：
+     - `0.35`
+     - `0.5`
+     - `0.75`
+3. 目标是：
+   - 尽量保住：
+     - `adjacent cosine`
+     - `active_template`
+     - `rms_ratio`
+   - 同时尽量少吃：
+     - `waveform`
+     - `stft`

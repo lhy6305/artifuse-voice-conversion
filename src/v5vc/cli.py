@@ -2300,6 +2300,35 @@ def build_parser() -> argparse.ArgumentParser:
             "Defaults to the current explicit training semantics."
         ),
     )
+    nores_vocoder_train_step_parser.add_argument(
+        "--decoder-branch-mean-mix-alpha",
+        type=float,
+        default=0.0,
+        help="Optional forward-path mix coefficient that blends fused_hidden with the equal-weight branch mean before the waveform decoder.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-mode",
+        default="fused_single",
+        help="Waveform decoder structure: fused_single, dual_branch_mix, periodic_plus_noise_residual, periodic_plus_noise_residual_shape, periodic_plus_noise_factorized_residual, periodic_plus_noise_residual_shape_temporal, or periodic_plus_noise_residual_shape_recurrent.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--periodic-waveform-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for unit-RMS adjacent-frame delta matching applied directly to periodic_waveform_frames.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--periodic-waveform-frame-adjacent-cosine-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing periodic_waveform_frames adjacent-frame cosine similarity above the aligned target on active transitions.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--periodic-waveform-frame-rms-floor-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for preventing periodic_waveform_frames active-frame log-RMS from falling below the aligned target floor.",
+    )
     nores_vocoder_train_loop_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-training-loop",
         help="Run a minimal multi-step training loop on the no-residual vocoder target package.",
@@ -2447,6 +2476,35 @@ def build_parser() -> argparse.ArgumentParser:
             "pre_overlap_add or post_ola_envelope. "
             "Defaults to the current explicit training semantics."
         ),
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--decoder-branch-mean-mix-alpha",
+        type=float,
+        default=0.0,
+        help="Optional forward-path mix coefficient that blends fused_hidden with the equal-weight branch mean before the waveform decoder.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-mode",
+        default="fused_single",
+        help="Waveform decoder structure: fused_single, dual_branch_mix, periodic_plus_noise_residual, periodic_plus_noise_residual_shape, periodic_plus_noise_factorized_residual, periodic_plus_noise_residual_shape_temporal, or periodic_plus_noise_residual_shape_recurrent.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--periodic-waveform-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for unit-RMS adjacent-frame delta matching applied directly to periodic_waveform_frames.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--periodic-waveform-frame-adjacent-cosine-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing periodic_waveform_frames adjacent-frame cosine similarity above the aligned target on active transitions.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--periodic-waveform-frame-rms-floor-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for preventing periodic_waveform_frames active-frame log-RMS from falling below the aligned target floor.",
     )
     nores_vocoder_dataset_packages_parser = subparsers.add_parser(
         "build-offline-mvp-nores-vocoder-dataset-packages",
@@ -2678,6 +2736,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for unit-RMS adjacent-frame delta matching on reconstructed waveform frames.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
+        "--frame-adjacent-cosine-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing decoded adjacent-frame cosine similarity above the aligned target on active transitions.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
         "--fused-hidden-template-weight",
         type=float,
         default=0.0,
@@ -2688,6 +2752,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for preventing fused_hidden adjacent-frame delta magnitude from collapsing below the branch hidden floor.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--fused-hidden-branch-mean-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for pulling fused_hidden toward the equal-weight branch mean in unit-RMS space on active frames.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--use-predicted-activity-gate",
@@ -2702,6 +2772,35 @@ def build_parser() -> argparse.ArgumentParser:
             "pre_overlap_add or post_ola_envelope. "
             "Defaults to the current explicit training semantics."
         ),
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--decoder-branch-mean-mix-alpha",
+        type=float,
+        default=0.0,
+        help="Optional forward-path mix coefficient that blends fused_hidden with the equal-weight branch mean before the waveform decoder.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-mode",
+        default="fused_single",
+        help="Waveform decoder structure: fused_single, dual_branch_mix, periodic_plus_noise_residual, periodic_plus_noise_residual_shape, periodic_plus_noise_factorized_residual, periodic_plus_noise_residual_shape_temporal, or periodic_plus_noise_residual_shape_recurrent.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--periodic-waveform-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for unit-RMS adjacent-frame delta matching applied directly to periodic_waveform_frames.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--periodic-waveform-frame-adjacent-cosine-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing periodic_waveform_frames adjacent-frame cosine similarity above the aligned target on active transitions.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--periodic-waveform-frame-rms-floor-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for preventing periodic_waveform_frames active-frame log-RMS from falling below the aligned target floor.",
     )
     nores_vocoder_review_parser = subparsers.add_parser(
         "review-offline-mvp-nores-vocoder-checkpoints",
@@ -2906,6 +3005,12 @@ def build_parser() -> argparse.ArgumentParser:
             "How export-side predicted activity gains are applied during waveform reconstruction: "
             "pre_overlap_add or post_ola_envelope."
         ),
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--decoder-branch-mean-mix-alpha",
+        type=float,
+        default=0.0,
+        help="Optional forward-path mix coefficient used when recomputing waveform_frames from the exported checkpoint.",
     )
     stage5_speech_emergence_probe_parser = subparsers.add_parser(
         "analyze-stage5-nores-speech-emergence",
@@ -4314,8 +4419,11 @@ def main(argv: list[str] | None = None) -> int:
             frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
-            fused_hidden_template_weight=args.fused_hidden_template_weight,
-            fused_hidden_delta_weight=args.fused_hidden_delta_weight,
+            decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            waveform_decoder_mode=args.waveform_decoder_mode,
+            periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
+            periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
+            periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -4344,8 +4452,11 @@ def main(argv: list[str] | None = None) -> int:
             frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
-            fused_hidden_template_weight=args.fused_hidden_template_weight,
-            fused_hidden_delta_weight=args.fused_hidden_delta_weight,
+            decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            waveform_decoder_mode=args.waveform_decoder_mode,
+            periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
+            periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
+            periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -4392,10 +4503,17 @@ def main(argv: list[str] | None = None) -> int:
             rms_guard_weight=args.rms_guard_weight,
             active_template_weight=args.active_template_weight,
             frame_delta_weight=args.frame_delta_weight,
+            frame_adjacent_cosine_weight=args.frame_adjacent_cosine_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             fused_hidden_template_weight=args.fused_hidden_template_weight,
             fused_hidden_delta_weight=args.fused_hidden_delta_weight,
+            fused_hidden_branch_mean_weight=args.fused_hidden_branch_mean_weight,
+            decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            waveform_decoder_mode=args.waveform_decoder_mode,
+            periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
+            periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
+            periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":
@@ -4440,6 +4558,7 @@ def main(argv: list[str] | None = None) -> int:
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+            decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
         )
         return 0
     if args.command == "analyze-stage5-nores-speech-emergence":
@@ -4678,3 +4797,7 @@ def main(argv: list[str] | None = None) -> int:
 
     parser.error(f"Unsupported command: {args.command}")
     return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

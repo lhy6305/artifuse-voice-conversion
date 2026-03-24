@@ -55,6 +55,21 @@ STRUCTURE_PROBE_VARIANTS = [
         "description": "Zero the waveform decoder input while leaving branch-side activity gates unchanged.",
         "transforms": [("fused_hidden", "zero")],
     },
+    {
+        "label": "fused_hidden_from_periodic_hidden",
+        "description": "Bypass fusion and feed periodic_hidden directly into the waveform decoder.",
+        "transforms": [("fused_hidden", "replace_with_periodic_hidden")],
+    },
+    {
+        "label": "fused_hidden_from_noise_hidden",
+        "description": "Bypass fusion and feed noise_hidden directly into the waveform decoder.",
+        "transforms": [("fused_hidden", "replace_with_noise_hidden")],
+    },
+    {
+        "label": "fused_hidden_from_branch_mean",
+        "description": "Bypass fusion and feed the equal-weight branch mean into the waveform decoder.",
+        "transforms": [("fused_hidden", "replace_with_branch_mean")],
+    },
 ]
 
 
@@ -200,6 +215,7 @@ def analyze_stage5_nores_waveform_decoder_structure(
             "baseline uses the current heard-route decode semantics so the resulting decoded-frame diversity stays aligned with the audible buzz path.",
             "periodic_hidden_frame_mean and noise_hidden_frame_mean test whether branch-side temporal diversity still matters once it reaches fusion.",
             "fused_hidden_frame_mean and fused_hidden_zero test whether the waveform decoder preserves or discards temporal diversity already present in fused_hidden.",
+            "fused_hidden_from_periodic_hidden, fused_hidden_from_noise_hidden, and fused_hidden_from_branch_mean bypass fusion and ask whether the existing waveform decoder can respond if it is fed branch-side hidden dynamics directly.",
             "If fused_hidden remains materially less template-like than waveform_frames on baseline, that is evidence the waveform decoder itself is a collapse site.",
             "If fused_hidden_frame_mean barely changes waveform_frames or decoded metrics, the waveform decoder is acting close to a fixed-template projector around the current operating region.",
         ],
@@ -255,6 +271,8 @@ def run_structure_probe_variant(
         transforms=transforms,
         stage_name="fused_hidden",
         transform_notes=transform_notes,
+        periodic_hidden=periodic_hidden,
+        noise_hidden=noise_hidden,
     )
     waveform_frames = torch.tanh(model.waveform_decoder(fused_hidden))
     periodic_gate = torch.sigmoid(model.periodic_gate(periodic_hidden))
@@ -293,6 +311,8 @@ def apply_structure_transform(
     transforms: list[tuple[str, str]],
     stage_name: str,
     transform_notes: list[str],
+    periodic_hidden: torch.Tensor | None = None,
+    noise_hidden: torch.Tensor | None = None,
 ) -> torch.Tensor:
     transformed = tensor
     for target_stage, mode in transforms:
@@ -303,6 +323,38 @@ def apply_structure_transform(
             transformed = mean_values.expand_as(transformed)
         elif mode == "zero":
             transformed = torch.zeros_like(transformed)
+        elif mode == "replace_with_periodic_hidden":
+            if periodic_hidden is None:
+                raise ValueError("periodic_hidden is required for replace_with_periodic_hidden.")
+            if tuple(periodic_hidden.shape) != tuple(transformed.shape):
+                raise ValueError(
+                    "periodic_hidden shape does not match fused_hidden for bypass substitution: "
+                    f"{tuple(periodic_hidden.shape)} vs {tuple(transformed.shape)}"
+                )
+            transformed = periodic_hidden
+        elif mode == "replace_with_noise_hidden":
+            if noise_hidden is None:
+                raise ValueError("noise_hidden is required for replace_with_noise_hidden.")
+            if tuple(noise_hidden.shape) != tuple(transformed.shape):
+                raise ValueError(
+                    "noise_hidden shape does not match fused_hidden for bypass substitution: "
+                    f"{tuple(noise_hidden.shape)} vs {tuple(transformed.shape)}"
+                )
+            transformed = noise_hidden
+        elif mode == "replace_with_branch_mean":
+            if periodic_hidden is None or noise_hidden is None:
+                raise ValueError("periodic_hidden and noise_hidden are required for replace_with_branch_mean.")
+            if tuple(periodic_hidden.shape) != tuple(transformed.shape):
+                raise ValueError(
+                    "periodic_hidden shape does not match fused_hidden for branch-mean substitution: "
+                    f"{tuple(periodic_hidden.shape)} vs {tuple(transformed.shape)}"
+                )
+            if tuple(noise_hidden.shape) != tuple(transformed.shape):
+                raise ValueError(
+                    "noise_hidden shape does not match fused_hidden for branch-mean substitution: "
+                    f"{tuple(noise_hidden.shape)} vs {tuple(transformed.shape)}"
+                )
+            transformed = 0.5 * (periodic_hidden + noise_hidden)
         else:
             raise ValueError(f"Unsupported structure-probe transform mode: {mode!r}")
         transform_notes.append(f"{stage_name} -> {mode}")

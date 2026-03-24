@@ -11552,3 +11552,601 @@
   - 早期无效 run
     需要在文档中明确标注：
     - 不作为正式结果引用
+### 372. `adjacent cosine` 被压低一点，不等于这条 quant-only 候选就是好方向；如果共享重建指标和幅度比例同步恶化，应按“局部量化换整体退化”处理，而不是按“已找到有效约束”处理
+- 现象:
+  - 在
+    `active_template=0.25`
+    基础上加入：
+    - `frame_adjacent_cosine_weight = 0.25`
+  - step4 validation
+    复算显示：
+    - `loss_frame_adjacent_cosine`
+      `329.727118 -> 321.258283`
+  - 但同时：
+    - `loss_waveform`
+      `0.130195 -> 0.152367`
+    - `loss_stft`
+      `0.659763 -> 0.801631`
+    - `loss_rms_guard`
+      `0.106174 -> 0.197122`
+    - `decoded_to_target_rms_ratio`
+      `0.990619 -> 1.225243`
+- 风险:
+  - 如果只盯着：
+    - `adjacent cosine`
+      降了
+  - 很容易误写成：
+    - 这条 loss
+      已经把坏解压住
+  - 实际它更可能只是：
+    - 用更差的重建与幅度稳定性
+      换到一个有限的
+      stationarity
+      指标改善
+- 处理要求:
+  - 以后解读这类
+    quant-only
+    候选时，
+    必须至少同时对照：
+    - `loss_waveform`
+    - `loss_stft`
+    - `loss_rms_guard`
+    - `decoded_to_target_rms_ratio`
+  - 只有当
+    `adjacent cosine`
+    改善
+    没有伴随明显共享指标恶化，
+    才能把它写成：
+    - 有潜力的晋级候选
+### 373. 新增量化指标之后，历史 run 的旧 summary 可能没有该字段；这时不能直接拿“字段缺失”当作 0 或当作不可比，而应使用当前 helper 对历史 checkpoint 做同口径复算
+- 现象:
+  - `active_template=0.25`
+    早先生成的 summary
+    尚未记录：
+    - `loss_frame_adjacent_cosine_excess_relu_0p02`
+  - 但当前代码已经支持该指标
+- 风险:
+  - 如果直接把：
+    - 字段缺失
+  - 当成：
+    - 指标不存在
+    - 或默认是
+      `0`
+  - 会把历史 run
+    错误解读成
+    更优
+    或不可比较
+- 处理要求:
+  - 只要新增了
+    validation 指标，
+    且要把它用于比较历史 checkpoint，
+    就应：
+    - 用当前 helper
+      对旧 checkpoint
+      重新跑一遍同口径 validation
+  - 文档里要明确标注：
+    - 哪些数字来自原始 summary
+    - 哪些数字来自事后复算
+### 374. 如果 `fused_hidden_frame_mean` 近乎无影响，但 `fused_hidden <- periodic/noise/branch_mean` 会显著降低 decoded template 化，不要再把 decoder 写成“只能输出固定 buzz”；更准确的说法是 decoder 被坏的 fused-hidden 工作区驯化了
+- 现象:
+  - baseline 下：
+    - `fused_hidden_frame_mean`
+      只有
+      `waveform_mean_abs_delta_vs_baseline = 0.003935`
+  - 但：
+    - `fused_hidden_from_periodic_hidden`
+      可把
+      `decoded_template`
+      从
+      `0.993590`
+      拉到
+      `0.588111`
+    - `fused_hidden_from_noise_hidden`
+      拉到
+      `0.700063`
+    - `fused_hidden_from_branch_mean`
+      拉到
+      `0.675008`
+- 风险:
+  - 如果只看前半句，
+    很容易误写成：
+    - decoder
+      完全不看输入
+      或只能输出固定模板
+  - 这会把后续主线错误推向：
+    - decoder-only
+      大修
+- 处理要求:
+  - 对这类结果的正确表述应是：
+    - baseline 下的
+      `fused_hidden`
+      已极接近常模板
+    - decoder
+      围绕这个坏工作区
+      学到了稳定解
+    - 但当输入 manifold
+      被明显改写时，
+      decoder
+      仍会响应
+### 375. bypass 变体若同时显著拉低 template 化、却把频谱重心和 RMS 比例一起推爆，不能把它误判成“只要把 fusion 修开就会自然说话”；这通常意味着 hidden 动态可用，但 decoder 尚未在该输入分布上被稳定校准
+- 现象:
+  - `fused_hidden_from_periodic_hidden`
+    把
+    `decoded_template`
+    拉到
+    `0.588111`
+  - 但同时：
+    - `decoded_spectral_centroid_hz`
+      `5857 -> 10702`
+    - `decoded_to_aligned_rms_ratio`
+      `0.928302 -> 1.888971`
+  - `noise_hidden`
+    与
+    `branch_mean`
+    bypass
+    也有同类现象
+- 风险:
+  - 如果只看：
+    - 模板化明显下降
+  - 很容易过早写成：
+    - decoder
+      已经证明能说话，
+      只差把 fusion
+      解开
+  - 实际更可能是：
+    - hidden 动态本身是有用的
+    - 但现有 decoder
+      对这种输入分布
+      还没有被稳定约束
+- 处理要求:
+  - 后续训练设计应优先采用：
+    - `fusion / fused_hidden`
+      侧动态保真约束
+    - 加上现有
+      `waveform / stft / rms_guard`
+      稳定锚点
+  - 不要把 bypass
+    的“模板化下降”
+    单独拿来当作：
+    - 直接可推广的成功信号
+### 376. 新的 fusion-side 表征对齐 loss 的原始量级可能远大于旧的 template/delta penalty；不先复算量级就直接套用旧权重，很容易把候选做得过弱或过猛
+- 现象:
+  - 新增
+    `loss_fused_hidden_to_branch_mean_unit_rms_l1`
+    后，
+    现有 checkpoint
+    上该项量级约为：
+    - `1.11 ~ 1.14`
+  - 明显大于先前：
+    - `loss_fused_hidden_template_excess_vs_branch`
+      约
+      `0.008`
+    - `loss_fused_hidden_delta_floor_halfmax`
+      近似
+      `0`
+- 风险:
+  - 如果沿用旧经验，
+    先随手试：
+    - `0.05`
+    - `0.1`
+    - `2.0`
+  - 很容易得到：
+    - 实际约束几乎没打进去
+    - 或总目标被新项主导
+- 处理要求:
+  - 只要引入新的表征级 loss，
+    第一件事先做：
+    - 现有 checkpoint
+      上的同口径复算
+  - 先看 raw metric
+    量级，
+    再选首个 smoke 权重
+### 377. `branch_mean` 型 fusion-side 约束如果带来 `waveform / rms_guard / active_template` 同向改善，但 `stft` 仍变差、`adjacent cosine` 基本不动，不要误判成“没用”；这更可能表示它已经触达正确层级，只是还没把输出稳定性和过细频谱一起校好
+- 现象:
+  - `fused_hidden_branch_mean=0.25`
+    step4 validation
+    相比 baseline：
+    - `loss_waveform`
+      略好
+    - `loss_rms_guard`
+      略好
+    - `loss_active_template`
+      明显下降
+    - 但
+      `loss_stft`
+      变差
+    - `frame_adjacent_cosine`
+      基本不动
+- 风险:
+  - 如果把
+    `adjacent cosine`
+    或
+    `stft`
+    当成单一裁决轴，
+    很容易过早把这条候选写死为：
+    - 无效
+  - 这会错过
+    实际已经更接近主问题层级的
+    fusion-side
+    候选
+- 处理要求:
+  - 对这类新候选，
+    应先升级到：
+    - fixed-record
+      听审
+  - 不要在还没听之前，
+    只凭单个共享指标
+    就直接否掉整条路线
+### 378. 如果 fusion-side 候选在量化上首次出现同方向改善，但人工听审仍是纯 buzz，就不要再把下一步写成同类 loss 的小权重 sweep；这通常说明“只靠 loss 拉近”不够，必须改 forward-path
+- 现象:
+  - `fused_hidden_branch_mean=0.25`
+    在量化上：
+    - `waveform`
+      略好
+    - `rms_guard`
+      略好
+    - `active_template`
+      明显下降
+  - 但人工听审结果仍是：
+    - pure buzz
+    - 无可标记语音
+- 风险:
+  - 如果只因为它是
+    fusion-side
+    第一条像样候选，
+    就继续做：
+    - `0.10 / 0.25 / 0.40`
+      这类同构小 sweep
+  - 很可能只会在
+    buzz-only
+    区间里原地打磨
+- 处理要求:
+  - 当出现这种
+    “量化首次变好，
+    但听感仍零语音”
+    的信号时，
+    下一步优先级应切到：
+    - 改 decoder 实际看到的
+      hidden 输入分布
+    - 而不是继续做
+      同构 loss-only
+      小调参
+### 379. 当 loss-only 已被听审否决时，直接改 decoder 输入分布通常比继续加同类 penalty 更有信息价值；哪怕只是线性 mix，也更容易看出系统到底会不会响应
+- 现象:
+  - `branch_mean`
+    loss-only
+    候选
+    人工听审失败后，
+    改做
+    `decoder_hidden = (1-alpha) * fused_hidden + alpha * branch_mean`
+    的 forward-path 微扫
+  - 立刻出现了：
+    - `waveform`
+      改善
+    - `stft`
+      改善
+    - `active_template`
+      更明显改善
+- 风险:
+  - 如果在
+    loss-only
+    失败后，
+    还继续做
+    同构 penalty
+    小扫，
+    往往很难回答：
+    - decoder
+      到底会不会对
+      更动态的输入 manifold
+      产生有意义响应
+- 处理要求:
+  - 当需要快速确认
+    “改输入分布是否比加 penalty 更有效”
+    时，
+    优先做：
+    - forward-path
+      最小可控干预
+  - 例如：
+    - 线性 mix
+    - schedule mix
+    - 局部 bypass
+### 380. 线性 forward-path mix 即便能同步改善 `waveform / stft / active_template`，也不等于已经接近语音出现；如果 `adjacent cosine` 仍不动且 RMS 比例继续偏离，就不能把它误判成“只差长训”
+- 现象:
+  - `decoder_mix030`
+    相比 baseline：
+    - `loss_waveform`
+      更好
+    - `loss_stft`
+      更好
+    - `loss_active_template`
+      更好
+  - 但同时：
+    - `loss_rms_guard`
+      明显变差
+    - `decoded_to_target_rms_ratio`
+      继续偏低
+    - `loss_frame_adjacent_cosine`
+      基本不动
+- 风险:
+  - 如果只看
+    `waveform / stft`
+    这些共享指标，
+    很容易把它误写成：
+    - 已经接近转正
+    - 只差更多 step
+  - 实际上它可能只是：
+    - 改变了谱形或模板程度
+    - 但还没解决
+      帧间站稳性
+      与能量稳态
+- 处理要求:
+  - 对这种候选，
+    必须同时看：
+    - `adjacent cosine`
+    - `decoded_to_target_rms_ratio`
+    - 人工听审
+  - 只要这三项里
+    仍有两项没有正向变化，
+    就不要直接推进到长训，
+    而应先升级结构改动强度
+### 381. 当 `loss-only` 和 `static linear mix` 都已被人工听审确认仍是 pure buzz 时，下一步就不该继续在单路 fused-hidden 路线上做微调，而应怀疑“单路 fused-hidden bottleneck”本身就是问题
+- 现象:
+  - `fused_hidden_branch_mean=0.25`
+    听审失败
+  - `decoder_mix030`
+    听审仍失败
+  - 两者都说明：
+    - 不论是
+      loss 拉近
+    - 还是
+      静态线性混入
+      `branch_mean`
+    都不足以产生可标记语音
+- 风险:
+  - 如果在这个阶段
+    还继续做：
+    - `branch_mean`
+      loss 微扫
+    - `decoder_mix`
+      alpha 微扫
+  - 很可能只会在
+    同一个
+    single-manifold
+    失败设定里
+    原地打磨
+- 处理要求:
+  - 当出现这种
+    “loss-only 失败 + linear mix 失败”
+    的双重信号时，
+    下一步默认应升级到：
+    - 结构级 decoder 改造
+    - 尤其优先怀疑
+      单路
+      `fused_hidden -> waveform_decoder`
+      这条瓶颈
+### 382. 双路 decoder 如果能同步明显改善 `waveform / stft / active_template`，就说明结构方向比单纯改 loss 更对；但如果 `adjacent cosine` 仍几乎不动、RMS 比例明显恶化，也不要急着导听审包
+- 现象:
+  - `dual_branch_mix`
+    smoke
+    相比 baseline：
+    - `loss_waveform`
+      明显下降
+    - `loss_stft`
+      明显下降
+    - `loss_active_template`
+      明显下降
+  - 但同时：
+    - `loss_frame_adjacent_cosine`
+      基本不动
+    - `decoded_to_target_rms_ratio`
+      明显恶化到
+      `0.79 ~ 0.81`
+- 风险:
+  - 如果看到共享指标大幅改善，
+    就立刻导听审包，
+    仍然很可能把用户时间浪费在
+    “更漂亮的量化失败”
+    上
+- 处理要求:
+  - 当用户已经明确要求
+    “信号不强不要导包”
+    时，
+    需要先过这两个门槛：
+    - `adjacent cosine`
+      至少有可辨识改善
+    - `RMS ratio`
+      不再继续恶化
+  - 两者未满足前，
+    先只做量化记录和结构迭代
+### 383. 把 `noise` 路改成残差注入通常比对称混合更符合语音先验，但如果残差注入仍然只受每帧单个标量 gate 控制，结构粒度往往还是不够
+- 现象:
+  - `periodic_plus_noise_residual`
+    相比
+    `dual_branch_mix`
+    ：
+    - `active_template`
+      更好
+    - `adjacent cosine`
+      略好
+  - 但：
+    - `stft`
+      未形成决定性优势
+    - `decoded_to_target_rms_ratio`
+      仍更差
+- 风险:
+  - 如果看到
+    “残差注入方向更合理”，
+    就继续扫：
+    - residual scale
+    - gate threshold
+    - 之类小参数，
+    很可能还是被
+    frame-level
+    标量控制粒度
+    卡住
+- 处理要求:
+  - 当残差注入方向已成立，
+    下一步优先升级：
+    - 残差注入粒度
+  - 而不是继续做
+    同构小参数 sweep
+### 384. 如果把残差注入粒度继续细化到 `sample-shape`、甚至加最小 temporal refiner 后，`adjacent cosine` 仍基本不动，就说明问题已经不再是“decoder 结构还不够花”，而是缺少显式 temporal behavior 约束
+- 现象:
+  - `periodic_plus_noise_residual_shape`
+    优于
+    `dual_branch_mix`
+  - 但
+    `factorized_residual`
+    与
+    `shape_temporal`
+    继续扩结构后，
+    `adjacent cosine`
+    仍基本不动
+- 风险:
+  - 如果这时还继续：
+    - 再加一层 decoder
+    - 再换一种 gate
+    - 再换一种局部 temporal 模块
+  - 很可能只是在
+    “共享指标会变，
+    但主失败项不动”
+    的区域反复打转
+- 处理要求:
+  - 当出现这种信号时，
+    下一步优先级应切到：
+    - 显式 temporal objective
+    - 或 transition-specific 约束
+  - 不再把主要资源投给
+    decoder 小结构微调
+### 385. `recurrent temporal path` 可以和显式 temporal loss 形成协同，但如果没有同步处理能量稳态，常见结果会是 `adjacent cosine` 继续下降而 RMS 继续走低
+- 现象:
+  - `periodic_plus_noise_residual_shape_recurrent`
+    相比
+    `residual_shape`
+    ：
+    - `active_template`
+      更低
+    - `adjacent cosine`
+      更低
+  - 在它上面叠加
+    `periodic_waveform_frame_delta`
+    与
+    `periodic_waveform_frame_adjacent_cosine`
+    后：
+    - `adjacent cosine`
+      继续下降
+    - `decoded_to_target_rms_ratio`
+      仅小幅回升，
+      仍明显低于
+      `residual_shape`
+- 风险:
+  - 如果看到
+    `adjacent cosine`
+    开始下去，
+    就误判成
+    “已经可以听”，
+    很容易再次浪费人工听审
+- 处理要求:
+  - 当
+    `temporal path + temporal loss`
+    开始生效时，
+    必须同步盯住：
+    - `decoded_to_target_rms_ratio`
+    - `loss_rms_guard`
+    - `loss_stft`
+  - 三者未同步稳住前，
+    仍不导听审包
+### 386. 用更大的全局 `rms_guard` 去救 `recurrent + temporal` 的低能量，通常会回收一部分 RMS，但很容易把频谱和 temporal 改善一起吃掉
+- 现象:
+  - 在
+    `recurrent + temporal`
+    基础上，
+    `rms_guard_weight: 0.2 -> 0.3`
+    后：
+    - `decoded_to_target_rms_ratio`
+      明显回升
+    - `loss_rms_guard`
+      明显改善
+  - 但同时：
+    - `loss_waveform`
+      变差
+    - `loss_stft`
+      明显变差
+    - `adjacent cosine`
+      也回吐一部分
+- 风险:
+  - 如果下一步继续扫：
+    - `rms_guard = 0.35`
+    - `rms_guard = 0.4`
+    之类，
+    很可能只是在
+    “把音量拉回来，
+    但主时序改善和频谱细节一起被吞掉”
+    的区域反复打转
+- 处理要求:
+  - 当
+    `rms_guard`
+    出现这种 tradeoff 时，
+    下一步优先尝试：
+    - 更局部的 periodic-path RMS / gain 锚点
+    - 或 residual scale 的稳态约束
+  - 不要先继续扫全局
+    `rms_guard`
+### 387. 给 periodic-path 做局部 RMS floor 时，如果 frame gain 用的是 `max(periodic_gate, noise_gate)`，模型会通过抬 `noise_gate` 来钻空子
+- 现象:
+  - 当
+    `periodic_waveform_frame_log_rms_floor`
+    的 frame gain
+    使用
+    `predicted_activity=max(periodic_gate, noise_gate)`
+    时，
+    会观察到：
+    - `noise_gate_pred_mean`
+      被显著抬高
+    - `activity_gate_pred_mean`
+      跟着一起上升
+  - 这并不等于
+    periodic 主干
+    真正补回了有效能量
+- 风险:
+  - 如果不注意这个漏洞，
+    很容易把
+    “gate 钻空子”
+    误判成：
+    - local RMS floor 生效
+- 处理要求:
+  - 如果目标是补
+    periodic 主干
+    的有效能量，
+    frame gain
+    应只使用：
+    - `periodic_gate`
+  - 不要使用：
+    - `max(periodic_gate, noise_gate)`
+### 388. 修正后的 `periodic_gate` local RMS floor 是比全局 `rms_guard` 更对问题的稳态锚点，但权重过大同样会过度牺牲 `waveform / stft`
+- 现象:
+  - `periodic_gate rms_floor = 0.5`
+    会同时改善：
+    - `adjacent cosine`
+    - `active_template`
+    - `decoded_to_target_rms_ratio`
+  - `periodic_gate rms_floor = 1.0`
+    虽然进一步拉高：
+    - `rms_ratio`
+  - 但会明显拉差：
+    - `waveform`
+    - `stft`
+- 风险:
+  - 看到
+    `rms_ratio`
+    快速接近 baseline，
+    就把大权重当成最优点，
+    很容易重新掉进：
+    - “量化里能量回来了，
+       但频谱和重建质量被拖坏”
+    的区域
+- 处理要求:
+  - 这种 local floor
+    的下一步应该优先做：
+    - 极窄权重微扫
+  - 不要直接继续往更大权重推

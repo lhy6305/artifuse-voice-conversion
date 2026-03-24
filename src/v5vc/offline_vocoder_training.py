@@ -225,9 +225,14 @@ def run_offline_mvp_nores_vocoder_training_step(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
-    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
+    frame_adjacent_cosine_weight: float = 0.0,
+    decoder_branch_mean_mix_alpha: float = 0.0,
+    waveform_decoder_mode: str = "fused_single",
+    periodic_waveform_frame_delta_weight: float = 0.0,
+    periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
+    periodic_waveform_frame_rms_floor_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -270,6 +275,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         harmonic_bins=int(harmonic_target.shape[-1]),
         noise_bins=int(noise_target.shape[-1]),
         frame_length=int(runtime["frame_length"]),
+        waveform_decoder_mode=waveform_decoder_mode,
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
     model.train()
@@ -277,6 +283,7 @@ def run_offline_mvp_nores_vocoder_training_step(
     outputs = model(
         periodic_branch_features=periodic_branch_features,
         noise_branch_features=noise_branch_features,
+        decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
     )
     total_loss, loss_metrics = compute_nores_vocoder_losses(
         outputs=outputs,
@@ -300,6 +307,9 @@ def run_offline_mvp_nores_vocoder_training_step(
         frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
         use_predicted_activity_gate=use_predicted_activity_gate,
         reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
+        periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+        periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+        periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
     )
     optimizer.zero_grad(set_to_none=True)
     total_loss.backward()
@@ -317,6 +327,7 @@ def run_offline_mvp_nores_vocoder_training_step(
             "harmonic_bins": int(harmonic_target.shape[-1]),
             "noise_bins": int(noise_target.shape[-1]),
             "decoder_frame_length": int(runtime["frame_length"]),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "optimizer": {
             "name": "Adam",
@@ -325,6 +336,10 @@ def run_offline_mvp_nores_vocoder_training_step(
         },
         "runtime": {
             "device": str(resolved_device),
+        },
+        "forward_path": {
+            "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "reproducibility": reproducibility,
         "loss_weights": {
@@ -339,6 +354,9 @@ def run_offline_mvp_nores_vocoder_training_step(
             "active_template": float(active_template_weight),
             "frame_delta": float(frame_delta_weight),
             "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
+            "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
+            "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
+            "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
@@ -412,9 +430,14 @@ def run_offline_mvp_nores_vocoder_training_loop(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
-    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
+    frame_adjacent_cosine_weight: float = 0.0,
+    decoder_branch_mean_mix_alpha: float = 0.0,
+    waveform_decoder_mode: str = "fused_single",
+    periodic_waveform_frame_delta_weight: float = 0.0,
+    periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
+    periodic_waveform_frame_rms_floor_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -467,6 +490,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
         harmonic_bins=int(training_batch["harmonic_target"].shape[-1]),
         noise_bins=int(training_batch["noise_target"].shape[-1]),
         frame_length=int(training_runtime["frame_length"]),
+        waveform_decoder_mode=waveform_decoder_mode,
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
 
@@ -485,6 +509,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
         outputs = model(
             periodic_branch_features=training_batch["periodic_branch_features"],
             noise_branch_features=training_batch["noise_branch_features"],
+            decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
         )
         total_loss, loss_metrics = compute_nores_vocoder_losses(
             outputs=outputs,
@@ -508,6 +533,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
             frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
+            periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+            periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+            periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
@@ -558,6 +586,10 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                 frame_length=int(validation_runtime["frame_length"]),
                 hop_length=int(validation_runtime["hop_length"]),
+                decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
+                periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+                periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+                periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                 validation_source=(
                     "separate_validation_package"
                     if resolved_validation_package_path is not None
@@ -606,9 +638,14 @@ def run_offline_mvp_nores_vocoder_training_loop(
             "harmonic_bins": int(training_batch["harmonic_target"].shape[-1]),
             "noise_bins": int(training_batch["noise_target"].shape[-1]),
             "decoder_frame_length": int(training_runtime["frame_length"]),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "runtime": {
             "device": str(resolved_device),
+        },
+        "forward_path": {
+            "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "reproducibility": reproducibility,
         "training": {
@@ -631,6 +668,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "active_template": float(active_template_weight),
                 "frame_delta": float(frame_delta_weight),
                 "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
+                "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
+                "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
+                "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -823,11 +863,17 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
-    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
+    frame_adjacent_cosine_weight: float = 0.0,
     fused_hidden_template_weight: float = 0.0,
     fused_hidden_delta_weight: float = 0.0,
+    fused_hidden_branch_mean_weight: float = 0.0,
+    decoder_branch_mean_mix_alpha: float = 0.0,
+    waveform_decoder_mode: str = "fused_single",
+    periodic_waveform_frame_delta_weight: float = 0.0,
+    periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
+    periodic_waveform_frame_rms_floor_weight: float = 0.0,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -878,6 +924,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         harmonic_bins=int(initial_batch["harmonic_target"].shape[-1]),
         noise_bins=int(initial_batch["noise_target"].shape[-1]),
         frame_length=int(initial_runtime["frame_length"]),
+        waveform_decoder_mode=waveform_decoder_mode,
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
 
@@ -924,6 +971,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             outputs = model(
                 periodic_branch_features=batch["periodic_branch_features"],
                 noise_branch_features=batch["noise_branch_features"],
+                decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
             )
             total_loss, loss_metrics = compute_nores_vocoder_losses(
                 outputs=outputs,
@@ -949,6 +997,10 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                 fused_hidden_template_weight=fused_hidden_template_weight,
                 fused_hidden_delta_weight=fused_hidden_delta_weight,
+                fused_hidden_branch_mean_weight=fused_hidden_branch_mean_weight,
+                periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+                periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+                periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
             )
             accumulated_loss = total_loss if accumulated_loss is None else accumulated_loss + total_loss
             package_metrics.append(
@@ -1015,6 +1067,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     fused_hidden_template_weight=fused_hidden_template_weight,
                     fused_hidden_delta_weight=fused_hidden_delta_weight,
+                    fused_hidden_branch_mean_weight=fused_hidden_branch_mean_weight,
+                    decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
+                    periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+                    periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+                    periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                     validation_source="validation_packages",
                 )
             else:
@@ -1038,6 +1095,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     fused_hidden_template_weight=fused_hidden_template_weight,
                     fused_hidden_delta_weight=fused_hidden_delta_weight,
+                    fused_hidden_branch_mean_weight=fused_hidden_branch_mean_weight,
+                    decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
+                    periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+                    periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+                    periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                     validation_source="train_packages_reused",
                 )
             validation_history.append(validation_payload_summary)
@@ -1078,9 +1140,14 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "harmonic_bins": int(initial_batch["harmonic_target"].shape[-1]),
             "noise_bins": int(initial_batch["noise_target"].shape[-1]),
             "decoder_frame_length": int(initial_runtime["frame_length"]),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "runtime": {
             "device": str(resolved_device),
+        },
+        "forward_path": {
+            "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "training": {
             "num_steps": effective_num_steps,
@@ -1106,6 +1173,10 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
                 "fused_hidden_template": float(fused_hidden_template_weight),
                 "fused_hidden_delta": float(fused_hidden_delta_weight),
+                "fused_hidden_branch_mean": float(fused_hidden_branch_mean_weight),
+                "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
+                "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
+                "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1685,18 +1756,37 @@ def compute_active_template_and_frame_delta_losses(
         frame_length=int(frame_length),
         hop_length=int(hop_length),
     )
+    return compute_frame_structure_losses_against_aligned_target(
+        predicted_frames=decoded_analysis_frames,
+        aligned_waveform=aligned_waveform[: decoded_waveform.shape[0]],
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        active_frame_rms_threshold=float(active_frame_rms_threshold),
+        zero_like=decoded_waveform,
+    )
+
+
+def compute_frame_structure_losses_against_aligned_target(
+    *,
+    predicted_frames: torch.Tensor,
+    aligned_waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
+    zero_like: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     aligned_analysis_frames = frame_waveform_sequence(
-        waveform=aligned_waveform[: decoded_waveform.shape[0]],
+        waveform=aligned_waveform,
         frame_length=int(frame_length),
         hop_length=int(hop_length),
     )
-    decoded_normalized_frames = normalize_frames_unit_rms(decoded_analysis_frames)
+    predicted_normalized_frames = normalize_frames_unit_rms(predicted_frames)
     aligned_normalized_frames = normalize_frames_unit_rms(aligned_analysis_frames)
     aligned_frame_rms = compute_centered_frame_rms(aligned_analysis_frames)
-    decoded_frame_deltas = compute_adjacent_deltas(decoded_normalized_frames)
+    predicted_frame_deltas = compute_adjacent_deltas(predicted_normalized_frames)
     aligned_frame_deltas = compute_adjacent_deltas(aligned_normalized_frames)
-    frame_delta_loss = F.l1_loss(decoded_frame_deltas, aligned_frame_deltas)
-    decoded_adjacent_cosine = (decoded_normalized_frames[:-1] * decoded_normalized_frames[1:]).sum(dim=1)
+    frame_delta_loss = F.l1_loss(predicted_frame_deltas, aligned_frame_deltas)
+    predicted_adjacent_cosine = (predicted_normalized_frames[:-1] * predicted_normalized_frames[1:]).sum(dim=1)
     aligned_adjacent_cosine = (aligned_normalized_frames[:-1] * aligned_normalized_frames[1:]).sum(dim=1)
     active_transition_mask = (
         (aligned_frame_rms[:-1] >= float(active_frame_rms_threshold))
@@ -1705,8 +1795,8 @@ def compute_active_template_and_frame_delta_losses(
 
     active_mask = aligned_frame_rms >= float(active_frame_rms_threshold)
     if bool(active_mask.any()):
-        decoded_template_cosine = compute_frame_cosine_to_reference(
-            frames=decoded_normalized_frames,
+        predicted_template_cosine = compute_frame_cosine_to_reference(
+            frames=predicted_normalized_frames,
             reference_index=0,
         )
         aligned_template_cosine = compute_frame_cosine_to_reference(
@@ -1714,19 +1804,21 @@ def compute_active_template_and_frame_delta_losses(
             reference_index=0,
         )
         active_template_excess = (
-            decoded_template_cosine[active_mask] - aligned_template_cosine[active_mask]
+            predicted_template_cosine[active_mask] - aligned_template_cosine[active_mask]
         ).clamp_min(0.0)
         active_template_loss = active_template_excess.mean()
     else:
-        active_template_loss = decoded_waveform.new_zeros(())
+        template_zero_like = predicted_frames if zero_like is None else zero_like
+        active_template_loss = template_zero_like.new_zeros(())
     if bool(active_transition_mask.any()):
         adjacent_cosine_excess = (
-            decoded_adjacent_cosine[active_transition_mask]
+            predicted_adjacent_cosine[active_transition_mask]
             - aligned_adjacent_cosine[active_transition_mask]
         ).clamp_min(0.0)
         adjacent_cosine_loss = adjacent_cosine_excess.mean()
     else:
-        adjacent_cosine_loss = decoded_waveform.new_zeros(())
+        adjacent_zero_like = predicted_frames if zero_like is None else zero_like
+        adjacent_cosine_loss = adjacent_zero_like.new_zeros(())
     return active_template_loss, frame_delta_loss, adjacent_cosine_loss
 
 
@@ -1736,10 +1828,11 @@ def compute_fused_hidden_anti_collapse_losses(
     noise_hidden: torch.Tensor,
     fused_hidden: torch.Tensor,
     frame_activity_target: torch.Tensor,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     periodic_normalized = normalize_frames_unit_rms(periodic_hidden)
     noise_normalized = normalize_frames_unit_rms(noise_hidden)
     fused_normalized = normalize_frames_unit_rms(fused_hidden)
+    branch_mean_normalized = normalize_frames_unit_rms(0.5 * (periodic_hidden + noise_hidden))
     activity_weights = frame_activity_target.to(fused_hidden.device, dtype=fused_hidden.dtype).view(-1)
 
     periodic_template_cosine = compute_frame_cosine_to_reference(
@@ -1767,7 +1860,9 @@ def compute_fused_hidden_anti_collapse_losses(
     delta_floor_excess = (branch_delta_floor - fused_delta_mag).clamp_min(0.0)
     delta_weight_sum = adjacent_activity_weights.sum().clamp_min(1.0e-6)
     fused_hidden_delta_loss = (delta_floor_excess * adjacent_activity_weights).sum() / delta_weight_sum
-    return fused_hidden_template_loss, fused_hidden_delta_loss
+    branch_mean_frame_l1 = torch.abs(fused_normalized - branch_mean_normalized).mean(dim=-1)
+    fused_hidden_branch_mean_loss = (branch_mean_frame_l1 * activity_weights).sum() / template_weight_sum
+    return fused_hidden_template_loss, fused_hidden_delta_loss, fused_hidden_branch_mean_loss
 
 
 def compute_rms_guard_loss(
@@ -1779,6 +1874,39 @@ def compute_rms_guard_loss(
     # Log-RMS keeps the guard scale-aware so low-amplitude collapse is penalized more clearly.
     rms_guard_loss = torch.abs(torch.log(predicted_rms) - torch.log(target_rms))
     return rms_guard_loss, predicted_rms, target_rms
+
+
+def compute_frame_log_rms_floor_loss_against_aligned_target(
+    *,
+    predicted_frames: torch.Tensor,
+    aligned_waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    frame_gains: torch.Tensor | None = None,
+    active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
+    floor_ratio: float = 1.0,
+    zero_like: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    aligned_analysis_frames = frame_waveform_sequence(
+        waveform=aligned_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    effective_predicted_frames = predicted_frames
+    if frame_gains is not None:
+        resolved_frame_gains = frame_gains.to(predicted_frames.device, dtype=predicted_frames.dtype).view(-1, 1)
+        effective_predicted_frames = predicted_frames * resolved_frame_gains
+    predicted_frame_rms = compute_centered_frame_rms(effective_predicted_frames).clamp_min(1.0e-6)
+    aligned_frame_rms = compute_centered_frame_rms(aligned_analysis_frames).clamp_min(1.0e-6)
+    active_mask = aligned_frame_rms >= float(active_frame_rms_threshold)
+    if not bool(active_mask.any()):
+        zero_source = predicted_frames if zero_like is None else zero_like
+        zero = zero_source.new_zeros(())
+        return zero, predicted_frame_rms.mean(), aligned_frame_rms.mean()
+    target_log_rms_floor = torch.log(aligned_frame_rms[active_mask] * float(floor_ratio)).to(predicted_frame_rms.dtype)
+    predicted_log_rms = torch.log(predicted_frame_rms[active_mask])
+    floor_excess = (target_log_rms_floor - predicted_log_rms).clamp_min(0.0)
+    return floor_excess.mean(), predicted_frame_rms[active_mask].mean(), aligned_frame_rms[active_mask].mean()
 
 
 def compute_nores_vocoder_losses(
@@ -1800,11 +1928,15 @@ def compute_nores_vocoder_losses(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
-    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
+    frame_adjacent_cosine_weight: float = 0.0,
     fused_hidden_template_weight: float = 0.0,
     fused_hidden_delta_weight: float = 0.0,
+    fused_hidden_branch_mean_weight: float = 0.0,
+    periodic_waveform_frame_delta_weight: float = 0.0,
+    periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
+    periodic_waveform_frame_rms_floor_weight: float = 0.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
         reconstruction_frame_gain_apply_mode
@@ -1841,13 +1973,23 @@ def compute_nores_vocoder_losses(
     frame_adjacent_cosine_loss = harmonic_loss.new_zeros(())
     fused_hidden_template_loss = harmonic_loss.new_zeros(())
     fused_hidden_delta_loss = harmonic_loss.new_zeros(())
+    fused_hidden_branch_mean_loss = harmonic_loss.new_zeros(())
+    periodic_waveform_frame_delta_loss = harmonic_loss.new_zeros(())
+    periodic_waveform_frame_adjacent_cosine_loss = harmonic_loss.new_zeros(())
+    periodic_waveform_frame_rms_floor_loss = harmonic_loss.new_zeros(())
+    periodic_waveform_frame_rms_mean = 0.0
+    aligned_active_frame_rms_mean = 0.0
     decoded_waveform_rms = 0.0
     target_waveform_rms = 0.0
     periodic_hidden = outputs.get("periodic_hidden")
     noise_hidden = outputs.get("noise_hidden")
     fused_hidden = outputs.get("fused_hidden")
     if periodic_hidden is not None and noise_hidden is not None and fused_hidden is not None:
-        fused_hidden_template_loss, fused_hidden_delta_loss = compute_fused_hidden_anti_collapse_losses(
+        (
+            fused_hidden_template_loss,
+            fused_hidden_delta_loss,
+            fused_hidden_branch_mean_loss,
+        ) = compute_fused_hidden_anti_collapse_losses(
             periodic_hidden=periodic_hidden,
             noise_hidden=noise_hidden,
             fused_hidden=fused_hidden,
@@ -1860,6 +2002,9 @@ def compute_nores_vocoder_losses(
         or float(active_template_weight) > 0.0
         or float(frame_delta_weight) > 0.0
         or float(frame_adjacent_cosine_weight) > 0.0
+        or float(periodic_waveform_frame_delta_weight) > 0.0
+        or float(periodic_waveform_frame_adjacent_cosine_weight) > 0.0
+        or float(periodic_waveform_frame_rms_floor_weight) > 0.0
     ):
         if aligned_waveform is None:
             raise ValueError("aligned_waveform is required when waveform/structure losses are enabled.")
@@ -1895,6 +2040,42 @@ def compute_nores_vocoder_losses(
         )
         decoded_waveform_rms = float(decoded_rms_tensor.detach().cpu().item())
         target_waveform_rms = float(target_rms_tensor.detach().cpu().item())
+        periodic_waveform_frames = outputs.get("periodic_waveform_frames")
+        if periodic_waveform_frames is not None and (
+            float(periodic_waveform_frame_delta_weight) > 0.0
+            or float(periodic_waveform_frame_adjacent_cosine_weight) > 0.0
+            or float(periodic_waveform_frame_rms_floor_weight) > 0.0
+        ):
+            if (
+                float(periodic_waveform_frame_delta_weight) > 0.0
+                or float(periodic_waveform_frame_adjacent_cosine_weight) > 0.0
+            ):
+                (
+                    _periodic_waveform_frame_template_loss,
+                    periodic_waveform_frame_delta_loss,
+                    periodic_waveform_frame_adjacent_cosine_loss,
+                ) = compute_frame_structure_losses_against_aligned_target(
+                    predicted_frames=periodic_waveform_frames,
+                    aligned_waveform=target_waveform,
+                    frame_length=int(frame_length),
+                    hop_length=int(hop_length),
+                    zero_like=harmonic_loss,
+                )
+            if float(periodic_waveform_frame_rms_floor_weight) > 0.0:
+                (
+                    periodic_waveform_frame_rms_floor_loss,
+                    periodic_waveform_frame_rms_mean_tensor,
+                    aligned_active_frame_rms_mean_tensor,
+                ) = compute_frame_log_rms_floor_loss_against_aligned_target(
+                    predicted_frames=periodic_waveform_frames,
+                    aligned_waveform=target_waveform,
+                    frame_length=int(frame_length),
+                    hop_length=int(hop_length),
+                    frame_gains=outputs.get("periodic_gate") if bool(use_predicted_activity_gate) else None,
+                    zero_like=harmonic_loss,
+                )
+                periodic_waveform_frame_rms_mean = float(periodic_waveform_frame_rms_mean_tensor.detach().cpu().item())
+                aligned_active_frame_rms_mean = float(aligned_active_frame_rms_mean_tensor.detach().cpu().item())
     total_loss = (
         harmonic_loss * float(harmonic_weight)
         + noise_loss * float(noise_weight)
@@ -1909,6 +2090,10 @@ def compute_nores_vocoder_losses(
         + frame_adjacent_cosine_loss * float(frame_adjacent_cosine_weight)
         + fused_hidden_template_loss * float(fused_hidden_template_weight)
         + fused_hidden_delta_loss * float(fused_hidden_delta_weight)
+        + fused_hidden_branch_mean_loss * float(fused_hidden_branch_mean_weight)
+        + periodic_waveform_frame_delta_loss * float(periodic_waveform_frame_delta_weight)
+        + periodic_waveform_frame_adjacent_cosine_loss * float(periodic_waveform_frame_adjacent_cosine_weight)
+        + periodic_waveform_frame_rms_floor_loss * float(periodic_waveform_frame_rms_floor_weight)
     )
     metrics = {
         "loss_total": round(float(total_loss.detach().cpu().item()), 6),
@@ -1931,6 +2116,22 @@ def compute_nores_vocoder_losses(
             float(fused_hidden_delta_loss.detach().cpu().item()),
             6,
         ),
+        "loss_fused_hidden_to_branch_mean_unit_rms_l1": round(
+            float(fused_hidden_branch_mean_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_periodic_waveform_frame_delta_unit_rms_l1": round(
+            float(periodic_waveform_frame_delta_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_periodic_waveform_frame_adjacent_cosine_excess_relu_0p02": round(
+            float(periodic_waveform_frame_adjacent_cosine_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_periodic_waveform_frame_log_rms_floor_excess": round(
+            float(periodic_waveform_frame_rms_floor_loss.detach().cpu().item()),
+            6,
+        ),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
         "noise_gate_pred_mean": round(float(outputs["noise_gate"].detach().mean().cpu().item()), 6),
         "activity_gate_pred_mean": round(float(predicted_activity.detach().mean().cpu().item()), 6),
@@ -1940,6 +2141,8 @@ def compute_nores_vocoder_losses(
         "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         "decoded_waveform_rms": round(decoded_waveform_rms, 6),
         "target_waveform_rms": round(target_waveform_rms, 6),
+        "periodic_waveform_active_frame_rms_mean": round(periodic_waveform_frame_rms_mean, 6),
+        "aligned_active_frame_rms_mean": round(aligned_active_frame_rms_mean, 6),
         "decoded_to_target_rms_ratio": round(
             0.0 if target_waveform_rms <= 1.0e-8 else decoded_waveform_rms / target_waveform_rms,
             6,
@@ -1962,18 +2165,23 @@ def run_nores_vocoder_validation_pass(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
-    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     frame_length: int,
     hop_length: int,
     validation_source: str,
+    frame_adjacent_cosine_weight: float = 0.0,
+    decoder_branch_mean_mix_alpha: float = 0.0,
+    periodic_waveform_frame_delta_weight: float = 0.0,
+    periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
+    periodic_waveform_frame_rms_floor_weight: float = 0.0,
 ) -> dict[str, object]:
     model.eval()
     with torch.no_grad():
         outputs = model(
             periodic_branch_features=validation_batch["periodic_branch_features"],
             noise_branch_features=validation_batch["noise_branch_features"],
+            decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
         )
         _loss, loss_metrics = compute_nores_vocoder_losses(
             outputs=outputs,
@@ -1997,11 +2205,17 @@ def run_nores_vocoder_validation_pass(
             frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
+            periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+            periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+            periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
         )
     return {
         "step": int(step),
         "validation_source": str(validation_source),
         "frame_count": int(validation_batch["harmonic_target"].shape[0]),
+        "forward_path": {
+            "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
+        },
         "loss_metrics": loss_metrics,
     }
 
@@ -2045,12 +2259,17 @@ def run_nores_vocoder_dataset_validation_pass(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
-    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     validation_source: str,
+    frame_adjacent_cosine_weight: float = 0.0,
     fused_hidden_template_weight: float = 0.0,
     fused_hidden_delta_weight: float = 0.0,
+    fused_hidden_branch_mean_weight: float = 0.0,
+    decoder_branch_mean_mix_alpha: float = 0.0,
+    periodic_waveform_frame_delta_weight: float = 0.0,
+    periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
+    periodic_waveform_frame_rms_floor_weight: float = 0.0,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
     model.eval()
@@ -2065,6 +2284,7 @@ def run_nores_vocoder_dataset_validation_pass(
             outputs = model(
                 periodic_branch_features=batch["periodic_branch_features"],
                 noise_branch_features=batch["noise_branch_features"],
+                decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
             )
             _loss, loss_metrics = compute_nores_vocoder_losses(
                 outputs=outputs,
@@ -2090,6 +2310,10 @@ def run_nores_vocoder_dataset_validation_pass(
                 reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
                 fused_hidden_template_weight=fused_hidden_template_weight,
                 fused_hidden_delta_weight=fused_hidden_delta_weight,
+                fused_hidden_branch_mean_weight=fused_hidden_branch_mean_weight,
+                periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
+                periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
+                periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
             )
             package_metrics.append(
                 {
@@ -2104,6 +2328,9 @@ def run_nores_vocoder_dataset_validation_pass(
         "validation_source": str(validation_source),
         "package_count": len(package_entries),
         "record_ids": [str(entry["record_id"]) for entry in package_entries],
+        "forward_path": {
+            "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
+        },
         "loss_metrics": average_loss_metrics([item["loss_metrics"] for item in package_metrics]),
         "package_metrics": package_metrics,
     }
