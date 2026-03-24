@@ -7,8 +7,12 @@ from pathlib import Path
 
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
+    attach_target_event_semantic_sidecar,
     attach_target_special_supervision,
     attach_target_weak_event_hints,
+    build_record_semantic_overview,
+    infer_target_event_semantic_sidecar_path,
+    load_target_event_semantic_sidecar_map,
     load_target_special_supervision_map,
     load_target_weak_event_hint_map,
 )
@@ -62,6 +66,15 @@ def build_streaming_student_calibration_assets(
         target_train_records = attach_target_special_supervision(
             target_train_records,
             load_target_special_supervision_map(target_special_supervision_path),
+        )
+    target_event_semantic_sidecar_path = resolve_target_event_semantic_sidecar_path(
+        config_path=config_path,
+        config=config,
+    )
+    if target_event_semantic_sidecar_path is not None and target_event_semantic_sidecar_path.exists():
+        target_train_records = attach_target_event_semantic_sidecar(
+            target_train_records,
+            load_target_event_semantic_sidecar_map(target_event_semantic_sidecar_path),
         )
 
     selection = select_calibration_records(
@@ -128,6 +141,23 @@ def resolve_optional_path(config_path: Path, raw_value: object) -> Path | None:
     if raw_value in {None, ""}:
         return None
     return (config_path.parent.parent / str(raw_value)).resolve()
+
+
+def resolve_target_event_semantic_sidecar_path(
+    config_path: Path,
+    config: dict[str, object],
+) -> Path | None:
+    resolved = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("target_event_semantic_sidecar_path"),
+    )
+    if resolved is not None:
+        return resolved
+    split_dir = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("split_dir"),
+    )
+    return infer_target_event_semantic_sidecar_path(split_dir)
 
 
 def select_calibration_records(
@@ -220,23 +250,26 @@ def build_record_tags(record: dict[str, object]) -> list[str]:
     tags: set[str] = set()
     duration_sec = float(record["audio"]["duration_sec"])
     lexical_char_count = len(str(record.get("text", {}).get("clean") or ""))
+    semantic_overview = build_record_semantic_overview(record)
     tags.add(f"duration_bucket:{bucketize_duration(duration_sec)}")
     tags.add(f"text_bucket:{bucketize_text_length(lexical_char_count)}")
 
-    weak_event_hints = record.get("weak_event_hints")
-    if isinstance(weak_event_hints, dict):
-        tags.add(f"structure:{str(weak_event_hints.get('utterance_structure_type', 'unknown'))}")
-        tags.add(f"final_terminal:{str(weak_event_hints.get('final_terminal_type', 'unknown'))}")
-        if int(weak_event_hints.get("pause_boundary_count", 0)) >= 2:
-            tags.add("pause:multi")
-        if int(weak_event_hints.get("terminal_boundary_count", 0)) >= 1:
-            tags.add("terminal:present")
-        if int(weak_event_hints.get("clause_count", 0)) >= 4:
-            tags.add("clause:ge4")
-        if bool(weak_event_hints.get("nonverbal_only", False)):
-            tags.add("content:nonverbal_only")
-        else:
-            tags.add("content:lexical")
+    tags.add(f"structure:{str(semantic_overview['semantic_utterance_structure_type'])}")
+    tags.add(f"final_terminal:{str(semantic_overview['semantic_final_terminal_type'])}")
+    if int(semantic_overview["semantic_pause_boundary_count"]) >= 2:
+        tags.add("pause:multi")
+    if int(semantic_overview["semantic_terminal_boundary_count"]) >= 1:
+        tags.add("terminal:present")
+    if int(semantic_overview["semantic_clause_count"]) >= 4:
+        tags.add("clause:ge4")
+    if bool(semantic_overview["semantic_nonverbal_only"]):
+        tags.add("content:nonverbal_only")
+    else:
+        tags.add("content:lexical")
+    if semantic_overview["semantic_contract_version"] is not None:
+        tags.add(f"semantic_contract:{semantic_overview['semantic_contract_version']}")
+        tags.add(f"semantic_label_status:{semantic_overview['semantic_label_status']}")
+        tags.add(f"semantic_inventory:{semantic_overview['semantic_inventory_status']}")
 
     target_special_supervision = record.get("target_special_supervision")
     if isinstance(target_special_supervision, dict):
@@ -283,18 +316,16 @@ def build_calibration_summary(
     max_records: int,
 ) -> dict[str, object]:
     selected_records = list(selection["records"])
-    weak_event_rows = [
-        record.get("weak_event_hints")
-        for record in selected_records
-        if isinstance(record.get("weak_event_hints"), dict)
-    ]
     supervision_rows = [
         record.get("target_special_supervision")
         for record in selected_records
         if isinstance(record.get("target_special_supervision"), dict)
     ]
-    structure_counts = Counter(str(row.get("utterance_structure_type", "unknown")) for row in weak_event_rows)
-    final_terminal_counts = Counter(str(row.get("final_terminal_type", "unknown")) for row in weak_event_rows)
+    semantic_overviews = [build_record_semantic_overview(record) for record in selected_records]
+    structure_counts = Counter(str(row["semantic_utterance_structure_type"]) for row in semantic_overviews)
+    final_terminal_counts = Counter(str(row["semantic_final_terminal_type"]) for row in semantic_overviews)
+    semantic_contract_counts = Counter(str(row["semantic_contract_version"] or "missing") for row in semantic_overviews)
+    semantic_label_status_counts = Counter(str(row["semantic_label_status"]) for row in semantic_overviews)
     pool_counts = Counter()
     for row in supervision_rows:
         for pool_name, is_member in dict(row.get("pool_memberships", {})).items():
@@ -318,6 +349,8 @@ def build_calibration_summary(
             "covered_tags": list(selection["covered_tags"]),
             "utterance_structure_type_counts": dict(sorted(structure_counts.items())),
             "final_terminal_type_counts": dict(sorted(final_terminal_counts.items())),
+            "semantic_contract_version_counts": dict(sorted(semantic_contract_counts.items())),
+            "semantic_label_status_counts": dict(sorted(semantic_label_status_counts.items())),
             "pool_membership_counts": dict(sorted(pool_counts.items())),
         },
         "conditioning_contract": {
@@ -329,7 +362,7 @@ def build_calibration_summary(
         },
         "notes": [
             "This stage only selects calibration records and writes a placeholder conditioning asset template.",
-            "Current selection uses structural diversity already available in weak_event_hints and target_special_supervision sidecars.",
+            "Current selection prefers target_event_semantic_sidecar when available, then falls back to weak_event_hints and target_special_supervision.",
             "The output is a bootstrap asset scaffold, not a learned s_spk_target / s_geom_target / alpha estimate.",
         ],
     }
@@ -406,6 +439,8 @@ def build_markdown(
         "## Coverage",
         f"- utterance_structure_type_counts: {json.dumps(selection_summary['utterance_structure_type_counts'], ensure_ascii=False)}",
         f"- final_terminal_type_counts: {json.dumps(selection_summary['final_terminal_type_counts'], ensure_ascii=False)}",
+        f"- semantic_contract_version_counts: {json.dumps(selection_summary['semantic_contract_version_counts'], ensure_ascii=False)}",
+        f"- semantic_label_status_counts: {json.dumps(selection_summary['semantic_label_status_counts'], ensure_ascii=False)}",
         f"- pool_membership_counts: {json.dumps(selection_summary['pool_membership_counts'], ensure_ascii=False)}",
         f"- covered_tags: {json.dumps(selection_summary['covered_tags'], ensure_ascii=False)}",
         "",

@@ -13,11 +13,14 @@ from torch.nn.utils import clip_grad_norm_
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
     TEXT_FEATURE_VERSION_LEGACY_V0,
+    attach_target_event_semantic_sidecar,
     attach_target_special_supervision,
     attach_target_weak_event_hints,
     build_training_batch_plan,
     build_char_vocab,
+    infer_target_event_semantic_sidecar_path,
     load_source_examples_from_records,
+    load_target_event_semantic_sidecar_map,
     load_target_special_supervision_map,
     load_target_weak_event_hint_map,
     load_target_examples_from_records,
@@ -92,6 +95,16 @@ def prepare_offline_mvp_training(
         target_train_records = attach_target_special_supervision(target_train_records, supervision_map)
         target_validation_records = attach_target_special_supervision(target_validation_records, supervision_map)
         target_special_eval_records = attach_target_special_supervision(target_special_eval_records, supervision_map)
+    target_event_semantic_sidecar_path = resolve_target_event_semantic_sidecar_path(
+        config_path=config_path,
+        config=config,
+        split_dir=split_dir,
+    )
+    if target_event_semantic_sidecar_path is not None:
+        semantic_map = load_target_event_semantic_sidecar_map(target_event_semantic_sidecar_path)
+        target_train_records = attach_target_event_semantic_sidecar(target_train_records, semantic_map)
+        target_validation_records = attach_target_event_semantic_sidecar(target_validation_records, semantic_map)
+        target_special_eval_records = attach_target_event_semantic_sidecar(target_special_eval_records, semantic_map)
     training_steps = int(config["training"].get("num_steps", 1))
     validation_interval = max(1, int(config["training"].get("validation_interval", training_steps)))
     checkpoint_interval = max(1, int(config["training"].get("checkpoint_interval", training_steps)))
@@ -357,6 +370,11 @@ def prepare_offline_mvp_training(
             "target_weak_event_hints_path": None if target_weak_event_hints_path is None else target_weak_event_hints_path.as_posix(),
             "target_special_supervision_path": (
                 None if target_special_supervision_path is None else target_special_supervision_path.as_posix()
+            ),
+            "target_event_semantic_sidecar_path": (
+                None
+                if target_event_semantic_sidecar_path is None
+                else target_event_semantic_sidecar_path.as_posix()
             ),
             "source_batch_audio_shape": list(source_batch["waveform"].shape),
             "vocab_size": len(vocab),
@@ -1023,6 +1041,17 @@ def resolve_target_special_supervision_path(
     return (config_path.parent.parent / supervision_path_config).resolve()
 
 
+def resolve_target_event_semantic_sidecar_path(
+    config_path: Path,
+    config: dict[str, object],
+    split_dir: Path | None,
+) -> Path | None:
+    semantic_path_config = config["data"].get("target_event_semantic_sidecar_path")
+    if semantic_path_config not in {None, ""}:
+        return (config_path.parent.parent / semantic_path_config).resolve()
+    return infer_target_event_semantic_sidecar_path(split_dir)
+
+
 def build_markdown(plan: dict[str, object]) -> str:
     return "\n".join(
         [
@@ -1056,6 +1085,7 @@ def build_markdown(plan: dict[str, object]) -> str:
             f"- target_text_feature_version: {plan['data']['target_text_feature_version']}",
             f"- target_weak_event_hints_path: {plan['data']['target_weak_event_hints_path']}",
             f"- target_special_supervision_path: {plan['data']['target_special_supervision_path']}",
+            f"- target_event_semantic_sidecar_path: {plan['data']['target_event_semantic_sidecar_path']}",
             f"- source_batch_audio_shape: {plan['data']['source_batch_audio_shape']}",
             f"- vocab_size: {plan['data']['vocab_size']}",
             "",

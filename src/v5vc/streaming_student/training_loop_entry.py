@@ -19,6 +19,7 @@ from v5vc.streaming_student.data import (
 from v5vc.streaming_student.losses import (
     apply_teacher_supervision_weight_schedule,
     compute_streaming_student_teacher_supervision_loss,
+    resolve_semantic_supervision_config,
     resolve_teacher_supervision_weight_schedule,
     resolve_teacher_supervision_weights,
 )
@@ -73,6 +74,10 @@ def run_streaming_student_training_loop(
     base_loss_weights = resolve_teacher_supervision_weights(
         overrides_path=resolved_loss_weight_overrides_path,
     )
+    semantic_supervision = resolve_semantic_supervision_config(
+        config=config.get("semantic_supervision"),
+        overrides_path=resolved_loss_weight_overrides_path,
+    )
     loss_weight_schedule = resolve_teacher_supervision_weight_schedule(
         overrides_path=resolved_loss_weight_overrides_path,
     )
@@ -123,6 +128,7 @@ def run_streaming_student_training_loop(
             batch=train_batch,
             weights=step_loss_weights,
             use_teacher_confidence=use_teacher_confidence,
+            semantic_supervision=semantic_supervision,
         )
         optimizer.zero_grad(set_to_none=True)
         train_loss.backward()
@@ -169,6 +175,7 @@ def run_streaming_student_training_loop(
                 records=records_by_split["target_validation"],
                 conditioning_asset=conditioning_asset,
                 base_loss_weights=base_loss_weights,
+                semantic_supervision=semantic_supervision,
                 loss_weight_schedule=loss_weight_schedule,
                 use_teacher_confidence=use_teacher_confidence,
                 batch_size=validation_batch_size,
@@ -201,6 +208,7 @@ def run_streaming_student_training_loop(
                         "max_grad_norm": float(max_grad_norm),
                         "use_teacher_confidence": bool(use_teacher_confidence),
                         "loss_weights": base_loss_weights,
+                        "semantic_supervision": semantic_supervision,
                         "loss_weight_schedule": loss_weight_schedule,
                         "loss_weight_overrides_path": (
                             None
@@ -242,6 +250,7 @@ def run_streaming_student_training_loop(
             "max_grad_norm": float(max_grad_norm),
             "use_teacher_confidence": bool(use_teacher_confidence),
             "loss_weights": base_loss_weights,
+            "semantic_supervision": semantic_supervision,
             "loss_weight_schedule": loss_weight_schedule,
             "loss_weight_overrides_path": (
                 None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
@@ -303,6 +312,7 @@ def run_validation_pass(
     records: list[dict[str, object]],
     conditioning_asset: dict[str, object],
     base_loss_weights: dict[str, float],
+    semantic_supervision: dict[str, object],
     loss_weight_schedule: dict[str, dict[str, float | str | int]],
     use_teacher_confidence: bool,
     batch_size: int,
@@ -357,6 +367,7 @@ def run_validation_pass(
                 batch=batch,
                 weights=effective_loss_weights,
                 use_teacher_confidence=use_teacher_confidence,
+                semantic_supervision=semantic_supervision,
             )
             batch_metrics.append(metrics)
             sampled_record_ids.append(list(batch["record_ids"]))

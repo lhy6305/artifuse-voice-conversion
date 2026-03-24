@@ -8,6 +8,7 @@ from time import perf_counter
 import torch
 
 from v5vc.manifest_builder import load_jsonl
+from v5vc.offline_mvp.data import infer_target_event_semantic_sidecar_path
 from v5vc.streaming_student.model import StreamingStudentScaffold
 from v5vc.train_entry import load_training_split, resolve_experiment_metrics_path
 
@@ -60,10 +61,16 @@ def prepare_streaming_student_stage(
         config_path=config_path,
         raw_value=data_config.get("target_special_supervision_path"),
     )
+    target_event_semantic_sidecar_path = resolve_target_event_semantic_sidecar_path(
+        config_path=config_path,
+        data_config=data_config,
+    )
     if target_weak_event_hints_path is not None and not target_weak_event_hints_path.exists():
         raise ValueError(f"target_weak_event_hints_path not found: {target_weak_event_hints_path}")
     if target_special_supervision_path is not None and not target_special_supervision_path.exists():
         raise ValueError(f"target_special_supervision_path not found: {target_special_supervision_path}")
+    if target_event_semantic_sidecar_path is not None and not target_event_semantic_sidecar_path.exists():
+        raise ValueError(f"target_event_semantic_sidecar_path not found: {target_event_semantic_sidecar_path}")
 
     seed = int(training_config.get("seed", 20260317))
     torch.manual_seed(seed)
@@ -118,6 +125,11 @@ def prepare_streaming_student_stage(
             ),
             "target_special_supervision_path": (
                 None if target_special_supervision_path is None else target_special_supervision_path.as_posix()
+            ),
+            "target_event_semantic_sidecar_path": (
+                None
+                if target_event_semantic_sidecar_path is None
+                else target_event_semantic_sidecar_path.as_posix()
             ),
         },
         "model": model_config,
@@ -177,6 +189,20 @@ def resolve_optional_path(config_path: Path, raw_value: object) -> Path | None:
     if raw_value in {None, ""}:
         return None
     return (config_path.parent.parent / str(raw_value)).resolve()
+
+
+def resolve_target_event_semantic_sidecar_path(
+    config_path: Path,
+    data_config: dict[str, object],
+) -> Path | None:
+    resolved = resolve_optional_path(
+        config_path=config_path,
+        raw_value=data_config.get("target_event_semantic_sidecar_path"),
+    )
+    if resolved is not None:
+        return resolved
+    split_dir = resolve_optional_path(config_path=config_path, raw_value=data_config.get("split_dir"))
+    return infer_target_event_semantic_sidecar_path(split_dir)
 
 
 def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> StreamingStudentScaffold:
@@ -264,6 +290,9 @@ def render_streaming_student_plan_markdown(plan: dict[str, object]) -> str:
         f"- target_special_eval_count: {data['target_special_eval_count']}",
         f"- source_train_count: {data['source_train_count']}",
         f"- source_validation_count: {data['source_validation_count']}",
+        f"- target_weak_event_hints_path: {data['target_weak_event_hints_path']}",
+        f"- target_special_supervision_path: {data['target_special_supervision_path']}",
+        f"- target_event_semantic_sidecar_path: {data['target_event_semantic_sidecar_path']}",
         "",
         "## Contract",
         f"- shared_hidden_dim: {contracts['frontend_outputs']['shared_hidden']['feature_dim']}",

@@ -16,6 +16,7 @@ from v5vc.streaming_student.data import (
 )
 from v5vc.streaming_student.losses import (
     compute_streaming_student_teacher_supervision_loss,
+    resolve_semantic_supervision_config,
     resolve_teacher_supervision_weights,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
@@ -63,6 +64,10 @@ def run_streaming_student_training_step(
     loss_weights = resolve_teacher_supervision_weights(
         overrides_path=resolved_loss_weight_overrides_path,
     )
+    semantic_supervision = resolve_semantic_supervision_config(
+        config=config.get("semantic_supervision"),
+        overrides_path=resolved_loss_weight_overrides_path,
+    )
 
     train_examples = load_streaming_student_target_examples_from_records(
         list(records_by_split["target_train"][: max(1, min(int(batch_size), len(records_by_split["target_train"])))])
@@ -99,6 +104,7 @@ def run_streaming_student_training_step(
         batch=train_batch,
         weights=loss_weights,
         use_teacher_confidence=use_teacher_confidence,
+        semantic_supervision=semantic_supervision,
     )
     optimizer.zero_grad(set_to_none=True)
     train_loss.backward()
@@ -118,6 +124,7 @@ def run_streaming_student_training_step(
             batch=validation_batch,
             weights=loss_weights,
             use_teacher_confidence=use_teacher_confidence,
+            semantic_supervision=semantic_supervision,
         )
 
     checkpoint_path = checkpoints_dir / f"{experiment_id}.step1.pt"
@@ -136,6 +143,7 @@ def run_streaming_student_training_step(
                 "max_grad_norm": float(max_grad_norm),
                 "use_teacher_confidence": bool(use_teacher_confidence),
                 "loss_weights": loss_weights,
+                "semantic_supervision": semantic_supervision,
                 "loss_weight_overrides_path": (
                     None
                     if resolved_loss_weight_overrides_path is None
@@ -170,6 +178,7 @@ def run_streaming_student_training_step(
             "max_grad_norm": float(max_grad_norm),
             "use_teacher_confidence": bool(use_teacher_confidence),
             "loss_weights": loss_weights,
+            "semantic_supervision": semantic_supervision,
             "loss_weight_overrides_path": (
                 None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
             ),

@@ -19383,3 +19383,749 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    - 回到更上游的
      `fusion / fused_hidden`
      主线
+## 2026-03-24 继续补充：fusion-side `fused_hidden_branch_mean` 在当前最强主线上形成了真实 Pareto 线
+- 正式报告：
+  - `docs/314_stage5_contractv2_normfix_periodicgate_rmsfloor065_fusedbranch_followup_report.md`
+
+### 当前关键结果
+1. 在当前最强主线：
+   - `periodic_plus_noise_residual_shape_recurrent`
+   - `periodic_waveform_frame_delta = 0.25`
+   - `periodic_waveform_frame_adjacent_cosine = 0.01`
+   - `periodic_waveform_frame_rms_floor = 0.65`
+   上重新加入
+   `fused_hidden_branch_mean_weight`
+   后，
+   结果和旧弱骨架时期已经不同
+2. 这次随着
+   `fused_hidden_branch_mean_weight`
+   从
+   `0.10 -> 0.25 -> 0.40`
+   增加，
+   可以稳定看到：
+   - `loss_fused_hidden_to_branch_mean_unit_rms_l1`
+     单调下降
+   - `active_template`
+     变好
+   - `adjacent cosine`
+     变好
+   - `rms_guard`
+     变好
+   - `decoded_to_target_rms_ratio`
+     更接近
+     `1.0`
+3. 代价也很稳定：
+   - `waveform`
+     变差
+   - `stft`
+     变差
+4. 因而这条线应被归类为：
+   - 一个真实的
+     fusion-side Pareto 线
+   而不是：
+   - 像 decode-side periodic spectral restraint
+     那样单纯把当前收益往回拉
+
+### 当前最值得记录的组合候选
+1. 在
+   `fused_hidden_branch_mean_weight = 0.25`
+   上叠一个最轻的：
+   - `stft_weight = 0.55`
+   后，
+   `waveform / stft`
+   税收被部分回收
+2. 同时它仍保留了相对 baseline 的：
+   - `active_template`
+     优势
+   - `adjacent cosine`
+     优势
+   - `rms_guard / rms_ratio`
+     优势
+3. 但它仍未形成：
+   - 对原始
+     `rms_floor=0.65`
+     baseline 的全面胜出
+4. 因而当前最准确的定位是：
+   - `fusedbranch=0.25 + stft=0.55`
+     是目前最平衡的 shadow candidate
+   - 还不是新的默认 leader
+
+### 当前阶段判断更新
+1. decode-side periodic spectral restraint
+   线当前可以继续暂停
+2. 更值得继续的是：
+   - `fusion / fused_hidden`
+     主线
+3. 当前仍不导听审包，
+   因为还没有新的无争议主线 winner
+
+### 更新后的下一步
+1. 如果继续只做一个最小实验，
+   当前最推荐的是：
+   - 以
+     `fusedbranch=0.25 + stft=0.55`
+     作为 shadow base
+   - 再微调：
+     - `stft=0.525`
+     - 或
+       `fusedbranch=0.20`
+2. 如果不想继续做同构微调，
+   更值钱的升级则是：
+   - 把当前
+     `branch_mean`
+     约束
+     从纯 loss
+     升级成更强的
+     forward-path
+     条件化
+## 2026-03-24 继续补充：fusion shadow 微调已完成，`fusedbranch=0.20 + stft=0.55` 成为新的 shadow leader
+- 正式报告：
+  - `docs/315_stage5_contractv2_normfix_periodicgate_rmsfloor065_fusedbranch_shadow_microtune_report.md`
+
+### 当前关键结果
+1. 围绕旧 shadow：
+   - `fusedbranch=0.25 + stft=0.55`
+   本轮只做了两个最小单变量微调：
+   - `fusedbranch=0.25 + stft=0.525`
+   - `fusedbranch=0.20 + stft=0.55`
+2. 结果显示：
+   - `stft=0.525`
+     不是更保守的回收方向
+   - 它没有把系统往 baseline 拉回，
+     而是进一步把：
+     - `active_template`
+     - `adjacent cosine`
+     - `rms_guard`
+     - `rms_ratio`
+     - `branch_mean`
+     推向更强
+   - 同时
+     `waveform / stft`
+     继续变差
+3. 相反：
+   - `fusedbranch=0.20 + stft=0.55`
+     才是当前更有效的平衡点
+4. 这条新候选相对 baseline：
+   - `waveform / stft`
+     只保留很小税收
+   - 但
+     `active_template / adjacent cosine / rms_guard / rms_ratio / branch_mean`
+     仍都优于 baseline
+
+### 当前阶段判断更新
+1. 当前最好的 shadow candidate
+   应更新为：
+   - `fusedbranch=0.20 + stft=0.55`
+2. 但它还没有形成：
+   - 对原始
+     `rms_floor=0.65`
+     baseline 的全面无争议胜出
+3. 因而默认 leader
+   仍不变：
+   - 原始
+     `periodic_gate rms_floor=0.65`
+4. 当前仍不导听审包
+
+### 更新后的下一步
+1. 如果继续只做一个最小实验，
+   当前最推荐的是：
+   - 以
+     `fusedbranch=0.20 + stft=0.55`
+     作为新 shadow base
+   - 再微调：
+     - `fusedbranch=0.15 + stft=0.55`
+     - 或
+       `fusedbranch=0.20 + stft=0.575`
+2. 如果不想继续做同构微调，
+   更值钱的升级仍然是：
+   - 把当前
+     `branch_mean`
+     约束
+     从纯 loss
+     升级成更强的
+     forward-path
+     条件化
+## 2026-03-24 继续补充：fusion shadow 微调 round 2 已完成，shadow line 收缩成两个近优角点
+- 正式报告：
+  - `docs/316_stage5_contractv2_normfix_periodicgate_rmsfloor065_fusedbranch_shadow_microtune_round2_report.md`
+
+### 当前关键结果
+1. 围绕
+   `fusedbranch=0.20 + stft=0.55`
+   本轮又做了两发最小微调：
+   - `fusedbranch=0.15 + stft=0.55`
+   - `fusedbranch=0.20 + stft=0.575`
+2. 结果显示：
+   - 这条 fusion-side shadow line
+     已经基本把
+     `waveform / stft`
+     税收回来了
+3. 但收回之后，
+   主要矛盾也变得更集中：
+   - `rms_guard`
+   - `decoded_to_target_rms_ratio`
+4. 两个新候选没有形成单一支配解，
+   而是分成两个很近的角点：
+   - `fusedbranch=0.15 + stft=0.55`
+     更平衡，
+     更接近 baseline
+   - `fusedbranch=0.20 + stft=0.575`
+     更偏 waveform/STFT 回收
+
+### 当前阶段判断更新
+1. 当前应把 shadow candidate
+   细分成两类：
+   - near-baseline balanced shadow:
+     `fusedbranch=0.15 + stft=0.55`
+   - waveform/STFT-recovery shadow:
+     `fusedbranch=0.20 + stft=0.575`
+2. 它们都还没有形成：
+   - 对原始
+     `rms_floor=0.65`
+     baseline 的全面无争议胜出
+3. 因而默认 leader
+   仍不变：
+   - 原始
+     `periodic_gate rms_floor=0.65`
+4. 当前仍不导听审包
+
+### 更新后的下一步
+1. 如果继续只做一个最小实验，
+   当前最推荐的是：
+   - 做交叉点：
+     `fusedbranch=0.15 + stft=0.575`
+2. 如果这发仍不能形成明显支配解，
+   则不再优先继续同构微扫，
+   而应转向：
+   - 把当前
+     `branch_mean`
+     约束
+     从纯 loss
+     升级成更强的
+     forward-path
+     条件化
+## 2026-03-24 继续补充：交叉点已测完，当前 fixed-6 听审包已正式落地
+- 正式报告：
+  - `docs/317_stage5_contractv2_normfix_periodicgate_rmsfloor065_fusedbranch_crosspoint_and_listening_bundle_report.md`
+
+### 当前关键结果
+1. 交叉点
+   `fusedbranch=0.15 + stft=0.575`
+   已完成
+2. 它在 fixed-6 上的表现是：
+   - `waveform / stft`
+     来到当前最好
+   - 但
+     `rms_guard / rms_ratio`
+     也回吐到当前最差
+3. 因而它不是：
+   - 当前新的单一 shadow leader
+4. 当前应继续把 shadow 线理解成：
+   - `fusedbranch=0.15 + stft=0.55`
+     是 near-baseline balance 点
+   - `fusedbranch=0.20 + stft=0.575`
+     是 waveform/STFT-recovery 点
+   - `fusedbranch=0.15 + stft=0.575`
+     是 recovery 过头的交叉点
+
+### 当前阶段判断更新
+1. 当前这条 fusion shadow line
+   已经被量化到足够细
+2. 继续同构微扫的边际价值
+   已明显下降
+3. 当前真正更有价值的下一步
+   不再是继续扫点，
+   而是：
+   - 直接做人工听审
+4. 本轮已完成 fixed-6 正式听审包导出，
+   路径为：
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_contractv2_normfix_periodicgate_rmsfloor065_fusion_shadow_compare_round1_1/`
+
+### 当前可直接听的对象
+1. `baseline/`
+2. `fusedbranch015_stft055/`
+3. `fusedbranch020_stft0575/`
+4. `fusedbranch015_stft0575/`
+5. 主听文件统一为：
+   - `*__decoded_pitch_matched.wav`
+
+### 更新后的下一步
+1. 下一步默认不再继续训练微扫
+2. 优先做：
+   - 这四路 fixed-6 包的人工听审
+3. 若听感仍全部是
+   `buzz-only`，
+   则应正式停止这条
+   loss-side
+   微调线，
+   改做：
+   - 更强的
+     `forward-path`
+     条件化
+## 2026-03-24 继续补充：四路 fusion shadow fixed-6 听审已全部失败，当前应正式停止 loss-side 微调线
+- 正式报告：
+  - `docs/318_stage5_contractv2_normfix_fusion_shadow_compare_human_audit_fail_and_next_plan.md`
+
+### 当前关键结果
+1. 用户已完成对以下四路 fixed-6 听审包的人工试听：
+   - `baseline`
+   - `fusedbranch015_stft055`
+   - `fusedbranch020_stft0575`
+   - `fusedbranch015_stft0575`
+2. 当前正式主观结论是：
+   - 全部样本仍为纯 buzz
+   - 未出现任何像人声的部分
+3. 因而当前应停止的不是：
+   - 某一个具体 shadow 点
+4. 而是：
+   - 整条
+     `fused_hidden_branch_mean + stft`
+     loss-side 微调线
+
+### 当前阶段判断更新
+1. 到这一步，
+   可以把当前判断写得更硬：
+   - fusion / branch-conditioned
+     方向本身没有被否定
+   - 但
+     loss-only
+     与静态线性 mix
+     这类轻量干预，
+     已被主观上证明不足以摆脱
+     buzz-only
+2. 当前真正缺的不是：
+   - 再做更细的
+     `branch_mean/stft`
+     权重组合
+3. 而是：
+   - 一个新的、
+     非线性的、
+     可稳态控制的
+     forward-path
+     decoder conditioning
+
+### 更新后的下一步
+1. 下一条主线应改为：
+   - 在当前最强骨架上，
+     实现一个
+     `branch-conditioned decoder adapter`
+2. 具体口径：
+   - 输入至少包含：
+     - `fused_hidden`
+     - `branch_mean_hidden`
+     - `fused_hidden - branch_mean_hidden`
+   - 输出一个逐帧 gate
+     或 residual correction，
+     再送入 decoder
+3. 这条线只做：
+   - baseline
+   - adapter candidate
+   两发最小 smoke
+4. 若 fixed-6 指标不明显恶化，
+   则直接导 fixed-6 听审包，
+   不再先做多轮结构超参微扫
+5. 如果这条结构级
+   forward-path
+   仍被听审判定为 pure buzz，
+   则应正式转向：
+   - `docs/280`
+     推荐的
+     Stage5 contract v2
+     主线
+## 2026-03-24 继续补充：第一版 `branch-conditioned decoder adapter` 最小 smoke 已完成，但当前形态不成立
+- 正式报告：
+  - `docs/319_stage5_contractv2_normfix_branch_conditioned_decoder_adapter_minimal_smoke_report.md`
+
+### 当前关键结果
+1. 已按计划实现第一版：
+   - `branch-conditioned decoder adapter`
+2. 这条新结构的最小 smoke
+   不是无效实验：
+   - 它会非常快地改善
+     `waveform / stft`
+3. 但同方向回吐也很强：
+   - `active_template`
+     大幅变差
+   - `adjacent cosine`
+     变差
+   - `rms_guard`
+     变差
+   - `decoded_to_target_rms_ratio`
+     也更差
+4. 保守初始化版
+   相比原始版
+   虽然更稳一些，
+   但仍没改变结论：
+   - 当前这条
+     broad hidden correction
+     形态不成立
+
+### 当前阶段判断更新
+1. 当前不导听审包
+2. 可以把这轮结论写成：
+   - 结构级
+     forward-path
+     升级方向本身仍值得继续
+   - 但介入位置必须收窄
+3. 当前失败的不是：
+   - “非线性 adapter”
+     这个大方向
+4. 当前失败的是：
+   - 把 correction
+     直接施加到
+     整个 branch decoder hidden
+     这一版具体形态
+
+### 更新后的下一步
+1. 下一条更合理的新实验应改为：
+   - `residual-shape-only branch-conditioned adapter`
+2. 具体口径：
+   - 保持
+     `temporal_periodic_hidden`
+     与
+     `temporal_noise_hidden`
+     主干不动
+   - 只对
+     `noise_residual_shape_head`
+     或 residual envelope
+     注入 branch-conditioned correction
+3. 目的：
+   - 尽量保住当前最强骨架的
+     `active_template / adjacent cosine / rms_ratio`
+   - 同时给 decoder 一点新的 timbre working space
+## 2026-03-24 继续补充：`residual-shape-only` 开关 plumbing 与 checkpoint 结构自动识别已补齐
+- 正式报告：
+  - `docs/320_stage5_contractv2_normfix_residual_shape_only_plumbing_and_checkpoint_shape_inference_report.md`
+
+### 当前关键结果
+1. 上一轮中断时，
+   代码只完成了一半：
+   - CLI
+   - training entry
+   - scaffold
+   - export
+   已部分接线
+2. 本轮已把剩余缺口补完：
+   - `offline_vocoder_scaffold.py`
+     新增共享 checkpoint 结构推断
+   - `nores_vocoder_audio_export.py`
+     改为复用共享推断
+   - `teacher_first_vc_demo.py`
+     也改为从 checkpoint
+     自动识别 vocoder 结构，
+     不再把 shape
+     硬编码成旧的
+     `fused_single`
+3. 同时修掉了一个中断态遗留回归：
+   - `infer_branch_label(...)`
+     调用方还停在旧签名
+
+### 当前阶段判断更新
+1. 现在真正缺的已经不是：
+   - plumbing
+2. 而是：
+   - 第一发
+     `residual-shape-only branch-conditioned adapter`
+     实验本身
+3. 后续无论走：
+   - `audio export`
+   - `teacher_first`
+   都不应再因为 checkpoint
+   结构误判而卡住
+
+### 更新后的下一步
+1. 直接启动：
+   - `residual-shape-only branch-conditioned adapter`
+     最小 smoke
+2. 跑完后立即验证：
+   - fixed-set aggregate
+   - export
+   - teacher-first
+     对新 checkpoint
+     的消费链是否全通
+## 2026-03-24 继续补充：第一发 `residual-shape-only branch-conditioned adapter` 最小 smoke 已完成，但当前也不成立
+- 正式报告：
+  - `docs/321_stage5_contractv2_normfix_residual_shape_only_adapter_minimal_smoke_report.md`
+
+### 当前关键结果
+1. 第一发
+   `residual-shape-only`
+   最小 smoke
+   已按计划完成
+2. 它依旧会买到：
+   - `waveform`
+   - `stft`
+     改善
+3. 但 fixed-6 与 validation
+   方向完全一致：
+   - `rms_guard`
+   - `active_template`
+   - `adjacent cosine`
+   - `decoded_to_target_rms_ratio`
+     继续明显回吐
+4. 更重要的是：
+   - 它没有超过上一轮最好形态
+     `branchcondadapter_conservative`
+5. 说明：
+   - 仅把 broad adapter
+     收窄到 residual-shape path，
+     还不足以形成新的可听候选
+
+### 当前阶段判断更新
+1. 当前失败的已经不只是：
+   - broad hidden correction
+2. 而是：
+   - broad adapter
+   - residual-shape-only adapter
+     这两条 decoder-conditioning 最小形态
+     都不成立
+3. 好消息是：
+   - export
+   - teacher-first
+     对新 checkpoint
+     的自动识别与消费链已验证全通
+4. 因而当前瓶颈已明确是：
+   - 指标/结构问题
+   不是：
+   - plumbing
+   - checkpoint 兼容性
+
+### 更新后的下一步
+1. 当前不导听审包
+2. 若继续沿 decoder-conditioning 线推进，
+   下一步应比
+   residual-shape-only
+   再更弱、更局部：
+   - residual gain
+   - scalar envelope bias
+   - 或同级别的极轻调制
+3. 若不想继续在这条线上做更弱结构实验，
+   则应准备正式转向：
+   - contract / semantic
+     升级路线
+## 2026-03-24 继续补充：decoder-conditioning 线已按用户决策停住，contract / semantic 升级路线已完成第一步 bootstrap
+- 正式报告：
+  - `docs/322_stage5_contract_semantic_upgrade_bootstrap_report.md`
+
+### 当前关键结果
+1. 本轮没有直接再开新训练，
+   而是先把 semantic 线的资产边界正式落盘：
+   - 当前 runtime
+     `event_probs`
+     仍是
+     `offline_mvp_heuristic_event_target_v1`
+   - 不再继续把它误写成设计态
+     `e_evt`
+2. 已新增：
+   - `src/v5vc/event_semantics.py`
+   - `build-target-event-semantic-sidecar`
+     CLI
+3. teacher contract /
+   vocoder scaffold
+   现在都会显式落盘：
+   - `event_probs_version`
+   - 8 维 heuristic 名字
+   - `semantic_status = heuristic_frame_targets_not_design_e_evt`
+4. 已重建：
+   - `data_prep/round1_1/b1_supervision/`
+   - `reports/data/round1_1_b1_supervision_inventory/`
+5. 已生成新的：
+   - `data_prep/round1_1/target_event_semantic_sidecar/`
+   - `reports/data/round1_1_target_event_semantic_sidecar/`
+6. 当前 sidecar 统计已明确写死：
+   - `record_count = 666`
+   - `clean_text_available_count = 666`
+   - `phone/manner/place/forced_alignment = 0`
+   - 说明这条 semantic 线当前仍然只是
+     target-side bootstrap
+
+### 当前阶段判断更新
+1. 现在可以明确区分两层东西：
+   - 旧 runtime
+     heuristic event targets
+   - 新 target-side
+     lexical / punctuation / clause
+     semantic sidecar
+2. 这一步还不是：
+   - semantic supervision
+     已经接入训练
+3. 但它已经把下一轮 contract / semantic
+   升级所需的 machine-readable 资产立住了
+4. 当前仍必须保留一个硬边界：
+   - source-side
+     对称 semantic
+     依旧没有
+
+### 更新后的下一步
+1. 默认不再回到
+   decoder-conditioning
+   小结构线
+2. 下一步优先决定：
+   - 把
+     `target_event_semantic_sidecar`
+     接到
+     Stage3 teacher-label /
+     student supervision
+   - 或接到
+     Stage5 target-side
+     semantic contract
+     消费链
+3. 无论选哪条，
+   都不能再把：
+   - `event_probs`
+     旧 8 维 heuristic
+     向量
+   写成：
+   - 设计稿最终
+     `e_evt`
+## 2026-03-24 继续补充：Stage3 已接入 `target_event_semantic_sidecar`，semantic bootstrap 不再只停留在离线资产层
+- 正式报告：
+  - `docs/323_stage3_target_event_semantic_sidecar_plumbing_report.md`
+
+### 当前关键结果
+1. 本轮已把
+   `target_event_semantic_sidecar`
+   真正接到：
+   - Stage3 teacher-label export
+   - Stage3 training-data contract
+   - Stage3 supervision dry-run
+   - calibration tagging
+   - scaffold / offline_mvp training plan
+2. `streaming_student_teacher_labels`
+   现在每条 index row
+   和每个 slice summary
+   都会显式写出：
+   - `semantic_contract_version`
+   - `semantic_inventory_status`
+   - `semantic_label_status`
+   - `semantic_utterance_structure_type`
+   - `semantic_final_terminal_type`
+3. Stage3
+   training-data /
+   supervision
+   dry-run summary
+   现在也会显式写出：
+   - `available_target_sidecars`
+     包含
+     `target_event_semantic_sidecar`
+   - `semantic_sidecar_summary`
+4. 为兼容旧
+   offline_mvp teacher checkpoint
+   没有这条 config
+   字段的情况，
+   当前消费链已支持：
+   - 从 `split_dir`
+     确定性推断
+     `target_event_semantic_sidecar`
+     默认路径
+5. 最小 smoke
+   已跑通：
+   - teacher-label export
+   - training-data
+   - supervision
+   都能看到
+   `target_event_semantic_sidecar_v1`
+
+### 当前阶段判断更新
+1. 现在 semantic 线已不再只是：
+   - 生成 sidecar
+2. 而是已经进入：
+   - Stage3 可消费的数据合同层
+3. 但它当前仍然只完成了：
+   - 数据透传
+   - 摘要
+   - 旧 checkpoint 兼容消费
+4. 它还没有进入：
+   - 新 semantic loss
+   - semantic weighting
+   - target-side semantic route
+     对训练行为的真实改写
+
+### 更新后的下一步
+1. 下一步默认优先：
+   - 在 Stage3 supervision
+     上增加第一版
+     target-side semantic
+     weighting / auxiliary loss
+2. 如果不先做 Stage3，
+   另一条备选是：
+   - 把这份 sidecar
+     接到 Stage5
+     target-side semantic
+     contract
+     消费链
+3. 无论先做哪条，
+   都必须继续写清：
+   - target-side semantic
+     已接入
+   - source-side semantic
+     仍缺
+## 2026-03-24 继续补充：Stage3 第一版 semantic weighting 已接入，并通过 supervision / train-step / checkpoint-eval smoke
+- 正式报告：
+  - `docs/324_stage3_target_event_semantic_weighting_smoke_report.md`
+
+### 当前关键结果
+1. 本轮没有新增 semantic head，
+   而是先做了更保守的第一版：
+   - 用
+     `target_event_semantic_sidecar`
+     对
+     Stage3
+     现有 teacher-supervised loss
+     做按样本语义重配
+2. 当前只重配：
+   - `teacher_event_prior`
+   - `teacher_event`
+   - `teacher_z_art`
+3. 当前明确不重配：
+   - `teacher_energy_proxy`
+   - `teacher_vuv_proxy`
+   - `teacher_aper_proxy`
+   - `teacher_proxy_acoustic`
+   - `teacher_proxy_temporal`
+4. 当前默认模板已带：
+   - `semantic_supervision.enabled = true`
+5. 最小 smoke
+   已确认：
+   - supervision dry-run
+     能看到结构样本被上调、
+     nonverbal 被下调
+   - train-step
+     会把
+     `semantic_supervision`
+     写入 checkpoint
+   - checkpoint-eval
+     会从 checkpoint
+     复现同一口径
+
+### 当前阶段判断更新
+1. 现在 semantic 路线已经从：
+   - 资产透传
+   进入到：
+   - 真正改变 loss
+2. 但这一轮仍然只是：
+   - sample-level semantic weighting
+3. 它还不是：
+   - 新 semantic head
+   - phone/manner/place
+     级别的语义监督
+4. 因而当前最准确的表述应是：
+   - Stage3 已开始消费 target-side semantic
+     去改写 supervision emphasis
+   - 但 semantic contract
+     仍远未完成
+
+### 更新后的下一步
+1. 下一步优先做：
+   - 一个很短的
+     Stage3 training loop
+     对比
+     semantic weighting
+     开/关
+2. 只有当短程轨迹可解释后，
+   才考虑继续加：
+   - utterance-level semantic auxiliary head
+   - semantic warmup schedule
+3. 当前仍不能把这条线写成：
+   - source-side semantic
+     已补齐

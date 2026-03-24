@@ -87,6 +87,11 @@ def prepare_streaming_student_training_data(
             "frame_length": int(config["model"]["frame_length"]),
             "hop_length": int(config["model"]["hop_length"]),
             "r_res_enabled": bool(config["model"].get("r_res_enabled", False)),
+            "available_target_sidecars": [
+                "weak_event_hints",
+                "target_special_supervision",
+                "target_event_semantic_sidecar",
+            ],
             "teacher_label_required_keys": [
                 "teacher_hidden",
                 "teacher_fused_hidden",
@@ -181,9 +186,40 @@ def build_slice_dry_run_summary(
                 6,
             ),
         },
+        "semantic_sidecar_summary": summarize_semantic_sidecars(batch["target_event_semantic_sidecar"]),
         "frame_alignment": frame_alignment,
         "status": "frame_contract_aligned" if frame_alignment["all_equal"] else "frame_contract_mismatch",
         "split_name": split_name,
+    }
+
+
+def summarize_semantic_sidecars(
+    sidecars: list[dict[str, object] | None],
+) -> dict[str, object]:
+    contract_counts: dict[str, int] = {}
+    label_status_counts: dict[str, int] = {}
+    structure_counts: dict[str, int] = {}
+    present_count = 0
+    for row in sidecars:
+        if not isinstance(row, dict):
+            continue
+        present_count += 1
+        contract_key = str(row.get("semantic_contract_version", "unknown"))
+        contract_counts[contract_key] = contract_counts.get(contract_key, 0) + 1
+        upgrade_status = row.get("upgrade_status")
+        if isinstance(upgrade_status, dict):
+            label_key = str(upgrade_status.get("label_status", "unknown"))
+            label_status_counts[label_key] = label_status_counts.get(label_key, 0) + 1
+        utterance_semantics = row.get("utterance_structure_semantics")
+        if isinstance(utterance_semantics, dict):
+            structure_key = str(utterance_semantics.get("utterance_structure_type", "unknown"))
+            structure_counts[structure_key] = structure_counts.get(structure_key, 0) + 1
+    return {
+        "present_count": present_count,
+        "missing_count": max(0, len(sidecars) - present_count),
+        "semantic_contract_version_counts": dict(sorted(contract_counts.items())),
+        "semantic_label_status_counts": dict(sorted(label_status_counts.items())),
+        "semantic_utterance_structure_type_counts": dict(sorted(structure_counts.items())),
     }
 
 
@@ -212,6 +248,7 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"- student_shapes: {json.dumps(payload['student_shapes'], ensure_ascii=False)}",
                 f"- conditioning_shapes: {json.dumps(payload['conditioning_shapes'], ensure_ascii=False)}",
                 f"- teacher_confidence: {json.dumps(payload['teacher_confidence'], ensure_ascii=False)}",
+                f"- semantic_sidecar_summary: {json.dumps(payload['semantic_sidecar_summary'], ensure_ascii=False)}",
                 f"- frame_alignment: {json.dumps(payload['frame_alignment'], ensure_ascii=False)}",
                 f"- status: {payload['status']}",
                 "",

@@ -1,0 +1,160 @@
+{
+  "generated_at": "2026-03-24T21:59:01",
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels_semantic_smoke/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "timing": {
+    "started_at": "2026-03-24T21:59:01",
+    "ended_at": "2026-03-24T21:59:01",
+    "duration_sec": 0.232959
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/semantic_smoke_subset",
+    "option_name": "semantic_smoke_subset",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 1,
+      "target_validation": 1,
+      "target_special_eval": 1,
+      "source_train": 1,
+      "source_validation": 1
+    }
+  },
+  "conditioning": {
+    "asset_version": "stage3_calibration_asset_v1",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha_value": 1.15,
+    "source": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
+  },
+  "loss_weights": {
+    "teacher_z_art": 1.0,
+    "teacher_event": 1.0,
+    "teacher_event_prior": 0.5,
+    "teacher_energy_proxy": 0.25,
+    "teacher_vuv_proxy": 0.15,
+    "teacher_aper_proxy": 0.1,
+    "teacher_proxy_acoustic": 0.0,
+    "teacher_proxy_temporal": 0.0,
+    "log_f0_correction_l1": 0.01,
+    "aper_correction_l1": 0.01
+  },
+  "loss_weight_overrides_path": null,
+  "use_teacher_confidence": true,
+  "slices": {
+    "target_train": {
+      "record_count": 1,
+      "dry_run_batch_size": 1,
+      "sample_record_ids": [
+        "target::archive_firefly_1"
+      ],
+      "semantic_sidecar_summary": {
+        "present_count": 1,
+        "missing_count": 0,
+        "semantic_contract_version_counts": {
+          "target_event_semantic_sidecar_v1": 1
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 1
+        }
+      },
+      "loss_metrics": {
+        "loss_total": 16.592844,
+        "loss_total_default_reference": 16.592844,
+        "loss_teacher_z_art": 3.678433,
+        "loss_teacher_event": 5.633097,
+        "loss_teacher_event_prior": 5.843097,
+        "loss_teacher_energy_proxy": 17.005571,
+        "loss_teacher_vuv_proxy": 0.685934,
+        "loss_teacher_aper_proxy": 0.041781,
+        "loss_teacher_proxy_acoustic": 17.214537,
+        "loss_teacher_proxy_temporal": 0.005628,
+        "loss_log_f0_correction_l1": 0.083482,
+        "loss_aper_correction_l1": 0.046845,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1350.021973
+      },
+      "loss_total_tensor": 16.592844
+    },
+    "target_validation": {
+      "record_count": 1,
+      "dry_run_batch_size": 1,
+      "sample_record_ids": [
+        "target::chapter3_3_firefly_162"
+      ],
+      "semantic_sidecar_summary": {
+        "present_count": 1,
+        "missing_count": 0,
+        "semantic_contract_version_counts": {
+          "target_event_semantic_sidecar_v1": 1
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 1
+        }
+      },
+      "loss_metrics": {
+        "loss_total": 15.312153,
+        "loss_total_default_reference": 15.312153,
+        "loss_teacher_z_art": 5.362088,
+        "loss_teacher_event": 5.568073,
+        "loss_teacher_event_prior": 5.759019,
+        "loss_teacher_energy_proxy": 5.595396,
+        "loss_teacher_vuv_proxy": 0.646019,
+        "loss_teacher_aper_proxy": 0.051725,
+        "loss_teacher_proxy_acoustic": 5.786883,
+        "loss_teacher_proxy_temporal": 0.009687,
+        "loss_log_f0_correction_l1": 0.106086,
+        "loss_aper_correction_l1": 0.049793,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 90.56897
+      },
+      "loss_total_tensor": 15.312153
+    },
+    "target_special_eval": {
+      "record_count": 1,
+      "dry_run_batch_size": 1,
+      "sample_record_ids": [
+        "target::no_text_voice/chapter3_17_firefly_106"
+      ],
+      "semantic_sidecar_summary": {
+        "present_count": 1,
+        "missing_count": 0,
+        "semantic_contract_version_counts": {
+          "target_event_semantic_sidecar_v1": 1
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 1
+        }
+      },
+      "loss_metrics": {
+        "loss_total": 14.117542,
+        "loss_total_default_reference": 14.117542,
+        "loss_teacher_z_art": 4.588376,
+        "loss_teacher_event": 5.543851,
+        "loss_teacher_event_prior": 5.779466,
+        "loss_teacher_energy_proxy": 3.963614,
+        "loss_teacher_vuv_proxy": 0.658155,
+        "loss_teacher_aper_proxy": 0.045059,
+        "loss_teacher_proxy_acoustic": 4.154478,
+        "loss_teacher_proxy_temporal": 0.004842,
+        "loss_log_f0_correction_l1": 0.087414,
+        "loss_aper_correction_l1": 0.057539,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 71.284851
+      },
+      "loss_total_tensor": 14.117542
+    }
+  },
+  "notes": [
+    "This stage defines only the minimum teacher-supervised dry-run losses needed to move beyond pure data wiring.",
+    "Current supervision intentionally avoids forcing a hidden-state distillation term because Stage3 and offline_mvp hidden dimensions are not yet aligned.",
+    "Frontend proxy terms are heuristic and should be treated as bootstrap supervision, not final semantic commitments."
+  ],
+  "next_steps": [
+    "Decide which teacher_frame_confidence behaviors become actual weighting or filtering policy in real training.",
+    "Add explicit Stage3 hidden-space projection only if hidden distillation is still needed after the base loss route is validated.",
+    "Build a real training loop on top of this dry-run contract without opening r_res yet."
+  ]
+}

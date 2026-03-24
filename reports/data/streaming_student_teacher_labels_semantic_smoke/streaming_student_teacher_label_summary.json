@@ -1,0 +1,217 @@
+{
+  "generated_at": "2026-03-24T21:56:29",
+  "route_handoff_path": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_route_handoff_round1_1_longwindow_final/route_handoff.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration.metrics.json",
+  "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "data_output_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels_semantic_smoke",
+  "report_output_dir": "F:/proj_dev/tmp/workdir4/reports/data/streaming_student_teacher_labels_semantic_smoke",
+  "teacher_anchor": {
+    "experiment_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+    "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration.metrics.json",
+    "route_policy": "default_minimax",
+    "route_selected_anchor_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "source": "route_handoff_anchor"
+  },
+  "index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels_semantic_smoke/teacher_label_index.jsonl",
+  "record_count": 3,
+  "frame_count": 3349,
+  "batch_size": 1,
+  "max_records_per_slice": 1,
+  "feature_dims": {
+    "hidden": 64,
+    "fused_hidden": 64,
+    "z_art": 8,
+    "event_logits": 8,
+    "acoustic": 4,
+    "confidence": 1
+  },
+  "slices": {
+    "target_train": {
+      "record_count": 1,
+      "duration_stats_sec": {
+        "count": 1,
+        "min": 11.087982,
+        "max": 11.087982,
+        "mean": 11.087982,
+        "median": 11.087982,
+        "stdev": 0.0
+      },
+      "frame_count_stats": {
+        "count": 1,
+        "min": 3054,
+        "max": 3054,
+        "mean": 3054.0,
+        "median": 3054,
+        "stdev": 0.0,
+        "sum": 3054
+      },
+      "confidence_mean_stats": {
+        "count": 1,
+        "min": 0.44205,
+        "max": 0.44205,
+        "mean": 0.44205,
+        "median": 0.44205,
+        "stdev": 0.0
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 1,
+        "min": 0.483955,
+        "max": 0.483955,
+        "mean": 0.483955,
+        "median": 0.483955,
+        "stdev": 0.0
+      },
+      "utterance_structure_type_counts": {
+        "multi_terminal": 1
+      },
+      "final_terminal_type_counts": {
+        "terminal_period": 1
+      },
+      "semantic_contract_version_counts": {
+        "target_event_semantic_sidecar_v1": 1
+      },
+      "semantic_inventory_status_counts": {
+        "matched_inventory": 1
+      },
+      "semantic_label_status_counts": {
+        "pending_upgrade": 1
+      },
+      "semantic_utterance_structure_type_counts": {
+        "multi_terminal": 1
+      },
+      "semantic_final_terminal_type_counts": {
+        "terminal_period": 1
+      },
+      "sample_record_ids": [
+        "target::archive_firefly_1"
+      ]
+    },
+    "target_validation": {
+      "record_count": 1,
+      "duration_stats_sec": {
+        "count": 1,
+        "min": 0.612993,
+        "max": 0.612993,
+        "mean": 0.612993,
+        "median": 0.612993,
+        "stdev": 0.0
+      },
+      "frame_count_stats": {
+        "count": 1,
+        "min": 167,
+        "max": 167,
+        "mean": 167.0,
+        "median": 167,
+        "stdev": 0.0,
+        "sum": 167
+      },
+      "confidence_mean_stats": {
+        "count": 1,
+        "min": 0.542329,
+        "max": 0.542329,
+        "mean": 0.542329,
+        "median": 0.542329,
+        "stdev": 0.0
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 1,
+        "min": 0.161677,
+        "max": 0.161677,
+        "mean": 0.161677,
+        "median": 0.161677,
+        "stdev": 0.0
+      },
+      "utterance_structure_type_counts": {
+        "single_clause_terminal": 1
+      },
+      "final_terminal_type_counts": {
+        "terminal_period": 1
+      },
+      "semantic_contract_version_counts": {
+        "target_event_semantic_sidecar_v1": 1
+      },
+      "semantic_inventory_status_counts": {
+        "matched_inventory": 1
+      },
+      "semantic_label_status_counts": {
+        "pending_upgrade": 1
+      },
+      "semantic_utterance_structure_type_counts": {
+        "single_clause_terminal": 1
+      },
+      "semantic_final_terminal_type_counts": {
+        "terminal_period": 1
+      },
+      "sample_record_ids": [
+        "target::chapter3_3_firefly_162"
+      ]
+    },
+    "target_special_eval": {
+      "record_count": 1,
+      "duration_stats_sec": {
+        "count": 1,
+        "min": 0.470998,
+        "max": 0.470998,
+        "mean": 0.470998,
+        "median": 0.470998,
+        "stdev": 0.0
+      },
+      "frame_count_stats": {
+        "count": 1,
+        "min": 128,
+        "max": 128,
+        "mean": 128.0,
+        "median": 128,
+        "stdev": 0.0,
+        "sum": 128
+      },
+      "confidence_mean_stats": {
+        "count": 1,
+        "min": 0.556913,
+        "max": 0.556913,
+        "mean": 0.556913,
+        "median": 0.556913,
+        "stdev": 0.0
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 1,
+        "min": 0.039062,
+        "max": 0.039062,
+        "mean": 0.039062,
+        "median": 0.039062,
+        "stdev": 0.0
+      },
+      "utterance_structure_type_counts": {
+        "nonverbal": 1
+      },
+      "final_terminal_type_counts": {
+        "none": 1
+      },
+      "semantic_contract_version_counts": {
+        "target_event_semantic_sidecar_v1": 1
+      },
+      "semantic_inventory_status_counts": {
+        "matched_inventory": 1
+      },
+      "semantic_label_status_counts": {
+        "pending_upgrade": 1
+      },
+      "semantic_utterance_structure_type_counts": {
+        "nonverbal": 1
+      },
+      "semantic_final_terminal_type_counts": {
+        "none": 1
+      },
+      "sample_record_ids": [
+        "target::no_text_voice/chapter3_17_firefly_106"
+      ]
+    }
+  },
+  "notes": [
+    "Teacher labels are pseudo labels exported from the formal offline_mvp route anchor, not physical ground truth.",
+    "frame_confidence uses heuristic bootstrap_v1 and is meant for later weighting/filtering, not as a final confidence design.",
+    "Stage3 may reuse these labels as assets, but should still keep its own training entry and loss contract separate from offline_mvp."
+  ]
+}

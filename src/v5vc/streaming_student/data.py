@@ -8,8 +8,11 @@ import torch
 
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
+    attach_target_event_semantic_sidecar,
     attach_target_special_supervision,
     attach_target_weak_event_hints,
+    infer_target_event_semantic_sidecar_path,
+    load_target_event_semantic_sidecar_map,
     load_target_special_supervision_map,
     load_target_weak_event_hint_map,
     load_waveform,
@@ -26,6 +29,7 @@ class StreamingStudentTargetExample:
     waveform: torch.Tensor
     weak_event_hints: dict[str, object] | None
     target_special_supervision: dict[str, object] | None
+    target_event_semantic_sidecar: dict[str, object] | None
     teacher_label_path: Path
     teacher_frame_mask: torch.Tensor
     teacher_hidden: torch.Tensor
@@ -141,6 +145,15 @@ def attach_sidecars_if_available(
             attached_records,
             load_target_special_supervision_map(special_supervision_path),
         )
+    semantic_sidecar_path = resolve_target_event_semantic_sidecar_path(
+        config_path=config_path,
+        config=config,
+    )
+    if semantic_sidecar_path is not None and semantic_sidecar_path.exists():
+        attached_records = attach_target_event_semantic_sidecar(
+            attached_records,
+            load_target_event_semantic_sidecar_map(semantic_sidecar_path),
+        )
     return attached_records
 
 
@@ -148,6 +161,23 @@ def resolve_optional_path(config_path: Path, raw_value: object) -> Path | None:
     if raw_value in {None, ""}:
         return None
     return (config_path.parent.parent / str(raw_value)).resolve()
+
+
+def resolve_target_event_semantic_sidecar_path(
+    config_path: Path,
+    config: dict[str, object],
+) -> Path | None:
+    resolved = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("target_event_semantic_sidecar_path"),
+    )
+    if resolved is not None:
+        return resolved
+    split_dir = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("split_dir"),
+    )
+    return infer_target_event_semantic_sidecar_path(split_dir)
 
 
 def attach_teacher_label_index(
@@ -208,6 +238,7 @@ def load_streaming_student_target_examples_from_records(
                 waveform=waveform,
                 weak_event_hints=record.get("weak_event_hints"),
                 target_special_supervision=record.get("target_special_supervision"),
+                target_event_semantic_sidecar=record.get("target_event_semantic_sidecar"),
                 teacher_label_path=teacher_label_path,
                 teacher_frame_mask=teacher_payload["frame_mask"].to(torch.bool),
                 teacher_hidden=teacher_payload["hidden"].to(torch.float32),
@@ -363,5 +394,6 @@ def collate_streaming_student_batch(
         "alpha": alpha_batch,
         "weak_event_hints": [example.weak_event_hints for example in examples],
         "target_special_supervision": [example.target_special_supervision for example in examples],
+        "target_event_semantic_sidecar": [example.target_event_semantic_sidecar for example in examples],
         "conditioning_summary": dict(conditioning_asset["summary"]),
     }

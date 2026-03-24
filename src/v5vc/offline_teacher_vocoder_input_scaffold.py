@@ -7,6 +7,8 @@ from pathlib import Path
 
 import torch
 
+from v5vc.event_semantics import build_current_runtime_event_semantics_meta
+
 
 SUPPORTED_CONTRACT_VERSIONS = {
     "offline_teacher_downstream_control_v1",
@@ -44,6 +46,9 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
     conditioning = dict(payload["conditioning"])
     source_acoustic_state_meta = dict(payload.get("source_acoustic_state_meta", {}))
     source_acoustic_state_stats = dict(source_acoustic_state_meta.get("stats", {}))
+    event_semantics_meta = dict(payload.get("event_semantics_meta", {}))
+    if not event_semantics_meta:
+        event_semantics_meta = build_current_runtime_event_semantics_meta()
 
     energy_proxy = derived["energy_proxy"].to(torch.float32)
     voiced_proxy = derived["voiced_proxy"].to(torch.float32)
@@ -234,6 +239,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
             "s_geom_target": geom_embedding,
             "alpha": alpha,
         },
+        "event_semantics_meta": event_semantics_meta,
         "stage5_requested_but_missing": stage5_requested_but_missing,
         "branch_scaffold": {
             "periodic_branch_features": periodic_branch_features,
@@ -272,6 +278,11 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
                 }
             ),
         },
+        "event_semantics": {
+            "event_probs_version": str(event_semantics_meta.get("event_probs_version", "unknown")),
+            "event_prob_dimensions": list(event_semantics_meta.get("event_prob_dimensions", [])),
+            "semantic_status": str(event_semantics_meta.get("semantic_status", "unknown")),
+        },
         "missing_design_keys": {
             "periodic_branch": list(missing_periodic_design_keys),
             "noise_branch": ["r_res"],
@@ -282,6 +293,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
                 "This scaffold is a consumer-side adapter for the C-prime v2-core contract rather than a final vocoder implementation.",
                 "periodic_branch_features now consume explicit f0_hz / vuv / E semantics through bounded consumer-side normalizations rather than raw Hz/log-RMS magnitudes.",
                 "noise_branch_features now consume aper / vuv / normalized E together with event_probs, while r_res remains intentionally absent on the no-res baseline route.",
+                "Current event_probs still use the offline_mvp_heuristic_event_target_v1 label space and should not be confused with the design-time named e_evt semantics.",
             ]
             if has_v2_core
             else [
@@ -358,6 +370,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- periodic_branch_feature_dim: {summary['periodic_branch_feature_dim']}",
         f"- noise_branch_feature_dim: {summary['noise_branch_feature_dim']}",
         f"- available_controls: {json.dumps(summary['available_controls'], ensure_ascii=False)}",
+        f"- event_semantics: {json.dumps(summary.get('event_semantics', {}), ensure_ascii=False)}",
         f"- missing_design_keys: {json.dumps(summary['missing_design_keys'], ensure_ascii=False)}",
         "",
         "## Notes",

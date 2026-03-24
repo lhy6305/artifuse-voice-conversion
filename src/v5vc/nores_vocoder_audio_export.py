@@ -9,7 +9,10 @@ from pathlib import Path
 import torch
 
 from v5vc.nores_vocoder_checkpoint_selection import select_offline_mvp_nores_vocoder_checkpoint
-from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
+from v5vc.offline_vocoder_scaffold import (
+    NoResidualSourceFilterVocoderScaffold,
+    build_nores_vocoder_scaffold_from_state_dict,
+)
 from v5vc.offline_vocoder_training import (
     DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
     compute_nores_vocoder_losses,
@@ -96,6 +99,8 @@ def export_offline_mvp_nores_vocoder_audio(
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
         predicted_activity_gate_apply_mode=resolved_predicted_activity_gate_apply_mode,
         decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
+        use_decoder_branch_condition_adapter=bool(model.use_decoder_branch_condition_adapter),
+        use_residual_shape_branch_condition_adapter=bool(model.use_residual_shape_branch_condition_adapter),
     )
 
     exported_records: list[dict[str, object]] = []
@@ -117,6 +122,7 @@ def export_offline_mvp_nores_vocoder_audio(
                 periodic_gate_target=batch["periodic_gate_target"],
                 noise_gate_target=batch["noise_gate_target"],
                 aligned_waveform=batch["aligned_waveform"],
+                sample_rate=int(runtime["sample_rate"]),
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
                 harmonic_weight=1.0,
@@ -227,6 +233,8 @@ def export_offline_mvp_nores_vocoder_audio(
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_predicted_activity_gate_apply_mode,
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
+            "use_decoder_branch_condition_adapter": bool(model.use_decoder_branch_condition_adapter),
+            "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
         },
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "checkpoint_selection_path": None if selection_summary is None else checkpoint_selection_path.resolve().as_posix(),
@@ -403,37 +411,14 @@ def build_model_from_checkpoint(
     first_runtime: dict[str, int],
 ) -> NoResidualSourceFilterVocoderScaffold:
     state_dict = dict(checkpoint_payload["model_state_dict"])
-    hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
-    harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
-    noise_bins = int(state_dict["noise_envelope.weight"].shape[0])
-    waveform_decoder_mode = infer_waveform_decoder_mode_from_state_dict(state_dict)
-    model = NoResidualSourceFilterVocoderScaffold(
+    model = build_nores_vocoder_scaffold_from_state_dict(
+        state_dict=state_dict,
         periodic_input_dim=int(first_batch["periodic_branch_features"].shape[-1]),
         noise_input_dim=int(first_batch["noise_branch_features"].shape[-1]),
-        hidden_dim=hidden_dim,
-        harmonic_bins=harmonic_bins,
-        noise_bins=noise_bins,
         frame_length=int(first_runtime["frame_length"]),
-        waveform_decoder_mode=waveform_decoder_mode,
     )
     model.load_state_dict(state_dict)
     return model
-
-
-def infer_waveform_decoder_mode_from_state_dict(state_dict: dict[str, torch.Tensor]) -> str:
-    if "periodic_temporal_gru.weight_ih_l0" in state_dict:
-        return "periodic_plus_noise_residual_shape_recurrent"
-    if "periodic_temporal_refiner.0.weight" in state_dict:
-        return "periodic_plus_noise_residual_shape_temporal"
-    if "noise_residual_gain_head.0.weight" in state_dict:
-        return "periodic_plus_noise_factorized_residual"
-    if "noise_residual_shape_head.0.weight" in state_dict:
-        return "periodic_plus_noise_residual_shape"
-    if "noise_residual_decoder.0.weight" in state_dict:
-        return "periodic_plus_noise_residual"
-    if "periodic_waveform_decoder.0.weight" in state_dict:
-        return "dual_branch_mix"
-    return "fused_single"
 
 
 def reset_managed_directory(path: Path) -> None:
@@ -667,7 +652,9 @@ def infer_branch_label(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
-    decoder_branch_mean_mix_alpha: float,
+    decoder_branch_mean_mix_alpha: float = 0.0,
+    use_decoder_branch_condition_adapter: bool = False,
+    use_residual_shape_branch_condition_adapter: bool = False,
 ) -> str:
     suffix = describe_waveform_decode_variant(
         use_predicted_activity_gate=bool(use_predicted_activity_gate),
@@ -675,6 +662,8 @@ def infer_branch_label(
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
         predicted_activity_gate_apply_mode=str(predicted_activity_gate_apply_mode),
         decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
+        use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
+        use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
     )
     if selection_summary is not None:
         selected_step = selection_summary.get("step")
@@ -688,9 +677,15 @@ def describe_waveform_decode_variant(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
-    decoder_branch_mean_mix_alpha: float,
+    decoder_branch_mean_mix_alpha: float = 0.0,
+    use_decoder_branch_condition_adapter: bool = False,
+    use_residual_shape_branch_condition_adapter: bool = False,
 ) -> str:
     parts: list[str] = []
+    if bool(use_decoder_branch_condition_adapter):
+        parts.append("branchcond")
+    if bool(use_residual_shape_branch_condition_adapter):
+        parts.append("residualshapecond")
     if float(decoder_branch_mean_mix_alpha) > 1.0e-9:
         mix_tag = int(round(float(decoder_branch_mean_mix_alpha) * 1000.0))
         parts.append(f"mix{mix_tag:03d}")

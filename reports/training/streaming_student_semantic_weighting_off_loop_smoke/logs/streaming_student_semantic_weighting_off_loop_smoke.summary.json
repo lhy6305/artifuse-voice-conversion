@@ -1,0 +1,487 @@
+{
+  "experiment_id": "streaming_student_semantic_weighting_off_loop_smoke",
+  "generated_at": "2026-03-24T22:15:30",
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels_semantic_smoke/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "timing": {
+    "started_at": "2026-03-24T22:15:28",
+    "ended_at": "2026-03-24T22:15:30",
+    "duration_sec": 1.808778
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/semantic_smoke_subset",
+    "option_name": "semantic_smoke_subset",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 1,
+      "target_validation": 1,
+      "target_special_eval": 1,
+      "source_train": 1,
+      "source_validation": 1
+    }
+  },
+  "conditioning": {
+    "asset_version": "stage3_calibration_asset_v1",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha_value": 1.15,
+    "source": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
+  },
+  "training": {
+    "batch_size": 1,
+    "validation_batch_size": 1,
+    "num_steps": 4,
+    "validation_interval": 1,
+    "checkpoint_interval": 4,
+    "validation_batches": 1,
+    "validation_mode": "full",
+    "learning_rate": 0.001,
+    "max_grad_norm": 1.0,
+    "use_teacher_confidence": true,
+    "loss_weights": {
+      "teacher_z_art": 1.0,
+      "teacher_event": 1.0,
+      "teacher_event_prior": 0.5,
+      "teacher_energy_proxy": 0.25,
+      "teacher_vuv_proxy": 0.15,
+      "teacher_aper_proxy": 0.1,
+      "teacher_proxy_acoustic": 0.0,
+      "teacher_proxy_temporal": 0.0,
+      "log_f0_correction_l1": 0.01,
+      "aper_correction_l1": 0.01
+    },
+    "semantic_supervision": {
+      "enabled": true,
+      "required_contract_version": "target_event_semantic_sidecar_v1",
+      "clean_text_bonus": 0.08,
+      "multi_clause_bonus": 0.08,
+      "multi_terminal_bonus": 0.1,
+      "clause_ge4_bonus": 0.08,
+      "pause_multi_bonus": 0.05,
+      "terminal_present_bonus": 0.05,
+      "nonverbal_penalty": 0.2,
+      "event_prior_alpha": 1.0,
+      "event_alpha": 0.35,
+      "z_art_alpha": 0.2,
+      "min_multiplier": 0.75,
+      "max_multiplier": 1.45
+    },
+    "loss_weight_schedule": {},
+    "loss_weight_overrides_path": "F:/proj_dev/tmp/workdir4/reports/config_overrides/streaming_student_semantic_weighting_disabled.json"
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-24T22:15:29",
+      "ended_at": "2026-03-24T22:15:30",
+      "duration_sec": 0.094272,
+      "record_ids": [
+        "target::archive_firefly_1"
+      ],
+      "loss_metrics": {
+        "loss_total": 21.081259,
+        "loss_total_default_reference": 21.081259,
+        "loss_teacher_z_art": 8.10586,
+        "loss_teacher_event": 5.729499,
+        "loss_teacher_event_prior": 5.49183,
+        "loss_teacher_energy_proxy": 17.562571,
+        "loss_teacher_vuv_proxy": 0.703088,
+        "loss_teacher_aper_proxy": 0.030818,
+        "loss_teacher_proxy_acoustic": 17.775478,
+        "loss_teacher_proxy_temporal": 0.006132,
+        "loss_log_f0_correction_l1": 0.046751,
+        "loss_aper_correction_l1": 0.032977,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1350.021973,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.36,
+        "semantic_event_prior_multiplier_mean": 1.36,
+        "semantic_event_multiplier_mean": 1.126,
+        "semantic_z_art_multiplier_mean": 1.072
+      },
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "grad_norm": 62.58271,
+      "status": "step_completed"
+    },
+    {
+      "step": 2,
+      "started_at": "2026-03-24T22:15:30",
+      "ended_at": "2026-03-24T22:15:30",
+      "duration_sec": 0.040303,
+      "record_ids": [
+        "target::archive_firefly_1"
+      ],
+      "loss_metrics": {
+        "loss_total": 15.340199,
+        "loss_total_default_reference": 15.340199,
+        "loss_teacher_z_art": 3.455812,
+        "loss_teacher_event": 5.544051,
+        "loss_teacher_event_prior": 5.459987,
+        "loss_teacher_energy_proxy": 13.983068,
+        "loss_teacher_vuv_proxy": 0.704898,
+        "loss_teacher_aper_proxy": 0.066603,
+        "loss_teacher_proxy_acoustic": 14.050428,
+        "loss_teacher_proxy_temporal": 0.005988,
+        "loss_log_f0_correction_l1": 0.020341,
+        "loss_aper_correction_l1": 0.197673,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1350.021973,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.36,
+        "semantic_event_prior_multiplier_mean": 1.36,
+        "semantic_event_multiplier_mean": 1.126,
+        "semantic_z_art_multiplier_mean": 1.072
+      },
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "grad_norm": 34.583042,
+      "status": "step_completed"
+    },
+    {
+      "step": 3,
+      "started_at": "2026-03-24T22:15:30",
+      "ended_at": "2026-03-24T22:15:30",
+      "duration_sec": 0.034567,
+      "record_ids": [
+        "target::archive_firefly_1"
+      ],
+      "loss_metrics": {
+        "loss_total": 12.715452,
+        "loss_total_default_reference": 12.715452,
+        "loss_teacher_z_art": 1.634765,
+        "loss_teacher_event": 5.450253,
+        "loss_teacher_event_prior": 5.415411,
+        "loss_teacher_energy_proxy": 11.200686,
+        "loss_teacher_vuv_proxy": 0.710079,
+        "loss_teacher_aper_proxy": 0.133167,
+        "loss_teacher_proxy_acoustic": 11.23137,
+        "loss_teacher_proxy_temporal": 0.005867,
+        "loss_log_f0_correction_l1": 0.047826,
+        "loss_aper_correction_l1": 0.224967,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1350.021973,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.36,
+        "semantic_event_prior_multiplier_mean": 1.36,
+        "semantic_event_multiplier_mean": 1.126,
+        "semantic_z_art_multiplier_mean": 1.072
+      },
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "grad_norm": 21.119459,
+      "status": "step_completed"
+    },
+    {
+      "step": 4,
+      "started_at": "2026-03-24T22:15:30",
+      "ended_at": "2026-03-24T22:15:30",
+      "duration_sec": 0.02834,
+      "record_ids": [
+        "target::archive_firefly_1"
+      ],
+      "loss_metrics": {
+        "loss_total": 11.23148,
+        "loss_total_default_reference": 11.23148,
+        "loss_teacher_z_art": 0.82844,
+        "loss_teacher_event": 5.357592,
+        "loss_teacher_event_prior": 5.349559,
+        "loss_teacher_energy_proxy": 8.962772,
+        "loss_teacher_vuv_proxy": 0.711718,
+        "loss_teacher_aper_proxy": 0.199459,
+        "loss_teacher_proxy_acoustic": 8.983196,
+        "loss_teacher_proxy_temporal": 0.005768,
+        "loss_log_f0_correction_l1": 0.142402,
+        "loss_aper_correction_l1": 0.184692,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 1350.021973,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.36,
+        "semantic_event_prior_multiplier_mean": 1.36,
+        "semantic_event_multiplier_mean": 1.126,
+        "semantic_z_art_multiplier_mean": 1.072
+      },
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "grad_norm": 13.314065,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 1,
+      "validation_mode": "full",
+      "validation_batches": 1,
+      "record_count": 1,
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 14.118607,
+        "loss_total_default_reference": 14.118607,
+        "loss_teacher_z_art": 4.814943,
+        "loss_teacher_event": 5.526057,
+        "loss_teacher_event_prior": 5.362447,
+        "loss_teacher_energy_proxy": 3.916521,
+        "loss_teacher_vuv_proxy": 0.7136,
+        "loss_teacher_aper_proxy": 0.080663,
+        "loss_teacher_proxy_acoustic": 3.96208,
+        "loss_teacher_proxy_temporal": 0.01045,
+        "loss_log_f0_correction_l1": 0.010002,
+        "loss_aper_correction_l1": 0.204495,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 90.56897,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.13,
+        "semantic_event_prior_multiplier_mean": 1.13,
+        "semantic_event_multiplier_mean": 1.0455,
+        "semantic_z_art_multiplier_mean": 1.026
+      }
+    },
+    {
+      "step": 2,
+      "validation_mode": "full",
+      "validation_batches": 1,
+      "record_count": 1,
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 11.234417,
+        "loss_total_default_reference": 11.234417,
+        "loss_teacher_z_art": 2.288605,
+        "loss_teacher_event": 5.412123,
+        "loss_teacher_event_prior": 5.354462,
+        "loss_teacher_energy_proxy": 2.919293,
+        "loss_teacher_vuv_proxy": 0.726983,
+        "loss_teacher_aper_proxy": 0.14849,
+        "loss_teacher_proxy_acoustic": 2.939103,
+        "loss_teacher_proxy_temporal": 0.010184,
+        "loss_log_f0_correction_l1": 0.04462,
+        "loss_aper_correction_l1": 0.229201,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 90.56897,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.13,
+        "semantic_event_prior_multiplier_mean": 1.13,
+        "semantic_event_multiplier_mean": 1.0455,
+        "semantic_z_art_multiplier_mean": 1.026
+      }
+    },
+    {
+      "step": 3,
+      "validation_mode": "full",
+      "validation_batches": 1,
+      "record_count": 1,
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 9.733636,
+        "loss_total_default_reference": 9.733636,
+        "loss_teacher_z_art": 1.057579,
+        "loss_teacher_event": 5.277047,
+        "loss_teacher_event_prior": 5.310607,
+        "loss_teacher_energy_proxy": 2.439662,
+        "loss_teacher_vuv_proxy": 0.728227,
+        "loss_teacher_aper_proxy": 0.212507,
+        "loss_teacher_proxy_acoustic": 2.454179,
+        "loss_teacher_proxy_temporal": 0.009938,
+        "loss_log_f0_correction_l1": 0.143842,
+        "loss_aper_correction_l1": 0.186801,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 90.56897,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.13,
+        "semantic_event_prior_multiplier_mean": 1.13,
+        "semantic_event_multiplier_mean": 1.0455,
+        "semantic_z_art_multiplier_mean": 1.026
+      }
+    },
+    {
+      "step": 4,
+      "validation_mode": "full",
+      "validation_batches": 1,
+      "record_count": 1,
+      "effective_loss_weights": {
+        "teacher_z_art": 1.0,
+        "teacher_event": 1.0,
+        "teacher_event_prior": 0.5,
+        "teacher_energy_proxy": 0.25,
+        "teacher_vuv_proxy": 0.15,
+        "teacher_aper_proxy": 0.1,
+        "teacher_proxy_acoustic": 0.0,
+        "teacher_proxy_temporal": 0.0,
+        "log_f0_correction_l1": 0.01,
+        "aper_correction_l1": 0.01
+      },
+      "sampled_record_ids": [
+        [
+          "target::chapter3_3_firefly_162"
+        ]
+      ],
+      "loss_metrics": {
+        "loss_total": 9.037385,
+        "loss_total_default_reference": 9.037385,
+        "loss_teacher_z_art": 0.5226,
+        "loss_teacher_event": 5.143949,
+        "loss_teacher_event_prior": 5.229675,
+        "loss_teacher_energy_proxy": 2.478596,
+        "loss_teacher_vuv_proxy": 0.718118,
+        "loss_teacher_aper_proxy": 0.250355,
+        "loss_teacher_proxy_acoustic": 2.492707,
+        "loss_teacher_proxy_temporal": 0.009707,
+        "loss_log_f0_correction_l1": 0.244918,
+        "loss_aper_correction_l1": 0.114826,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 90.56897,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.13,
+        "semantic_event_prior_multiplier_mean": 1.13,
+        "semantic_event_multiplier_mean": 1.0455,
+        "semantic_z_art_multiplier_mean": 1.026
+      }
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_semantic_weighting_off_loop_smoke/checkpoints/streaming_student_semantic_weighting_off_loop_smoke.step4.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_semantic_weighting_off_loop_smoke/checkpoints/streaming_student_semantic_weighting_off_loop_smoke.step4.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 4,
+      "validation_mode": "full",
+      "loss_total": 9.037385,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_semantic_weighting_off_loop_smoke/checkpoints/streaming_student_semantic_weighting_off_loop_smoke.step4.pt"
+    }
+  },
+  "notes": [
+    "This is a minimal multi-step Stage3 training loop scaffold built on top of the new teacher-supervised contract.",
+    "Validation now walks the full target_validation slice sequentially inside the training loop.",
+    "The purpose is to expose step-wise loss, grad_norm, validation, and checkpoint behavior before adding richer supervision or r_res."
+  ],
+  "next_steps": [
+    "Use this fuller validation mode to compare future short-horizon runs without relying on a separate checkpoint-eval pass for every checkpoint.",
+    "Tune learning rate, loss weights, and teacher confidence usage based on short-horizon trajectories instead of a single step.",
+    "Keep hidden distillation and r_res disabled until the base multi-step route is stable."
+  ],
+  "status": "training_loop_scaffold_completed"
+}

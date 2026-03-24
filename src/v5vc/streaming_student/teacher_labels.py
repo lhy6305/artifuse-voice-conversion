@@ -13,11 +13,15 @@ from v5vc.data_scan import summarize_numeric
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
     TEXT_FEATURE_VERSION_LEGACY_V0,
+    attach_target_event_semantic_sidecar,
     attach_target_special_supervision,
     attach_target_weak_event_hints,
+    build_record_semantic_overview,
     build_char_vocab,
     collate_target_batch,
+    infer_target_event_semantic_sidecar_path,
     load_target_examples_from_records,
+    load_target_event_semantic_sidecar_map,
     load_target_special_supervision_map,
     load_target_weak_event_hint_map,
 )
@@ -284,10 +288,30 @@ def load_target_records_by_split(
             supervision_map = load_target_special_supervision_map(resolved_supervision_path)
             for split_name, records in records_by_split.items():
                 records_by_split[split_name] = attach_target_special_supervision(records, supervision_map)
+    target_event_semantic_sidecar_path = resolve_target_event_semantic_sidecar_path(
+        split_dir=split_dir,
+        checkpoint_config=checkpoint_config,
+        workspace_root=workspace_root,
+    )
+    if target_event_semantic_sidecar_path is not None and target_event_semantic_sidecar_path.exists():
+        semantic_map = load_target_event_semantic_sidecar_map(target_event_semantic_sidecar_path)
+        for split_name, records in records_by_split.items():
+            records_by_split[split_name] = attach_target_event_semantic_sidecar(records, semantic_map)
     if max_records_per_slice is not None and max_records_per_slice > 0:
         for split_name in records_by_split:
             records_by_split[split_name] = records_by_split[split_name][: max_records_per_slice]
     return records_by_split
+
+
+def resolve_target_event_semantic_sidecar_path(
+    split_dir: Path,
+    checkpoint_config: dict[str, object],
+    workspace_root: Path,
+) -> Path | None:
+    raw_value = checkpoint_config["data"].get("target_event_semantic_sidecar_path")
+    if raw_value not in {None, ""}:
+        return resolve_path_ref(raw_value, workspace_root=workspace_root)
+    return infer_target_event_semantic_sidecar_path(split_dir)
 
 
 def export_split_teacher_labels(
@@ -309,6 +333,11 @@ def export_split_teacher_labels(
     low_confidence_ratios: list[float] = []
     structure_counts: Counter[str] = Counter()
     terminal_counts: Counter[str] = Counter()
+    semantic_contract_counts: Counter[str] = Counter()
+    semantic_inventory_counts: Counter[str] = Counter()
+    semantic_label_status_counts: Counter[str] = Counter()
+    semantic_structure_counts: Counter[str] = Counter()
+    semantic_terminal_counts: Counter[str] = Counter()
 
     if not records:
         return {
@@ -321,6 +350,11 @@ def export_split_teacher_labels(
                 "low_confidence_frame_ratio_stats": summarize_numeric([]),
                 "utterance_structure_type_counts": {},
                 "final_terminal_type_counts": {},
+                "semantic_contract_version_counts": {},
+                "semantic_inventory_status_counts": {},
+                "semantic_label_status_counts": {},
+                "semantic_utterance_structure_type_counts": {},
+                "semantic_final_terminal_type_counts": {},
                 "sample_record_ids": [],
             },
         }
@@ -367,10 +401,14 @@ def export_split_teacher_labels(
             frame_counts.append(int(export_row["frame_count"]))
             confidence_means.append(float(export_row["confidence_mean"]))
             low_confidence_ratios.append(float(export_row["low_confidence_frame_ratio"]))
-            weak_event_hints = record.get("weak_event_hints")
-            if isinstance(weak_event_hints, dict):
-                structure_counts[str(weak_event_hints.get("utterance_structure_type", "unknown"))] += 1
-                terminal_counts[str(weak_event_hints.get("final_terminal_type", "unknown"))] += 1
+            semantic_overview = build_record_semantic_overview(record)
+            structure_counts[str(semantic_overview["semantic_utterance_structure_type"])] += 1
+            terminal_counts[str(semantic_overview["semantic_final_terminal_type"])] += 1
+            semantic_contract_counts[str(semantic_overview["semantic_contract_version"] or "missing")] += 1
+            semantic_inventory_counts[str(semantic_overview["semantic_inventory_status"])] += 1
+            semantic_label_status_counts[str(semantic_overview["semantic_label_status"])] += 1
+            semantic_structure_counts[str(semantic_overview["semantic_utterance_structure_type"])] += 1
+            semantic_terminal_counts[str(semantic_overview["semantic_final_terminal_type"])] += 1
 
     return {
         "index_rows": index_rows,
@@ -382,6 +420,11 @@ def export_split_teacher_labels(
             "low_confidence_frame_ratio_stats": summarize_numeric(low_confidence_ratios),
             "utterance_structure_type_counts": dict(sorted(structure_counts.items())),
             "final_terminal_type_counts": dict(sorted(terminal_counts.items())),
+            "semantic_contract_version_counts": dict(sorted(semantic_contract_counts.items())),
+            "semantic_inventory_status_counts": dict(sorted(semantic_inventory_counts.items())),
+            "semantic_label_status_counts": dict(sorted(semantic_label_status_counts.items())),
+            "semantic_utterance_structure_type_counts": dict(sorted(semantic_structure_counts.items())),
+            "semantic_final_terminal_type_counts": dict(sorted(semantic_terminal_counts.items())),
             "sample_record_ids": [str(row["record_id"]) for row in index_rows[:8]],
         },
     }
@@ -426,6 +469,7 @@ def export_single_record(
     low_confidence_ratio = float((record_confidence < threshold).to(torch.float32).mean().item())
     weak_event_hints = record.get("weak_event_hints")
     target_special_supervision = record.get("target_special_supervision")
+    semantic_overview = build_record_semantic_overview(record)
     return {
         "record_id": record_id,
         "split_name": split_name,
@@ -444,6 +488,13 @@ def export_single_record(
         "final_terminal_type": (
             None if not isinstance(weak_event_hints, dict) else str(weak_event_hints.get("final_terminal_type"))
         ),
+        "semantic_source": str(semantic_overview["semantic_source"]),
+        "semantic_contract_version": semantic_overview["semantic_contract_version"],
+        "semantic_label_space_version": semantic_overview["semantic_label_space_version"],
+        "semantic_inventory_status": str(semantic_overview["semantic_inventory_status"]),
+        "semantic_label_status": str(semantic_overview["semantic_label_status"]),
+        "semantic_utterance_structure_type": str(semantic_overview["semantic_utterance_structure_type"]),
+        "semantic_final_terminal_type": str(semantic_overview["semantic_final_terminal_type"]),
         "special_proximity_score": (
             None
             if not isinstance(target_special_supervision, dict)
@@ -548,6 +599,11 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"- low_confidence_frame_ratio_mean: {slice_summary['low_confidence_frame_ratio_stats']['mean']}",
                 f"- utterance_structure_type_counts: {slice_summary['utterance_structure_type_counts']}",
                 f"- final_terminal_type_counts: {slice_summary['final_terminal_type_counts']}",
+                f"- semantic_contract_version_counts: {slice_summary['semantic_contract_version_counts']}",
+                f"- semantic_inventory_status_counts: {slice_summary['semantic_inventory_status_counts']}",
+                f"- semantic_label_status_counts: {slice_summary['semantic_label_status_counts']}",
+                f"- semantic_utterance_structure_type_counts: {slice_summary['semantic_utterance_structure_type_counts']}",
+                f"- semantic_final_terminal_type_counts: {slice_summary['semantic_final_terminal_type_counts']}",
                 f"- sample_record_ids: {slice_summary['sample_record_ids']}",
             ]
         )

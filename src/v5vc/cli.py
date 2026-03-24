@@ -21,6 +21,9 @@ from v5vc.checkpoint_selection_analysis import analyze_offline_mvp_checkpoint_se
 from v5vc.checkpoint_series_eval import evaluate_offline_mvp_checkpoint_series
 from v5vc.data_scan import scan_project_data
 from v5vc.eval_baseline import evaluate_round1_baseline
+from v5vc.event_semantics import (
+    build_target_event_semantic_sidecar,
+)
 from v5vc.event_target_analysis import analyze_offline_mvp_event_targets
 from v5vc.experiment import init_experiment_record
 from v5vc.final_experiment_comparison import compare_offline_mvp_final_experiments
@@ -2312,6 +2315,16 @@ def build_parser() -> argparse.ArgumentParser:
         help="Waveform decoder structure: fused_single, dual_branch_mix, periodic_plus_noise_residual, periodic_plus_noise_residual_shape, periodic_plus_noise_factorized_residual, periodic_plus_noise_residual_shape_temporal, or periodic_plus_noise_residual_shape_recurrent.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--use-decoder-branch-condition-adapter",
+        action="store_true",
+        help="Enable a learned non-linear branch-conditioned decoder adapter built from fused_hidden, branch_mean_hidden, and their difference.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--use-residual-shape-branch-condition-adapter",
+        action="store_true",
+        help="Enable a learned non-linear branch-conditioned correction applied only to the residual-shape / residual-envelope path.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
         type=float,
         default=0.0,
@@ -2499,6 +2512,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--waveform-decoder-mode",
         default="fused_single",
         help="Waveform decoder structure: fused_single, dual_branch_mix, periodic_plus_noise_residual, periodic_plus_noise_residual_shape, periodic_plus_noise_factorized_residual, periodic_plus_noise_residual_shape_temporal, or periodic_plus_noise_residual_shape_recurrent.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--use-decoder-branch-condition-adapter",
+        action="store_true",
+        help="Enable a learned non-linear branch-conditioned decoder adapter built from fused_hidden, branch_mean_hidden, and their difference.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--use-residual-shape-branch-condition-adapter",
+        action="store_true",
+        help="Enable a learned non-linear branch-conditioned correction applied only to the residual-shape / residual-envelope path.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
@@ -2807,6 +2830,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--waveform-decoder-mode",
         default="fused_single",
         help="Waveform decoder structure: fused_single, dual_branch_mix, periodic_plus_noise_residual, periodic_plus_noise_residual_shape, periodic_plus_noise_factorized_residual, periodic_plus_noise_residual_shape_temporal, or periodic_plus_noise_residual_shape_recurrent.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--use-decoder-branch-condition-adapter",
+        action="store_true",
+        help="Enable a learned non-linear branch-conditioned decoder adapter built from fused_hidden, branch_mean_hidden, and their difference.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--use-residual-shape-branch-condition-adapter",
+        action="store_true",
+        help="Enable a learned non-linear branch-conditioned correction applied only to the residual-shape / residual-envelope path.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
@@ -3873,6 +3906,35 @@ def build_parser() -> argparse.ArgumentParser:
         help="Hop length used to estimate frame-level boundary indices.",
     )
 
+    event_semantic_sidecar_parser = subparsers.add_parser(
+        "build-target-event-semantic-sidecar",
+        help="Build a formal target-side semantic sidecar by separating lexical/structure semantics from heuristic frame event targets.",
+    )
+    event_semantic_sidecar_parser.add_argument(
+        "--weak-event-hints-path",
+        type=Path,
+        default=Path("data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl"),
+        help="Path to the target-side weak event hints sidecar.",
+    )
+    event_semantic_sidecar_parser.add_argument(
+        "--target-supervision-inventory-path",
+        type=Path,
+        default=Path("data_prep/round1_1/b1_supervision/target_supervision_inventory.jsonl"),
+        help="Path to the target-side supervision inventory jsonl.",
+    )
+    event_semantic_sidecar_parser.add_argument(
+        "--data-output-dir",
+        type=Path,
+        default=Path("data_prep/round1_1/target_event_semantic_sidecar"),
+        help="Directory for machine-readable target event semantic sidecars.",
+    )
+    event_semantic_sidecar_parser.add_argument(
+        "--report-output-dir",
+        type=Path,
+        default=Path("reports/data/round1_1_target_event_semantic_sidecar"),
+        help="Directory for target event semantic sidecar reports.",
+    )
+
     special_supervision_parser = subparsers.add_parser(
         "analyze-round1-target-special-supervision",
         help="Build a target-side special-supervision blueprint from split manifests and weak event hints.",
@@ -4457,6 +4519,8 @@ def main(argv: list[str] | None = None) -> int:
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
             waveform_decoder_mode=args.waveform_decoder_mode,
+            use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
+            use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -4492,6 +4556,8 @@ def main(argv: list[str] | None = None) -> int:
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
             waveform_decoder_mode=args.waveform_decoder_mode,
+            use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
+            use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -4551,6 +4617,8 @@ def main(argv: list[str] | None = None) -> int:
             fused_hidden_branch_mean_weight=args.fused_hidden_branch_mean_weight,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
             waveform_decoder_mode=args.waveform_decoder_mode,
+            use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
+            use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -4815,6 +4883,14 @@ def main(argv: list[str] | None = None) -> int:
             report_output_dir=args.report_output_dir,
             frame_length=args.frame_length,
             hop_length=args.hop_length,
+        )
+        return 0
+    if args.command == "build-target-event-semantic-sidecar":
+        build_target_event_semantic_sidecar(
+            weak_event_hints_path=args.weak_event_hints_path,
+            target_supervision_inventory_path=args.target_supervision_inventory_path,
+            data_output_dir=args.data_output_dir,
+            report_output_dir=args.report_output_dir,
         )
         return 0
     if args.command == "analyze-round1-target-special-supervision":

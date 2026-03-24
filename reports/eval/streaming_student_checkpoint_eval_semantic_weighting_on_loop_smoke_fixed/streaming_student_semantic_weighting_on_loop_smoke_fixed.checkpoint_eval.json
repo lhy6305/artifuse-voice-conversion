@@ -1,0 +1,143 @@
+{
+  "generated_at": "2026-03-24T22:20:18",
+  "experiment_id": "streaming_student_semantic_weighting_on_loop_smoke_fixed",
+  "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_semantic_weighting_on_loop_smoke_fixed/checkpoints/streaming_student_semantic_weighting_on_loop_smoke_fixed.step4.pt",
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels_semantic_smoke/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "timing": {
+    "started_at": "2026-03-24T22:20:17",
+    "ended_at": "2026-03-24T22:20:18",
+    "duration_sec": 0.286642
+  },
+  "split": {
+    "strategy": "materialized_split",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/semantic_smoke_subset",
+    "option_name": "semantic_smoke_subset",
+    "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+    "counts": {
+      "target_train": 1,
+      "target_validation": 1,
+      "target_special_eval": 1,
+      "source_train": 1,
+      "source_validation": 1
+    }
+  },
+  "conditioning": {
+    "asset_version": "stage3_calibration_asset_v1",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha_value": 1.15,
+    "source": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"
+  },
+  "training": {
+    "batch_size": 1,
+    "loss_weights": {
+      "teacher_z_art": 1.0,
+      "teacher_event": 1.0,
+      "teacher_event_prior": 0.5,
+      "teacher_energy_proxy": 0.25,
+      "teacher_vuv_proxy": 0.15,
+      "teacher_aper_proxy": 0.1,
+      "teacher_proxy_acoustic": 0.0,
+      "teacher_proxy_temporal": 0.0,
+      "log_f0_correction_l1": 0.01,
+      "aper_correction_l1": 0.01
+    },
+    "semantic_supervision": {
+      "enabled": true,
+      "required_contract_version": "target_event_semantic_sidecar_v1",
+      "clean_text_bonus": 0.08,
+      "multi_clause_bonus": 0.08,
+      "multi_terminal_bonus": 0.1,
+      "clause_ge4_bonus": 0.08,
+      "pause_multi_bonus": 0.05,
+      "terminal_present_bonus": 0.05,
+      "nonverbal_penalty": 0.2,
+      "event_prior_alpha": 1.0,
+      "event_alpha": 0.35,
+      "z_art_alpha": 0.2,
+      "min_multiplier": 0.75,
+      "max_multiplier": 1.45
+    },
+    "loss_weight_overrides_path": null,
+    "use_teacher_confidence": true
+  },
+  "slices": {
+    "target_validation": {
+      "record_count": 1,
+      "batch_count": 1,
+      "loss_metrics": {
+        "loss_total": 9.591149,
+        "loss_total_default_reference": 9.591149,
+        "loss_total_semantic_disabled_reference": 9.006555,
+        "loss_teacher_z_art": 0.538281,
+        "loss_teacher_event": 5.367845,
+        "loss_teacher_event_prior": 5.864645,
+        "loss_teacher_energy_proxy": 2.456865,
+        "loss_teacher_vuv_proxy": 0.726606,
+        "loss_teacher_aper_proxy": 0.258724,
+        "loss_teacher_proxy_acoustic": 2.471168,
+        "loss_teacher_proxy_temporal": 0.009722,
+        "loss_log_f0_correction_l1": 0.246351,
+        "loss_aper_correction_l1": 0.115981,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 90.56897,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 1.0,
+        "semantic_nonverbal_sample_ratio": 0.0,
+        "semantic_base_multiplier_mean": 1.13,
+        "semantic_event_prior_multiplier_mean": 1.13,
+        "semantic_event_multiplier_mean": 1.0455,
+        "semantic_z_art_multiplier_mean": 1.026
+      },
+      "sample_record_id_batches": [
+        [
+          "target::chapter3_3_firefly_162"
+        ]
+      ]
+    },
+    "target_special_eval": {
+      "record_count": 1,
+      "batch_count": 1,
+      "loss_metrics": {
+        "loss_total": 7.526979,
+        "loss_total_default_reference": 7.526979,
+        "loss_total_semantic_disabled_reference": 8.423156,
+        "loss_teacher_z_art": 0.304121,
+        "loss_teacher_event": 4.787611,
+        "loss_teacher_event_prior": 4.185174,
+        "loss_teacher_energy_proxy": 0.821526,
+        "loss_teacher_vuv_proxy": 0.715509,
+        "loss_teacher_aper_proxy": 0.262773,
+        "loss_teacher_proxy_acoustic": 0.832743,
+        "loss_teacher_proxy_temporal": 0.004805,
+        "loss_log_f0_correction_l1": 0.249036,
+        "loss_aper_correction_l1": 0.118495,
+        "teacher_confidence_weighted": true,
+        "effective_weight_sum": 71.284851,
+        "semantic_supervision_enabled": true,
+        "semantic_sidecar_present_ratio": 1.0,
+        "semantic_weight_applied_ratio": 1.0,
+        "semantic_clean_text_sample_ratio": 0.0,
+        "semantic_nonverbal_sample_ratio": 1.0,
+        "semantic_base_multiplier_mean": 0.8,
+        "semantic_event_prior_multiplier_mean": 0.8,
+        "semantic_event_multiplier_mean": 0.93,
+        "semantic_z_art_multiplier_mean": 0.96
+      },
+      "sample_record_id_batches": [
+        [
+          "target::no_text_voice/chapter3_17_firefly_106"
+        ]
+      ]
+    }
+  },
+  "notes": [
+    "This evaluation uses the stored Stage3 checkpoint with the current teacher-label and calibration assets.",
+    "Unlike the in-loop sampled validation, this report walks the full selected slice sequentially.",
+    "These losses are still teacher-supervised proxy losses, not final user-facing quality metrics."
+  ]
+}

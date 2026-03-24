@@ -1,0 +1,130 @@
+{
+  "weak_event_hints_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+  "target_supervision_inventory_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/b1_supervision/target_supervision_inventory.jsonl",
+  "semantic_contract_version": "target_event_semantic_sidecar_v1",
+  "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+  "record_count": 666,
+  "split_counts": {
+    "target_special_eval": 8,
+    "target_train": 592,
+    "target_validation": 66
+  },
+  "inventory_status_counts": {
+    "matched_inventory": 666
+  },
+  "utterance_structure_type_counts": {
+    "multi_clause_single_terminal": 307,
+    "multi_terminal": 174,
+    "nonverbal": 8,
+    "other": 111,
+    "single_clause_terminal": 66
+  },
+  "final_terminal_type_counts": {
+    "none": 182,
+    "terminal_exclamation": 42,
+    "terminal_period": 340,
+    "terminal_question": 102
+  },
+  "future_label_status_counts": {
+    "pending_upgrade": 666
+  },
+  "clean_text_available_count": 666,
+  "phone_sequence_available_count": 0,
+  "manner_sequence_available_count": 0,
+  "place_sequence_available_count": 0,
+  "forced_alignment_available_count": 0,
+  "lexical_char_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 76,
+    "mean": 21.295796
+  },
+  "clause_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 10,
+    "mean": 3.010511
+  },
+  "pause_boundary_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 9,
+    "mean": 1.915916
+  },
+  "terminal_boundary_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 4,
+    "mean": 1.115616
+  },
+  "current_runtime_event_probs": {
+    "event_probs_version": "offline_mvp_heuristic_event_target_v1",
+    "event_prob_dimensions": [
+      "energy_gate",
+      "abs_delta_gate",
+      "high_zero_cross",
+      "low_zero_cross_voiced_like",
+      "high_zero_cross_voiced_like",
+      "delta_energy_rise",
+      "delta_energy_fall",
+      "energy_norm"
+    ],
+    "event_prob_dimension_specs": [
+      {
+        "index": 0,
+        "name": "energy_gate",
+        "category": "heuristic_frame_target",
+        "description": "基于能量阈值的启发式活动门，不是设计态 fric/closure/burst 语义。"
+      },
+      {
+        "index": 1,
+        "name": "abs_delta_gate",
+        "category": "heuristic_frame_target",
+        "description": "基于帧间幅度变化的启发式变化门，不是显式事件类别。"
+      },
+      {
+        "index": 2,
+        "name": "high_zero_cross",
+        "category": "heuristic_frame_target",
+        "description": "基于过零率的高噪声启发式指标，不等价于设计态 fric 类别。"
+      },
+      {
+        "index": 3,
+        "name": "low_zero_cross_voiced_like",
+        "category": "heuristic_frame_target",
+        "description": "基于低过零率的浊音倾向启发式指标，不是设计态 p_voicing。"
+      },
+      {
+        "index": 4,
+        "name": "high_zero_cross_voiced_like",
+        "category": "heuristic_frame_target",
+        "description": "带 voiced-like 门的高过零率启发式指标，不是命名辅音语义。"
+      },
+      {
+        "index": 5,
+        "name": "delta_energy_rise",
+        "category": "heuristic_frame_target",
+        "description": "基于能量上升的启发式变化指标，不是显式 burst 标签。"
+      },
+      {
+        "index": 6,
+        "name": "delta_energy_fall",
+        "category": "heuristic_frame_target",
+        "description": "基于能量下降的启发式变化指标，不是显式 closure 标签。"
+      },
+      {
+        "index": 7,
+        "name": "energy_norm",
+        "category": "heuristic_frame_target",
+        "description": "归一化能量启发式指标，不是设计态 event semantic。"
+      }
+    ],
+    "semantic_status": "heuristic_frame_targets_not_design_e_evt",
+    "recommended_contract_interpretation": "当前 event_probs 只能解释为旧 offline MVP 启发式帧级事件目标，不能再当作设计稿中的命名 e_evt 语义。"
+  },
+  "notes": [
+    "这份 sidecar 的目标是把 target-side lexical/structure 语义和当前 heuristic frame event targets 明确拆开。",
+    "当前 semantic sidecar 只覆盖 target 侧可离线获得的文本、标点、分句结构，不假装已拥有 source-side phone/manner/place 对齐标签。",
+    "后续若进入真正的 contract/semantic 升级，应优先消费这份独立 sidecar，而不是继续把旧 event_probs 当设计态 e_evt。"
+  ]
+}

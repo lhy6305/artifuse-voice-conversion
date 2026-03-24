@@ -29,6 +29,7 @@ class TargetExample:
     text_features: torch.Tensor
     weak_event_hints: dict[str, object] | None
     target_special_supervision: dict[str, object] | None
+    target_event_semantic_sidecar: dict[str, object] | None
 
 
 @dataclass
@@ -66,6 +67,14 @@ def load_target_special_supervision_map(path: Path) -> dict[str, dict[str, objec
     }
 
 
+def load_target_event_semantic_sidecar_map(path: Path) -> dict[str, dict[str, object]]:
+    semantic_rows = load_jsonl(path)
+    return {
+        str(row["record_id"]): row
+        for row in semantic_rows
+    }
+
+
 def attach_target_weak_event_hints(
     records: list[dict[str, object]],
     hint_map: dict[str, dict[str, object]],
@@ -90,6 +99,115 @@ def attach_target_special_supervision(
         updated["target_special_supervision"] = supervision_map.get(record_id)
         attached_records.append(updated)
     return attached_records
+
+
+def attach_target_event_semantic_sidecar(
+    records: list[dict[str, object]],
+    semantic_map: dict[str, dict[str, object]],
+) -> list[dict[str, object]]:
+    attached_records: list[dict[str, object]] = []
+    for record in records:
+        updated = dict(record)
+        record_id = str(record["record_id"])
+        updated["target_event_semantic_sidecar"] = semantic_map.get(record_id)
+        attached_records.append(updated)
+    return attached_records
+
+
+def infer_target_event_semantic_sidecar_path(split_dir: Path | None) -> Path | None:
+    if split_dir is None:
+        return None
+    split_dir = split_dir.resolve()
+    if split_dir.parent == split_dir:
+        return None
+    round_dir = split_dir.parent.parent
+    candidate = round_dir / "target_event_semantic_sidecar" / "target_event_semantic_sidecar.jsonl"
+    if candidate.exists():
+        return candidate.resolve()
+    return None
+
+
+def build_record_semantic_overview(record: dict[str, object]) -> dict[str, object]:
+    semantic_sidecar = record.get("target_event_semantic_sidecar")
+    weak_event_hints = record.get("weak_event_hints")
+    target_special_supervision = record.get("target_special_supervision")
+
+    if isinstance(semantic_sidecar, dict):
+        utterance_semantics = (
+            dict(semantic_sidecar.get("utterance_structure_semantics", {}))
+            if isinstance(semantic_sidecar.get("utterance_structure_semantics"), dict)
+            else {}
+        )
+        boundary_semantics = (
+            dict(semantic_sidecar.get("boundary_semantics", {}))
+            if isinstance(semantic_sidecar.get("boundary_semantics"), dict)
+            else {}
+        )
+        text_semantics = (
+            dict(semantic_sidecar.get("text_semantics", {}))
+            if isinstance(semantic_sidecar.get("text_semantics"), dict)
+            else {}
+        )
+        upgrade_status = (
+            dict(semantic_sidecar.get("upgrade_status", {}))
+            if isinstance(semantic_sidecar.get("upgrade_status"), dict)
+            else {}
+        )
+        semantic_scope = (
+            dict(semantic_sidecar.get("semantic_scope", {}))
+            if isinstance(semantic_sidecar.get("semantic_scope"), dict)
+            else {}
+        )
+        return {
+            "semantic_source": "target_event_semantic_sidecar",
+            "semantic_contract_version": str(semantic_sidecar.get("semantic_contract_version", "")) or None,
+            "semantic_label_space_version": str(semantic_sidecar.get("semantic_label_space_version", "")) or None,
+            "semantic_inventory_status": str(semantic_sidecar.get("inventory_status", "unknown")),
+            "semantic_label_status": str(upgrade_status.get("label_status", "unknown")),
+            "semantic_utterance_structure_type": str(
+                utterance_semantics.get("utterance_structure_type", "unknown")
+            ),
+            "semantic_final_terminal_type": str(
+                utterance_semantics.get("final_terminal_type", "unknown")
+            ),
+            "semantic_clause_count": int(utterance_semantics.get("clause_count", 0)),
+            "semantic_pause_boundary_count": int(boundary_semantics.get("pause_boundary_count", 0)),
+            "semantic_terminal_boundary_count": int(boundary_semantics.get("terminal_boundary_count", 0)),
+            "semantic_nonverbal_only": bool(text_semantics.get("nonverbal_only", False)),
+            "semantic_clean_text_available": bool(semantic_scope.get("clean_text_available", False)),
+            "semantic_phone_sequence_available": bool(semantic_scope.get("phone_sequence_available", False)),
+            "semantic_manner_sequence_available": bool(semantic_scope.get("manner_sequence_available", False)),
+            "semantic_place_sequence_available": bool(semantic_scope.get("place_sequence_available", False)),
+            "semantic_forced_alignment_available": bool(semantic_scope.get("forced_alignment_available", False)),
+        }
+
+    if not isinstance(weak_event_hints, dict):
+        weak_event_hints = {}
+    if not isinstance(target_special_supervision, dict):
+        target_special_supervision = {}
+    return {
+        "semantic_source": "weak_event_hints_fallback" if weak_event_hints else "missing",
+        "semantic_contract_version": None,
+        "semantic_label_space_version": None,
+        "semantic_inventory_status": "missing",
+        "semantic_label_status": "missing",
+        "semantic_utterance_structure_type": str(weak_event_hints.get("utterance_structure_type", "unknown")),
+        "semantic_final_terminal_type": str(
+            weak_event_hints.get(
+                "final_terminal_type",
+                target_special_supervision.get("final_terminal_type", "unknown"),
+            )
+        ),
+        "semantic_clause_count": int(weak_event_hints.get("clause_count", 0)),
+        "semantic_pause_boundary_count": int(weak_event_hints.get("pause_boundary_count", 0)),
+        "semantic_terminal_boundary_count": int(weak_event_hints.get("terminal_boundary_count", 0)),
+        "semantic_nonverbal_only": bool(weak_event_hints.get("nonverbal_only", False)),
+        "semantic_clean_text_available": False,
+        "semantic_phone_sequence_available": False,
+        "semantic_manner_sequence_available": False,
+        "semantic_place_sequence_available": False,
+        "semantic_forced_alignment_available": False,
+    }
 
 
 def build_char_vocab(target_records: list[dict[str, object]]) -> dict[str, int]:
@@ -531,10 +649,11 @@ def is_priority_target_record(
     sampling_config: dict[str, object],
 ) -> bool:
     record_id = str(record["record_id"])
+    semantic_overview = build_record_semantic_overview(record)
     target_special_supervision = record.get("target_special_supervision")
     pool_memberships: dict[str, bool] = {}
     special_proximity_score = 0.0
-    final_terminal_type = "none"
+    final_terminal_type = str(semantic_overview["semantic_final_terminal_type"])
     if isinstance(target_special_supervision, dict):
         raw_pool_memberships = target_special_supervision.get("pool_memberships")
         if isinstance(raw_pool_memberships, dict):
@@ -543,7 +662,8 @@ def is_priority_target_record(
                 for key, value in raw_pool_memberships.items()
             }
         special_proximity_score = float(target_special_supervision.get("special_proximity_score", 0.0))
-        final_terminal_type = str(target_special_supervision.get("final_terminal_type", "none"))
+        if final_terminal_type in {"", "unknown"}:
+            final_terminal_type = str(target_special_supervision.get("final_terminal_type", "none"))
         if "within_special_duration_ceiling" in target_special_supervision:
             within_special_duration_ceiling = bool(
                 target_special_supervision.get("within_special_duration_ceiling", False)
@@ -553,14 +673,10 @@ def is_priority_target_record(
     else:
         within_special_duration_ceiling = None
 
-    weak_event_hints = record.get("weak_event_hints")
-    if not isinstance(weak_event_hints, dict):
-        weak_event_hints = {}
-
-    clause_count = int(weak_event_hints.get("clause_count", 0))
-    pause_boundary_count = int(weak_event_hints.get("pause_boundary_count", 0))
-    terminal_boundary_count = int(weak_event_hints.get("terminal_boundary_count", 0))
-    utterance_structure_type = str(weak_event_hints.get("utterance_structure_type", "other"))
+    clause_count = int(semantic_overview["semantic_clause_count"])
+    pause_boundary_count = int(semantic_overview["semantic_pause_boundary_count"])
+    terminal_boundary_count = int(semantic_overview["semantic_terminal_boundary_count"])
+    utterance_structure_type = str(semantic_overview["semantic_utterance_structure_type"])
     excluded_pool_memberships = {
         str(value)
         for value in list(sampling_config.get("exclude_pool_memberships", []))
@@ -811,6 +927,7 @@ def load_target_examples_from_records(
                 text_features=text_features,
                 weak_event_hints=record.get("weak_event_hints"),
                 target_special_supervision=record.get("target_special_supervision"),
+                target_event_semantic_sidecar=record.get("target_event_semantic_sidecar"),
             )
         )
     return examples
@@ -858,7 +975,9 @@ def collate_source_batch(examples: list[SourceExample]) -> dict[str, torch.Tenso
     }
 
 
-def collate_target_batch(examples: list[TargetExample]) -> dict[str, torch.Tensor | list[str]]:
+def collate_target_batch(
+    examples: list[TargetExample],
+) -> dict[str, torch.Tensor | list[str] | list[dict[str, object] | None]]:
     audio_lengths = torch.tensor([example.waveform.numel() for example in examples], dtype=torch.long)
     token_lengths = torch.tensor([example.token_ids.numel() for example in examples], dtype=torch.long)
     max_audio_length = int(audio_lengths.max().item()) if examples else 0
@@ -881,4 +1000,5 @@ def collate_target_batch(examples: list[TargetExample]) -> dict[str, torch.Tenso
         "texts": [example.text for example in examples],
         "weak_event_hints": [example.weak_event_hints for example in examples],
         "target_special_supervision": [example.target_special_supervision for example in examples],
+        "target_event_semantic_sidecar": [example.target_event_semantic_sidecar for example in examples],
     }

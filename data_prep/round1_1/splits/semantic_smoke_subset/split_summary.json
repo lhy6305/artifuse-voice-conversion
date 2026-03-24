@@ -1,0 +1,22 @@
+{
+  "option_name": "semantic_smoke_subset",
+  "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+  "source_option_path": "F:/proj_dev/tmp/workdir4/reports/data/round1_1_split_analysis/options/hybrid_stratified_blocked.json",
+  "source_manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/manifests",
+  "counts": {
+    "target_train": 1,
+    "target_validation": 1,
+    "target_special_eval": 1,
+    "source_train": 1,
+    "source_validation": 1
+  },
+  "strategy": "semantic_smoke_subset",
+  "notes": [
+    "subset split for stage3 semantic smoke only"
+  ],
+  "target_train_count": 1,
+  "target_validation_count": 1,
+  "target_special_eval_count": 1,
+  "source_train_count": 1,
+  "source_validation_count": 1
+}

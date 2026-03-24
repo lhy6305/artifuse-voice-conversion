@@ -33,10 +33,14 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         noise_bins: int,
         frame_length: int | None = None,
         waveform_decoder_mode: str = "fused_single",
+        use_decoder_branch_condition_adapter: bool = False,
+        use_residual_shape_branch_condition_adapter: bool = False,
     ) -> None:
         super().__init__()
         self.frame_length = int(frame_length) if frame_length is not None and int(frame_length) > 0 else None
         self.waveform_decoder_mode = normalize_waveform_decoder_mode(waveform_decoder_mode)
+        self.use_decoder_branch_condition_adapter = bool(use_decoder_branch_condition_adapter)
+        self.use_residual_shape_branch_condition_adapter = bool(use_residual_shape_branch_condition_adapter)
         self.periodic_encoder = build_mlp(periodic_input_dim, hidden_dim, hidden_dim)
         self.noise_encoder = build_mlp(noise_input_dim, hidden_dim, hidden_dim)
         self.periodic_gate = nn.Linear(hidden_dim, 1)
@@ -62,7 +66,47 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.noise_temporal_refiner = None
         self.periodic_temporal_gru = None
         self.noise_temporal_gru = None
+        self.decoder_branch_condition_adapter = None
+        self.decoder_branch_condition_gate = None
+        self.decoder_fused_condition_proj = None
+        self.decoder_periodic_condition_proj = None
+        self.decoder_noise_condition_proj = None
+        self.residual_shape_branch_condition_adapter = None
+        self.residual_shape_branch_condition_gate = None
+        self.residual_shape_branch_condition_proj = None
+        if self.use_decoder_branch_condition_adapter:
+            self.decoder_branch_condition_adapter = nn.Sequential(
+                nn.Linear(hidden_dim * 3, hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(hidden_dim),
+                nn.Linear(hidden_dim, hidden_dim),
+            )
+            self.decoder_branch_condition_gate = nn.Linear(hidden_dim, 1)
+            self.decoder_fused_condition_proj = nn.Linear(hidden_dim, hidden_dim)
+            self.decoder_periodic_condition_proj = nn.Linear(hidden_dim, hidden_dim)
+            self.decoder_noise_condition_proj = nn.Linear(hidden_dim, hidden_dim)
+            nn.init.zeros_(self.decoder_branch_condition_gate.weight)
+            nn.init.constant_(self.decoder_branch_condition_gate.bias, -2.0)
+            nn.init.zeros_(self.decoder_fused_condition_proj.weight)
+            nn.init.zeros_(self.decoder_fused_condition_proj.bias)
+            nn.init.zeros_(self.decoder_periodic_condition_proj.weight)
+            nn.init.zeros_(self.decoder_periodic_condition_proj.bias)
+            nn.init.zeros_(self.decoder_noise_condition_proj.weight)
+            nn.init.zeros_(self.decoder_noise_condition_proj.bias)
         if self.frame_length is not None:
+            if self.use_residual_shape_branch_condition_adapter:
+                self.residual_shape_branch_condition_adapter = nn.Sequential(
+                    nn.Linear(hidden_dim * 3, hidden_dim),
+                    nn.GELU(),
+                    nn.LayerNorm(hidden_dim),
+                    nn.Linear(hidden_dim, hidden_dim),
+                )
+                self.residual_shape_branch_condition_gate = nn.Linear(hidden_dim, 1)
+                self.residual_shape_branch_condition_proj = nn.Linear(hidden_dim, int(self.frame_length))
+                nn.init.zeros_(self.residual_shape_branch_condition_gate.weight)
+                nn.init.constant_(self.residual_shape_branch_condition_gate.bias, -2.0)
+                nn.init.zeros_(self.residual_shape_branch_condition_proj.weight)
+                nn.init.zeros_(self.residual_shape_branch_condition_proj.bias)
             if self.waveform_decoder_mode == "fused_single":
                 self.waveform_decoder = nn.Sequential(
                     nn.Linear(hidden_dim, hidden_dim),
@@ -232,6 +276,59 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             else fused_hidden * float(1.0 - resolved_decoder_branch_mean_mix_alpha)
             + branch_mean_hidden * resolved_decoder_branch_mean_mix_alpha
         )
+        branch_condition_gate = None
+        fused_condition = None
+        periodic_condition = None
+        noise_condition = None
+        residual_shape_branch_condition_gate = None
+        residual_shape_branch_condition_delta = None
+        if self.use_decoder_branch_condition_adapter:
+            if (
+                self.decoder_branch_condition_adapter is None
+                or self.decoder_branch_condition_gate is None
+                or self.decoder_fused_condition_proj is None
+                or self.decoder_periodic_condition_proj is None
+                or self.decoder_noise_condition_proj is None
+            ):
+                raise RuntimeError("Decoder branch-condition adapter modules are not initialized.")
+            branch_condition_features = torch.cat(
+                [
+                    fused_hidden,
+                    branch_mean_hidden,
+                    fused_hidden - branch_mean_hidden,
+                ],
+                dim=-1,
+            )
+            branch_condition_context = self.decoder_branch_condition_adapter(branch_condition_features)
+            branch_condition_gate = torch.sigmoid(self.decoder_branch_condition_gate(branch_condition_context))
+            fused_condition = torch.tanh(self.decoder_fused_condition_proj(branch_condition_context))
+            periodic_condition = torch.tanh(self.decoder_periodic_condition_proj(branch_condition_context))
+            noise_condition = torch.tanh(self.decoder_noise_condition_proj(branch_condition_context))
+            decoder_hidden = decoder_hidden + branch_condition_gate * fused_condition
+        if self.use_residual_shape_branch_condition_adapter:
+            if (
+                self.residual_shape_branch_condition_adapter is None
+                or self.residual_shape_branch_condition_gate is None
+                or self.residual_shape_branch_condition_proj is None
+            ):
+                raise RuntimeError("Residual-shape branch-condition adapter modules are not initialized.")
+            residual_shape_branch_condition_features = torch.cat(
+                [
+                    fused_hidden,
+                    branch_mean_hidden,
+                    fused_hidden - branch_mean_hidden,
+                ],
+                dim=-1,
+            )
+            residual_shape_branch_condition_context = self.residual_shape_branch_condition_adapter(
+                residual_shape_branch_condition_features
+            )
+            residual_shape_branch_condition_gate = torch.sigmoid(
+                self.residual_shape_branch_condition_gate(residual_shape_branch_condition_context)
+            )
+            residual_shape_branch_condition_delta = torch.tanh(
+                self.residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
+            )
         outputs = {
             "periodic_hidden": periodic_hidden,
             "noise_hidden": noise_hidden,
@@ -243,6 +340,14 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             "harmonic_envelope": self.harmonic_envelope(periodic_hidden),
             "noise_envelope": self.noise_envelope(noise_hidden),
         }
+        if branch_condition_gate is not None:
+            outputs["decoder_branch_condition_gate"] = branch_condition_gate
+            outputs["decoder_fused_condition"] = fused_condition
+            outputs["decoder_periodic_condition"] = periodic_condition
+            outputs["decoder_noise_condition"] = noise_condition
+        if residual_shape_branch_condition_gate is not None:
+            outputs["residual_shape_branch_condition_gate"] = residual_shape_branch_condition_gate
+            outputs["residual_shape_branch_condition_delta"] = residual_shape_branch_condition_delta
         if self.frame_length is None:
             return outputs
         if self.waveform_decoder_mode == "fused_single":
@@ -259,12 +364,22 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 or self.waveform_frame_mixer is None
             ):
                 raise RuntimeError("Dual-branch waveform decoder modules are not initialized.")
-            periodic_frames = self.periodic_waveform_decoder(periodic_hidden)
-            noise_frames = self.noise_waveform_decoder(noise_hidden)
+            conditioned_periodic_hidden = apply_decoder_branch_condition(
+                periodic_hidden,
+                branch_condition_gate,
+                periodic_condition,
+            )
+            conditioned_noise_hidden = apply_decoder_branch_condition(
+                noise_hidden,
+                branch_condition_gate,
+                noise_condition,
+            )
+            periodic_frames = self.periodic_waveform_decoder(conditioned_periodic_hidden)
+            noise_frames = self.noise_waveform_decoder(conditioned_noise_hidden)
             mixer_features = torch.cat(
                 [
-                    periodic_hidden,
-                    noise_hidden,
+                    conditioned_periodic_hidden,
+                    conditioned_noise_hidden,
                     outputs["periodic_gate"],
                     outputs["noise_gate"],
                 ],
@@ -285,11 +400,21 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 or self.noise_residual_scale is None
             ):
                 raise RuntimeError("Periodic-plus-noise-residual decoder modules are not initialized.")
-            periodic_frames = self.periodic_waveform_decoder(periodic_hidden)
-            noise_residual = self.noise_residual_decoder(noise_hidden)
+            conditioned_periodic_hidden = apply_decoder_branch_condition(
+                periodic_hidden,
+                branch_condition_gate,
+                periodic_condition,
+            )
+            conditioned_noise_hidden = apply_decoder_branch_condition(
+                noise_hidden,
+                branch_condition_gate,
+                noise_condition,
+            )
+            periodic_frames = self.periodic_waveform_decoder(conditioned_periodic_hidden)
+            noise_residual = self.noise_residual_decoder(conditioned_noise_hidden)
             residual_gate_features = torch.cat(
                 [
-                    noise_hidden,
+                    conditioned_noise_hidden,
                     outputs["periodic_gate"],
                     outputs["noise_gate"],
                 ],
@@ -315,18 +440,34 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         ):
             raise RuntimeError("Periodic-plus-noise-residual-shape decoder modules are not initialized.")
         if self.waveform_decoder_mode == "periodic_plus_noise_residual_shape":
-            periodic_frames = self.periodic_waveform_decoder(periodic_hidden)
-            noise_residual = self.noise_residual_decoder(noise_hidden)
+            conditioned_periodic_hidden = apply_decoder_branch_condition(
+                periodic_hidden,
+                branch_condition_gate,
+                periodic_condition,
+            )
+            conditioned_noise_hidden = apply_decoder_branch_condition(
+                noise_hidden,
+                branch_condition_gate,
+                noise_condition,
+            )
+            periodic_frames = self.periodic_waveform_decoder(conditioned_periodic_hidden)
+            noise_residual = self.noise_residual_decoder(conditioned_noise_hidden)
             residual_shape_features = torch.cat(
                 [
-                    periodic_hidden,
-                    noise_hidden,
+                    conditioned_periodic_hidden,
+                    conditioned_noise_hidden,
                     outputs["periodic_gate"],
                     outputs["noise_gate"],
                 ],
                 dim=-1,
             )
-            noise_residual_shape = torch.sigmoid(self.noise_residual_shape_head(residual_shape_features))
+            noise_residual_shape_logits = self.noise_residual_shape_head(residual_shape_features)
+            if residual_shape_branch_condition_gate is not None and residual_shape_branch_condition_delta is not None:
+                noise_residual_shape_logits = (
+                    noise_residual_shape_logits
+                    + residual_shape_branch_condition_gate * residual_shape_branch_condition_delta
+                )
+            noise_residual_shape = torch.sigmoid(noise_residual_shape_logits)
             residual_scale = self.noise_residual_scale.to(
                 device=periodic_frames.device,
                 dtype=periodic_frames.dtype,
@@ -347,18 +488,34 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 or self.noise_residual_scale is None
             ):
                 raise RuntimeError("Periodic-plus-noise-factorized-residual decoder modules are not initialized.")
-            periodic_frames = self.periodic_waveform_decoder(periodic_hidden)
-            noise_residual_shape_source = self.noise_residual_decoder(noise_hidden)
+            conditioned_periodic_hidden = apply_decoder_branch_condition(
+                periodic_hidden,
+                branch_condition_gate,
+                periodic_condition,
+            )
+            conditioned_noise_hidden = apply_decoder_branch_condition(
+                noise_hidden,
+                branch_condition_gate,
+                noise_condition,
+            )
+            periodic_frames = self.periodic_waveform_decoder(conditioned_periodic_hidden)
+            noise_residual_shape_source = self.noise_residual_decoder(conditioned_noise_hidden)
             residual_features = torch.cat(
                 [
-                    periodic_hidden,
-                    noise_hidden,
+                    conditioned_periodic_hidden,
+                    conditioned_noise_hidden,
                     outputs["periodic_gate"],
                     outputs["noise_gate"],
                 ],
                 dim=-1,
             )
-            noise_residual_envelope = torch.sigmoid(self.noise_residual_shape_head(residual_features))
+            noise_residual_envelope_logits = self.noise_residual_shape_head(residual_features)
+            if residual_shape_branch_condition_gate is not None and residual_shape_branch_condition_delta is not None:
+                noise_residual_envelope_logits = (
+                    noise_residual_envelope_logits
+                    + residual_shape_branch_condition_gate * residual_shape_branch_condition_delta
+                )
+            noise_residual_envelope = torch.sigmoid(noise_residual_envelope_logits)
             noise_residual_gain = torch.sigmoid(self.noise_residual_gain_head(residual_features))
             residual_scale = self.noise_residual_scale.to(
                 device=periodic_frames.device,
@@ -388,6 +545,16 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 raise RuntimeError("Periodic-plus-noise-residual-shape-temporal decoder modules are not initialized.")
             temporal_periodic_hidden = periodic_hidden + apply_temporal_refiner(periodic_hidden, self.periodic_temporal_refiner)
             temporal_noise_hidden = noise_hidden + apply_temporal_refiner(noise_hidden, self.noise_temporal_refiner)
+            temporal_periodic_hidden = apply_decoder_branch_condition(
+                temporal_periodic_hidden,
+                branch_condition_gate,
+                periodic_condition,
+            )
+            temporal_noise_hidden = apply_decoder_branch_condition(
+                temporal_noise_hidden,
+                branch_condition_gate,
+                noise_condition,
+            )
             periodic_frames = self.periodic_waveform_decoder(temporal_periodic_hidden)
             noise_residual = self.noise_residual_decoder(temporal_noise_hidden)
             residual_features = torch.cat(
@@ -399,7 +566,13 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 ],
                 dim=-1,
             )
-            noise_residual_envelope = torch.sigmoid(self.noise_residual_shape_head(residual_features))
+            noise_residual_envelope_logits = self.noise_residual_shape_head(residual_features)
+            if residual_shape_branch_condition_gate is not None and residual_shape_branch_condition_delta is not None:
+                noise_residual_envelope_logits = (
+                    noise_residual_envelope_logits
+                    + residual_shape_branch_condition_gate * residual_shape_branch_condition_delta
+                )
+            noise_residual_envelope = torch.sigmoid(noise_residual_envelope_logits)
             residual_scale = self.noise_residual_scale.to(
                 device=periodic_frames.device,
                 dtype=periodic_frames.dtype,
@@ -426,6 +599,16 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             raise RuntimeError("Periodic-plus-noise-residual-shape-recurrent decoder modules are not initialized.")
         temporal_periodic_hidden = periodic_hidden + apply_gru_temporal_refiner(periodic_hidden, self.periodic_temporal_gru)
         temporal_noise_hidden = noise_hidden + apply_gru_temporal_refiner(noise_hidden, self.noise_temporal_gru)
+        temporal_periodic_hidden = apply_decoder_branch_condition(
+            temporal_periodic_hidden,
+            branch_condition_gate,
+            periodic_condition,
+        )
+        temporal_noise_hidden = apply_decoder_branch_condition(
+            temporal_noise_hidden,
+            branch_condition_gate,
+            noise_condition,
+        )
         periodic_frames = self.periodic_waveform_decoder(temporal_periodic_hidden)
         noise_residual = self.noise_residual_decoder(temporal_noise_hidden)
         residual_features = torch.cat(
@@ -437,7 +620,13 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             ],
             dim=-1,
         )
-        noise_residual_envelope = torch.sigmoid(self.noise_residual_shape_head(residual_features))
+        noise_residual_envelope_logits = self.noise_residual_shape_head(residual_features)
+        if residual_shape_branch_condition_gate is not None and residual_shape_branch_condition_delta is not None:
+            noise_residual_envelope_logits = (
+                noise_residual_envelope_logits
+                + residual_shape_branch_condition_gate * residual_shape_branch_condition_delta
+            )
+        noise_residual_envelope = torch.sigmoid(noise_residual_envelope_logits)
         residual_scale = self.noise_residual_scale.to(
             device=periodic_frames.device,
             dtype=periodic_frames.dtype,
@@ -566,6 +755,65 @@ def build_mlp(input_dim: int, hidden_dim: int, output_dim: int) -> nn.Sequential
         nn.LayerNorm(hidden_dim),
         nn.Linear(hidden_dim, output_dim),
     )
+
+
+def infer_waveform_decoder_mode_from_state_dict(state_dict: dict[str, torch.Tensor]) -> str:
+    if "periodic_temporal_gru.weight_ih_l0" in state_dict:
+        return "periodic_plus_noise_residual_shape_recurrent"
+    if "periodic_temporal_refiner.0.weight" in state_dict:
+        return "periodic_plus_noise_residual_shape_temporal"
+    if "noise_residual_gain_head.0.weight" in state_dict:
+        return "periodic_plus_noise_factorized_residual"
+    if "noise_residual_shape_head.0.weight" in state_dict:
+        return "periodic_plus_noise_residual_shape"
+    if "noise_residual_decoder.0.weight" in state_dict:
+        return "periodic_plus_noise_residual"
+    if "periodic_waveform_decoder.0.weight" in state_dict:
+        return "dual_branch_mix"
+    return "fused_single"
+
+
+def infer_decoder_branch_condition_adapter_from_state_dict(state_dict: dict[str, torch.Tensor]) -> bool:
+    return "decoder_branch_condition_adapter.0.weight" in state_dict
+
+
+def infer_residual_shape_branch_condition_adapter_from_state_dict(state_dict: dict[str, torch.Tensor]) -> bool:
+    return "residual_shape_branch_condition_adapter.0.weight" in state_dict
+
+
+def build_nores_vocoder_scaffold_from_state_dict(
+    *,
+    state_dict: dict[str, torch.Tensor],
+    periodic_input_dim: int,
+    noise_input_dim: int,
+    frame_length: int,
+) -> NoResidualSourceFilterVocoderScaffold:
+    hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
+    harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
+    noise_bins = int(state_dict["noise_envelope.weight"].shape[0])
+    return NoResidualSourceFilterVocoderScaffold(
+        periodic_input_dim=int(periodic_input_dim),
+        noise_input_dim=int(noise_input_dim),
+        hidden_dim=hidden_dim,
+        harmonic_bins=harmonic_bins,
+        noise_bins=noise_bins,
+        frame_length=int(frame_length),
+        waveform_decoder_mode=infer_waveform_decoder_mode_from_state_dict(state_dict),
+        use_decoder_branch_condition_adapter=infer_decoder_branch_condition_adapter_from_state_dict(state_dict),
+        use_residual_shape_branch_condition_adapter=infer_residual_shape_branch_condition_adapter_from_state_dict(
+            state_dict
+        ),
+    )
+
+
+def apply_decoder_branch_condition(
+    base_hidden: torch.Tensor,
+    branch_condition_gate: torch.Tensor | None,
+    branch_condition_hidden: torch.Tensor | None,
+) -> torch.Tensor:
+    if branch_condition_gate is None or branch_condition_hidden is None:
+        return base_hidden
+    return base_hidden + branch_condition_gate * branch_condition_hidden
 
 
 def normalize_waveform_decoder_mode(waveform_decoder_mode: str) -> str:

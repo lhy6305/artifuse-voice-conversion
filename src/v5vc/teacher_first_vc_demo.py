@@ -31,7 +31,10 @@ from v5vc.offline_teacher_runtime import (
     run_streaming_pass,
 )
 from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
-from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
+from v5vc.offline_vocoder_scaffold import (
+    NoResidualSourceFilterVocoderScaffold,
+    build_nores_vocoder_scaffold_from_state_dict,
+)
 from v5vc.offline_vocoder_training import (
     extract_training_batch,
     extract_training_runtime,
@@ -573,6 +576,9 @@ def run_offline_mvp_teacher_first_vc_demo(
             predicted_activity_gate_floor=float(predicted_activity_gate_floor),
             predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
             predicted_activity_gate_apply_mode=resolved_apply_mode,
+            decoder_branch_mean_mix_alpha=0.0,
+            use_decoder_branch_condition_adapter=bool(model.use_decoder_branch_condition_adapter),
+            use_residual_shape_branch_condition_adapter=bool(model.use_residual_shape_branch_condition_adapter),
         )
         summary = build_summary_payload(
             status="succeeded",
@@ -687,15 +693,10 @@ def build_vocoder_model_from_runtime_dims(
         noise_input_dim=noise_input_dim,
         frame_length=frame_length,
     )
-    hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
-    harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
-    noise_bins = int(state_dict["noise_envelope.weight"].shape[0])
-    model = NoResidualSourceFilterVocoderScaffold(
+    model = build_nores_vocoder_scaffold_from_state_dict(
+        state_dict=state_dict,
         periodic_input_dim=int(periodic_input_dim),
         noise_input_dim=int(noise_input_dim),
-        hidden_dim=hidden_dim,
-        harmonic_bins=harmonic_bins,
-        noise_bins=noise_bins,
         frame_length=int(frame_length),
     )
     model.load_state_dict(state_dict)
@@ -723,37 +724,40 @@ def validate_vocoder_checkpoint_against_runtime_dims(
     noise_input_dim: int,
     frame_length: int,
 ) -> None:
-    expected_shapes = {
-        "periodic_encoder.0.weight": (None, int(periodic_input_dim)),
-        "noise_encoder.0.weight": (None, int(noise_input_dim)),
-        "waveform_decoder.3.weight": (int(frame_length), None),
-        "waveform_decoder.3.bias": (int(frame_length),),
+    tensor_state_dict = {
+        key: value
+        for key, value in state_dict.items()
+        if isinstance(value, torch.Tensor)
     }
-    mismatches = []
-    for key, expected_shape in expected_shapes.items():
-        value = state_dict.get(key)
-        if not isinstance(value, torch.Tensor):
+    expected_model = build_nores_vocoder_scaffold_from_state_dict(
+        state_dict=tensor_state_dict,
+        periodic_input_dim=int(periodic_input_dim),
+        noise_input_dim=int(noise_input_dim),
+        frame_length=int(frame_length),
+    )
+    expected_state_dict = expected_model.state_dict()
+    mismatches: list[str] = []
+    missing_keys = [key for key in expected_state_dict if key not in tensor_state_dict]
+    unexpected_keys = [key for key in tensor_state_dict if key not in expected_state_dict]
+    for key, expected_value in expected_state_dict.items():
+        actual_value = tensor_state_dict.get(key)
+        if actual_value is None:
             continue
-        actual_shape = tuple(int(dim) for dim in value.shape)
-        if len(actual_shape) != len(expected_shape):
-            mismatches.append(
-                f"{key}: expected rank {len(expected_shape)} but found shape {actual_shape}"
-            )
-            continue
-        mismatch_parts = []
-        for index, expected_dim in enumerate(expected_shape):
-            if expected_dim is None:
-                continue
-            if actual_shape[index] != expected_dim:
-                mismatch_parts.append(
-                    f"dim{index} expected {expected_dim} but found {actual_shape[index]}"
-                )
-        if mismatch_parts:
-            mismatches.append(f"{key}: " + "; ".join(mismatch_parts))
-    if mismatches:
+        actual_shape = tuple(int(dim) for dim in actual_value.shape)
+        expected_shape = tuple(int(dim) for dim in expected_value.shape)
+        if actual_shape != expected_shape:
+            mismatches.append(f"{key}: expected {expected_shape} but found {actual_shape}")
+    if missing_keys or unexpected_keys or mismatches:
+        details: list[str] = []
+        if missing_keys:
+            details.append("missing_keys=" + ", ".join(sorted(missing_keys)))
+        if unexpected_keys:
+            details.append("unexpected_keys=" + ", ".join(sorted(unexpected_keys)))
+        if mismatches:
+            details.append("shape_mismatches=" + " | ".join(mismatches))
         raise ValueError(
             "Stage5 vocoder checkpoint is incompatible with the current scaffold: "
-            + " | ".join(mismatches)
+            + " | ".join(details)
         )
 
 
@@ -3525,6 +3529,9 @@ def build_reference_decoder_behavior_summary(
         predicted_activity_gate_floor=predicted_activity_gate_floor,
         predicted_activity_gate_smoothing_frames=predicted_activity_gate_smoothing_frames,
         predicted_activity_gate_apply_mode=predicted_activity_gate_apply_mode,
+        decoder_branch_mean_mix_alpha=0.0,
+        use_decoder_branch_condition_adapter=bool(model.use_decoder_branch_condition_adapter),
+        use_residual_shape_branch_condition_adapter=bool(model.use_residual_shape_branch_condition_adapter),
     )
     reference_cases = []
     for package_path in reference_package_paths:

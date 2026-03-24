@@ -231,6 +231,8 @@ def run_offline_mvp_nores_vocoder_training_step(
     frame_adjacent_cosine_weight: float = 0.0,
     decoder_branch_mean_mix_alpha: float = 0.0,
     waveform_decoder_mode: str = "fused_single",
+    use_decoder_branch_condition_adapter: bool = False,
+    use_residual_shape_branch_condition_adapter: bool = False,
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
@@ -279,6 +281,8 @@ def run_offline_mvp_nores_vocoder_training_step(
         noise_bins=int(noise_target.shape[-1]),
         frame_length=int(runtime["frame_length"]),
         waveform_decoder_mode=waveform_decoder_mode,
+        use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
+        use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
     model.train()
@@ -346,6 +350,8 @@ def run_offline_mvp_nores_vocoder_training_step(
         "forward_path": {
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
             "waveform_decoder_mode": str(model.waveform_decoder_mode),
+            "use_decoder_branch_condition_adapter": bool(model.use_decoder_branch_condition_adapter),
+            "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
         },
         "reproducibility": reproducibility,
         "loss_weights": {
@@ -443,6 +449,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
     frame_adjacent_cosine_weight: float = 0.0,
     decoder_branch_mean_mix_alpha: float = 0.0,
     waveform_decoder_mode: str = "fused_single",
+    use_decoder_branch_condition_adapter: bool = False,
+    use_residual_shape_branch_condition_adapter: bool = False,
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
@@ -501,6 +509,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
         noise_bins=int(training_batch["noise_target"].shape[-1]),
         frame_length=int(training_runtime["frame_length"]),
         waveform_decoder_mode=waveform_decoder_mode,
+        use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
+        use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
 
@@ -662,6 +672,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
         "forward_path": {
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
             "waveform_decoder_mode": str(model.waveform_decoder_mode),
+            "use_decoder_branch_condition_adapter": bool(model.use_decoder_branch_condition_adapter),
+            "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
         },
         "reproducibility": reproducibility,
         "training": {
@@ -889,6 +901,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     fused_hidden_branch_mean_weight: float = 0.0,
     decoder_branch_mean_mix_alpha: float = 0.0,
     waveform_decoder_mode: str = "fused_single",
+    use_decoder_branch_condition_adapter: bool = False,
+    use_residual_shape_branch_condition_adapter: bool = False,
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
@@ -945,6 +959,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         noise_bins=int(initial_batch["noise_target"].shape[-1]),
         frame_length=int(initial_runtime["frame_length"]),
         waveform_decoder_mode=waveform_decoder_mode,
+        use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
+        use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
 
@@ -1175,6 +1191,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         "forward_path": {
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
             "waveform_decoder_mode": str(model.waveform_decoder_mode),
+            "use_decoder_branch_condition_adapter": bool(model.use_decoder_branch_condition_adapter),
+            "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
         },
         "training": {
             "num_steps": effective_num_steps,

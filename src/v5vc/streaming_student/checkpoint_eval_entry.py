@@ -17,6 +17,7 @@ from v5vc.streaming_student.data import (
 from v5vc.streaming_student.losses import (
     build_default_teacher_supervision_weights,
     compute_streaming_student_teacher_supervision_loss,
+    resolve_semantic_supervision_config,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
 
@@ -58,6 +59,9 @@ def evaluate_streaming_student_checkpoint(
     training_summary = dict(payload.get("training", {}))
     loss_weights = dict(training_summary.get("loss_weights", {})) or build_default_teacher_supervision_weights()
     use_teacher_confidence = bool(training_summary.get("use_teacher_confidence", True))
+    semantic_supervision = resolve_semantic_supervision_config(
+        config=training_summary.get("semantic_supervision", config.get("semantic_supervision")),
+    )
 
     evaluation_slices = ["target_validation"]
     if include_special_eval:
@@ -72,6 +76,7 @@ def evaluate_streaming_student_checkpoint(
                 conditioning_asset=conditioning_asset,
                 loss_weights=loss_weights,
                 use_teacher_confidence=use_teacher_confidence,
+                semantic_supervision=semantic_supervision,
                 batch_size=batch_size,
             )
 
@@ -93,6 +98,7 @@ def evaluate_streaming_student_checkpoint(
         "training": {
             "batch_size": int(batch_size),
             "loss_weights": loss_weights,
+            "semantic_supervision": semantic_supervision,
             "loss_weight_overrides_path": training_summary.get("loss_weight_overrides_path"),
             "use_teacher_confidence": use_teacher_confidence,
         },
@@ -124,6 +130,7 @@ def evaluate_split(
     conditioning_asset: dict[str, object],
     loss_weights: dict[str, float],
     use_teacher_confidence: bool,
+    semantic_supervision: dict[str, object],
     batch_size: int,
 ) -> dict[str, object]:
     effective_batch_size = max(1, int(batch_size))
@@ -154,6 +161,7 @@ def evaluate_split(
             batch=batch,
             weights=loss_weights,
             use_teacher_confidence=use_teacher_confidence,
+            semantic_supervision=semantic_supervision,
         )
         batch_metrics.append(metrics)
         sampled_record_ids.append(list(batch["record_ids"]))

@@ -15,6 +15,7 @@ from v5vc.streaming_student.data import (
 )
 from v5vc.streaming_student.losses import (
     compute_streaming_student_teacher_supervision_loss,
+    resolve_semantic_supervision_config,
     resolve_teacher_supervision_weights,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
@@ -56,6 +57,10 @@ def prepare_streaming_student_supervision(
     effective_weights = resolve_teacher_supervision_weights(
         overrides_path=resolved_loss_weight_overrides_path,
     )
+    semantic_supervision = resolve_semantic_supervision_config(
+        config=config.get("semantic_supervision"),
+        overrides_path=resolved_loss_weight_overrides_path,
+    )
 
     slice_summaries: dict[str, object] = {}
     with torch.no_grad():
@@ -77,11 +82,13 @@ def prepare_streaming_student_supervision(
                 batch=batch,
                 weights=effective_weights,
                 use_teacher_confidence=use_teacher_confidence,
+                semantic_supervision=semantic_supervision,
             )
             slice_summaries[split_name] = {
                 "record_count": len(records),
                 "dry_run_batch_size": len(batch["record_ids"]),
                 "sample_record_ids": list(batch["record_ids"]),
+                "semantic_sidecar_summary": summarize_semantic_sidecars(batch["target_event_semantic_sidecar"]),
                 "loss_metrics": metrics,
                 "loss_total_tensor": round(float(total_loss.detach().cpu().item()), 6),
             }
@@ -101,6 +108,7 @@ def prepare_streaming_student_supervision(
         "split": split_summary,
         "conditioning": conditioning_asset["summary"],
         "loss_weights": effective_weights,
+        "semantic_supervision": semantic_supervision,
         "loss_weight_overrides_path": (
             None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
         ),
@@ -109,6 +117,7 @@ def prepare_streaming_student_supervision(
         "notes": [
             "This stage defines only the minimum teacher-supervised dry-run losses needed to move beyond pure data wiring.",
             "Current supervision intentionally avoids forcing a hidden-state distillation term because Stage3 and offline_mvp hidden dimensions are not yet aligned.",
+            "Current semantic supervision only reweights teacher_event_prior / teacher_event / teacher_z_art by target-side structure semantics; it does not pretend to add phone/manner/place labels.",
             "Frontend proxy terms are heuristic and should be treated as bootstrap supervision, not final semantic commitments.",
         ],
         "next_steps": [
@@ -137,6 +146,30 @@ def prepare_streaming_student_supervision(
     )
 
 
+def summarize_semantic_sidecars(
+    sidecars: list[dict[str, object] | None],
+) -> dict[str, object]:
+    contract_counts: dict[str, int] = {}
+    label_status_counts: dict[str, int] = {}
+    present_count = 0
+    for row in sidecars:
+        if not isinstance(row, dict):
+            continue
+        present_count += 1
+        contract_key = str(row.get("semantic_contract_version", "unknown"))
+        contract_counts[contract_key] = contract_counts.get(contract_key, 0) + 1
+        upgrade_status = row.get("upgrade_status")
+        if isinstance(upgrade_status, dict):
+            label_key = str(upgrade_status.get("label_status", "unknown"))
+            label_status_counts[label_key] = label_status_counts.get(label_key, 0) + 1
+    return {
+        "present_count": present_count,
+        "missing_count": max(0, len(sidecars) - present_count),
+        "semantic_contract_version_counts": dict(sorted(contract_counts.items())),
+        "semantic_label_status_counts": dict(sorted(label_status_counts.items())),
+    }
+
+
 def build_markdown(summary: dict[str, object]) -> str:
     lines = [
         "# Stage3 Streaming Student Supervision Plan",
@@ -147,6 +180,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- calibration_asset_path: {summary['calibration_asset_path']}",
         f"- conditioning: {json.dumps(summary['conditioning'], ensure_ascii=False)}",
         f"- loss_weights: {json.dumps(summary['loss_weights'], ensure_ascii=False)}",
+        f"- semantic_supervision: {json.dumps(summary['semantic_supervision'], ensure_ascii=False)}",
         f"- loss_weight_overrides_path: {summary['loss_weight_overrides_path']}",
         f"- use_teacher_confidence: {summary['use_teacher_confidence']}",
         "",
@@ -159,6 +193,7 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"- record_count: {payload['record_count']}",
                 f"- dry_run_batch_size: {payload['dry_run_batch_size']}",
                 f"- sample_record_ids: {payload['sample_record_ids']}",
+                f"- semantic_sidecar_summary: {json.dumps(payload['semantic_sidecar_summary'], ensure_ascii=False)}",
                 f"- loss_metrics: {json.dumps(payload['loss_metrics'], ensure_ascii=False)}",
                 "",
             ]

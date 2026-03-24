@@ -12324,5 +12324,662 @@
   - 否则更合理的是：
     - 暂停 decode-side periodic spectral restraint
     - 回到更上游的
-      `fusion / fused_hidden`
-      主线
+    `fusion / fused_hidden`
+     主线
+### 394. 一个 fusion-side 约束在弱骨架上失败，并不等于它在更强骨架上永久无价值
+- 现象:
+  - 早期
+    `fused_hidden_branch_mean`
+    在较弱骨架上，
+    更像是：
+    - 指标轻微改善
+    - 但听感与整体行为仍不成立
+  - 但当主线升级到：
+    - recurrent temporal decoder
+    - local periodic temporal losses
+    - `periodic_gate rms_floor=0.65`
+    之后，
+    同一类 fusion-side 约束会重新表现成：
+    - `active_template / adjacent cosine / rms_guard / rms_ratio`
+      同步改善
+- 风险:
+  - 如果把旧骨架上的失败结论直接永久化，
+    很容易错过：
+    - 在更强 backbone 上重新变得有价值的旧约束
+- 处理要求:
+  - 对曾经失败但理论位置仍合理的约束，
+    在 backbone 明显升级后，
+    允许做一次最小回访
+  - 回访时重点看：
+    - 它是在“重新回摆”
+    - 还是形成新的 Pareto 线
+### 395. 不能把所有“改善结构指标但牺牲 waveform/STFT”的约束都归类成同一种回摆
+- 现象:
+  - decode-side periodic spectral restraint
+    常见模式是：
+    - 频谱约束命中
+    - 但把当前主线的结构收益拉回
+  - fusion-side
+    `fused_hidden_branch_mean`
+    在当前强骨架上的模式则是：
+    - `active_template / adjacent cosine / rms_guard / rms_ratio`
+      一起向前
+    - 只是在
+      `waveform / stft`
+      上付税
+- 风险:
+  - 如果只因为二者都让
+    `waveform / stft`
+    变差，
+    就把它们都归到：
+    - “没有价值的 pull-back”
+    会误删一条真实可继续优化的 Pareto 支线
+- 处理要求:
+  - 当某个 regularizer
+    明显推动了：
+    - 结构指标
+    - 能量匹配指标
+    而不是把它们一起拖回去时，
+    应把它记录成：
+    - shadow candidate
+  - 在它未被更优组合彻底淘汰前，
+    不要提前关线
+### 396. 在 fusion-side Pareto 线上，`stft_weight` 和 `fused_hidden_branch_mean_weight` 的微调方向并不对称
+- 现象:
+  - 围绕
+    `fusedbranch=0.25 + stft=0.55`
+    做微调时，
+    把
+    `stft_weight`
+    从
+    `0.55`
+    降到
+    `0.525`
+    并没有表现成：
+    - 更保守
+    - 更接近 baseline
+  - 它反而常会继续推动：
+    - `active_template`
+    - `adjacent cosine`
+    - `rms_guard`
+    - `rms_ratio`
+    - `branch_mean`
+    向更强约束侧走，
+    同时
+    `waveform / stft`
+    继续变差
+- 风险:
+  - 如果把“把一个 loss 权重调小”
+    直接等同于
+    “往 baseline 回收”，
+    很容易在局部 Pareto 线上做出错误直觉判断
+- 处理要求:
+  - 在这类影子主线附近，
+    微调时必须把：
+    - `step4 validation`
+    - fixed-set aggregate
+    同时复核
+  - 不要只凭：
+    - 参数方向
+    - 或单个 loss 名称
+    来预判结果方向
+### 397. 如果目标是回收 waveform/STFT 税，当前更有效的微调轴是先减弱 fusion-side 对齐，而不是继续下调 STFT
+- 现象:
+  - 在当前强骨架上，
+    从
+    `fusedbranch=0.25 + stft=0.55`
+    出发时，
+    把
+    `fused_hidden_branch_mean_weight`
+    降到
+    `0.20`
+    往往会得到：
+    - 更接近 baseline 的
+      `waveform / stft`
+    - 同时仍保留明显的
+      `active_template / adjacent cosine / rms_guard / rms_ratio / branch_mean`
+      收益
+- 风险:
+  - 如果此时只盯着
+    `stft_weight`
+    去继续下调，
+    容易错过真正更有效的平衡轴
+- 处理要求:
+  - 当 fusion-side Pareto 线已经成立后，
+    想做“更平衡”的最小微调时，
+    优先先试：
+    - 更小的
+      `fused_hidden_branch_mean_weight`
+  - 只有在这条轴也不能回收足够税收时，
+    再考虑继续沿
+    `stft_weight`
+    方向微扫
+### 398. 当 fusion-side shadow line 接近 baseline 时，最先消失的往往是 waveform/STFT 税，而不是全部冲突
+- 现象:
+  - 在
+    `fused_hidden_branch_mean`
+    已被压到较轻区间后，
+    继续微调常会先看到：
+    - `loss_waveform`
+      回到 baseline 附近甚至略优
+    - `loss_stft`
+      也回到 baseline 附近甚至略优
+  - 但与此同时，
+    剩余冲突往往会集中到：
+    - `rms_guard`
+    - `decoded_to_target_rms_ratio`
+- 风险:
+  - 如果只看到
+    `waveform / stft`
+    已经回来了，
+    就过早宣布已经出现全面支配解，
+    很容易忽略最后的能量对齐缺口
+- 处理要求:
+  - 当 shadow line
+    接近 baseline 时，
+    必须继续把：
+    - `rms_guard`
+    - `decoded_to_target_rms_ratio`
+    列为一等公民指标
+  - 不要只凭：
+    - `waveform`
+    - `stft`
+    先行定胜负
+### 399. 在近优区间里，shadow line 可能裂成多个风格不同的角点，而不是自然收敛成单一最优点
+- 现象:
+  - 当
+    `fusedbranch`
+    与
+    `stft`
+    都已经进入很窄的微调区间后，
+    常见结果不是：
+    - 一个参数点全面优于其他点
+  - 而是分裂成：
+    - 更平衡的 near-baseline 点
+    - 更偏 waveform/STFT recovery 的点
+- 风险:
+  - 如果此时强行选一个“唯一 shadow winner”，
+    很容易抹掉另一个仍有信息价值的角点
+- 处理要求:
+  - 当出现这种分裂时，
+    应先承认：
+    - 这是两个近优角点
+  - 下一发优先做：
+    - 它们的交叉点
+    - 或中间点
+  - 只有当交叉点也不能形成明显支配解时，
+    再停止同构微扫并升级实验形态
+### 400. 当听审已被明确提上下一步时，不能让导出链路继续依赖过期的训练损失签名
+- 现象:
+  - 在当前 no-res Stage5 路线上，
+    训练侧
+    `compute_nores_vocoder_losses`
+    新增了
+    `sample_rate`
+    参数后，
+    `export-offline-mvp-nores-vocoder-audio`
+    仍按旧签名调用，
+    会在真正准备导听审包时才爆出：
+    - `missing 1 required positional argument: 'sample_rate'`
+- 风险:
+  - 如果直到“该听了”的那一刻
+    才发现这类导出回归，
+    会把实验判断和交付链路问题混在一起，
+    白白打断节奏
+- 处理要求:
+  - 只要训练损失签名发生变化，
+    同步检查：
+    - `audio export`
+    - 其他复用该损失的评估入口
+  - 在准备正式听审前，
+    至少做一次单条 export smoke
+### 401. 当交叉点只能把某一组共享指标推到极致、却明显回吐剩余主矛盾时，正确动作是立刻听，而不是继续围着角点补更多点
+- 现象:
+  - 在当前 fusion shadow line 上，
+    交叉点
+    `fusedbranch=0.15 + stft=0.575`
+    把：
+    - `waveform`
+    - `stft`
+      推到最好
+  - 但也把：
+    - `rms_guard`
+    - `decoded_to_target_rms_ratio`
+      推到最差
+- 风险:
+  - 如果此时继续按“再补一个更中间的点”
+    机械推进，
+    很容易重新掉回：
+    - 数值上越来越细
+    - 可听性仍然没有被验证
+    的旧陷阱
+- 处理要求:
+  - 当交叉点已经把 Pareto 结构写清楚后，
+    下一步应切到：
+    - fixed-set 听审
+  - 只有听审后仍存在明确新方向，
+    才值得继续围绕该族参数再扫
+### 402. 当同一族 fusion-side shadow 候选已经被 fixed-set 人工听审全部判定为 pure buzz 时，必须停止把这条线写成“只差最后一点微调”
+- 现象:
+  - 在当前强骨架上，
+    即使
+    `fused_hidden_branch_mean + stft`
+    已被扫到 near-baseline / recovery / cross-point
+    三类角点，
+    fixed-6 听审仍可能全部给出：
+    - 纯 buzz
+    - 没有任何像人声的部分
+- 风险:
+  - 如果这时还继续把它表述成：
+    - 还差一个更中间的点
+    - 或只差更久训练
+    就会把 objective-side 诊断进展误报成可听性接近成功
+- 处理要求:
+  - 一旦同一族候选已被 fixed-set 听审整体否决，
+    就应正式关掉这条微调线
+  - 后续只能：
+    - 升级实验形态
+    - 或切主线
+  - 不能继续做同构 loss sweep
+### 403. 当 loss-only 与 static linear mix 都已在强骨架上被听审否决后，下一步应直接升级为非线性结构级 forward-path，而不是继续围绕单路 fused-hidden 做轻量修补
+- 现象:
+  - `branch_mean` loss-only
+    已失败
+  - `decoder_branch_mean_mix_alpha`
+    线性 forward-path
+    也已失败
+  - 后续更强骨架上的
+    `branch_mean + stft`
+    细微扫仍全部失败
+- 风险:
+  - 如果仍继续在：
+    - 单路
+      `fused_hidden`
+    - 轻量 loss
+    - 固定 alpha 线性 mix
+    这三类手段里来回组合，
+    很容易持续停留在
+    `buzz-only`
+    假解附近
+- 处理要求:
+  - 这时下一步应直接升级成：
+    - 非线性
+      decoder conditioning
+    - 或其他结构级
+      forward-path
+      干预
+  - 若结构级 forward-path
+    仍失败，
+    再正式切到：
+    - contract 语义升级主线
+### 404. 第一版非线性 forward-path adapter 如果直接改写整个 branch decoder hidden，很容易再次复现“重建更好、结构更差”的假进展
+- 现象:
+  - 在当前最强骨架上，
+    宽范围的
+    `branch-conditioned decoder adapter`
+    会很快改善：
+    - `waveform`
+    - `stft`
+  - 但同时也会明显拉坏：
+    - `active_template`
+    - `adjacent cosine`
+    - `rms_guard`
+    - `decoded_to_target_rms_ratio`
+- 风险:
+  - 如果只看到
+    `waveform / stft`
+    明显变好，
+    很容易误判成：
+    - 非线性 forward-path
+      已经抓对了
+      最小落点
+  - 实际上失败的可能不是大方向，
+    而是：
+    - 介入位置太宽
+    - 改写得太早
+- 处理要求:
+  - 第一版结构级 adapter
+    若表现出这种模式，
+    不要直接回退到
+    loss-side
+    或 contract v2
+  - 先把 adapter
+    介入位置收窄到：
+    - residual-shape
+    - residual envelope
+    这类更局部的位点
+### 405. 即使给结构级 adapter 做保守初始化，若 fixed-6 方向仍不改，就不要把问题继续归到“只是初始化不够稳”
+- 现象:
+  - 把
+    gate
+    与 correction projection
+    做保守初始化后，
+    指标可能会：
+    - 比原始 adapter
+      稍微稳一点
+  - 但只要 fixed-6
+    仍然保持：
+    - `waveform / stft`
+      更好
+    - `active_template / adjacent cosine / rms_ratio`
+      更差
+    的同方向结构，
+    就说明问题不是单纯初始化
+- 风险:
+  - 如果此时继续只围绕：
+    - bias
+    - gate 初值
+    - projection 零初始化
+    打转，
+    很容易把结构问题误降级成训练技巧问题
+- 处理要求:
+  - 保守初始化若不能改变 fixed-6 方向，
+    下一步就应改：
+    - adapter 介入位置
+    - 而不是继续只改初始化细节
+### 406. 给 nores vocoder 新增 forward-path 结构时，不能只修训练和 export；所有 checkpoint 消费侧都必须同步切到“从 state_dict 反推结构”
+- 现象:
+  - 本轮新增
+    `residual-shape-only branch-conditioned adapter`
+    时，
+    CLI / training / scaffold / export
+    已经部分接好
+  - 但
+    `teacher_first_vc_demo.py`
+    仍保留：
+    - 旧的
+      `infer_branch_label(...)`
+      调用签名
+    - 旧的
+      `fused_single`
+      shape 假设
+    - 对
+      `waveform_decoder.3.*`
+      的硬编码校验
+- 风险:
+  - 如果只看
+    `audio export`
+    已能吃新 checkpoint，
+    很容易误以为整条消费链都已经安全
+  - 实际到真正导包或
+    teacher-first
+    场景时，
+    仍会因为旧 shape 假设而误判：
+    - checkpoint 不兼容
+    - 模型形态不匹配
+- 处理要求:
+  - 每次给 nores vocoder
+    新增结构开关后，
+    至少同步检查：
+    - train step
+    - training loop
+    - dataset loop
+    - audio export
+    - teacher-first / 其他 checkpoint 消费侧
+  - 最稳妥的做法是：
+    - 把结构识别统一收敛成
+      “从 `model_state_dict` 反推”
+      的共享逻辑
+  - 禁止继续在不同消费端
+    各自维护一套：
+    - waveform decoder mode 推断
+    - adapter 存在性判断
+    - checkpoint shape 校验
+### 407. 只把 decoder-conditioning 收窄到 residual-shape / residual-envelope 位点，并不会自动把系统从“重建更好、结构更差”里救出来
+- 现象:
+  - 本轮把
+    branch-conditioned adapter
+    从：
+    - 整个 branch hidden
+    收窄到：
+    - residual-shape / residual-envelope
+      路径
+  - 但 fixed-6
+    与 validation
+    仍保持同一老模式：
+    - `waveform / stft`
+      更好
+    - `rms_guard / active_template / adjacent cosine / rms_ratio`
+      更差
+- 风险:
+  - 如果只因为介入位置“更局部”，
+    就预期它会自然保住结构收益，
+    很容易再做一轮“看起来更精细、但结论没变”的假推进
+- 处理要求:
+  - 收窄到 residual-shape
+    若仍保持同方向回吐，
+    就不要继续把希望放在：
+    - 同构初始化微调
+    - 或同位点小修小补
+  - 下一步要么：
+    - 再收窄成
+      scalar / gain / bias
+      级别的极弱调制
+  - 要么：
+    - 正式停止这条 decoder-conditioning 线
+      转去更上游的语义/contract 升级
+### 408. 当一个“更局部”的 adapter 连前一轮最好候选都没超过时，应该把它视为方向证伪，而不是“还差最后一点调参”
+- 现象:
+  - `residual-shape-only`
+    相比上一轮最好形态
+    `branchcondadapter_conservative`
+    只在
+    `waveform`
+    上略好一点
+  - 但：
+    - `stft`
+      更差
+    - `rms_guard`
+      更差
+    - `active_template`
+      更差
+    - `adjacent cosine`
+      更差
+    - `rms_ratio`
+      更差
+- 风险:
+  - 如果这时还把它叙述成：
+    - 已经接近成立
+    - 只差再微调一发初始化
+    就会把一个已经非常清楚的负结果误报成接近成功
+- 处理要求:
+  - 当“更局部”的新形态
+    连前一轮最好候选都没有超过时，
+    默认应视为：
+    - 该层级结构假设已基本不成立
+  - 除非有非常明确的新机制，
+    否则不要继续沿同一层级做小修小补
+### 409. `contract_v2` 当前的 `event_probs` 仍是旧 heuristic frame targets，不能在 contract/scaffold/报告里继续把它写成设计态 `e_evt`
+- 现象:
+  - 当前 runtime
+    `event_probs`
+    对应的仍是：
+    - `energy_gate`
+    - `abs_delta_gate`
+    - `high_zero_cross`
+    - `low_zero_cross_voiced_like`
+    - `high_zero_cross_voiced_like`
+    - `delta_energy_rise`
+    - `delta_energy_fall`
+    - `energy_norm`
+  - 它们来自旧
+    heuristic frame event target，
+    不是设计稿里的命名：
+    - `p_fric`
+    - `p_closure`
+    - `p_burst`
+    - `p_voicing`
+    - `c_place`
+    - `c_manner`
+- 风险:
+  - 如果继续把当前
+    `event_probs`
+    直接叙述成
+    `e_evt`
+    已到位，
+    后续就会把：
+    - semantic 缺口
+    - label 缺口
+    - target-side / source-side
+      非对称缺口
+    一起误藏掉
+- 处理要求:
+  - 后续所有：
+    - contract
+    - scaffold
+    - 阶段报告
+    - 训练入口说明
+    都必须显式注明：
+    - 当前
+      `event_probs`
+      的 heuristic 版本
+    - 它不是最终设计态
+      `e_evt`
+  - 若要继续做 semantic 升级，
+    必须把新的 lexical / structure
+    语义资产和旧 heuristic frame targets
+    分开落盘
+### 410. target-side semantic sidecar 已可正式使用，但它当前只证明“目标侧语义底账已具备”，不证明 source-side 对称语义也已具备
+- 现象:
+  - 本轮已生成：
+    - `data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl`
+  - 摘要已明确：
+    - `record_count = 666`
+    - `clean_text_available_count = 666`
+    - `phone_sequence_available_count = 0`
+    - `manner_sequence_available_count = 0`
+    - `place_sequence_available_count = 0`
+    - `forced_alignment_available_count = 0`
+- 风险:
+  - 如果只看到
+    “semantic sidecar 已落盘”，
+    很容易把它误升格成：
+    - 源/目标对称 semantic contract
+      已经准备好
+  - 这样一来，
+    后续训练方案就可能错误依赖：
+    - 源侧 phone/manner/place
+    - 源侧 forced alignment
+    - 源侧文本事件监督
+- 处理要求:
+  - 后续所有 semantic 路线汇报，
+    必须固定拆开写：
+    - target-side semantic
+      当前已具备什么
+    - source-side semantic
+      当前仍缺什么
+  - 在 source 侧新增真实标签或对齐资产前，
+    不允许把当前 semantic sidecar
+    叙述成：
+    - 对称语义合同
+      已完成
+### 411. 旧 teacher checkpoint 通常不会自带 `target_event_semantic_sidecar_path`，Stage3 消费侧若只读 checkpoint config，会把新 semantic 资产重新丢掉
+- 现象:
+  - 当前多数
+    offline_mvp
+    teacher checkpoint
+    形成于
+    `target_event_semantic_sidecar`
+    引入之前
+  - 它们的
+    `config.data`
+    里通常没有：
+    - `target_event_semantic_sidecar_path`
+- 风险:
+  - 如果
+    `streaming_student teacher-label export`
+    只从 checkpoint config
+    读取 sidecar 路径，
+    就会出现一种假阴性：
+    - sidecar 其实已经生成
+    - 但导出的 teacher-label summary
+      却完全看不见它
+  - 后面再看 Stage3 摘要时，
+    很容易误判成：
+    - semantic plumbing
+      还没打通
+- 处理要求:
+  - 兼容旧 checkpoint
+    时，
+    不能只依赖：
+    - `config.data.target_event_semantic_sidecar_path`
+  - 还必须支持：
+    - 基于 `split_dir`
+      推断默认路径
+      `../../target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl`
+  - 新训练计划则应同步把这条路径
+    正式写回：
+    - config
+    - plan summary
+### 412. Stage3 `training-data / supervision` 的最小 smoke 不能只裁 teacher-label export；teacher-label index 若不覆盖整个 split，会按既有契约直接报错
+- 现象:
+  - 本轮做
+    Stage3 semantic plumbing
+    smoke 时，
+    先用：
+    - `build-streaming-student-teacher-labels --max-records-per-slice 1`
+    导出了一份最小 teacher-label index
+  - 随后直接拿它去跑：
+    - `prepare-streaming-student-training-data`
+    - `prepare-streaming-student-supervision`
+    会报：
+    - `Teacher-label index missing ... records for target_train`
+- 风险:
+  - 如果不了解这个旧前提，
+    很容易把报错误读成：
+    - semantic sidecar 接线坏了
+  - 实际上真正的问题只是：
+    - teacher-label index
+      与 split
+      覆盖范围不一致
+- 处理要求:
+  - 对
+    Stage3
+    做最小 smoke
+    时，
+    不能只缩 teacher-label export
+  - 必须同时：
+    - 下采样一个匹配的 subset split
+    - 或直接导出覆盖完整 split
+      的 teacher-label index
+  - 换句话说，
+    `teacher-label index`
+    和
+    `split_dir`
+    必须保持同一覆盖域
+### 413. 当前 `target_event_semantic_sidecar` 只适合做“结构级样本重配”，还不适合直接去重配 `vuv / aper / energy` 这类 proxy loss
+- 现象:
+  - 当前 sidecar
+    真正有的信息是：
+    - clean text
+    - punctuation boundary
+    - clause structure
+    - nonverbal / lexical
+  - 它没有：
+    - phone
+    - manner
+    - place
+    - forced alignment
+- 风险:
+  - 如果看到
+    semantic sidecar
+    已接进 Stage3，
+    就顺手把它拿去重配：
+    - `teacher_vuv_proxy`
+    - `teacher_aper_proxy`
+    - `teacher_energy_proxy`
+    很容易把“结构语义”
+    误当成“更高置信 phonetic / acoustic 标签”
+- 处理要求:
+  - 当前第一版 semantic weighting
+    最多只应温和作用于：
+    - `teacher_event_prior`
+    - `teacher_event`
+    - `teacher_z_art`
+  - 在拿到更细粒度的
+    phone / manner / place / alignment
+    资产前，
+    不要把当前 sidecar
+    直接升格成：
+    - voicing / aperiodicity / energy
+      的更高置信监督

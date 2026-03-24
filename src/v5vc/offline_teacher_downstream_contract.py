@@ -7,6 +7,7 @@ from pathlib import Path
 import torch
 
 from v5vc.ablation_eval import load_checkpoint
+from v5vc.event_semantics import build_current_runtime_event_semantics_meta
 from v5vc.offline_teacher_runtime import (
     OfflineMVPTeacherRuntime,
     compare_runtime_outputs,
@@ -194,6 +195,7 @@ def build_contract_payload(
     energy_log = streaming_outputs["acoustic"][:, 0]
     zero_cross_rate = streaming_outputs["acoustic"][:, 2]
     event_probs = streaming_outputs["event_probs"]
+    event_semantics_meta = build_current_runtime_event_semantics_meta()
     return {
         "contract_version": CONTRACT_VERSION_V2,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
@@ -230,6 +232,7 @@ def build_contract_payload(
             "aper_version": source_acoustic_state["aper_version"],
             "stats": dict(source_acoustic_state["stats"]),
         },
+        "event_semantics": event_semantics_meta,
         "provided_keys": {
             "v2_core": [
                 "frame_start_ms",
@@ -281,6 +284,7 @@ def build_contract_payload(
             "This contract upgrades the teacher-first downstream packet to the C-prime v2-core baseline for the experimental Stage5 route.",
             "f0_hz / vuv / aper / E are produced by a deterministic source acoustic state extraction chain aligned to the teacher runtime frame grid.",
             "aper-v1 is a single scalar per frame in [0, 1], where 0 is more periodic and 1 is more aperiodic; it is intended for the noise branch only.",
+            "Current event_probs still follow the offline_mvp_heuristic_event_target_v1 label space and should not be misread as the final named e_evt semantics from the design doc.",
             "r_res and final_vocoder_waveform remain intentionally absent because Phase C3 stays on the no-res baseline route.",
         ],
     }
@@ -313,6 +317,7 @@ def build_tensor_payload(
     vuv = source_acoustic_state["vuv"].to(torch.float32)
     aper = source_acoustic_state["aper"].to(torch.float32)
     energy_control = source_acoustic_state["E"].to(torch.float32)
+    event_semantics_meta = build_current_runtime_event_semantics_meta()
     return {
         "contract_version": CONTRACT_VERSION_V2,
         "input_audio_path": input_audio_path.resolve().as_posix(),
@@ -333,6 +338,7 @@ def build_tensor_payload(
         "z_art": streaming_outputs["z_art"].to(torch.float32),
         "event_logits": streaming_outputs["event_logits"].to(torch.float32),
         "event_probs": event_probs,
+        "event_semantics_meta": event_semantics_meta,
         "f0_hz": f0_hz,
         "vuv": vuv,
         "aper": aper,
@@ -385,6 +391,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- runtime: {json.dumps(summary['runtime'], ensure_ascii=False)}",
         f"- conditioning: {json.dumps(summary['conditioning'], ensure_ascii=False)}",
         f"- source_acoustic_state: {json.dumps(summary.get('source_acoustic_state', {}), ensure_ascii=False)}",
+        f"- event_semantics: {json.dumps(summary.get('event_semantics', {}), ensure_ascii=False)}",
         "",
         "## Keys",
         f"- provided_keys: {json.dumps(summary['provided_keys'], ensure_ascii=False)}",
