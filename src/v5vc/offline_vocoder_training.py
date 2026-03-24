@@ -24,6 +24,7 @@ from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
 
 DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE = "pre_overlap_add"
 DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD = 0.02
+DEFAULT_PERIODIC_WAVEFORM_HIGH_BAND_HZ = 4000.0
 SUPPORTED_TEACHER_VOCODER_SCAFFOLD_VERSIONS = {
     "offline_teacher_vocoder_input_scaffold_v1",
     "offline_teacher_vocoder_input_scaffold_v2",
@@ -233,6 +234,8 @@ def run_offline_mvp_nores_vocoder_training_step(
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
+    periodic_waveform_stft_weight: float = 0.0,
+    periodic_waveform_high_band_excess_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -292,6 +295,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         periodic_gate_target=periodic_gate_target,
         noise_gate_target=noise_gate_target,
         aligned_waveform=training_batch["aligned_waveform"],
+        sample_rate=int(runtime["sample_rate"]),
         frame_length=int(runtime["frame_length"]),
         hop_length=int(runtime["hop_length"]),
         harmonic_weight=harmonic_weight,
@@ -310,6 +314,8 @@ def run_offline_mvp_nores_vocoder_training_step(
         periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
         periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
         periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+        periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+        periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
     )
     optimizer.zero_grad(set_to_none=True)
     total_loss.backward()
@@ -357,6 +363,8 @@ def run_offline_mvp_nores_vocoder_training_step(
             "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
             "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
             "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
+            "periodic_waveform_stft": float(periodic_waveform_stft_weight),
+            "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
@@ -438,6 +446,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
+    periodic_waveform_stft_weight: float = 0.0,
+    periodic_waveform_high_band_excess_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -518,6 +528,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
             periodic_gate_target=training_batch["periodic_gate_target"],
             noise_gate_target=training_batch["noise_gate_target"],
             aligned_waveform=training_batch["aligned_waveform"],
+            sample_rate=int(training_runtime["sample_rate"]),
             frame_length=int(training_runtime["frame_length"]),
             hop_length=int(training_runtime["hop_length"]),
             harmonic_weight=harmonic_weight,
@@ -536,6 +547,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
             periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+            periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+            periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
@@ -584,12 +597,15 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
+                sample_rate=int(validation_runtime["sample_rate"]),
                 frame_length=int(validation_runtime["frame_length"]),
                 hop_length=int(validation_runtime["hop_length"]),
                 decoder_branch_mean_mix_alpha=decoder_branch_mean_mix_alpha,
                 periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
                 periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
                 periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+                periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+                periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                 validation_source=(
                     "separate_validation_package"
                     if resolved_validation_package_path is not None
@@ -671,6 +687,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
                 "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
                 "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
+                "periodic_waveform_stft": float(periodic_waveform_stft_weight),
+                "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -874,6 +892,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
+    periodic_waveform_stft_weight: float = 0.0,
+    periodic_waveform_high_band_excess_weight: float = 0.0,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -980,6 +1000,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 periodic_gate_target=batch["periodic_gate_target"],
                 noise_gate_target=batch["noise_gate_target"],
                 aligned_waveform=batch["aligned_waveform"],
+                sample_rate=int(runtime["sample_rate"]),
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
                 harmonic_weight=harmonic_weight,
@@ -1001,6 +1022,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
                 periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
                 periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+                periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+                periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
             )
             accumulated_loss = total_loss if accumulated_loss is None else accumulated_loss + total_loss
             package_metrics.append(
@@ -1072,6 +1095,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
                     periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
                     periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+                    periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+                    periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                     validation_source="validation_packages",
                 )
             else:
@@ -1100,6 +1125,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
                     periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
                     periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+                    periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+                    periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                     validation_source="train_packages_reused",
                 )
             validation_history.append(validation_payload_summary)
@@ -1177,6 +1204,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
                 "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
                 "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
+                "periodic_waveform_stft": float(periodic_waveform_stft_weight),
+                "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1689,6 +1718,56 @@ def compute_stft_reconstruction_loss(
     return F.l1_loss(torch.log1p(predicted_spec.abs()), torch.log1p(target_spec.abs()))
 
 
+def compute_waveform_high_band_energy_ratio(
+    waveform: torch.Tensor,
+    sample_rate: int,
+    high_band_hz: float = DEFAULT_PERIODIC_WAVEFORM_HIGH_BAND_HZ,
+) -> torch.Tensor:
+    centered = waveform.to(torch.float32).view(-1)
+    if int(centered.numel()) < 16:
+        return centered.new_zeros(())
+    centered = centered - centered.mean()
+    if float(centered.abs().max().detach().cpu().item()) <= 1.0e-9:
+        return centered.new_zeros(())
+    window = torch.hann_window(
+        int(centered.shape[0]),
+        dtype=centered.dtype,
+        device=centered.device,
+    )
+    spectrum = torch.fft.rfft(centered * window)
+    power = spectrum.abs().pow(2)
+    total_power = power.sum()
+    if float(total_power.detach().cpu().item()) <= 1.0e-12:
+        return centered.new_zeros(())
+    frequencies = torch.fft.rfftfreq(int(centered.shape[0]), d=1.0 / float(sample_rate)).to(
+        dtype=centered.dtype,
+        device=centered.device,
+    )
+    high_band_mask = frequencies >= float(high_band_hz)
+    if not bool(high_band_mask.any().detach().cpu().item()):
+        return centered.new_zeros(())
+    return power[high_band_mask].sum() / total_power.clamp_min(1.0e-12)
+
+
+def compute_waveform_high_band_energy_excess_loss(
+    predicted_waveform: torch.Tensor,
+    target_waveform: torch.Tensor,
+    sample_rate: int,
+    high_band_hz: float = DEFAULT_PERIODIC_WAVEFORM_HIGH_BAND_HZ,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    predicted_ratio = compute_waveform_high_band_energy_ratio(
+        waveform=predicted_waveform,
+        sample_rate=int(sample_rate),
+        high_band_hz=float(high_band_hz),
+    )
+    target_ratio = compute_waveform_high_band_energy_ratio(
+        waveform=target_waveform,
+        sample_rate=int(sample_rate),
+        high_band_hz=float(high_band_hz),
+    )
+    return (predicted_ratio - target_ratio).clamp_min(0.0), predicted_ratio, target_ratio
+
+
 def frame_waveform_sequence(
     waveform: torch.Tensor,
     frame_length: int,
@@ -1916,6 +1995,7 @@ def compute_nores_vocoder_losses(
     periodic_gate_target: torch.Tensor,
     noise_gate_target: torch.Tensor,
     aligned_waveform: torch.Tensor | None,
+    sample_rate: int | None,
     frame_length: int | None,
     hop_length: int | None,
     harmonic_weight: float,
@@ -1937,6 +2017,8 @@ def compute_nores_vocoder_losses(
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
+    periodic_waveform_stft_weight: float = 0.0,
+    periodic_waveform_high_band_excess_weight: float = 0.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
         reconstruction_frame_gain_apply_mode
@@ -1977,10 +2059,14 @@ def compute_nores_vocoder_losses(
     periodic_waveform_frame_delta_loss = harmonic_loss.new_zeros(())
     periodic_waveform_frame_adjacent_cosine_loss = harmonic_loss.new_zeros(())
     periodic_waveform_frame_rms_floor_loss = harmonic_loss.new_zeros(())
+    periodic_waveform_stft_loss = harmonic_loss.new_zeros(())
+    periodic_waveform_high_band_excess_loss = harmonic_loss.new_zeros(())
     periodic_waveform_frame_rms_mean = 0.0
     aligned_active_frame_rms_mean = 0.0
     decoded_waveform_rms = 0.0
     target_waveform_rms = 0.0
+    periodic_waveform_high_band_ratio = 0.0
+    aligned_waveform_high_band_ratio = 0.0
     periodic_hidden = outputs.get("periodic_hidden")
     noise_hidden = outputs.get("noise_hidden")
     fused_hidden = outputs.get("fused_hidden")
@@ -2005,6 +2091,8 @@ def compute_nores_vocoder_losses(
         or float(periodic_waveform_frame_delta_weight) > 0.0
         or float(periodic_waveform_frame_adjacent_cosine_weight) > 0.0
         or float(periodic_waveform_frame_rms_floor_weight) > 0.0
+        or float(periodic_waveform_stft_weight) > 0.0
+        or float(periodic_waveform_high_band_excess_weight) > 0.0
     ):
         if aligned_waveform is None:
             raise ValueError("aligned_waveform is required when waveform/structure losses are enabled.")
@@ -2045,6 +2133,8 @@ def compute_nores_vocoder_losses(
             float(periodic_waveform_frame_delta_weight) > 0.0
             or float(periodic_waveform_frame_adjacent_cosine_weight) > 0.0
             or float(periodic_waveform_frame_rms_floor_weight) > 0.0
+            or float(periodic_waveform_stft_weight) > 0.0
+            or float(periodic_waveform_high_band_excess_weight) > 0.0
         ):
             if (
                 float(periodic_waveform_frame_delta_weight) > 0.0
@@ -2076,6 +2166,47 @@ def compute_nores_vocoder_losses(
                 )
                 periodic_waveform_frame_rms_mean = float(periodic_waveform_frame_rms_mean_tensor.detach().cpu().item())
                 aligned_active_frame_rms_mean = float(aligned_active_frame_rms_mean_tensor.detach().cpu().item())
+            periodic_only_waveform = None
+            if (
+                float(periodic_waveform_stft_weight) > 0.0
+                or float(periodic_waveform_high_band_excess_weight) > 0.0
+            ):
+                periodic_only_waveform = reconstruct_waveform_from_frames(
+                    waveform_frames=periodic_waveform_frames,
+                    frame_length=int(frame_length),
+                    hop_length=int(hop_length),
+                    frame_gains=outputs.get("periodic_gate") if bool(use_predicted_activity_gate) else None,
+                    frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
+                )
+            if float(periodic_waveform_stft_weight) > 0.0 and periodic_only_waveform is not None:
+                periodic_target_waveform = target_waveform[: periodic_only_waveform.shape[0]]
+                periodic_waveform_stft_loss = compute_stft_reconstruction_loss(
+                    predicted_waveform=periodic_only_waveform,
+                    target_waveform=periodic_target_waveform,
+                    frame_length=int(frame_length),
+                    hop_length=int(hop_length),
+                )
+            if float(periodic_waveform_high_band_excess_weight) > 0.0 and periodic_only_waveform is not None:
+                if sample_rate is None:
+                    raise ValueError(
+                        "sample_rate is required when periodic_waveform_high_band_excess_weight is enabled."
+                    )
+                periodic_target_waveform = target_waveform[: periodic_only_waveform.shape[0]]
+                (
+                    periodic_waveform_high_band_excess_loss,
+                    periodic_waveform_high_band_ratio_tensor,
+                    aligned_waveform_high_band_ratio_tensor,
+                ) = compute_waveform_high_band_energy_excess_loss(
+                    predicted_waveform=periodic_only_waveform,
+                    target_waveform=periodic_target_waveform,
+                    sample_rate=int(sample_rate),
+                )
+                periodic_waveform_high_band_ratio = float(
+                    periodic_waveform_high_band_ratio_tensor.detach().cpu().item()
+                )
+                aligned_waveform_high_band_ratio = float(
+                    aligned_waveform_high_band_ratio_tensor.detach().cpu().item()
+                )
     total_loss = (
         harmonic_loss * float(harmonic_weight)
         + noise_loss * float(noise_weight)
@@ -2094,6 +2225,8 @@ def compute_nores_vocoder_losses(
         + periodic_waveform_frame_delta_loss * float(periodic_waveform_frame_delta_weight)
         + periodic_waveform_frame_adjacent_cosine_loss * float(periodic_waveform_frame_adjacent_cosine_weight)
         + periodic_waveform_frame_rms_floor_loss * float(periodic_waveform_frame_rms_floor_weight)
+        + periodic_waveform_stft_loss * float(periodic_waveform_stft_weight)
+        + periodic_waveform_high_band_excess_loss * float(periodic_waveform_high_band_excess_weight)
     )
     metrics = {
         "loss_total": round(float(total_loss.detach().cpu().item()), 6),
@@ -2132,6 +2265,14 @@ def compute_nores_vocoder_losses(
             float(periodic_waveform_frame_rms_floor_loss.detach().cpu().item()),
             6,
         ),
+        "loss_periodic_waveform_stft": round(
+            float(periodic_waveform_stft_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_periodic_waveform_high_band_excess": round(
+            float(periodic_waveform_high_band_excess_loss.detach().cpu().item()),
+            6,
+        ),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
         "noise_gate_pred_mean": round(float(outputs["noise_gate"].detach().mean().cpu().item()), 6),
         "activity_gate_pred_mean": round(float(predicted_activity.detach().mean().cpu().item()), 6),
@@ -2143,6 +2284,8 @@ def compute_nores_vocoder_losses(
         "target_waveform_rms": round(target_waveform_rms, 6),
         "periodic_waveform_active_frame_rms_mean": round(periodic_waveform_frame_rms_mean, 6),
         "aligned_active_frame_rms_mean": round(aligned_active_frame_rms_mean, 6),
+        "periodic_waveform_high_band_energy_ratio": round(periodic_waveform_high_band_ratio, 6),
+        "aligned_waveform_high_band_energy_ratio": round(aligned_waveform_high_band_ratio, 6),
         "decoded_to_target_rms_ratio": round(
             0.0 if target_waveform_rms <= 1.0e-8 else decoded_waveform_rms / target_waveform_rms,
             6,
@@ -2167,6 +2310,7 @@ def run_nores_vocoder_validation_pass(
     frame_delta_weight: float,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
+    sample_rate: int,
     frame_length: int,
     hop_length: int,
     validation_source: str,
@@ -2175,6 +2319,8 @@ def run_nores_vocoder_validation_pass(
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
+    periodic_waveform_stft_weight: float = 0.0,
+    periodic_waveform_high_band_excess_weight: float = 0.0,
 ) -> dict[str, object]:
     model.eval()
     with torch.no_grad():
@@ -2190,6 +2336,7 @@ def run_nores_vocoder_validation_pass(
             periodic_gate_target=validation_batch["periodic_gate_target"],
             noise_gate_target=validation_batch["noise_gate_target"],
             aligned_waveform=validation_batch["aligned_waveform"],
+            sample_rate=int(sample_rate),
             frame_length=int(frame_length),
             hop_length=int(hop_length),
             harmonic_weight=harmonic_weight,
@@ -2208,6 +2355,8 @@ def run_nores_vocoder_validation_pass(
             periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+            periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+            periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
         )
     return {
         "step": int(step),
@@ -2270,6 +2419,8 @@ def run_nores_vocoder_dataset_validation_pass(
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
+    periodic_waveform_stft_weight: float = 0.0,
+    periodic_waveform_high_band_excess_weight: float = 0.0,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
     model.eval()
@@ -2293,6 +2444,7 @@ def run_nores_vocoder_dataset_validation_pass(
                 periodic_gate_target=batch["periodic_gate_target"],
                 noise_gate_target=batch["noise_gate_target"],
                 aligned_waveform=batch["aligned_waveform"],
+                sample_rate=int(runtime["sample_rate"]),
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
                 harmonic_weight=harmonic_weight,
@@ -2314,6 +2466,8 @@ def run_nores_vocoder_dataset_validation_pass(
                 periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
                 periodic_waveform_frame_adjacent_cosine_weight=periodic_waveform_frame_adjacent_cosine_weight,
                 periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
+                periodic_waveform_stft_weight=periodic_waveform_stft_weight,
+                periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
             )
             package_metrics.append(
                 {

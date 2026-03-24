@@ -12150,3 +12150,179 @@
     的下一步应该优先做：
     - 极窄权重微扫
   - 不要直接继续往更大权重推
+### 389. `periodic_gate` local RMS floor 往上推到中高区间后，会形成稳定的 Pareto 曲线；一旦 `adjacent cosine` 已不再继续改善，就该停止扫权重
+- 现象:
+  - `0.35 -> 0.65`
+    区间内，
+    常见趋势是：
+    - `adjacent cosine`
+      继续下降
+    - `active_template`
+      继续下降
+    - `rms_ratio`
+      继续上升
+    - 同时
+      `waveform / stft`
+      继续恶化
+  - 到
+    `0.75 / 1.0`
+    后，
+    `adjacent cosine`
+    已不再继续变好，
+    但
+    `waveform / stft`
+    还在继续变差
+- 风险:
+  - 如果这时还继续扫更大权重，
+    只会得到：
+    - 更像 baseline 的能量
+    - 更差的频谱/重建
+    而不会真的换来新的结构收益
+- 处理要求:
+  - 当
+    `adjacent cosine`
+    已进入平台区，
+    下一步应停止扫
+    `rms_floor`
+    权重
+  - 改成在当前 sweet spot 上，
+    用别的守护项修复：
+    - `stft`
+    - 或其他频谱质量
+### 390. 在 `periodic_gate rms_floor` 已经找到 sweet spot 后，继续提高全局 `stft_weight` 往往只是在回收频谱，同时回吐结构/能量改进
+- 现象:
+  - 当主线已经固定在
+    `periodic_gate rms_floor=0.65`
+    这类 sweet spot 时，
+    把全局
+    `stft_weight`
+    从
+    `0.5`
+    提到
+    `0.55 / 0.6`
+    会出现：
+    - `waveform / stft`
+      变好
+    - 但
+      `adjacent cosine / active_template / rms_ratio`
+      同时回吐
+- 风险:
+  - 如果此时继续扫更大的
+    `stft_weight`，
+    往往不会生成新的更优 Pareto 点，
+    只会把模型重新拉回：
+    - 更像旧的频谱重建偏好
+    - 更弱的结构/能量收益
+- 处理要求:
+  - 在这种信号出现后，
+    停止扫全局
+    `stft_weight`
+  - 改做更局部的频谱守护，
+    优先放在：
+    - periodic-path
+    - 或其他更接近主干生成路径的局部位点
+### 391. 即使把频谱守护收窄到 `periodic_waveform_frames` 本身，整段 STFT 对齐仍可能和当前结构/能量收益发生同类冲突
+- 现象:
+  - 对
+    `periodic_waveform_frames`
+    经
+    `periodic_gate`
+    重建后的 waveform
+    加 local STFT guard 后，
+    常见结果仍然是：
+    - `waveform / stft`
+      变好
+    - 但
+      `adjacent cosine / active_template / rms_ratio`
+      一起回吐
+- 风险:
+  - 如果看到
+    “已经从全局 STFT 改成 local periodic STFT”，
+    就以为冲突会自动消失，
+    很容易继续在同类损失上浪费轮次
+- 处理要求:
+  - 一旦 local periodic STFT
+    也表现出同类 tradeoff，
+    就应停止继续扫：
+    - `periodic_waveform_stft_weight`
+  - 下一步改做更窄的频谱形状约束，
+    例如：
+    - 高频能量 restraint
+    - spectral tilt restraint
+### 392. 给新的 periodic-path 窄频谱约束做第一次 smoke 时，不能把“loss 数值是不是非零”当成唯一接线判据
+- 现象:
+  - 在单包单步 smoke 里，
+    即使
+    `periodic_waveform_high_band_excess_weight`
+    已经成功透传，
+    也可能出现：
+    - `loss_periodic_waveform_high_band_excess = 0.0`
+    - `periodic_waveform_high_band_energy_ratio = 0.0`
+    - `aligned_waveform_high_band_energy_ratio = 0.0`
+- 风险:
+  - 如果这时只看
+    `loss == 0`
+    就把它误判成：
+    - 参数没接上
+    - loss 没进图
+  - 很容易重复改一遍已经正确的接线
+- 处理要求:
+  - 第一次 smoke
+    应同时核对：
+    - `loss_weights` 里是否有
+      `periodic_waveform_high_band_excess`
+    - `loss_metrics` 里是否已写出：
+      - `loss_periodic_waveform_high_band_excess`
+      - `periodic_waveform_high_band_energy_ratio`
+      - `aligned_waveform_high_band_energy_ratio`
+  - 接线确认后，
+    再用 dataset-level smoke
+    去判断这条 restraint
+    是否真的会在正式样本分布上触发并产生有效 tradeoff
+### 393. 即使把 periodic-path 频谱约束缩成“只罚高频占比过量”，它仍可能继续回吐当前主线的结构收益
+- 现象:
+  - 在
+    `periodic_gate rms_floor=0.65`
+    主线上，
+    加
+    `periodic_waveform_high_band_excess_weight`
+    后，
+    常见现象是：
+    - `loss_periodic_waveform_high_band_excess`
+      明显非零
+    - `periodic_waveform_high_band_energy_ratio`
+      随权重上升而下降
+  - 但与此同时：
+    - `waveform / stft`
+      变差
+    - `active_template`
+      变差
+    - `adjacent cosine`
+      变差
+    - `decoded_to_target_rms_ratio`
+      反而更接近
+      `1.0`
+- 风险:
+  - 如果只看到
+    “高频占比确实被压下来了”，
+    很容易误判成：
+    - 这就是当前最缺的修正
+  - 实际上它可能只是又一种：
+    - 把系统往能量/音色稳态拉回
+    - 同时吐掉结构收益
+    的约束
+- 处理要求:
+  - 一旦观察到：
+    - 高频占比单调变好
+    - 但结构/重建共享指标同步回吐
+  - 就不要继续扫：
+    - `periodic_waveform_high_band_excess_weight`
+  - 若还要沿 periodic spectral line
+    继续，
+    下一步应改做：
+    - `spectral tilt restraint`
+  - 否则更合理的是：
+    - 暂停 decode-side periodic spectral restraint
+    - 回到更上游的
+      `fusion / fused_hidden`
+      主线

@@ -19112,3 +19112,274 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    - 同时尽量少吃：
      - `waveform`
      - `stft`
+## 2026-03-24 继续补充：periodic-gate RMS-floor 极窄微扫已完成，当前甜点收敛到 `0.65`
+- 正式报告：
+  - `docs/309_stage5_contractv2_normfix_periodicgate_rmsfloor_narrow_sweep_report.md`
+
+### 当前关键结果
+1. `periodic_gate rms_floor`
+   这条线已经形成清晰的 Pareto 曲线：
+   - 权重越高，
+     `adjacent cosine / active_template / rms_ratio`
+     越好
+   - 但
+     `waveform / stft`
+     也越差
+2. 当前 sweet spot
+   已经从上一轮的
+   `0.5`
+   收敛到：
+   - **`0.65`**
+3. `0.65`
+   在 fixed6 上给出当前最平衡结果：
+   - `adjacent cosine = 313.562889`
+   - `active_template = 0.147958`
+   - `decoded_to_target_rms_ratio = 0.870709`
+   - 代价：
+     - `waveform = 0.120843`
+     - `stft = 0.590533`
+4. `0.75`
+   与
+   `1.0`
+   已经说明：
+   - 继续往更高权重推，
+     不再划算
+
+### 当前阶段判断更新
+1. 当前主线已经不再是：
+   - 继续找更好的
+     RMS-floor 权重
+2. 当前更值钱的提问是：
+   - 在
+     `0.65`
+     这个已收敛的 sweet spot 上，
+     能不能补回一部分
+     `stft`
+     而不把结构/能量改善吐掉
+3. 因此：
+   - 下一步不再继续扫
+     `rms_floor`
+   - 也不回去扫
+     `rms_guard`
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 下一条最值得做的实验应是：
+   - 固定：
+     - `periodic_waveform_frame_delta = 0.25`
+     - `periodic_waveform_frame_adjacent_cosine = 0.01`
+     - `periodic_gate rms_floor = 0.65`
+   - 只小幅上调：
+     - `stft_weight: 0.5 -> 0.6`
+3. 目标是：
+   - 继续保住：
+     - `adjacent cosine`
+     - `active_template`
+     - `rms_ratio`
+   - 同时尽量把
+     `stft`
+     往回收一点
+## 2026-03-24 继续补充：`rms_floor=0.65` 上的小幅 STFT guard 跟进已完成，当前仍以原始 `0.65` 主线最好
+- 正式报告：
+  - `docs/310_stage5_contractv2_normfix_periodicgate_rmsfloor065_stft_followup_report.md`
+
+### 当前关键结果
+1. `stft_weight`
+   从
+   `0.5`
+   提到
+   `0.55 / 0.6`
+   确实能把：
+   - `waveform`
+   - `stft`
+   往回收
+2. 但同步会回吐：
+   - `adjacent cosine`
+   - `active_template`
+   - `decoded_to_target_rms_ratio`
+3. 其中
+   `0.55`
+   比
+   `0.6`
+   更平衡，
+   但仍然没有超过：
+   - 原始
+     `periodic_gate rms_floor = 0.65`
+
+### 当前阶段判断更新
+1. 当前可以停止在全局
+   `stft_weight`
+   上继续微扫
+2. 更准确地说：
+   - 全局 STFT guard
+     不是当前最值钱的修正位点
+3. 因而下一步不应继续：
+   - `stft = 0.65`
+   - `stft = 0.7`
+   - 之类同构 sweep
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 下一条最值得做的实验应转到：
+   - 在当前最好主线
+     `recurrent + periodic temporal losses + periodic_gate rms_floor=0.65`
+     上，
+     加一个更局部的 periodic-path 频谱守护
+3. 优先级高于：
+   - 再扫全局
+     `stft_weight`
+## 2026-03-24 继续补充：local periodic STFT guard 跟进已完成，同样没有超过原始 `rms_floor=0.65`
+- 正式报告：
+  - `docs/311_stage5_contractv2_normfix_periodicgate_rmsfloor065_periodicstft_followup_report.md`
+
+### 当前关键结果
+1. 把频谱守护从：
+   - 全局 `stft_weight`
+   改成：
+   - `periodic_waveform_stft_weight`
+   这种更局部的 periodic-path STFT 约束，
+   仍然是同一类 tradeoff：
+   - `waveform / stft`
+     变好
+   - 但
+     `adjacent cosine / active_template / rms_ratio`
+     回吐
+2. 所以当前可以明确停止：
+   - 全局 STFT guard sweep
+   - local periodic STFT guard sweep
+
+### 当前阶段判断更新
+1. 当前主线最强点仍然是：
+   - 原始
+     `periodic_gate rms_floor = 0.65`
+2. 也就是说：
+   - 现在最不缺的是
+     “再多一点 STFT”
+   - 最缺的是
+     “更窄、更有针对性的 periodic-path 频谱形状约束”
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 下一条最值得做的实验应是：
+   - 保持
+     `periodic_gate rms_floor = 0.65`
+   - 不再用整段 STFT guard
+   - 改做更窄的 periodic-path 高频能量 / spectral tilt restraint
+## 2026-03-24 继续补充：periodic-path high-band restraint 已完成代码接线与单步 smoke，当前已具备最小实验入口
+- 正式报告：
+  - `docs/312_stage5_contractv2_normfix_periodic_high_band_restraint_bootstrap_report.md`
+
+### 当前关键结果
+1. 当前已新增：
+   - `periodic_waveform_high_band_excess_weight`
+2. 这条新 loss 的语义是：
+   - 对
+     `periodic_waveform_frames`
+     经
+     `periodic_gate`
+     重建后的 periodic-only waveform，
+     只惩罚
+     `high_band_energy_ratio`
+     高于 aligned target 的部分
+3. 已完成：
+   - CLI 接线
+   - training / validation / dataset-loop 透传
+   - summary 字段落盘
+   - `compileall`
+   - 单步 `cpu` smoke
+4. 本次单步 smoke
+   不是量化胜负验证，
+   只是确认：
+   - 参数通了
+   - loss 通了
+   - 指标通了
+
+### 当前阶段判断更新
+1. 当前最强主线仍然是：
+   - 原始
+     `periodic_gate rms_floor = 0.65`
+2. 当前新增的不是：
+   - 新 best candidate
+3. 当前新增的是：
+   - 一个已经可直接开跑的
+     periodic-path 高频 restraint
+     实验入口
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 下一条最值得做的实验应是：
+   - 保持
+     `periodic_gate rms_floor = 0.65`
+   - 做最小 dataset-loop smoke：
+     - `periodic_waveform_high_band_excess_weight = 0.02`
+     - `0.05`
+     - `0.1`
+3. 重点观察：
+   - 新 loss 是否稳定非零
+   - `periodic_waveform_high_band_energy_ratio`
+     是否被压回
+   - 同时不要回吐：
+     - `adjacent cosine`
+     - `active_template`
+     - `rms_ratio`
+## 2026-03-24 继续补充：periodic-path high-band restraint 跟进已完成，仍未超过原始 `rms_floor=0.65`
+- 正式报告：
+  - `docs/313_stage5_contractv2_normfix_periodicgate_rmsfloor065_highband_followup_report.md`
+
+### 当前关键结果
+1. `periodic_waveform_high_band_excess_weight`
+   这条线不是假实验：
+   - 新 loss 明显非零
+   - 且权重越高，
+     `periodic_waveform_high_band_energy_ratio`
+     越低
+2. 也就是说：
+   - 它确实能压 periodic-path
+     的高频占比
+3. 但共享指标方向也很明确：
+   - `waveform`
+     变差
+   - `stft`
+     变差
+   - `active_template`
+     变差
+   - `adjacent cosine`
+     变差
+   - 同时
+     `rms_ratio`
+     更接近
+     `1.0`
+4. 其中
+   `0.02`
+   是三条 high-band 候选里最轻的一条，
+   但仍然没有超过：
+   - 原始
+     `periodic_gate rms_floor = 0.65`
+
+### 当前阶段判断更新
+1. 当前可以把结论再写硬一点：
+   - decode-side periodic spectral restraint family
+     至少在：
+     - 全局 STFT
+     - local periodic STFT
+     - periodic high-band excess
+     这几种最小形态上，
+     都没有给出比原始
+     `rms_floor=0.65`
+     更好的 Pareto 点
+2. 因而当前不建议继续在：
+   - `periodic_waveform_high_band_excess_weight`
+   上做同构微扫
+
+### 更新后的下一步
+1. 仍不导听审包
+2. 若还坚持沿 periodic spectral line
+   只做一个最小新实验，
+   更像样的下一发应改成：
+   - `spectral tilt restraint`
+3. 但从当前全局价值判断，
+   我更倾向于：
+   - 先暂停 decode-side periodic spectral restraint 线
+   - 回到更上游的
+     `fusion / fused_hidden`
+     主线

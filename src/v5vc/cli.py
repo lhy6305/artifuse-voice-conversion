@@ -2329,6 +2329,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Optional loss weight for preventing periodic_waveform_frames active-frame log-RMS from falling below the aligned target floor.",
     )
+    nores_vocoder_train_step_parser.add_argument(
+        "--periodic-waveform-stft-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for log-STFT reconstruction on periodic_waveform_frames reconstructed with periodic_gate gains.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--periodic-waveform-high-band-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing periodic-only reconstructed waveform high-band energy ratio above the aligned target.",
+    )
     nores_vocoder_train_loop_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-training-loop",
         help="Run a minimal multi-step training loop on the no-residual vocoder target package.",
@@ -2505,6 +2517,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for preventing periodic_waveform_frames active-frame log-RMS from falling below the aligned target floor.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--periodic-waveform-stft-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for log-STFT reconstruction on periodic_waveform_frames reconstructed with periodic_gate gains.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--periodic-waveform-high-band-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing periodic-only reconstructed waveform high-band energy ratio above the aligned target.",
     )
     nores_vocoder_dataset_packages_parser = subparsers.add_parser(
         "build-offline-mvp-nores-vocoder-dataset-packages",
@@ -2801,6 +2825,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for preventing periodic_waveform_frames active-frame log-RMS from falling below the aligned target floor.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--periodic-waveform-stft-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for log-STFT reconstruction on periodic_waveform_frames reconstructed with periodic_gate gains.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--periodic-waveform-high-band-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing periodic-only reconstructed waveform high-band energy ratio above the aligned target.",
     )
     nores_vocoder_review_parser = subparsers.add_parser(
         "review-offline-mvp-nores-vocoder-checkpoints",
@@ -4424,6 +4460,8 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
+            periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
+            periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -4457,6 +4495,8 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
+            periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
+            periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -4514,6 +4554,8 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
+            periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
+            periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":
