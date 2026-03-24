@@ -1,0 +1,238 @@
+{
+  "summary_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_contractv2_normfix_active_template01_delta8_smoke_round1_1/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json",
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_checkpoint_review_contractv2_normfix_active_template01_delta8_smoke_round1_1",
+  "dataset": {
+    "train_package_count": 592,
+    "validation_package_count": 66
+  },
+  "runtime": {
+    "device": "cuda:0"
+  },
+  "training": {
+    "num_steps": 4,
+    "packages_per_step": 4,
+    "validation_interval": 2,
+    "checkpoint_interval": 2,
+    "sampler_mode": "shuffle",
+    "seed": 20260324,
+    "deterministic": true,
+    "learning_rate": 0.001,
+    "max_grad_norm": 5.0,
+    "loss_weights": {
+      "harmonic": 1.0,
+      "noise": 1.0,
+      "periodic_gate": 0.2,
+      "noise_gate": 0.2,
+      "activity_gate": 0.2,
+      "waveform": 0.5,
+      "stft": 0.5,
+      "rms_guard": 0.2,
+      "active_template": 0.1,
+      "frame_delta": 8.0,
+      "fused_hidden_template": 0.0,
+      "fused_hidden_delta": 0.0,
+      "use_predicted_activity_gate": true,
+      "reconstruction_frame_gain_apply_mode": "pre_overlap_add"
+    }
+  },
+  "checkpoint_count": 2,
+  "checkpoints": [
+    {
+      "step": 2,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 8.939874,
+        "loss_harmonic_envelope": 0.364277,
+        "loss_noise_envelope": 0.187223,
+        "loss_periodic_gate": 0.664564,
+        "loss_noise_gate": 0.652108,
+        "loss_activity_gate": 0.70129,
+        "loss_waveform": 0.141187,
+        "loss_stft": 0.697401,
+        "loss_rms_guard": 0.131306,
+        "loss_active_frame_template_excess_relu_0p02": 0.455352,
+        "loss_frame_delta_unit_rms_l1": 0.936711,
+        "loss_fused_hidden_template_excess_vs_branch": 4e-06,
+        "loss_fused_hidden_delta_floor_halfmax": 3e-06,
+        "periodic_gate_pred_mean": 0.444872,
+        "noise_gate_pred_mean": 0.432084,
+        "activity_gate_pred_mean": 0.445979,
+        "periodic_gate_target_mean": 0.454971,
+        "noise_gate_target_mean": 0.493324,
+        "activity_gate_target_mean": 0.653426,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.132797,
+        "target_waveform_rms": 0.123402,
+        "decoded_to_target_rms_ratio": 1.102928
+      },
+      "delta_vs_previous_loss_total": null,
+      "delta_vs_first_loss_total": 0.0
+    },
+    {
+      "step": 4,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 8.753729,
+        "loss_harmonic_envelope": 0.310989,
+        "loss_noise_envelope": 0.121358,
+        "loss_periodic_gate": 0.644574,
+        "loss_noise_gate": 0.674588,
+        "loss_activity_gate": 0.699662,
+        "loss_waveform": 0.124557,
+        "loss_stft": 0.606675,
+        "loss_rms_guard": 0.150914,
+        "loss_active_frame_template_excess_relu_0p02": 0.244954,
+        "loss_frame_delta_unit_rms_l1": 0.937166,
+        "loss_fused_hidden_template_excess_vs_branch": 2e-06,
+        "loss_fused_hidden_delta_floor_halfmax": 4.3e-05,
+        "periodic_gate_pred_mean": 0.41762,
+        "noise_gate_pred_mean": 0.361245,
+        "activity_gate_pred_mean": 0.41762,
+        "periodic_gate_target_mean": 0.454971,
+        "noise_gate_target_mean": 0.493324,
+        "activity_gate_target_mean": 0.653426,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.10882,
+        "target_waveform_rms": 0.123402,
+        "decoded_to_target_rms_ratio": 0.902366
+      },
+      "delta_vs_previous_loss_total": -0.186145,
+      "delta_vs_first_loss_total": -0.186145
+    }
+  ],
+  "pairwise_reviews": [
+    {
+      "from_step": 2,
+      "to_step": 4,
+      "record_count": 66,
+      "average_delta_loss_total": -0.186145,
+      "improved_count": 66,
+      "worsened_count": 0,
+      "unchanged_count": 0,
+      "improved_ratio": 1.0,
+      "worsened_ratio": 0.0,
+      "top_improved_records": [
+        {
+          "record_id": "target::chapter3_6_firefly_103",
+          "previous_loss_total": 9.045584,
+          "current_loss_total": 8.783285,
+          "delta_loss_total": -0.262299
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_115",
+          "previous_loss_total": 5.643844,
+          "current_loss_total": 5.388645,
+          "delta_loss_total": -0.255199
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_106",
+          "previous_loss_total": 9.759427,
+          "current_loss_total": 9.504422,
+          "delta_loss_total": -0.255005
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_246",
+          "previous_loss_total": 5.595184,
+          "current_loss_total": 5.356038,
+          "delta_loss_total": -0.239146
+        }
+      ],
+      "top_worsened_records": [
+        {
+          "record_id": "target::chapter3_20_firefly_184",
+          "previous_loss_total": 9.769758,
+          "current_loss_total": 9.644711,
+          "delta_loss_total": -0.125047
+        },
+        {
+          "record_id": "target::chapter3_21_firefly_116",
+          "previous_loss_total": 9.790571,
+          "current_loss_total": 9.652974,
+          "delta_loss_total": -0.137597
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_112",
+          "previous_loss_total": 8.589658,
+          "current_loss_total": 8.449662,
+          "delta_loss_total": -0.139996
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_207",
+          "previous_loss_total": 9.338195,
+          "current_loss_total": 9.193357,
+          "delta_loss_total": -0.144838
+        }
+      ]
+    }
+  ],
+  "overall_review": {
+    "from_step": 2,
+    "to_step": 4,
+    "record_count": 66,
+    "average_delta_loss_total": -0.186145,
+    "improved_count": 66,
+    "worsened_count": 0,
+    "unchanged_count": 0,
+    "improved_ratio": 1.0,
+    "worsened_ratio": 0.0,
+    "top_improved_records": [
+      {
+        "record_id": "target::chapter3_6_firefly_103",
+        "previous_loss_total": 9.045584,
+        "current_loss_total": 8.783285,
+        "delta_loss_total": -0.262299
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_115",
+        "previous_loss_total": 5.643844,
+        "current_loss_total": 5.388645,
+        "delta_loss_total": -0.255199
+      },
+      {
+        "record_id": "target::chapter3_6_firefly_106",
+        "previous_loss_total": 9.759427,
+        "current_loss_total": 9.504422,
+        "delta_loss_total": -0.255005
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_246",
+        "previous_loss_total": 5.595184,
+        "current_loss_total": 5.356038,
+        "delta_loss_total": -0.239146
+      }
+    ],
+    "top_worsened_records": [
+      {
+        "record_id": "target::chapter3_20_firefly_184",
+        "previous_loss_total": 9.769758,
+        "current_loss_total": 9.644711,
+        "delta_loss_total": -0.125047
+      },
+      {
+        "record_id": "target::chapter3_21_firefly_116",
+        "previous_loss_total": 9.790571,
+        "current_loss_total": 9.652974,
+        "delta_loss_total": -0.137597
+      },
+      {
+        "record_id": "target::chapter3_4_firefly_112",
+        "previous_loss_total": 8.589658,
+        "current_loss_total": 8.449662,
+        "delta_loss_total": -0.139996
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_207",
+        "previous_loss_total": 9.338195,
+        "current_loss_total": 9.193357,
+        "delta_loss_total": -0.144838
+      }
+    ]
+  },
+  "notes": [
+    "This review is derived from the dataset-loop summary validation_history payload.",
+    "Checkpoint-level loss_total tracks validation-package averages already recorded by the Stage5 loop.",
+    "Per-record review compares validation package loss_total across checkpoints to see whether gains are broad-based or concentrated."
+  ]
+}

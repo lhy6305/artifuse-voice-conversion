@@ -18205,3 +18205,167 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    而不是：
    - 这条 objective
      还差多少就能转正
+## 2026-03-24 继续补充：waveform decoder 结构探针显示主坍缩更早发生在 `fusion -> fused_hidden`，不支持把问题单独归因到 `waveform_decoder`
+- 已运行：
+  - `reports/runtime/stage5_waveform_decoder_structure_probe_contractv2_normfix_round1_1/`
+- 文档：
+  - `docs/296_stage5_contractv2_normfix_waveform_decoder_structure_probe_report.md`
+
+### 当前关键结果
+1. baseline
+   各阶段模板化：
+   - `periodic_hidden_template_cosine_mean = 0.714140`
+   - `noise_hidden_template_cosine_mean = 0.811654`
+   - `fused_hidden_template_cosine_mean = 0.991105`
+   - `waveform_frames_template_cosine_mean = 0.999462`
+   - `decoded_frames_template_cosine_mean = 0.993590`
+2. baseline
+   各阶段 frame delta：
+   - `periodic_hidden_frame_delta_abs_mean = 0.024629`
+   - `noise_hidden_frame_delta_abs_mean = 0.018997`
+   - `fused_hidden_frame_delta_abs_mean = 0.007185`
+   - `waveform_frames_frame_delta_abs_mean = 0.001350`
+3. `fused_hidden -> waveform_frames`
+   的新增模板化幅度很小：
+   - `fused_to_waveform_template_cosine_gap = 0.008357`
+   - `fused_to_waveform_adjacent_cosine_gap = 0.000134`
+4. probe
+   自动判断：
+   - `collapse_not_localized_to_waveform_decoder`
+5. 干预灵敏度：
+   - `fused_hidden_frame_mean`
+     只带来
+     `waveform_mean_abs_delta_vs_baseline = 0.003935`
+   - `fused_hidden_zero`
+     则有
+     `0.153620`
+   - 说明：
+     - decoder
+       仍依赖
+       `fused_hidden`
+       的总体值域
+     - 但 baseline
+       下的
+       `fused_hidden`
+       已经非常接近
+       常模板区域
+
+### 当前阶段判断更新
+1. 现在不应把根因写成：
+   - `waveform_decoder`
+     单点塌缩
+2. 更准确的写法是：
+   - branch hidden
+     仍保留一定动态
+   - 但动态在
+     `fusion`
+     后已被大幅压平
+   - `waveform_decoder`
+     只是继续沿这个
+     已塌缩表示
+     生成 buzz
+3. 因此下一步主攻方向应从：
+   - decoder-only
+     结构 tweak
+   转到：
+   - `fusion / fused_hidden`
+     级别的 objective
+     或结构约束
+
+### 更新后的下一步
+1. 优先设计：
+   - `fused_hidden`
+     anti-template
+   - `fused_hidden`
+     frame-delta
+   - 或 branch-to-fusion
+     diversity preservation
+     约束
+2. 不建议先把主资源投到：
+   - `waveform_decoder`
+     架构替换
+   - 或 decoder
+     末端局部修补
+3. 下一轮最小实验，
+   更适合验证：
+   - 能不能先让
+     `fused_hidden`
+     脱离近固定模板区
+   - 再看 fixed-record
+     是否仍是
+     buzz-only
+## 2026-03-24 继续补充：`fused_hidden_template=0.05 + fused_hidden_delta=2.0` 最小 smoke 只带来极弱改动，尚不足以推动系统离开 baseline buzz 解
+- 已完成有效实验：
+  - `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_contractv2_normfix_fusedhidden_t005_d2_smoke_round1_3/`
+- 文档：
+  - `docs/297_stage5_contractv2_normfix_fusedhidden_t005_d2_minimal_smoke_report.md`
+
+### 当前关键结果
+1. step4 validation
+   相比
+   `docs/294`
+   的 baseline：
+   - `loss_waveform`
+     `0.125092 -> 0.125093`
+   - `loss_stft`
+     `0.601828 -> 0.601784`
+   - `loss_rms_guard`
+     `0.155673 -> 0.155716`
+   - `loss_active_template`
+     `0.503176 -> 0.502417`
+   - `loss_frame_delta`
+     `0.936750 -> 0.936755`
+   - `loss_fused_hidden_template_excess_vs_branch`
+     `0.008236 -> 0.007477`
+2. fixed 6 条 aggregate：
+   - baseline：
+     - `loss_fused_hidden_template_excess_vs_branch = 0.010317`
+   - candidate：
+     - `loss_fused_hidden_template_excess_vs_branch = 0.009490`
+3. 当前解释：
+   - `fused_hidden_template`
+     指标
+     约有
+     `8% ~ 9%`
+     的下降
+   - 但其余共享重建指标
+     几乎全部与 baseline
+     重合
+   - `frame_delta`
+     仍完全没有被带起来
+
+### 当前阶段判断更新
+1. 问题层级判断仍正确：
+   - 应继续盯
+     `fusion / fused_hidden`
+2. 但当前这组
+   轻量 penalty
+   的实际扰动太弱，
+   不能写成：
+   - 已找到有效
+     `fused_hidden`
+     objective
+3. 更准确的写法是：
+   - 方向可能对
+   - 但当前 loss
+     形式和权重
+     还不足以改写
+     当前坏解
+
+### 更新后的下一步
+1. 不建议把
+   `fused_hidden_template=0.05`
+   `fused_hidden_delta=2.0`
+   直接拿去做长训
+2. 下一步应优先加强：
+   - branch-to-fusion
+     diversity preservation
+   - 或更强的
+     `fused_hidden`
+     objective
+     形态
+3. 当前更像是：
+   - 已确认该打
+     `fusion`
+   - 但还没有拿到
+     足够有力的武器

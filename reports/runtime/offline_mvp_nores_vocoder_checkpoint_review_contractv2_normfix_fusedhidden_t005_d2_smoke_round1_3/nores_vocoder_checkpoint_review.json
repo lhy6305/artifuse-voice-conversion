@@ -1,0 +1,238 @@
+{
+  "summary_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_contractv2_normfix_fusedhidden_t005_d2_smoke_round1_3/logs/offline_mvp_nores_vocoder_dataset_loop.summary.json",
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_checkpoint_review_contractv2_normfix_fusedhidden_t005_d2_smoke_round1_3",
+  "dataset": {
+    "train_package_count": 592,
+    "validation_package_count": 66
+  },
+  "runtime": {
+    "device": "cuda:0"
+  },
+  "training": {
+    "num_steps": 4,
+    "packages_per_step": 4,
+    "validation_interval": 2,
+    "checkpoint_interval": 2,
+    "sampler_mode": "shuffle",
+    "seed": 20260324,
+    "deterministic": true,
+    "learning_rate": 0.001,
+    "max_grad_norm": 5.0,
+    "loss_weights": {
+      "harmonic": 1.0,
+      "noise": 1.0,
+      "periodic_gate": 0.2,
+      "noise_gate": 0.2,
+      "activity_gate": 0.2,
+      "waveform": 0.5,
+      "stft": 0.5,
+      "rms_guard": 0.2,
+      "active_template": 0.0,
+      "frame_delta": 0.0,
+      "fused_hidden_template": 0.05,
+      "fused_hidden_delta": 2.0,
+      "use_predicted_activity_gate": true,
+      "reconstruction_frame_gain_apply_mode": "pre_overlap_add"
+    }
+  },
+  "checkpoint_count": 2,
+  "checkpoints": [
+    {
+      "step": 2,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 1.400002,
+        "loss_harmonic_envelope": 0.363188,
+        "loss_noise_envelope": 0.186081,
+        "loss_periodic_gate": 0.664466,
+        "loss_noise_gate": 0.652087,
+        "loss_activity_gate": 0.701041,
+        "loss_waveform": 0.140842,
+        "loss_stft": 0.70082,
+        "loss_rms_guard": 0.131884,
+        "loss_active_frame_template_excess_relu_0p02": 0.546417,
+        "loss_frame_delta_unit_rms_l1": 0.936638,
+        "loss_fused_hidden_template_excess_vs_branch": 5.4e-05,
+        "loss_fused_hidden_delta_floor_halfmax": 2e-06,
+        "periodic_gate_pred_mean": 0.445103,
+        "noise_gate_pred_mean": 0.432398,
+        "activity_gate_pred_mean": 0.446199,
+        "periodic_gate_target_mean": 0.454971,
+        "noise_gate_target_mean": 0.493324,
+        "activity_gate_target_mean": 0.653426,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.132936,
+        "target_waveform_rms": 0.123402,
+        "decoded_to_target_rms_ratio": 1.104149
+      },
+      "delta_vs_previous_loss_total": null,
+      "delta_vs_first_loss_total": 0.0
+    },
+    {
+      "step": 4,
+      "validation_source": "validation_packages",
+      "package_count": 66,
+      "loss_metrics": {
+        "loss_total": 1.22959,
+        "loss_harmonic_envelope": 0.309554,
+        "loss_noise_envelope": 0.120365,
+        "loss_periodic_gate": 0.645877,
+        "loss_noise_gate": 0.673817,
+        "loss_activity_gate": 0.703851,
+        "loss_waveform": 0.125093,
+        "loss_stft": 0.601784,
+        "loss_rms_guard": 0.155716,
+        "loss_active_frame_template_excess_relu_0p02": 0.502417,
+        "loss_frame_delta_unit_rms_l1": 0.936755,
+        "loss_fused_hidden_template_excess_vs_branch": 0.007477,
+        "loss_fused_hidden_delta_floor_halfmax": 3e-06,
+        "periodic_gate_pred_mean": 0.414392,
+        "noise_gate_pred_mean": 0.362852,
+        "activity_gate_pred_mean": 0.414392,
+        "periodic_gate_target_mean": 0.454971,
+        "noise_gate_target_mean": 0.493324,
+        "activity_gate_target_mean": 0.653426,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.108396,
+        "target_waveform_rms": 0.123402,
+        "decoded_to_target_rms_ratio": 0.899355
+      },
+      "delta_vs_previous_loss_total": -0.170412,
+      "delta_vs_first_loss_total": -0.170412
+    }
+  ],
+  "pairwise_reviews": [
+    {
+      "from_step": 2,
+      "to_step": 4,
+      "record_count": 66,
+      "average_delta_loss_total": -0.170412,
+      "improved_count": 66,
+      "worsened_count": 0,
+      "unchanged_count": 0,
+      "improved_ratio": 1.0,
+      "worsened_ratio": 0.0,
+      "top_improved_records": [
+        {
+          "record_id": "target::chapter3_6_firefly_103",
+          "previous_loss_total": 1.383194,
+          "current_loss_total": 1.141237,
+          "delta_loss_total": -0.241957
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_115",
+          "previous_loss_total": 1.278369,
+          "current_loss_total": 1.038022,
+          "delta_loss_total": -0.240347
+        },
+        {
+          "record_id": "target::chapter3_6_firefly_106",
+          "previous_loss_total": 1.378634,
+          "current_loss_total": 1.142578,
+          "delta_loss_total": -0.236056
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_246",
+          "previous_loss_total": 1.333151,
+          "current_loss_total": 1.105813,
+          "delta_loss_total": -0.227338
+        }
+      ],
+      "top_worsened_records": [
+        {
+          "record_id": "target::chapter3_20_firefly_184",
+          "previous_loss_total": 1.504163,
+          "current_loss_total": 1.387684,
+          "delta_loss_total": -0.116479
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_112",
+          "previous_loss_total": 1.470651,
+          "current_loss_total": 1.347022,
+          "delta_loss_total": -0.123629
+        },
+        {
+          "record_id": "target::chapter3_29_firefly_141",
+          "previous_loss_total": 1.408768,
+          "current_loss_total": 1.28026,
+          "delta_loss_total": -0.128508
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_140",
+          "previous_loss_total": 1.471886,
+          "current_loss_total": 1.343316,
+          "delta_loss_total": -0.12857
+        }
+      ]
+    }
+  ],
+  "overall_review": {
+    "from_step": 2,
+    "to_step": 4,
+    "record_count": 66,
+    "average_delta_loss_total": -0.170412,
+    "improved_count": 66,
+    "worsened_count": 0,
+    "unchanged_count": 0,
+    "improved_ratio": 1.0,
+    "worsened_ratio": 0.0,
+    "top_improved_records": [
+      {
+        "record_id": "target::chapter3_6_firefly_103",
+        "previous_loss_total": 1.383194,
+        "current_loss_total": 1.141237,
+        "delta_loss_total": -0.241957
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_115",
+        "previous_loss_total": 1.278369,
+        "current_loss_total": 1.038022,
+        "delta_loss_total": -0.240347
+      },
+      {
+        "record_id": "target::chapter3_6_firefly_106",
+        "previous_loss_total": 1.378634,
+        "current_loss_total": 1.142578,
+        "delta_loss_total": -0.236056
+      },
+      {
+        "record_id": "target::chapter3_3_firefly_246",
+        "previous_loss_total": 1.333151,
+        "current_loss_total": 1.105813,
+        "delta_loss_total": -0.227338
+      }
+    ],
+    "top_worsened_records": [
+      {
+        "record_id": "target::chapter3_20_firefly_184",
+        "previous_loss_total": 1.504163,
+        "current_loss_total": 1.387684,
+        "delta_loss_total": -0.116479
+      },
+      {
+        "record_id": "target::chapter3_4_firefly_112",
+        "previous_loss_total": 1.470651,
+        "current_loss_total": 1.347022,
+        "delta_loss_total": -0.123629
+      },
+      {
+        "record_id": "target::chapter3_29_firefly_141",
+        "previous_loss_total": 1.408768,
+        "current_loss_total": 1.28026,
+        "delta_loss_total": -0.128508
+      },
+      {
+        "record_id": "target::chapter3_4_firefly_140",
+        "previous_loss_total": 1.471886,
+        "current_loss_total": 1.343316,
+        "delta_loss_total": -0.12857
+      }
+    ]
+  },
+  "notes": [
+    "This review is derived from the dataset-loop summary validation_history payload.",
+    "Checkpoint-level loss_total tracks validation-package averages already recorded by the Stage5 loop.",
+    "Per-record review compares validation package loss_total across checkpoints to see whether gains are broad-based or concentrated."
+  ]
+}

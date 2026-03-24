@@ -84,6 +84,7 @@ from v5vc.stage5_low_activity_probe import (
 )
 from v5vc.stage5_low_activity_governance_report import materialize_stage5_low_activity_governance_report
 from v5vc.stage5_speech_emergence_probe import analyze_stage5_nores_speech_emergence
+from v5vc.stage5_waveform_decoder_structure_probe import analyze_stage5_nores_waveform_decoder_structure
 from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_waveform_objective_collapse
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
@@ -2677,6 +2678,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for unit-RMS adjacent-frame delta matching on reconstructed waveform frames.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
+        "--fused-hidden-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing fused_hidden template collapse relative to the branch hidden states.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--fused-hidden-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for preventing fused_hidden adjacent-frame delta magnitude from collapsing below the branch hidden floor.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
@@ -2967,6 +2980,83 @@ def build_parser() -> argparse.ArgumentParser:
         help="Moving-average radius for predicted activity gate smoothing across neighboring frames.",
     )
     stage5_speech_emergence_probe_parser.add_argument(
+        "--predicted-activity-gate-apply-mode",
+        default="post_ola_envelope",
+        help="How predicted activity gains are applied during waveform reconstruction: pre_overlap_add or post_ola_envelope.",
+    )
+    stage5_waveform_decoder_structure_parser = subparsers.add_parser(
+        "analyze-stage5-nores-waveform-decoder-structure",
+        help="Probe whether temporal diversity collapse happens before fusion or inside the Stage5 waveform decoder head.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 waveform-decoder structure probe outputs.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path. When omitted, --checkpoint-selection must be provided.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used to resolve the probe checkpoint.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to probe from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Torch device used for the probe, for example cpu or cuda:0.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--use-predicted-activity-gate",
+        action="store_true",
+        help="Apply predicted frame activity during waveform reconstruction to match the heard Stage5 route.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Minimum frame gain applied after predicted activity gating.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help="Moving-average radius for predicted activity gate smoothing across neighboring frames.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
         "--predicted-activity-gate-apply-mode",
         default="post_ola_envelope",
         help="How predicted activity gains are applied during waveform reconstruction: pre_overlap_add or post_ola_envelope.",
@@ -4224,6 +4314,8 @@ def main(argv: list[str] | None = None) -> int:
             frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
+            fused_hidden_template_weight=args.fused_hidden_template_weight,
+            fused_hidden_delta_weight=args.fused_hidden_delta_weight,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -4252,6 +4344,8 @@ def main(argv: list[str] | None = None) -> int:
             frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
+            fused_hidden_template_weight=args.fused_hidden_template_weight,
+            fused_hidden_delta_weight=args.fused_hidden_delta_weight,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -4300,6 +4394,8 @@ def main(argv: list[str] | None = None) -> int:
             frame_delta_weight=args.frame_delta_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
+            fused_hidden_template_weight=args.fused_hidden_template_weight,
+            fused_hidden_delta_weight=args.fused_hidden_delta_weight,
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":
@@ -4348,6 +4444,23 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "analyze-stage5-nores-speech-emergence":
         analyze_stage5_nores_speech_emergence(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            device=args.device,
+            use_predicted_activity_gate=args.use_predicted_activity_gate,
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-waveform-decoder-structure":
+        analyze_stage5_nores_waveform_decoder_structure(
             output_dir=args.output_dir,
             checkpoint_path=args.checkpoint,
             checkpoint_selection_path=args.checkpoint_selection,

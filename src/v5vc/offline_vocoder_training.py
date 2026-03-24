@@ -225,6 +225,7 @@ def run_offline_mvp_nores_vocoder_training_step(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
+    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
 ) -> None:
@@ -296,6 +297,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         rms_guard_weight=rms_guard_weight,
         active_template_weight=active_template_weight,
         frame_delta_weight=frame_delta_weight,
+        frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
         use_predicted_activity_gate=use_predicted_activity_gate,
         reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
     )
@@ -336,6 +338,7 @@ def run_offline_mvp_nores_vocoder_training_step(
             "rms_guard": float(rms_guard_weight),
             "active_template": float(active_template_weight),
             "frame_delta": float(frame_delta_weight),
+            "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
@@ -409,6 +412,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
+    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
 ) -> None:
@@ -501,6 +505,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
             rms_guard_weight=rms_guard_weight,
             active_template_weight=active_template_weight,
             frame_delta_weight=frame_delta_weight,
+            frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
         )
@@ -548,6 +553,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 rms_guard_weight=rms_guard_weight,
                 active_template_weight=active_template_weight,
                 frame_delta_weight=frame_delta_weight,
+                frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                 frame_length=int(validation_runtime["frame_length"]),
@@ -624,6 +630,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "rms_guard": float(rms_guard_weight),
                 "active_template": float(active_template_weight),
                 "frame_delta": float(frame_delta_weight),
+                "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -816,8 +823,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
+    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
+    fused_hidden_template_weight: float = 0.0,
+    fused_hidden_delta_weight: float = 0.0,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -934,8 +944,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 rms_guard_weight=rms_guard_weight,
                 active_template_weight=active_template_weight,
                 frame_delta_weight=frame_delta_weight,
+                frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
+                fused_hidden_template_weight=fused_hidden_template_weight,
+                fused_hidden_delta_weight=fused_hidden_delta_weight,
             )
             accumulated_loss = total_loss if accumulated_loss is None else accumulated_loss + total_loss
             package_metrics.append(
@@ -997,8 +1010,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     rms_guard_weight=rms_guard_weight,
                     active_template_weight=active_template_weight,
                     frame_delta_weight=frame_delta_weight,
+                    frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
+                    fused_hidden_template_weight=fused_hidden_template_weight,
+                    fused_hidden_delta_weight=fused_hidden_delta_weight,
                     validation_source="validation_packages",
                 )
             else:
@@ -1017,8 +1033,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     rms_guard_weight=rms_guard_weight,
                     active_template_weight=active_template_weight,
                     frame_delta_weight=frame_delta_weight,
+                    frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
+                    fused_hidden_template_weight=fused_hidden_template_weight,
+                    fused_hidden_delta_weight=fused_hidden_delta_weight,
                     validation_source="train_packages_reused",
                 )
             validation_history.append(validation_payload_summary)
@@ -1084,6 +1103,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "rms_guard": float(rms_guard_weight),
                 "active_template": float(active_template_weight),
                 "frame_delta": float(frame_delta_weight),
+                "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
+                "fused_hidden_template": float(fused_hidden_template_weight),
+                "fused_hidden_delta": float(fused_hidden_delta_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1657,7 +1679,7 @@ def compute_active_template_and_frame_delta_losses(
     frame_length: int,
     hop_length: int,
     active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
-) -> tuple[torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     decoded_analysis_frames = frame_waveform_sequence(
         waveform=decoded_waveform,
         frame_length=int(frame_length),
@@ -1674,6 +1696,12 @@ def compute_active_template_and_frame_delta_losses(
     decoded_frame_deltas = compute_adjacent_deltas(decoded_normalized_frames)
     aligned_frame_deltas = compute_adjacent_deltas(aligned_normalized_frames)
     frame_delta_loss = F.l1_loss(decoded_frame_deltas, aligned_frame_deltas)
+    decoded_adjacent_cosine = (decoded_normalized_frames[:-1] * decoded_normalized_frames[1:]).sum(dim=1)
+    aligned_adjacent_cosine = (aligned_normalized_frames[:-1] * aligned_normalized_frames[1:]).sum(dim=1)
+    active_transition_mask = (
+        (aligned_frame_rms[:-1] >= float(active_frame_rms_threshold))
+        | (aligned_frame_rms[1:] >= float(active_frame_rms_threshold))
+    ) if int(aligned_frame_rms.shape[0]) > 1 else aligned_frame_rms.new_zeros((0,), dtype=torch.bool)
 
     active_mask = aligned_frame_rms >= float(active_frame_rms_threshold)
     if bool(active_mask.any()):
@@ -1691,7 +1719,55 @@ def compute_active_template_and_frame_delta_losses(
         active_template_loss = active_template_excess.mean()
     else:
         active_template_loss = decoded_waveform.new_zeros(())
-    return active_template_loss, frame_delta_loss
+    if bool(active_transition_mask.any()):
+        adjacent_cosine_excess = (
+            decoded_adjacent_cosine[active_transition_mask]
+            - aligned_adjacent_cosine[active_transition_mask]
+        ).clamp_min(0.0)
+        adjacent_cosine_loss = adjacent_cosine_excess.mean()
+    else:
+        adjacent_cosine_loss = decoded_waveform.new_zeros(())
+    return active_template_loss, frame_delta_loss, adjacent_cosine_loss
+
+
+def compute_fused_hidden_anti_collapse_losses(
+    *,
+    periodic_hidden: torch.Tensor,
+    noise_hidden: torch.Tensor,
+    fused_hidden: torch.Tensor,
+    frame_activity_target: torch.Tensor,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    periodic_normalized = normalize_frames_unit_rms(periodic_hidden)
+    noise_normalized = normalize_frames_unit_rms(noise_hidden)
+    fused_normalized = normalize_frames_unit_rms(fused_hidden)
+    activity_weights = frame_activity_target.to(fused_hidden.device, dtype=fused_hidden.dtype).view(-1)
+
+    periodic_template_cosine = compute_frame_cosine_to_reference(
+        frames=periodic_normalized,
+        reference_index=0,
+    )
+    noise_template_cosine = compute_frame_cosine_to_reference(
+        frames=noise_normalized,
+        reference_index=0,
+    )
+    fused_template_cosine = compute_frame_cosine_to_reference(
+        frames=fused_normalized,
+        reference_index=0,
+    )
+    branch_template_ceiling = torch.maximum(periodic_template_cosine, noise_template_cosine)
+    template_excess = (fused_template_cosine - branch_template_ceiling).clamp_min(0.0)
+    template_weight_sum = activity_weights.sum().clamp_min(1.0e-6)
+    fused_hidden_template_loss = (template_excess * activity_weights).sum() / template_weight_sum
+
+    periodic_delta_mag = compute_adjacent_deltas(periodic_normalized).abs().mean(dim=-1)
+    noise_delta_mag = compute_adjacent_deltas(noise_normalized).abs().mean(dim=-1)
+    fused_delta_mag = compute_adjacent_deltas(fused_normalized).abs().mean(dim=-1)
+    adjacent_activity_weights = activity_weights[1:] if int(activity_weights.shape[0]) > 1 else activity_weights.new_ones((1,))
+    branch_delta_floor = 0.5 * torch.maximum(periodic_delta_mag, noise_delta_mag)
+    delta_floor_excess = (branch_delta_floor - fused_delta_mag).clamp_min(0.0)
+    delta_weight_sum = adjacent_activity_weights.sum().clamp_min(1.0e-6)
+    fused_hidden_delta_loss = (delta_floor_excess * adjacent_activity_weights).sum() / delta_weight_sum
+    return fused_hidden_template_loss, fused_hidden_delta_loss
 
 
 def compute_rms_guard_loss(
@@ -1724,8 +1800,11 @@ def compute_nores_vocoder_losses(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
+    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
+    fused_hidden_template_weight: float = 0.0,
+    fused_hidden_delta_weight: float = 0.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
         reconstruction_frame_gain_apply_mode
@@ -1759,14 +1838,28 @@ def compute_nores_vocoder_losses(
     rms_guard_loss = harmonic_loss.new_zeros(())
     active_template_loss = harmonic_loss.new_zeros(())
     frame_delta_loss = harmonic_loss.new_zeros(())
+    frame_adjacent_cosine_loss = harmonic_loss.new_zeros(())
+    fused_hidden_template_loss = harmonic_loss.new_zeros(())
+    fused_hidden_delta_loss = harmonic_loss.new_zeros(())
     decoded_waveform_rms = 0.0
     target_waveform_rms = 0.0
+    periodic_hidden = outputs.get("periodic_hidden")
+    noise_hidden = outputs.get("noise_hidden")
+    fused_hidden = outputs.get("fused_hidden")
+    if periodic_hidden is not None and noise_hidden is not None and fused_hidden is not None:
+        fused_hidden_template_loss, fused_hidden_delta_loss = compute_fused_hidden_anti_collapse_losses(
+            periodic_hidden=periodic_hidden,
+            noise_hidden=noise_hidden,
+            fused_hidden=fused_hidden,
+            frame_activity_target=frame_activity_target,
+        )
     if (
         float(waveform_weight) > 0.0
         or float(stft_weight) > 0.0
         or float(rms_guard_weight) > 0.0
         or float(active_template_weight) > 0.0
         or float(frame_delta_weight) > 0.0
+        or float(frame_adjacent_cosine_weight) > 0.0
     ):
         if aligned_waveform is None:
             raise ValueError("aligned_waveform is required when waveform/structure losses are enabled.")
@@ -1794,7 +1887,7 @@ def compute_nores_vocoder_losses(
             predicted_waveform=decoded_waveform,
             target_waveform=target_waveform,
         )
-        active_template_loss, frame_delta_loss = compute_active_template_and_frame_delta_losses(
+        active_template_loss, frame_delta_loss, frame_adjacent_cosine_loss = compute_active_template_and_frame_delta_losses(
             decoded_waveform=decoded_waveform,
             aligned_waveform=target_waveform,
             frame_length=int(frame_length),
@@ -1813,6 +1906,9 @@ def compute_nores_vocoder_losses(
         + rms_guard_loss * float(rms_guard_weight)
         + active_template_loss * float(active_template_weight)
         + frame_delta_loss * float(frame_delta_weight)
+        + frame_adjacent_cosine_loss * float(frame_adjacent_cosine_weight)
+        + fused_hidden_template_loss * float(fused_hidden_template_weight)
+        + fused_hidden_delta_loss * float(fused_hidden_delta_weight)
     )
     metrics = {
         "loss_total": round(float(total_loss.detach().cpu().item()), 6),
@@ -1826,6 +1922,15 @@ def compute_nores_vocoder_losses(
         "loss_rms_guard": round(float(rms_guard_loss.detach().cpu().item()), 6),
         "loss_active_frame_template_excess_relu_0p02": round(float(active_template_loss.detach().cpu().item()), 6),
         "loss_frame_delta_unit_rms_l1": round(float(frame_delta_loss.detach().cpu().item()), 6),
+        "loss_frame_adjacent_cosine_excess_relu_0p02": round(float(frame_adjacent_cosine_loss.detach().cpu().item()), 6),
+        "loss_fused_hidden_template_excess_vs_branch": round(
+            float(fused_hidden_template_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_fused_hidden_delta_floor_halfmax": round(
+            float(fused_hidden_delta_loss.detach().cpu().item()),
+            6,
+        ),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
         "noise_gate_pred_mean": round(float(outputs["noise_gate"].detach().mean().cpu().item()), 6),
         "activity_gate_pred_mean": round(float(predicted_activity.detach().mean().cpu().item()), 6),
@@ -1857,6 +1962,7 @@ def run_nores_vocoder_validation_pass(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
+    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     frame_length: int,
@@ -1888,6 +1994,7 @@ def run_nores_vocoder_validation_pass(
             rms_guard_weight=rms_guard_weight,
             active_template_weight=active_template_weight,
             frame_delta_weight=frame_delta_weight,
+            frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
         )
@@ -1938,9 +2045,12 @@ def run_nores_vocoder_dataset_validation_pass(
     rms_guard_weight: float,
     active_template_weight: float,
     frame_delta_weight: float,
+    frame_adjacent_cosine_weight: float = 0.0,
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     validation_source: str,
+    fused_hidden_template_weight: float = 0.0,
+    fused_hidden_delta_weight: float = 0.0,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
     model.eval()
@@ -1975,8 +2085,11 @@ def run_nores_vocoder_dataset_validation_pass(
                 rms_guard_weight=rms_guard_weight,
                 active_template_weight=active_template_weight,
                 frame_delta_weight=frame_delta_weight,
+                frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
+                fused_hidden_template_weight=fused_hidden_template_weight,
+                fused_hidden_delta_weight=fused_hidden_delta_weight,
             )
             package_metrics.append(
                 {

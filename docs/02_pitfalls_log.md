@@ -11414,3 +11414,141 @@
       或
       “再细调一点”
       就可能转正
+### 369. 如果 decoder 结构探针显示 `fused_hidden` 本身已经高度模板化，就不要把 Stage5 buzz 根因单独归到 `waveform_decoder`
+- 现象:
+  - `contractv2_normfix`
+    的 Stage5
+    waveform decoder
+    probe 中，
+    baseline
+    出现：
+    - `periodic_hidden_template_cosine_mean = 0.714140`
+    - `noise_hidden_template_cosine_mean = 0.811654`
+    - `fused_hidden_template_cosine_mean = 0.991105`
+    - `waveform_frames_template_cosine_mean = 0.999462`
+  - 同时：
+    - `fused_to_waveform_template_cosine_gap = 0.008357`
+    - `fused_to_waveform_adjacent_cosine_gap = 0.000134`
+  - probe
+    自动判断为：
+    - `collapse_not_localized_to_waveform_decoder`
+- 风险:
+  - 很容易看到：
+    - 输出是固定 buzz
+  - 就直接把锅全甩给：
+    - `waveform_decoder`
+  - 然后优先投入：
+    - decoder-only
+      架构替换
+      或尾部修补
+  - 实际上如果
+    `fused_hidden`
+    已经接近常模板，
+    decoder
+    只能继续放大
+    这个塌缩表示，
+    很难单独把语音救回来
+- 处理要求:
+  - 只要 probe
+    显示：
+    - branch hidden
+      仍有一定动态
+    - 但 `fused_hidden`
+      已高度模板化
+  - 默认主问题应上移到：
+    - `fusion`
+    - `fused_hidden`
+      objective
+    - branch-to-fusion
+      diversity preservation
+  - 不要把下一轮主资源
+    优先投给：
+    - `waveform_decoder`
+      单点改造
+### 370. `fused_hidden_frame_mean` 几乎不改输出，并不等于 decoder 完全不依赖 `fused_hidden`；它更常表示 baseline 已经落在近常模板工作区
+- 现象:
+  - 本轮 probe
+    中：
+    - `fused_hidden_frame_mean`
+      只有
+      `waveform_mean_abs_delta_vs_baseline = 0.003935`
+  - 但：
+    - `fused_hidden_zero`
+      仍可带来
+      `0.153620`
+      的波形变化
+- 风险:
+  - 如果只看
+    `frame_mean`
+    干预，
+    很容易误写成：
+    - decoder
+      不看
+      `fused_hidden`
+  - 这是过强结论
+- 处理要求:
+  - 解释时必须区分：
+    - `frame_mean`
+      几乎无影响
+    - 与
+      `zero`
+      仍有明显影响
+  - 更稳妥的表述应是：
+    - decoder
+      仍依赖
+      `fused_hidden`
+      的总体值域
+    - 但当前 baseline
+      下的
+      `fused_hidden`
+      已经过于接近
+      常模板区域，
+      所以进一步压成
+      frame mean
+      几乎不改变结果
+### 371. 给 dataset loop 新增 objective 权重后，必须在正式解读结果前先核对 summary 中的 `training.loss_weights`，否则很容易把“参数没透传”的假实验当成真实 candidate
+- 现象:
+  - 本轮接入
+    `fused_hidden`
+    objective
+    时，
+    早期
+    `..._smoke_round1_1`
+    和
+    `..._smoke_round1_2`
+    虽然命令行带了：
+    - `--fused-hidden-template-weight 0.05`
+    - `--fused-hidden-delta-weight 2.0`
+  - 但 dataset loop
+    CLI
+    分发处漏传，
+    summary
+    实际记录的仍是：
+    - `fused_hidden_template = 0.0`
+    - `fused_hidden_delta = 0.0`
+- 风险:
+  - 如果只看：
+    - 目录名
+    - 命令历史
+    - 训练日志表面输出
+  - 很容易把这种 run
+    误写成：
+    - candidate
+      已跑完
+  - 实际它只是 baseline
+    的重复跑
+- 处理要求:
+  - 只要新增了
+    CLI -> training
+    的 objective
+    参数，
+    正式引用结果前必须检查：
+    - `summary['training']['loss_weights']`
+  - 只有当 summary
+    明确记录了
+    目标权重值，
+    该 run
+    才能被当成有效实验
+  - 早期无效 run
+    需要在文档中明确标注：
+    - 不作为正式结果引用
