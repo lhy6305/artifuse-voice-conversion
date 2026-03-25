@@ -75,6 +75,22 @@ def load_target_event_semantic_sidecar_map(path: Path) -> dict[str, dict[str, ob
     }
 
 
+def load_target_event_timing_semantic_sidecar_map(path: Path) -> dict[str, dict[str, object]]:
+    timing_rows = load_jsonl(path)
+    return {
+        str(row["record_id"]): row
+        for row in timing_rows
+    }
+
+
+def load_paired_parallel_source_semantic_parity_sidecar_map(path: Path) -> dict[str, dict[str, object]]:
+    parity_rows = load_jsonl(path)
+    return {
+        str(row["record_id"]): row
+        for row in parity_rows
+    }
+
+
 def attach_target_weak_event_hints(
     records: list[dict[str, object]],
     hint_map: dict[str, dict[str, object]],
@@ -114,6 +130,32 @@ def attach_target_event_semantic_sidecar(
     return attached_records
 
 
+def attach_target_event_timing_semantic_sidecar(
+    records: list[dict[str, object]],
+    timing_map: dict[str, dict[str, object]],
+) -> list[dict[str, object]]:
+    attached_records: list[dict[str, object]] = []
+    for record in records:
+        updated = dict(record)
+        record_id = str(record["record_id"])
+        updated["target_event_timing_semantic_sidecar"] = timing_map.get(record_id)
+        attached_records.append(updated)
+    return attached_records
+
+
+def attach_paired_parallel_source_semantic_parity_sidecar(
+    records: list[dict[str, object]],
+    parity_map: dict[str, dict[str, object]],
+) -> list[dict[str, object]]:
+    attached_records: list[dict[str, object]] = []
+    for record in records:
+        updated = dict(record)
+        source_record_id = str(record.get("source_record_id") or record["record_id"])
+        updated["source_semantic_parity_sidecar"] = parity_map.get(source_record_id)
+        attached_records.append(updated)
+    return attached_records
+
+
 def infer_target_event_semantic_sidecar_path(split_dir: Path | None) -> Path | None:
     if split_dir is None:
         return None
@@ -122,6 +164,40 @@ def infer_target_event_semantic_sidecar_path(split_dir: Path | None) -> Path | N
         return None
     round_dir = split_dir.parent.parent
     candidate = round_dir / "target_event_semantic_sidecar" / "target_event_semantic_sidecar.jsonl"
+    if candidate.exists():
+        return candidate.resolve()
+    return None
+
+
+def infer_target_event_timing_semantic_sidecar_path(split_dir: Path | None) -> Path | None:
+    if split_dir is None:
+        return None
+    split_dir = split_dir.resolve()
+    if split_dir.parent == split_dir:
+        return None
+    round_dir = split_dir.parent.parent
+    candidate = (
+        round_dir
+        / "target_event_timing_semantic_sidecar"
+        / "target_event_timing_semantic_sidecar.jsonl"
+    )
+    if candidate.exists():
+        return candidate.resolve()
+    return None
+
+
+def infer_paired_parallel_source_semantic_parity_sidecar_path(split_dir: Path | None) -> Path | None:
+    if split_dir is None:
+        return None
+    split_dir = split_dir.resolve()
+    if split_dir.parent == split_dir:
+        return None
+    round_dir = split_dir.parent.parent
+    candidate = (
+        round_dir
+        / "paired_parallel_source_semantic_parity_sidecar"
+        / "paired_parallel_source_semantic_parity_sidecar.jsonl"
+    )
     if candidate.exists():
         return candidate.resolve()
     return None
@@ -207,6 +283,117 @@ def build_record_semantic_overview(record: dict[str, object]) -> dict[str, objec
         "semantic_manner_sequence_available": False,
         "semantic_place_sequence_available": False,
         "semantic_forced_alignment_available": False,
+    }
+
+
+def build_record_timing_semantic_overview(record: dict[str, object]) -> dict[str, object]:
+    timing_sidecar = record.get("target_event_timing_semantic_sidecar")
+    if not isinstance(timing_sidecar, dict):
+        return {
+            "timing_source": "missing",
+            "timing_contract_version": None,
+            "timing_label_space_version": None,
+            "timing_inventory_status": "missing",
+            "timing_alignment_type": None,
+            "timing_label_status": "missing",
+            "timeline_event_count": 0,
+            "clause_region_count": 0,
+            "pause_boundary_event_count": 0,
+            "terminal_boundary_event_count": 0,
+            "weak_time_alignment_ready_for_target_side_bootstrap": False,
+        }
+
+    timing_alignment = (
+        dict(timing_sidecar.get("timing_alignment", {}))
+        if isinstance(timing_sidecar.get("timing_alignment"), dict)
+        else {}
+    )
+    coverage_summary = (
+        dict(timing_sidecar.get("time_aware_semantics", {}).get("coverage_summary", {}))
+        if isinstance(timing_sidecar.get("time_aware_semantics"), dict)
+        and isinstance(timing_sidecar.get("time_aware_semantics").get("coverage_summary"), dict)
+        else {}
+    )
+    upgrade_status = (
+        dict(timing_sidecar.get("upgrade_status", {}))
+        if isinstance(timing_sidecar.get("upgrade_status"), dict)
+        else {}
+    )
+    timeline_events = (
+        list(timing_sidecar.get("time_aware_semantics", {}).get("timeline_events", []))
+        if isinstance(timing_sidecar.get("time_aware_semantics"), dict)
+        and isinstance(timing_sidecar.get("time_aware_semantics").get("timeline_events"), list)
+        else []
+    )
+    return {
+        "timing_source": "target_event_timing_semantic_sidecar",
+        "timing_contract_version": str(timing_sidecar.get("semantic_contract_version", "")) or None,
+        "timing_label_space_version": str(timing_sidecar.get("semantic_label_space_version", "")) or None,
+        "timing_inventory_status": str(timing_sidecar.get("inventory_status", "unknown")),
+        "timing_alignment_type": str(timing_alignment.get("alignment_type", "")) or None,
+        "timing_label_status": str(upgrade_status.get("label_status", "unknown")),
+        "timeline_event_count": len(timeline_events),
+        "clause_region_count": int(coverage_summary.get("clause_region_count", 0)),
+        "pause_boundary_event_count": int(coverage_summary.get("pause_boundary_event_count", 0)),
+        "terminal_boundary_event_count": int(coverage_summary.get("terminal_boundary_event_count", 0)),
+        "weak_time_alignment_ready_for_target_side_bootstrap": bool(
+            upgrade_status.get("weak_time_alignment_ready_for_target_side_bootstrap", False)
+        ),
+    }
+
+
+def build_record_source_semantic_parity_overview(record: dict[str, object]) -> dict[str, object]:
+    parity_sidecar = record.get("source_semantic_parity_sidecar")
+    if not isinstance(parity_sidecar, dict):
+        return {
+            "parity_source": "missing",
+            "parity_contract_version": None,
+            "parity_label_space_version": None,
+            "parity_status": "missing",
+            "parity_transfer_type": None,
+            "parity_label_status": "missing",
+            "parity_utterance_structure_type": "unknown",
+            "parity_clause_count": 0,
+            "parity_pause_boundary_count": 0,
+            "parity_terminal_boundary_count": 0,
+            "semantic_ready_for_source_side_bootstrap": False,
+            "native_source_semantic_available": False,
+        }
+
+    semantic_transfer = (
+        dict(parity_sidecar.get("semantic_transfer", {}))
+        if isinstance(parity_sidecar.get("semantic_transfer"), dict)
+        else {}
+    )
+    source_semantic_bootstrap = (
+        dict(parity_sidecar.get("source_semantic_bootstrap", {}))
+        if isinstance(parity_sidecar.get("source_semantic_bootstrap"), dict)
+        else {}
+    )
+    upgrade_status = (
+        dict(parity_sidecar.get("upgrade_status", {}))
+        if isinstance(parity_sidecar.get("upgrade_status"), dict)
+        else {}
+    )
+    return {
+        "parity_source": "paired_parallel_source_semantic_parity_sidecar",
+        "parity_contract_version": str(parity_sidecar.get("semantic_contract_version", "")) or None,
+        "parity_label_space_version": str(parity_sidecar.get("semantic_label_space_version", "")) or None,
+        "parity_status": str(parity_sidecar.get("parity_status", "unknown")),
+        "parity_transfer_type": str(semantic_transfer.get("transfer_type", "")) or None,
+        "parity_label_status": str(source_semantic_bootstrap.get("label_status", "unknown")),
+        "parity_utterance_structure_type": str(
+            source_semantic_bootstrap.get("utterance_structure_type", "unknown")
+        ),
+        "parity_clause_count": int(source_semantic_bootstrap.get("clause_count", 0)),
+        "parity_pause_boundary_count": int(source_semantic_bootstrap.get("pause_boundary_count", 0)),
+        "parity_terminal_boundary_count": int(source_semantic_bootstrap.get("terminal_boundary_count", 0)),
+        "semantic_ready_for_source_side_bootstrap": bool(
+            upgrade_status.get("semantic_ready_for_source_side_bootstrap", False)
+        ),
+        "native_source_semantic_available": bool(
+            upgrade_status.get("native_source_semantic_available", False)
+        ),
     }
 
 

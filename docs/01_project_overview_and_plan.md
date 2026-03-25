@@ -20769,3 +20769,383 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
      `e_evt`
      consumer
    而不是微调当前 package-level weighting
+## 2026-03-25 继续补充：Stage5 obvious-buzz 自动否定门禁已接入 export，当前 semantic/baseline 可由机器直接判废
+- 正式报告：
+  - `docs/339_stage5_buzz_auto_reject_gate_report.md`
+
+### 当前关键结果
+1. `export-offline-mvp-nores-vocoder-audio`
+   现在会在 manifest
+   内写出：
+   - `buzz_reject_assessment`
+   - `buzz_reject_summary`
+2. 这套门禁是：
+   - 保守 negative gate
+   - 只负责自动否定
+     obvious buzz / fuzz
+   - 不负责自动证明
+     “已经可听”
+3. 当前回放 paired overfit24
+   baseline / semantic
+   两份 validation training-sync export，
+   结果都是：
+   - `all_records_auto_reject = true`
+
+### 当前阶段判断更新
+1. 对这类已经明显落在
+   `template-buzz / harsh-fuzz`
+   失败区的样本，
+   后续不必再默认转人工听审
+2. 以后只有在：
+   - 机器未自动判废
+   - 且量化没有明显退化
+   时，
+   才值得继续占用人工听审
+
+### 更新后的下一步
+1. semantic
+   这条线可直接按：
+   - obvious-buzz
+     自动否定
+   收口
+2. 主线继续回到：
+   - 更明确的
+     design-state
+     `e_evt`
+     consumer
+## 2026-03-25 继续补充：第一条 target-side semantic forward consumer 已接通，且首次跨过 obvious-buzz 自动否定门禁
+- 正式报告：
+  - `docs/340_stage5_target_semantic_forward_consumer_bootstrap_report.md`
+
+### 当前关键结果
+1. 已新增
+   `semantic_consumer_mode = target_sidecar_broadcast_v1`
+   的 package build 路线：
+   - 把 target-side semantic
+     编成 9 维静态向量
+   - broadcast 到所有 frame
+   - 拼进
+     periodic / noise
+     branch features
+2. 新 package
+   输入维度已从：
+   - `36 / 36`
+   变成：
+   - `45 / 45`
+   说明 semantic
+   已真正进入 Stage5 forward path
+3. paired overfit24
+   当前量化结果相对 baseline：
+   - `loss_total: 0.856916 -> 0.852640`
+   - `loss_stft: 0.364732 -> 0.315007`
+   - `loss_rms_guard: 0.021712 -> 0.006695`
+   - `loss_waveform: 0.159986 -> 0.165847`
+4. 更关键的是：
+   - 当前 semantic consumer
+     的 validation export
+     已不再是
+     `all_records_auto_reject = true`
+   - 机器门禁结果变成：
+     - `review_required_count = 2`
+     - `all_records_auto_reject = false`
+
+### 当前阶段判断更新
+1. 这是第一条：
+   - 真正进入 Stage5 forward path
+   - 且未被 obvious-buzz 机器门禁直接判死
+   的 semantic mainline candidate
+2. 但它仍未证明：
+   - 已经出现可听 speech emergence
+3. 所以当前状态应写成：
+   - 值得人工复核
+   - 而不是已经成功
+
+### 更新后的下一步
+1. 优先听：
+   - `reports/audio/stage5_paired_parallel_overfit24_semanticconsumer_compare_quick_audit_20260325/`
+2. 若听感仍失败，
+   则继续推进：
+   - 更明确的
+     design-state
+     `e_evt`
+     consumer
+## 2026-03-25 继续补充：target-side semantic forward consumer 虽跨过机器门禁，但人工听审仍是 pure fuzz
+- 正式报告：
+  - `docs/341_stage5_target_semantic_forward_consumer_human_audit_fail_and_next_step_report.md`
+
+### 当前关键结果
+1. 用户已完成
+   `semanticconsumer`
+   vs baseline
+   quick audit
+2. 明确结论是：
+   - 仍是 pure fuzz
+   - 没有人声成分
+   - 只是没有之前那么响
+3. 因而：
+   - `target_sidecar_broadcast_v1`
+     不能继续沿同层微调推进
+
+### 当前阶段判断更新
+1. 这次失败不是：
+   - plumbing 未接通
+   - 也不是机器门禁误杀
+2. 更准确的解释是：
+   - target-only
+     utterance-level static semantic
+     即便进入 Stage5 forward path，
+     也不足以推动 speech emergence
+3. 所以这次应正式把下一步上收到：
+   - 更接近 design-state
+     `e_evt`
+     的
+     time-aware / event-aware
+     semantic asset
+
+### 更新后的下一步
+1. 停止继续做
+   Stage5 target-only static semantic
+   broadcast 变体
+2. 转向：
+   - 构建真正可支撑
+     `e_evt`
+     consumer
+     的时序语义资产
+## 2026-03-25 继续补充：第一份 target-side time-aware semantic bridge 资产已正式物化
+- 正式报告：
+  - `docs/342_stage5_target_event_timing_semantic_sidecar_bootstrap_report.md`
+
+### 当前关键结果
+1. 已新增命令：
+   - `build-target-event-timing-semantic-sidecar`
+2. 新资产：
+   - 不再只是
+     utterance-level summary
+   - 而是正式保留：
+     - `clause_region`
+     - `pause_boundary_window`
+     - `terminal_boundary_window`
+     的 sparse timeline
+3. 已生成：
+   - `data_prep/round1_1/target_event_timing_semantic_sidecar/target_event_timing_semantic_sidecar.jsonl`
+   - `reports/data/round1_1_target_event_timing_semantic_sidecar/`
+4. 当前摘要统计：
+   - `record_count = 666`
+   - `weak_time_alignment_ready_for_target_side_bootstrap_count = 658`
+   - `timeline_event_count_stats.mean = 6.042042`
+
+### 当前阶段判断更新
+1. 这一步说明：
+   - 现有仓库并不缺
+     target-side
+     弱时序边界信息
+   - 真正缺的是：
+     - 正式 sidecar
+     - 下游 consumer
+       读取路径
+2. 所以下一轮不应再回到：
+   - utterance-only static semantic
+3. 更合理的主线推进应改写为：
+   - 用这份
+     timing sidecar
+     去接
+     第一条
+     time-aware semantic consumer
+
+### 更新后的下一步
+1. 优先把：
+   - `target_event_timing_semantic_sidecar`
+     接入
+     Stage5 package / consumer
+     元数据与读取链
+2. 继续保持当前边界：
+   - target-side only
+   - weak timing only
+   - 仍未完成完整
+     design-state
+     `e_evt`
+## 2026-03-25 继续补充：target event timing semantic 已接入 Stage5 package / index metadata
+- 正式报告：
+  - `docs/343_stage5_target_event_timing_semantic_stage5_metadata_plumbing_report.md`
+
+### 当前关键结果
+1. Stage5 package builder
+   已新增：
+   - `--target-event-timing-semantic-sidecar`
+2. `offline_mvp.data`
+   已支持：
+   - timing sidecar
+     的 load / infer / overview
+3. smoke package build
+   已验证：
+   - dataset index
+     会记录
+     `target_event_timing_semantic_sidecar_path`
+   - 每个 package
+     会记录
+     `target_event_timing_semantic_sidecar_present`
+     与
+     `target_timing_semantic_overview`
+   - split summary
+     会记录
+     `timing_semantic_sidecar_summary`
+
+### 当前阶段判断更新
+1. 现在已经可以明确拆开三层问题：
+   - 资产是否存在
+   - metadata 是否接通
+   - consumer 是否有效
+2. 这意味着下一轮如果失败，
+   不会再混淆成：
+   - 只是 sidecar 没带进去
+3. 当前主线已自然推进到：
+   - 第一版
+     time-aware consumer
+     设计与 smoke
+
+### 更新后的下一步
+1. 基于当前 package metadata，
+   开始设计第一版
+   Stage5 time-aware semantic consumer
+2. 继续保持：
+   - 不回到
+     static semantic
+     broadcast
+   - 不把 weak timing asset
+     误写成完整
+     `e_evt`
+## 2026-03-25 继续补充：第一版 framewise timing consumer 已接通，但被自动门禁直接判为 obvious buzz
+- 正式报告：
+  - `docs/344_stage5_target_timing_consumer_round1_fail_and_next_route_report.md`
+
+### 当前关键结果
+1. 已新增：
+   - `semantic_consumer_mode = target_timing_sidecar_framewise_v1`
+2. 新 consumer
+   确认真实进入 forward path：
+   - 输入维度从
+     `36 / 36`
+     变成
+     `46 / 46`
+3. paired overfit24
+   相对 baseline：
+   - `loss_stft: 0.364732 -> 0.361870`
+   - `loss_rms_guard: 0.021712 -> 0.006484`
+   - 但
+     `loss_total: 0.856916 -> 0.867541`
+   - `loss_waveform: 0.159986 -> 0.163164`
+4. 更关键的是：
+   - validation export
+     被门禁直接判成：
+     - `auto_reject_count = 2`
+     - `all_records_auto_reject = true`
+
+### 当前阶段判断更新
+1. 这说明：
+   - target-only
+     weak timing
+     即便做成 framewise sparse consumer，
+     仍然不够
+2. 所以主线不应再停留在：
+   - Stage5 target-only
+     weak timing
+     变体微调
+3. 下一步应正式上收到：
+   - parity-aware semantic assets
+   - 或更上游的
+     semantic supervision route
+
+### 更新后的下一步
+1. 停止继续做：
+   - Stage5 target-only
+     weak timing consumer
+2. 转向：
+   - 更上游的
+     `e_evt`
+     supervision / parity
+     资产层
+## 2026-03-25 继续补充：第一份 paired-parallel source semantic parity sidecar 已正式物化
+- 正式报告：
+  - `docs/345_stage5_paired_parallel_source_semantic_parity_sidecar_bootstrap_report.md`
+
+### 当前关键结果
+1. 已新增命令：
+   - `build-paired-parallel-source-semantic-parity-sidecar`
+2. 新资产不是：
+   - source-native semantic
+3. 新资产是：
+   - paired target semantic/timing
+     向 source frame axis
+     的 parity bootstrap
+4. 当前 overfit smoke
+   摘要：
+   - `record_count = 2`
+   - `semantic_ready_for_source_side_bootstrap_count = 2`
+   - `source_to_target_duration_ratio_stats.mean = 1.436329`
+
+### 当前阶段判断更新
+1. 现在已经不再只是口头上说：
+   - 要做 parity-aware assets
+2. 第一份
+   source-side parity-aware
+   semantic sidecar
+   已真实存在
+3. 但这一步仍不能误写成：
+   - source semantic 已完成
+   - `e_evt` 已接回
+
+### 更新后的下一步
+1. 把这份
+   source parity sidecar
+   接入
+   Stage5 package / index metadata
+2. 明确验证 attach key
+   必须是：
+   - `source_record_id`
+## 2026-03-25 继续补充：source semantic parity 已接入 Stage5 package / index metadata
+- 正式报告：
+  - `docs/346_stage5_source_semantic_parity_stage5_metadata_plumbing_report.md`
+
+### 当前关键结果
+1. `build-offline-mvp-nores-vocoder-dataset-packages`
+   已新增：
+   - `--source-semantic-parity-sidecar`
+2. Stage5 package
+   已记录：
+   - `source_semantic_parity_sidecar_present`
+   - `source_semantic_parity_overview`
+3. dataset index
+   已记录：
+   - `source_semantic_parity_sidecar_path`
+   - `source_semantic_parity_summary`
+4. paired overfit smoke
+   已验证：
+   - train / validation
+     都是
+     `present_count = 2`
+
+### 当前阶段判断更新
+1. 现在已经可以独立验证：
+   - source parity
+     资产存在
+   - metadata 接通
+2. 所以下一轮若继续做
+   source-aware 路线，
+   不会再混淆成：
+   - sidecar 没进 package
+3. 当前主线自然推进到：
+   - 评估
+     source parity
+     是更适合接
+     Stage5 consumer
+     还是更上游 supervision
+
+### 更新后的下一步
+1. 继续保持：
+   - 不回到
+     target-only
+     semantic/timing 微调
+2. 下一轮优先评估：
+   - source-parity aware consumer
+   - 或更上游
+     supervision route

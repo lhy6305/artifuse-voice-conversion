@@ -1,0 +1,412 @@
+{
+  "dataset_index_version": "offline_mvp_nores_vocoder_dataset_index_v1",
+  "generated_at": "2026-03-25T16:51:40",
+  "timing": {
+    "started_at": "2026-03-25T16:51:37",
+    "ended_at": "2026-03-25T16:51:40",
+    "duration_sec": 2.856306
+  },
+  "selection_mode": "file_order",
+  "train_split_path": null,
+  "validation_split_path": null,
+  "train_pair_spec_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_train_pairs.jsonl",
+  "validation_pair_spec_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_validation_pairs.jsonl",
+  "target_event_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl",
+  "semantic_consumer_mode": "target_sidecar_broadcast_v1",
+  "train_packages": [
+    {
+      "record_id": "paired::parallel_firefly_107_to_target_firefly_107",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_107",
+      "target_record_id": "target::chapter3_17_firefly_107",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.62898,
+      "split_name": "train",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_semanticconsumer_smoke_round1_1/packages/train/paired__parallel_firefly_107_to_target_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v2",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "multi_clause_single_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 2,
+        "semantic_pause_boundary_count": 1,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "target_sidecar_broadcast_v1",
+        "semantic_tag": "target_semantic_broadcast_v1",
+        "feature_dim": 9,
+        "feature_names": [
+          "clean_text_available",
+          "nonverbal_only",
+          "lexical_char_count_norm",
+          "clause_count_norm",
+          "pause_boundary_count_norm",
+          "terminal_boundary_count_norm",
+          "structure_single_clause_terminal",
+          "structure_multi_clause_single_terminal",
+          "structure_multi_terminal"
+        ],
+        "semantic_sidecar_present": true,
+        "feature_source": "target_event_semantic_sidecar",
+        "feature_values": [
+          1.0,
+          0.0,
+          0.3125,
+          0.5,
+          0.333333,
+          0.5,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "frame_count": 657,
+      "periodic_input_dim": 45,
+      "noise_input_dim": 45,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1621927,
+      "package_build_sec": 0.815409,
+      "package_status": "built_now"
+    },
+    {
+      "record_id": "paired::parallel_firefly_132_to_target_firefly_132",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_132",
+      "target_record_id": "target::chapter3_17_firefly_132",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.519977,
+      "split_name": "train",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_semanticconsumer_smoke_round1_1/packages/train/paired__parallel_firefly_132_to_target_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v2",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "single_clause_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 1,
+        "semantic_pause_boundary_count": 0,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "target_sidecar_broadcast_v1",
+        "semantic_tag": "target_semantic_broadcast_v1",
+        "feature_dim": 9,
+        "feature_names": [
+          "clean_text_available",
+          "nonverbal_only",
+          "lexical_char_count_norm",
+          "clause_count_norm",
+          "pause_boundary_count_norm",
+          "terminal_boundary_count_norm",
+          "structure_single_clause_terminal",
+          "structure_multi_clause_single_terminal",
+          "structure_multi_terminal"
+        ],
+        "semantic_sidecar_present": true,
+        "feature_source": "target_event_semantic_sidecar",
+        "feature_values": [
+          1.0,
+          0.0,
+          0.3125,
+          0.25,
+          0.0,
+          0.5,
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "frame_count": 660,
+      "periodic_input_dim": 45,
+      "noise_input_dim": 45,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1607459,
+      "package_build_sec": 0.645139,
+      "package_status": "built_now"
+    }
+  ],
+  "validation_packages": [
+    {
+      "record_id": "paired::parallel_firefly_107_to_target_firefly_107",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_107",
+      "target_record_id": "target::chapter3_17_firefly_107",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.62898,
+      "split_name": "validation",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_semanticconsumer_smoke_round1_1/packages/validation/paired__parallel_firefly_107_to_target_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v2",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "multi_clause_single_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 2,
+        "semantic_pause_boundary_count": 1,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "target_sidecar_broadcast_v1",
+        "semantic_tag": "target_semantic_broadcast_v1",
+        "feature_dim": 9,
+        "feature_names": [
+          "clean_text_available",
+          "nonverbal_only",
+          "lexical_char_count_norm",
+          "clause_count_norm",
+          "pause_boundary_count_norm",
+          "terminal_boundary_count_norm",
+          "structure_single_clause_terminal",
+          "structure_multi_clause_single_terminal",
+          "structure_multi_terminal"
+        ],
+        "semantic_sidecar_present": true,
+        "feature_source": "target_event_semantic_sidecar",
+        "feature_values": [
+          1.0,
+          0.0,
+          0.3125,
+          0.5,
+          0.333333,
+          0.5,
+          0.0,
+          1.0,
+          0.0
+        ]
+      },
+      "frame_count": 657,
+      "periodic_input_dim": 45,
+      "noise_input_dim": 45,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1622011,
+      "package_build_sec": 0.700415,
+      "package_status": "built_now"
+    },
+    {
+      "record_id": "paired::parallel_firefly_132_to_target_firefly_132",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_132",
+      "target_record_id": "target::chapter3_17_firefly_132",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.519977,
+      "split_name": "validation",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_semanticconsumer_smoke_round1_1/packages/validation/paired__parallel_firefly_132_to_target_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v2",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "single_clause_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 1,
+        "semantic_pause_boundary_count": 0,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "target_sidecar_broadcast_v1",
+        "semantic_tag": "target_semantic_broadcast_v1",
+        "feature_dim": 9,
+        "feature_names": [
+          "clean_text_available",
+          "nonverbal_only",
+          "lexical_char_count_norm",
+          "clause_count_norm",
+          "pause_boundary_count_norm",
+          "terminal_boundary_count_norm",
+          "structure_single_clause_terminal",
+          "structure_multi_clause_single_terminal",
+          "structure_multi_terminal"
+        ],
+        "semantic_sidecar_present": true,
+        "feature_source": "target_event_semantic_sidecar",
+        "feature_values": [
+          1.0,
+          0.0,
+          0.3125,
+          0.25,
+          0.0,
+          0.5,
+          1.0,
+          0.0,
+          0.0
+        ]
+      },
+      "frame_count": 660,
+      "periodic_input_dim": 45,
+      "noise_input_dim": 45,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1607543,
+      "package_build_sec": 0.639379,
+      "package_status": "built_now"
+    }
+  ],
+  "notes": [
+    "This dataset index is a Stage5 package-level bridge built on top of the teacher-first contract path.",
+    "Each package still contains proxy spectral/gate targets rather than a final waveform decoder objective.",
+    "Current package generation may reload the teacher checkpoint per record, so this builder is a functional baseline rather than a throughput-optimized exporter.",
+    "If train_pair_spec_path / validation_pair_spec_path are set, teacher controls are exported from source_audio_path while aligned waveform targets come from target_audio_path.",
+    "When available, target_event_semantic_sidecar is attached by target_record_id and summarized in package/index metadata.",
+    "semantic_consumer_mode controls whether target-side semantic sidecar remains metadata only or is broadcast into Stage5 branch features as a forward-path consumer."
+  ],
+  "summary": {
+    "train_package_count": 2,
+    "validation_package_count": 2,
+    "train": {
+      "package_count": 2,
+      "total_audio_duration_sec": 5.148957,
+      "total_frame_count": 1317,
+      "total_package_size_bytes": 3229386,
+      "total_package_build_sec": 1.460548,
+      "avg_package_build_sec": 0.730274,
+      "avg_package_size_bytes": 1614693.0,
+      "built_now_count": 2,
+      "reused_existing_count": 0,
+      "record_modes": [
+        "paired_source_to_target"
+      ],
+      "training_package_versions": [
+        "offline_mvp_nores_vocoder_train_targets_v2"
+      ],
+      "source_scaffold_versions": [
+        "offline_teacher_vocoder_input_scaffold_v2"
+      ],
+      "periodic_input_dims": [
+        45
+      ],
+      "noise_input_dims": [
+        45
+      ],
+      "harmonic_target_dims": [
+        32
+      ],
+      "noise_target_dims": [
+        32
+      ],
+      "versions_consistent": true,
+      "dims_consistent": true,
+      "semantic_sidecar_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_contract_version_counts": {
+          "target_event_semantic_sidecar_v1": 2
+        },
+        "semantic_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 2
+        }
+      }
+    },
+    "validation": {
+      "package_count": 2,
+      "total_audio_duration_sec": 5.148957,
+      "total_frame_count": 1317,
+      "total_package_size_bytes": 3229554,
+      "total_package_build_sec": 1.339794,
+      "avg_package_build_sec": 0.669897,
+      "avg_package_size_bytes": 1614777.0,
+      "built_now_count": 2,
+      "reused_existing_count": 0,
+      "record_modes": [
+        "paired_source_to_target"
+      ],
+      "training_package_versions": [
+        "offline_mvp_nores_vocoder_train_targets_v2"
+      ],
+      "source_scaffold_versions": [
+        "offline_teacher_vocoder_input_scaffold_v2"
+      ],
+      "periodic_input_dims": [
+        45
+      ],
+      "noise_input_dims": [
+        45
+      ],
+      "harmonic_target_dims": [
+        32
+      ],
+      "noise_target_dims": [
+        32
+      ],
+      "versions_consistent": true,
+      "dims_consistent": true,
+      "semantic_sidecar_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_contract_version_counts": {
+          "target_event_semantic_sidecar_v1": 2
+        },
+        "semantic_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 2
+        }
+      }
+    },
+    "total_package_count": 4,
+    "total_package_size_bytes": 6458940,
+    "total_package_build_sec": 2.800342,
+    "index_build_duration_sec": 2.856306
+  }
+}

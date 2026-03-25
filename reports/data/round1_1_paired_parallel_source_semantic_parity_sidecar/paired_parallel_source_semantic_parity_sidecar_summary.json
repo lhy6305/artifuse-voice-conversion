@@ -1,0 +1,79 @@
+{
+  "pair_spec_paths": [
+    "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_train_pairs.jsonl",
+    "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_validation_pairs.jsonl"
+  ],
+  "target_event_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl",
+  "target_event_timing_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_timing_semantic_sidecar/target_event_timing_semantic_sidecar.jsonl",
+  "semantic_contract_version": "paired_parallel_source_semantic_parity_sidecar_v1",
+  "semantic_label_space_version": "source_paired_parallel_bootstrap_semantics_v1",
+  "transfer_type": "paired_parallel_target_to_source_same_content_v1",
+  "record_count": 2,
+  "split_membership_counts": {
+    "train": 2,
+    "validation": 2
+  },
+  "parity_status_counts": {
+    "matched_target_semantic_and_timing": 2
+  },
+  "utterance_structure_type_counts": {
+    "multi_clause_single_terminal": 1,
+    "single_clause_terminal": 1
+  },
+  "label_status_counts": {
+    "pending_upgrade": 2
+  },
+  "semantic_ready_for_source_side_bootstrap_count": 2,
+  "frame_projection": {
+    "frame_length": 400,
+    "hop_length": 160,
+    "sample_rate": 44100
+  },
+  "source_estimated_frame_count_stats": {
+    "count": 2,
+    "min": 968,
+    "max": 1068,
+    "mean": 1018.0
+  },
+  "lexical_char_count_stats": {
+    "count": 2,
+    "min": 10,
+    "max": 10,
+    "mean": 10.0
+  },
+  "clause_region_count_stats": {
+    "count": 2,
+    "min": 1,
+    "max": 2,
+    "mean": 1.5
+  },
+  "pause_boundary_event_count_stats": {
+    "count": 2,
+    "min": 0,
+    "max": 1,
+    "mean": 0.5
+  },
+  "terminal_boundary_event_count_stats": {
+    "count": 2,
+    "min": 1,
+    "max": 1,
+    "mean": 1.0
+  },
+  "timeline_event_count_stats": {
+    "count": 2,
+    "min": 2,
+    "max": 4,
+    "mean": 3.0
+  },
+  "source_to_target_duration_ratio_stats": {
+    "count": 2,
+    "min": 1.396334,
+    "max": 1.476323,
+    "mean": 1.436329
+  },
+  "notes": [
+    "这份 sidecar 不是 native source text semantic，而是利用 paired parallel 同内容 target 语义做的 source-side parity bootstrap。",
+    "source frame timing 由 target lexical ratios 投影到 source duration 上，不是 source forced alignment。",
+    "它的意义是补 source-side / parity-aware semantic assets，不应误写成 source-native semantic 已完成。"
+  ]
+}

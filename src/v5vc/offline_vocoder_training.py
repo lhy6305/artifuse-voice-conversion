@@ -14,8 +14,14 @@ from torch.nn.utils import clip_grad_norm_
 
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
+    build_record_source_semantic_parity_overview,
+    build_record_timing_semantic_overview,
     build_record_semantic_overview,
+    infer_paired_parallel_source_semantic_parity_sidecar_path,
+    infer_target_event_timing_semantic_sidecar_path,
     infer_target_event_semantic_sidecar_path,
+    load_paired_parallel_source_semantic_parity_sidecar_map,
+    load_target_event_timing_semantic_sidecar_map,
     load_target_event_semantic_sidecar_map,
     load_waveform,
 )
@@ -39,6 +45,35 @@ SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
     "offline_mvp_nores_vocoder_train_targets_v2",
 }
 DEFAULT_STAGE5_SEMANTIC_PACKAGE_ALPHA = 0.2
+DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE = "none"
+SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
+    "none",
+    "target_sidecar_broadcast_v1",
+    "target_timing_sidecar_framewise_v1",
+}
+STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES = [
+    "clean_text_available",
+    "nonverbal_only",
+    "lexical_char_count_norm",
+    "clause_count_norm",
+    "pause_boundary_count_norm",
+    "terminal_boundary_count_norm",
+    "structure_single_clause_terminal",
+    "structure_multi_clause_single_terminal",
+    "structure_multi_terminal",
+]
+STAGE5_TARGET_TIMING_SIDECAR_FEATURE_NAMES = [
+    "clause_active",
+    "clause_role_single",
+    "clause_role_initial",
+    "clause_role_middle",
+    "clause_role_final",
+    "clause_progress_norm",
+    "utterance_progress_norm",
+    "pause_boundary_window",
+    "terminal_boundary_window",
+    "boundary_any_window",
+]
 
 
 def normalize_training_reconstruction_frame_gain_apply_mode(frame_gain_apply_mode: str) -> str:
@@ -58,6 +93,9 @@ def build_offline_mvp_nores_vocoder_training_package(
     frame_length: int | None,
     hop_length: int | None,
     target_event_semantic_sidecar: dict[str, object] | None = None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None = None,
+    source_semantic_parity_sidecar: dict[str, object] | None = None,
+    semantic_consumer_mode: str = DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
 ) -> None:
     scaffold_path = scaffold_path.resolve()
     target_audio_path = target_audio_path.resolve()
@@ -94,9 +132,12 @@ def build_offline_mvp_nores_vocoder_training_package(
     branch_scaffold = dict(payload["branch_scaffold"])
     periodic_branch_features = branch_scaffold["periodic_branch_features"].to(torch.float32)
     noise_branch_features = branch_scaffold["noise_branch_features"].to(torch.float32)
+    periodic_feature_semantics = list(branch_scaffold.get("periodic_feature_semantics", []))
+    noise_feature_semantics = list(branch_scaffold.get("noise_feature_semantics", []))
     available_controls = dict(payload["available_controls"])
     frame_count = int(payload["frame_count"])
     has_v2_core = scaffold_version == "offline_teacher_vocoder_input_scaffold_v2"
+    resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
 
     waveform, actual_sample_rate = load_waveform(target_audio_path)
     if int(actual_sample_rate) != int(resolved_sample_rate):
@@ -161,6 +202,49 @@ def build_offline_mvp_nores_vocoder_training_package(
             )
         }
     )
+    target_timing_semantic_overview = build_record_timing_semantic_overview(
+        {
+            "target_event_timing_semantic_sidecar": (
+                dict(target_event_timing_semantic_sidecar)
+                if isinstance(target_event_timing_semantic_sidecar, dict)
+                else None
+            )
+        }
+    )
+    source_semantic_parity_overview = build_record_source_semantic_parity_overview(
+        {
+            "source_semantic_parity_sidecar": (
+                dict(source_semantic_parity_sidecar)
+                if isinstance(source_semantic_parity_sidecar, dict)
+                else None
+            )
+        }
+    )
+    semantic_consumer = build_stage5_semantic_consumer_features(
+        target_event_semantic_sidecar=(
+            dict(target_event_semantic_sidecar)
+            if isinstance(target_event_semantic_sidecar, dict)
+            else None
+        ),
+        target_event_timing_semantic_sidecar=(
+            dict(target_event_timing_semantic_sidecar)
+            if isinstance(target_event_timing_semantic_sidecar, dict)
+            else None
+        ),
+        frame_count=frame_count,
+        mode=resolved_semantic_consumer_mode,
+    )
+    if int(semantic_consumer["feature_dim"]) > 0:
+        periodic_branch_features = torch.cat(
+            [periodic_branch_features, semantic_consumer["periodic_broadcast_features"]],
+            dim=-1,
+        )
+        noise_branch_features = torch.cat(
+            [noise_branch_features, semantic_consumer["noise_broadcast_features"]],
+            dim=-1,
+        )
+        periodic_feature_semantics.append(str(semantic_consumer["semantic_tag"]))
+        noise_feature_semantics.append(str(semantic_consumer["semantic_tag"]))
 
     training_payload = {
         "training_package_version": training_package_version,
@@ -173,7 +257,20 @@ def build_offline_mvp_nores_vocoder_training_package(
             if not isinstance(target_event_semantic_sidecar, dict)
             else dict(target_event_semantic_sidecar)
         ),
+        "target_event_timing_semantic_sidecar": (
+            None
+            if not isinstance(target_event_timing_semantic_sidecar, dict)
+            else dict(target_event_timing_semantic_sidecar)
+        ),
+        "source_semantic_parity_sidecar": (
+            None
+            if not isinstance(source_semantic_parity_sidecar, dict)
+            else dict(source_semantic_parity_sidecar)
+        ),
         "target_semantic_overview": target_semantic_overview,
+        "target_timing_semantic_overview": target_timing_semantic_overview,
+        "source_semantic_parity_overview": source_semantic_parity_overview,
+        "semantic_consumer": dict(semantic_consumer["summary"]),
         "frame_count": frame_count,
         "runtime": {
             "sample_rate": int(resolved_sample_rate),
@@ -183,6 +280,10 @@ def build_offline_mvp_nores_vocoder_training_package(
         "inputs": {
             "periodic_branch_features": periodic_branch_features,
             "noise_branch_features": noise_branch_features,
+        },
+        "input_semantics": {
+            "periodic_feature_semantics": periodic_feature_semantics,
+            "noise_feature_semantics": noise_feature_semantics,
         },
         "targets": {
             "harmonic_envelope_target": harmonic_target,
@@ -204,6 +305,11 @@ def build_offline_mvp_nores_vocoder_training_package(
         "source_audio_path": payload.get("source_audio_path"),
         "target_event_semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
         "target_semantic_overview": target_semantic_overview,
+        "target_event_timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+        "target_timing_semantic_overview": target_timing_semantic_overview,
+        "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+        "source_semantic_parity_overview": source_semantic_parity_overview,
+        "semantic_consumer": dict(semantic_consumer["summary"]),
         "runtime": training_payload["runtime"],
         "frame_count": frame_count,
         "aligned_waveform_samples": int(aligned_waveform.shape[0]),
@@ -793,6 +899,9 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     selection_mode: str,
     skip_existing: bool,
     target_event_semantic_sidecar_path: Path | None = None,
+    target_event_timing_semantic_sidecar_path: Path | None = None,
+    source_semantic_parity_sidecar_path: Path | None = None,
+    semantic_consumer_mode: str = DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
 ) -> None:
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -815,7 +924,20 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         train_split_path=resolved_train_split_path,
         validation_split_path=resolved_validation_split_path,
     )
+    resolved_target_event_timing_semantic_sidecar_path = resolve_target_event_timing_semantic_sidecar_path_for_stage5(
+        target_event_timing_semantic_sidecar_path=target_event_timing_semantic_sidecar_path,
+        train_split_path=resolved_train_split_path,
+        validation_split_path=resolved_validation_split_path,
+    )
+    resolved_source_semantic_parity_sidecar_path = resolve_source_semantic_parity_sidecar_path_for_stage5(
+        source_semantic_parity_sidecar_path=source_semantic_parity_sidecar_path,
+        train_split_path=resolved_train_split_path,
+        validation_split_path=resolved_validation_split_path,
+    )
+    resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
     semantic_sidecar_map = None
+    timing_semantic_sidecar_map = None
+    source_semantic_parity_sidecar_map = None
     if resolved_target_event_semantic_sidecar_path is not None:
         if not resolved_target_event_semantic_sidecar_path.exists():
             raise ValueError(
@@ -824,6 +946,24 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             )
         semantic_sidecar_map = load_target_event_semantic_sidecar_map(
             resolved_target_event_semantic_sidecar_path
+        )
+    if resolved_target_event_timing_semantic_sidecar_path is not None:
+        if not resolved_target_event_timing_semantic_sidecar_path.exists():
+            raise ValueError(
+                "target_event_timing_semantic_sidecar_path not found: "
+                f"{resolved_target_event_timing_semantic_sidecar_path}"
+            )
+        timing_semantic_sidecar_map = load_target_event_timing_semantic_sidecar_map(
+            resolved_target_event_timing_semantic_sidecar_path
+        )
+    if resolved_source_semantic_parity_sidecar_path is not None:
+        if not resolved_source_semantic_parity_sidecar_path.exists():
+            raise ValueError(
+                "source_semantic_parity_sidecar_path not found: "
+                f"{resolved_source_semantic_parity_sidecar_path}"
+            )
+        source_semantic_parity_sidecar_map = load_paired_parallel_source_semantic_parity_sidecar_map(
+            resolved_source_semantic_parity_sidecar_path
         )
 
     if resolved_train_pair_spec_path is not None:
@@ -867,6 +1007,9 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         split_name="train",
         packages_dir=packages_dir,
         semantic_sidecar_map=semantic_sidecar_map,
+        timing_semantic_sidecar_map=timing_semantic_sidecar_map,
+        source_semantic_parity_sidecar_map=source_semantic_parity_sidecar_map,
+        semantic_consumer_mode=resolved_semantic_consumer_mode,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -882,6 +1025,9 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         split_name="validation",
         packages_dir=packages_dir,
         semantic_sidecar_map=semantic_sidecar_map,
+        timing_semantic_sidecar_map=timing_semantic_sidecar_map,
+        source_semantic_parity_sidecar_map=source_semantic_parity_sidecar_map,
+        semantic_consumer_mode=resolved_semantic_consumer_mode,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -919,6 +1065,17 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             if resolved_target_event_semantic_sidecar_path is None
             else resolved_target_event_semantic_sidecar_path.as_posix()
         ),
+        "target_event_timing_semantic_sidecar_path": (
+            None
+            if resolved_target_event_timing_semantic_sidecar_path is None
+            else resolved_target_event_timing_semantic_sidecar_path.as_posix()
+        ),
+        "source_semantic_parity_sidecar_path": (
+            None
+            if resolved_source_semantic_parity_sidecar_path is None
+            else resolved_source_semantic_parity_sidecar_path.as_posix()
+        ),
+        "semantic_consumer_mode": resolved_semantic_consumer_mode,
         "train_packages": train_entries,
         "validation_packages": validation_entries,
         "notes": [
@@ -930,6 +1087,9 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
                 "while aligned waveform targets come from target_audio_path."
             ),
             "When available, target_event_semantic_sidecar is attached by target_record_id and summarized in package/index metadata.",
+            "When available, target_event_timing_semantic_sidecar is attached by target_record_id and summarized in package/index metadata.",
+            "When available, paired_parallel_source_semantic_parity_sidecar is attached by source_record_id and summarized in package/index metadata.",
+            "semantic_consumer_mode controls whether target-side semantic sidecar remains metadata only or is broadcast into Stage5 branch features as a forward-path consumer.",
         ],
     }
     index_payload["summary"] = summarize_dataset_package_index(
@@ -1524,6 +1684,229 @@ def resolve_stage5_semantic_supervision_config(
     return effective
 
 
+def normalize_stage5_semantic_consumer_mode(mode: str) -> str:
+    normalized = str(mode).strip().lower()
+    if normalized not in SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES:
+        raise ValueError(
+            f"Unsupported Stage5 semantic_consumer_mode: {mode!r}. "
+            f"Expected one of {sorted(SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES)}."
+        )
+    return normalized
+
+
+def build_stage5_target_sidecar_broadcast_feature_values(
+    target_event_semantic_sidecar: dict[str, object] | None,
+) -> list[float]:
+    if not isinstance(target_event_semantic_sidecar, dict):
+        return [0.0 for _ in STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES]
+    semantic_scope = (
+        dict(target_event_semantic_sidecar.get("semantic_scope", {}))
+        if isinstance(target_event_semantic_sidecar.get("semantic_scope"), dict)
+        else {}
+    )
+    text_semantics = (
+        dict(target_event_semantic_sidecar.get("text_semantics", {}))
+        if isinstance(target_event_semantic_sidecar.get("text_semantics"), dict)
+        else {}
+    )
+    boundary_semantics = (
+        dict(target_event_semantic_sidecar.get("boundary_semantics", {}))
+        if isinstance(target_event_semantic_sidecar.get("boundary_semantics"), dict)
+        else {}
+    )
+    utterance_semantics = (
+        dict(target_event_semantic_sidecar.get("utterance_structure_semantics", {}))
+        if isinstance(target_event_semantic_sidecar.get("utterance_structure_semantics"), dict)
+        else {}
+    )
+    structure_type = str(utterance_semantics.get("utterance_structure_type", "unknown"))
+    lexical_char_count = int(text_semantics.get("lexical_char_count", 0))
+    clause_count = int(utterance_semantics.get("clause_count", 0))
+    pause_boundary_count = int(boundary_semantics.get("pause_boundary_count", 0))
+    terminal_boundary_count = int(boundary_semantics.get("terminal_boundary_count", 0))
+    return [
+        1.0 if bool(semantic_scope.get("clean_text_available", False)) else 0.0,
+        1.0 if bool(text_semantics.get("nonverbal_only", False)) else 0.0,
+        min(max(float(lexical_char_count), 0.0), 32.0) / 32.0,
+        min(max(float(clause_count), 0.0), 4.0) / 4.0,
+        min(max(float(pause_boundary_count), 0.0), 3.0) / 3.0,
+        min(max(float(terminal_boundary_count), 0.0), 2.0) / 2.0,
+        1.0 if structure_type == "single_clause_terminal" else 0.0,
+        1.0 if structure_type == "multi_clause_single_terminal" else 0.0,
+        1.0 if structure_type == "multi_terminal" else 0.0,
+    ]
+
+
+def build_stage5_target_timing_sidecar_feature_tensors(
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    frame_count: int,
+) -> tuple[torch.Tensor, dict[str, object]]:
+    feature_dim = len(STAGE5_TARGET_TIMING_SIDECAR_FEATURE_NAMES)
+    resolved_frame_count = max(1, int(frame_count))
+    features = torch.zeros((resolved_frame_count, feature_dim), dtype=torch.float32)
+    if resolved_frame_count > 1:
+        features[:, 6] = torch.linspace(0.0, 1.0, resolved_frame_count, dtype=torch.float32)
+    if not isinstance(target_event_timing_semantic_sidecar, dict):
+        return features, {
+            "feature_source": "zeros_missing_timing_sidecar",
+            "timeline_event_count": 0,
+            "clause_region_count": 0,
+            "pause_boundary_event_count": 0,
+            "terminal_boundary_event_count": 0,
+        }
+
+    time_aware_semantics = (
+        dict(target_event_timing_semantic_sidecar.get("time_aware_semantics", {}))
+        if isinstance(target_event_timing_semantic_sidecar.get("time_aware_semantics"), dict)
+        else {}
+    )
+    clause_regions = (
+        list(time_aware_semantics.get("clause_regions", []))
+        if isinstance(time_aware_semantics.get("clause_regions"), list)
+        else []
+    )
+    boundary_events = (
+        list(time_aware_semantics.get("boundary_events", []))
+        if isinstance(time_aware_semantics.get("boundary_events"), list)
+        else []
+    )
+    timeline_events = (
+        list(time_aware_semantics.get("timeline_events", []))
+        if isinstance(time_aware_semantics.get("timeline_events"), list)
+        else []
+    )
+    pause_boundary_event_count = 0
+    terminal_boundary_event_count = 0
+
+    for clause in clause_regions:
+        start_index = min(resolved_frame_count - 1, max(0, int(clause.get("frame_start_index", 0))))
+        end_index = min(
+            resolved_frame_count - 1,
+            max(start_index, int(clause.get("frame_end_index", start_index))),
+        )
+        frame_span = max(1, end_index - start_index + 1)
+        features[start_index : end_index + 1, 0] = 1.0
+        clause_role = str(clause.get("clause_role", "unknown"))
+        if clause_role == "single":
+            features[start_index : end_index + 1, 1] = 1.0
+        elif clause_role == "initial":
+            features[start_index : end_index + 1, 2] = 1.0
+        elif clause_role == "middle":
+            features[start_index : end_index + 1, 3] = 1.0
+        elif clause_role == "final":
+            features[start_index : end_index + 1, 4] = 1.0
+        if frame_span == 1:
+            features[start_index : end_index + 1, 5] = 1.0
+        else:
+            features[start_index : end_index + 1, 5] = torch.linspace(
+                0.0,
+                1.0,
+                frame_span,
+                dtype=torch.float32,
+            )
+
+    for event in boundary_events:
+        event_type = str(event.get("event_type", "unknown"))
+        start_index = min(resolved_frame_count - 1, max(0, int(event.get("frame_start_index", 0))))
+        end_index = min(
+            resolved_frame_count - 1,
+            max(start_index, int(event.get("frame_end_index", start_index))),
+        )
+        if event_type == "pause_boundary_window":
+            features[start_index : end_index + 1, 7] = 1.0
+            pause_boundary_event_count += 1
+        elif event_type == "terminal_boundary_window":
+            features[start_index : end_index + 1, 8] = 1.0
+            terminal_boundary_event_count += 1
+    features[:, 9] = torch.maximum(features[:, 7], features[:, 8])
+    return features, {
+        "feature_source": "target_event_timing_semantic_sidecar",
+        "timeline_event_count": len(timeline_events),
+        "clause_region_count": len(clause_regions),
+        "pause_boundary_event_count": pause_boundary_event_count,
+        "terminal_boundary_event_count": terminal_boundary_event_count,
+    }
+
+
+def build_stage5_semantic_consumer_features(
+    *,
+    target_event_semantic_sidecar: dict[str, object] | None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    frame_count: int,
+    mode: str,
+) -> dict[str, object]:
+    resolved_mode = normalize_stage5_semantic_consumer_mode(mode)
+    if resolved_mode == "none":
+        empty = torch.zeros((int(frame_count), 0), dtype=torch.float32)
+        return {
+            "feature_dim": 0,
+            "semantic_tag": "target_semantic_consumer_none",
+            "periodic_broadcast_features": empty,
+            "noise_broadcast_features": empty,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "target_semantic_consumer_none",
+                "feature_dim": 0,
+                "feature_names": [],
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "feature_source": "disabled",
+                "feature_values": [],
+            },
+        }
+    if resolved_mode == "target_sidecar_broadcast_v1":
+        feature_names = list(STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES)
+        values = build_stage5_target_sidecar_broadcast_feature_values(target_event_semantic_sidecar)
+        feature_tensor = torch.tensor(values, dtype=torch.float32).view(1, -1).expand(int(frame_count), -1).contiguous()
+        feature_source = (
+            "target_event_semantic_sidecar"
+            if isinstance(target_event_semantic_sidecar, dict)
+            else "zeros_missing_sidecar"
+        )
+        return {
+            "feature_dim": int(feature_tensor.shape[-1]),
+            "semantic_tag": "target_semantic_broadcast_v1",
+            "periodic_broadcast_features": feature_tensor,
+            "noise_broadcast_features": feature_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "target_semantic_broadcast_v1",
+                "feature_dim": int(feature_tensor.shape[-1]),
+                "feature_names": feature_names,
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "feature_source": feature_source,
+                "feature_values": [round(float(item), 6) for item in values],
+            },
+        }
+
+    feature_names = list(STAGE5_TARGET_TIMING_SIDECAR_FEATURE_NAMES)
+    feature_tensor, timing_summary = build_stage5_target_timing_sidecar_feature_tensors(
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        frame_count=int(frame_count),
+    )
+    return {
+        "feature_dim": int(feature_tensor.shape[-1]),
+        "semantic_tag": "target_timing_sidecar_framewise_v1",
+        "periodic_broadcast_features": feature_tensor,
+        "noise_broadcast_features": feature_tensor,
+        "summary": {
+            "semantic_consumer_mode": resolved_mode,
+            "semantic_tag": "target_timing_sidecar_framewise_v1",
+            "feature_dim": int(feature_tensor.shape[-1]),
+            "feature_names": feature_names,
+            "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+            "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+            "feature_source": timing_summary["feature_source"],
+            "timing_timeline_event_count": int(timing_summary["timeline_event_count"]),
+            "timing_clause_region_count": int(timing_summary["clause_region_count"]),
+            "timing_pause_boundary_event_count": int(timing_summary["pause_boundary_event_count"]),
+            "timing_terminal_boundary_event_count": int(timing_summary["terminal_boundary_event_count"]),
+            "feature_values": [],
+        },
+    }
+
+
 def resolve_target_event_semantic_sidecar_path_for_stage5(
     target_event_semantic_sidecar_path: Path | None,
     train_split_path: Path | None,
@@ -1535,6 +1918,38 @@ def resolve_target_event_semantic_sidecar_path_for_stage5(
         if split_path is None:
             continue
         inferred = infer_target_event_semantic_sidecar_path(split_path.resolve().parent)
+        if inferred is not None and inferred.exists():
+            return inferred.resolve()
+    return None
+
+
+def resolve_target_event_timing_semantic_sidecar_path_for_stage5(
+    target_event_timing_semantic_sidecar_path: Path | None,
+    train_split_path: Path | None,
+    validation_split_path: Path | None,
+) -> Path | None:
+    if target_event_timing_semantic_sidecar_path is not None:
+        return target_event_timing_semantic_sidecar_path.resolve()
+    for split_path in (train_split_path, validation_split_path):
+        if split_path is None:
+            continue
+        inferred = infer_target_event_timing_semantic_sidecar_path(split_path.resolve().parent)
+        if inferred is not None and inferred.exists():
+            return inferred.resolve()
+    return None
+
+
+def resolve_source_semantic_parity_sidecar_path_for_stage5(
+    source_semantic_parity_sidecar_path: Path | None,
+    train_split_path: Path | None,
+    validation_split_path: Path | None,
+) -> Path | None:
+    if source_semantic_parity_sidecar_path is not None:
+        return source_semantic_parity_sidecar_path.resolve()
+    for split_path in (train_split_path, validation_split_path):
+        if split_path is None:
+            continue
+        inferred = infer_paired_parallel_source_semantic_parity_sidecar_path(split_path.resolve().parent)
         if inferred is not None and inferred.exists():
             return inferred.resolve()
     return None
@@ -1653,6 +2068,68 @@ def summarize_stage5_package_semantics(entries: list[dict[str, object]]) -> dict
     }
 
 
+def summarize_stage5_package_timing_semantics(entries: list[dict[str, object]]) -> dict[str, object]:
+    present_count = 0
+    contract_counts: dict[str, int] = {}
+    alignment_counts: dict[str, int] = {}
+    label_status_counts: dict[str, int] = {}
+    total_timeline_event_count = 0
+    for entry in entries:
+        timing_overview = entry.get("target_timing_semantic_overview")
+        if not isinstance(timing_overview, dict):
+            continue
+        if str(timing_overview.get("timing_source", "missing")) == "missing":
+            continue
+        present_count += 1
+        contract_key = str(timing_overview.get("timing_contract_version", "unknown"))
+        alignment_key = str(timing_overview.get("timing_alignment_type", "unknown"))
+        label_key = str(timing_overview.get("timing_label_status", "unknown"))
+        total_timeline_event_count += int(timing_overview.get("timeline_event_count", 0))
+        contract_counts[contract_key] = contract_counts.get(contract_key, 0) + 1
+        alignment_counts[alignment_key] = alignment_counts.get(alignment_key, 0) + 1
+        label_status_counts[label_key] = label_status_counts.get(label_key, 0) + 1
+    count = max(1, present_count)
+    return {
+        "present_count": int(present_count),
+        "missing_count": max(0, len(entries) - present_count),
+        "timing_contract_version_counts": dict(sorted(contract_counts.items())),
+        "timing_alignment_type_counts": dict(sorted(alignment_counts.items())),
+        "timing_label_status_counts": dict(sorted(label_status_counts.items())),
+        "timeline_event_count_mean": round(total_timeline_event_count / count, 6) if present_count else 0.0,
+    }
+
+
+def summarize_stage5_package_source_semantic_parity(entries: list[dict[str, object]]) -> dict[str, object]:
+    present_count = 0
+    contract_counts: dict[str, int] = {}
+    status_counts: dict[str, int] = {}
+    structure_counts: dict[str, int] = {}
+    ready_count = 0
+    for entry in entries:
+        parity_overview = entry.get("source_semantic_parity_overview")
+        if not isinstance(parity_overview, dict):
+            continue
+        if str(parity_overview.get("parity_source", "missing")) == "missing":
+            continue
+        present_count += 1
+        contract_key = str(parity_overview.get("parity_contract_version", "unknown"))
+        status_key = str(parity_overview.get("parity_status", "unknown"))
+        structure_key = str(parity_overview.get("parity_utterance_structure_type", "unknown"))
+        if bool(parity_overview.get("semantic_ready_for_source_side_bootstrap", False)):
+            ready_count += 1
+        contract_counts[contract_key] = contract_counts.get(contract_key, 0) + 1
+        status_counts[status_key] = status_counts.get(status_key, 0) + 1
+        structure_counts[structure_key] = structure_counts.get(structure_key, 0) + 1
+    return {
+        "present_count": int(present_count),
+        "missing_count": max(0, len(entries) - present_count),
+        "semantic_ready_for_source_side_bootstrap_count": int(ready_count),
+        "parity_contract_version_counts": dict(sorted(contract_counts.items())),
+        "parity_status_counts": dict(sorted(status_counts.items())),
+        "parity_utterance_structure_type_counts": dict(sorted(structure_counts.items())),
+    }
+
+
 def summarize_stage5_semantic_weighting(package_metrics: list[dict[str, object]]) -> dict[str, object]:
     if not package_metrics:
         return {
@@ -1751,6 +2228,9 @@ def build_dataset_packages_for_split(
     split_name: str,
     packages_dir: Path,
     semantic_sidecar_map: dict[str, dict[str, object]] | None,
+    timing_semantic_sidecar_map: dict[str, dict[str, object]] | None,
+    source_semantic_parity_sidecar_map: dict[str, dict[str, object]] | None,
+    semantic_consumer_mode: str,
     route_handoff_path: Path | None,
     checkpoint_path: Path | None,
     calibration_asset_path: Path | None,
@@ -1774,9 +2254,16 @@ def build_dataset_packages_for_split(
         targets_dir = record_dir / "train_targets"
         package_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.pt"
         target_record_id = str(resolved_paths.get("target_record_id") or record_id)
+        source_record_id = str(resolved_paths.get("source_record_id") or record_id)
         target_event_semantic_sidecar = None
+        target_event_timing_semantic_sidecar = None
+        source_semantic_parity_sidecar = None
         if semantic_sidecar_map is not None:
             target_event_semantic_sidecar = semantic_sidecar_map.get(target_record_id)
+        if timing_semantic_sidecar_map is not None:
+            target_event_timing_semantic_sidecar = timing_semantic_sidecar_map.get(target_record_id)
+        if source_semantic_parity_sidecar_map is not None:
+            source_semantic_parity_sidecar = source_semantic_parity_sidecar_map.get(source_record_id)
         package_reused = bool(skip_existing and package_path.exists())
         if package_reused:
             existing_payload = load_training_package_payload(package_path)
@@ -1784,6 +2271,19 @@ def build_dataset_packages_for_split(
                 isinstance(target_event_semantic_sidecar, dict)
                 and not isinstance(existing_payload.get("target_event_semantic_sidecar"), dict)
             ):
+                package_reused = False
+            if (
+                isinstance(target_event_timing_semantic_sidecar, dict)
+                and not isinstance(existing_payload.get("target_event_timing_semantic_sidecar"), dict)
+            ):
+                package_reused = False
+            if (
+                isinstance(source_semantic_parity_sidecar, dict)
+                and not isinstance(existing_payload.get("source_semantic_parity_sidecar"), dict)
+            ):
+                package_reused = False
+            existing_semantic_consumer = dict(existing_payload.get("semantic_consumer", {}))
+            if str(existing_semantic_consumer.get("semantic_consumer_mode", "none")) != str(semantic_consumer_mode):
                 package_reused = False
         if not package_reused:
             export_offline_mvp_teacher_downstream_contract(
@@ -1812,6 +2312,9 @@ def build_dataset_packages_for_split(
                 frame_length=None,
                 hop_length=None,
                 target_event_semantic_sidecar=target_event_semantic_sidecar,
+                target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+                source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+                semantic_consumer_mode=semantic_consumer_mode,
             )
         package_payload = load_training_package_payload(package_path)
         package_build_sec = perf_counter() - record_started_perf
@@ -1834,6 +2337,19 @@ def build_dataset_packages_for_split(
                     isinstance(package_payload.get("target_event_semantic_sidecar"), dict)
                 ),
                 "target_semantic_overview": dict(package_payload.get("target_semantic_overview", {})),
+                "target_event_timing_semantic_sidecar_present": bool(
+                    isinstance(package_payload.get("target_event_timing_semantic_sidecar"), dict)
+                ),
+                "target_timing_semantic_overview": dict(
+                    package_payload.get("target_timing_semantic_overview", {})
+                ),
+                "source_semantic_parity_sidecar_present": bool(
+                    isinstance(package_payload.get("source_semantic_parity_sidecar"), dict)
+                ),
+                "source_semantic_parity_overview": dict(
+                    package_payload.get("source_semantic_parity_overview", {})
+                ),
+                "semantic_consumer": dict(package_payload.get("semantic_consumer", {})),
                 "frame_count": int(package_payload["frame_count"]),
                 "periodic_input_dim": int(package_payload["inputs"]["periodic_branch_features"].shape[-1]),
                 "noise_input_dim": int(package_payload["inputs"]["noise_branch_features"].shape[-1]),
@@ -1909,6 +2425,8 @@ def summarize_dataset_package_index(
                 and len(noise_target_dims) <= 1
             ),
             "semantic_sidecar_summary": summarize_stage5_package_semantics(entries),
+            "timing_semantic_sidecar_summary": summarize_stage5_package_timing_semantics(entries),
+            "source_semantic_parity_summary": summarize_stage5_package_source_semantic_parity(entries),
         }
 
     train_summary = summarize_split(train_packages)
@@ -3051,6 +3569,11 @@ def build_training_package_markdown(summary: dict[str, object]) -> str:
         f"- source_audio_path: {summary['source_audio_path']}",
         f"- target_event_semantic_sidecar_present: {summary.get('target_event_semantic_sidecar_present', False)}",
         f"- target_semantic_overview: {json.dumps(summary.get('target_semantic_overview', {}), ensure_ascii=False)}",
+        f"- target_event_timing_semantic_sidecar_present: {summary.get('target_event_timing_semantic_sidecar_present', False)}",
+        f"- target_timing_semantic_overview: {json.dumps(summary.get('target_timing_semantic_overview', {}), ensure_ascii=False)}",
+        f"- source_semantic_parity_sidecar_present: {summary.get('source_semantic_parity_sidecar_present', False)}",
+        f"- source_semantic_parity_overview: {json.dumps(summary.get('source_semantic_parity_overview', {}), ensure_ascii=False)}",
+        f"- semantic_consumer: {json.dumps(summary.get('semantic_consumer', {}), ensure_ascii=False)}",
         f"- runtime: {json.dumps(summary['runtime'], ensure_ascii=False)}",
         f"- frame_count: {summary['frame_count']}",
         f"- aligned_waveform_samples: {summary['aligned_waveform_samples']}",
@@ -3143,6 +3666,9 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         f"- train_pair_spec_path: {summary.get('train_pair_spec_path')}",
         f"- validation_pair_spec_path: {summary.get('validation_pair_spec_path')}",
         f"- target_event_semantic_sidecar_path: {summary.get('target_event_semantic_sidecar_path')}",
+        f"- target_event_timing_semantic_sidecar_path: {summary.get('target_event_timing_semantic_sidecar_path')}",
+        f"- source_semantic_parity_sidecar_path: {summary.get('source_semantic_parity_sidecar_path')}",
+        f"- semantic_consumer_mode: {summary.get('semantic_consumer_mode')}",
         f"- summary: {json.dumps(summary['summary'], ensure_ascii=False)}",
         "",
         "## Train Packages",
@@ -3156,6 +3682,11 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
             f"target_audio_path={entry.get('target_audio_path')} "
             f"target_event_semantic_sidecar_present={entry.get('target_event_semantic_sidecar_present', False)} "
             f"target_semantic_overview={json.dumps(entry.get('target_semantic_overview', {}), ensure_ascii=False)} "
+            f"target_event_timing_semantic_sidecar_present={entry.get('target_event_timing_semantic_sidecar_present', False)} "
+            f"target_timing_semantic_overview={json.dumps(entry.get('target_timing_semantic_overview', {}), ensure_ascii=False)} "
+            f"source_semantic_parity_sidecar_present={entry.get('source_semantic_parity_sidecar_present', False)} "
+            f"source_semantic_parity_overview={json.dumps(entry.get('source_semantic_parity_overview', {}), ensure_ascii=False)} "
+            f"semantic_consumer={json.dumps(entry.get('semantic_consumer', {}), ensure_ascii=False)} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "
@@ -3175,6 +3706,11 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
             f"target_audio_path={entry.get('target_audio_path')} "
             f"target_event_semantic_sidecar_present={entry.get('target_event_semantic_sidecar_present', False)} "
             f"target_semantic_overview={json.dumps(entry.get('target_semantic_overview', {}), ensure_ascii=False)} "
+            f"target_event_timing_semantic_sidecar_present={entry.get('target_event_timing_semantic_sidecar_present', False)} "
+            f"target_timing_semantic_overview={json.dumps(entry.get('target_timing_semantic_overview', {}), ensure_ascii=False)} "
+            f"source_semantic_parity_sidecar_present={entry.get('source_semantic_parity_sidecar_present', False)} "
+            f"source_semantic_parity_overview={json.dumps(entry.get('source_semantic_parity_overview', {}), ensure_ascii=False)} "
+            f"semantic_consumer={json.dumps(entry.get('semantic_consumer', {}), ensure_ascii=False)} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "

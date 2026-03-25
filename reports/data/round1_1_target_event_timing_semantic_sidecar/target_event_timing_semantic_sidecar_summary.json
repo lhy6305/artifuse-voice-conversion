@@ -1,0 +1,95 @@
+{
+  "weak_event_hints_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+  "target_event_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl",
+  "semantic_contract_version": "target_event_timing_semantic_sidecar_v1",
+  "semantic_label_space_version": "target_weak_time_aligned_semantics_v1",
+  "timing_alignment_type": "weak_punctuation_lexical_progress_v1",
+  "boundary_half_width_frames": 2,
+  "record_count": 666,
+  "split_counts": {
+    "target_special_eval": 8,
+    "target_train": 592,
+    "target_validation": 66
+  },
+  "inventory_status_counts": {
+    "matched_semantic_sidecar": 666
+  },
+  "utterance_structure_type_counts": {
+    "multi_clause_single_terminal": 307,
+    "multi_terminal": 174,
+    "nonverbal": 8,
+    "other": 111,
+    "single_clause_terminal": 66
+  },
+  "future_label_status_counts": {
+    "pending_upgrade": 666
+  },
+  "clause_role_counts": {
+    "final": 557,
+    "initial": 557,
+    "middle": 790,
+    "single": 101
+  },
+  "boundary_symbol_type_counts": {
+    "pause_colon": 2,
+    "pause_comma": 1238,
+    "pause_enumeration": 36,
+    "terminal_exclamation": 77,
+    "terminal_period": 488,
+    "terminal_question": 178
+  },
+  "weak_time_alignment_ready_for_target_side_bootstrap_count": 658,
+  "estimated_frame_count_stats": {
+    "count": 666,
+    "min": 61,
+    "max": 7025,
+    "mean": 1678.869369
+  },
+  "clause_region_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 10,
+    "mean": 3.010511
+  },
+  "pause_boundary_event_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 9,
+    "mean": 1.915916
+  },
+  "terminal_boundary_event_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 4,
+    "mean": 1.115616
+  },
+  "timeline_event_count_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 20,
+    "mean": 6.042042
+  },
+  "clause_region_coverage_frames_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 7025,
+    "mean": 1675.393393
+  },
+  "pause_boundary_window_coverage_frames_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 45,
+    "mean": 9.045045
+  },
+  "terminal_boundary_window_coverage_frames_stats": {
+    "count": 666,
+    "min": 0,
+    "max": 18,
+    "mean": 4.115616
+  },
+  "notes": [
+    "这份 timing sidecar 只把现有 target-side 弱边界与 clause spans 组织成稀疏时序资产，不生成逐帧 dense float 数组。",
+    "当前 frame 索引仍来自文本标点与 lexical progress 的弱估计，不是 forced alignment。",
+    "它的定位是 design-state e_evt 之前的 target-side time-aware bridge，不应误写成完整 e_evt 合同已完成。"
+  ]
+}

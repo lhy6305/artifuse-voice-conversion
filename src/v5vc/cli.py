@@ -22,6 +22,8 @@ from v5vc.checkpoint_series_eval import evaluate_offline_mvp_checkpoint_series
 from v5vc.data_scan import scan_project_data
 from v5vc.eval_baseline import evaluate_round1_baseline
 from v5vc.event_semantics import (
+    build_paired_parallel_source_semantic_parity_sidecar,
+    build_target_event_timing_semantic_sidecar,
     build_target_event_semantic_sidecar,
 )
 from v5vc.event_target_analysis import analyze_offline_mvp_event_targets
@@ -2621,6 +2623,32 @@ def build_parser() -> argparse.ArgumentParser:
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(
+        "--target-event-timing-semantic-sidecar",
+        type=Path,
+        default=None,
+        help=(
+            "Optional target_event_timing_semantic_sidecar jsonl. When omitted, Stage5 will infer the standard "
+            "round1_1 timing sidecar from the split directory when available."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
+        "--source-semantic-parity-sidecar",
+        type=Path,
+        default=None,
+        help=(
+            "Optional paired_parallel_source_semantic_parity_sidecar jsonl. When omitted, Stage5 will infer the "
+            "standard round1_1 parity sidecar from the split directory when available."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
+        "--semantic-consumer-mode",
+        default="none",
+        help=(
+            "How target_event_semantic_sidecar is consumed during package build: "
+            "none, target_sidecar_broadcast_v1, or target_timing_sidecar_framewise_v1."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
         "--chunk-samples",
         type=int,
         default=None,
@@ -3973,6 +4001,95 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory for target event semantic sidecar reports.",
     )
 
+    event_timing_semantic_sidecar_parser = subparsers.add_parser(
+        "build-target-event-timing-semantic-sidecar",
+        help="Build a sparse frame/event-aware target semantic bridge sidecar from weak boundary/clause timing hints.",
+    )
+    event_timing_semantic_sidecar_parser.add_argument(
+        "--weak-event-hints-path",
+        type=Path,
+        default=Path("data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl"),
+        help="Path to the target-side weak event hints sidecar.",
+    )
+    event_timing_semantic_sidecar_parser.add_argument(
+        "--target-event-semantic-sidecar-path",
+        type=Path,
+        default=Path("data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl"),
+        help="Path to the utterance-level target event semantic sidecar jsonl.",
+    )
+    event_timing_semantic_sidecar_parser.add_argument(
+        "--data-output-dir",
+        type=Path,
+        default=Path("data_prep/round1_1/target_event_timing_semantic_sidecar"),
+        help="Directory for machine-readable target event timing semantic sidecars.",
+    )
+    event_timing_semantic_sidecar_parser.add_argument(
+        "--report-output-dir",
+        type=Path,
+        default=Path("reports/data/round1_1_target_event_timing_semantic_sidecar"),
+        help="Directory for target event timing semantic sidecar reports.",
+    )
+    event_timing_semantic_sidecar_parser.add_argument(
+        "--boundary-half-width-frames",
+        type=int,
+        default=2,
+        help="Half width for sparse boundary windows around weak boundary frame indices.",
+    )
+
+    paired_parallel_source_parity_parser = subparsers.add_parser(
+        "build-paired-parallel-source-semantic-parity-sidecar",
+        help="Build a source-side parity bootstrap semantic sidecar by transferring paired target semantic/timing assets onto source frame axes.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--pair-spec-path",
+        type=Path,
+        action="append",
+        default=None,
+        help="Paired source-to-target jsonl. Repeat this flag to include multiple pair-spec files.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--target-event-semantic-sidecar-path",
+        type=Path,
+        default=Path("data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl"),
+        help="Path to the target-side utterance semantic sidecar jsonl.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--target-event-timing-semantic-sidecar-path",
+        type=Path,
+        default=Path("data_prep/round1_1/target_event_timing_semantic_sidecar/target_event_timing_semantic_sidecar.jsonl"),
+        help="Path to the target-side timing semantic sidecar jsonl.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--data-output-dir",
+        type=Path,
+        default=Path("data_prep/round1_1/paired_parallel_source_semantic_parity_sidecar"),
+        help="Directory for machine-readable source-side parity semantic sidecars.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--report-output-dir",
+        type=Path,
+        default=Path("reports/data/round1_1_paired_parallel_source_semantic_parity_sidecar"),
+        help="Directory for source-side parity semantic reports.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--frame-length",
+        type=int,
+        default=400,
+        help="Frame length used for source-side frame-count estimation.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--hop-length",
+        type=int,
+        default=160,
+        help="Hop length used for source-side frame-count estimation.",
+    )
+    paired_parallel_source_parity_parser.add_argument(
+        "--sample-rate",
+        type=int,
+        default=44100,
+        help="Sample rate used for source-side frame-count estimation.",
+    )
+
     special_supervision_parser = subparsers.add_parser(
         "analyze-round1-target-special-supervision",
         help="Build a target-side special-supervision blueprint from split manifests and weak event hints.",
@@ -4625,6 +4742,9 @@ def main(argv: list[str] | None = None) -> int:
             selection_mode=args.selection_mode,
             skip_existing=bool(args.skip_existing),
             target_event_semantic_sidecar_path=args.target_event_semantic_sidecar,
+            target_event_timing_semantic_sidecar_path=args.target_event_timing_semantic_sidecar,
+            source_semantic_parity_sidecar_path=args.source_semantic_parity_sidecar,
+            semantic_consumer_mode=args.semantic_consumer_mode,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-dataset-training-loop":
@@ -4936,6 +5056,27 @@ def main(argv: list[str] | None = None) -> int:
             target_supervision_inventory_path=args.target_supervision_inventory_path,
             data_output_dir=args.data_output_dir,
             report_output_dir=args.report_output_dir,
+        )
+        return 0
+    if args.command == "build-target-event-timing-semantic-sidecar":
+        build_target_event_timing_semantic_sidecar(
+            weak_event_hints_path=args.weak_event_hints_path,
+            target_event_semantic_sidecar_path=args.target_event_semantic_sidecar_path,
+            data_output_dir=args.data_output_dir,
+            report_output_dir=args.report_output_dir,
+            boundary_half_width_frames=args.boundary_half_width_frames,
+        )
+        return 0
+    if args.command == "build-paired-parallel-source-semantic-parity-sidecar":
+        build_paired_parallel_source_semantic_parity_sidecar(
+            pair_spec_paths=[] if args.pair_spec_path is None else list(args.pair_spec_path),
+            target_event_semantic_sidecar_path=args.target_event_semantic_sidecar_path,
+            target_event_timing_semantic_sidecar_path=args.target_event_timing_semantic_sidecar_path,
+            data_output_dir=args.data_output_dir,
+            report_output_dir=args.report_output_dir,
+            frame_length=args.frame_length,
+            hop_length=args.hop_length,
+            sample_rate=args.sample_rate,
         )
         return 0
     if args.command == "analyze-round1-target-special-supervision":

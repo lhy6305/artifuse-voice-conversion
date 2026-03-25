@@ -13386,3 +13386,297 @@
       consumer
     - 或更复杂的 semantic
       训练结构
+### 426. 对 Stage5 “明显仍是 pure buzz / pure fuzz”的样本，可以上机器做保守自动否定；但机器门禁只能做 negative gate，不能拿来证明样本已经成功
+- 现象:
+  - 这次
+    paired overfit24
+    semantic / baseline
+    两份 validation export
+    都已被人工确认仍是
+    pure buzz / pure fuzz
+  - 同时，
+    target-relative
+    模板塌缩和极端高频偏离指标
+    也都明显越界
+- 风险:
+  - 如果每次都还要再走一轮人工听审，
+    会把大量时间浪费在
+    “机器和人都能一眼否掉”
+    的失败样本上
+  - 但如果反过来把
+    “机器没判废”
+    当成
+    “机器认定已成功”，
+    又会重犯把量化误当听感结论的老问题
+- 处理要求:
+  - 对这类 Stage5
+    输出，
+    允许先用保守的
+    obvious-buzz
+    自动否定门禁
+    过滤
+  - 只要
+    `auto_reject_obvious_buzz`
+    命中，
+    就可以直接判失败
+  - 但若结果只是
+    `review_required`，
+    仍必须保留：
+    - 人工听审
+    - 或更强的正向证据
+  - 换句话说：
+    - 机器可以替代“明确失败”的复读听审
+    - 不能替代“已经成功”的最终确认
+### 427. 当新的 forward-path 候选首次从 `auto_reject_obvious_buzz` 跨到 `review_required` 时，只能把它升级成“值得听”，不能直接写成“已脱离 buzz”
+- 现象:
+  - 这次
+    `target_sidecar_broadcast_v1`
+    首次让 paired overfit24
+    候选从：
+    - `all_records_auto_reject = true`
+    进入：
+    - `all_records_auto_reject = false`
+    - `review_required`
+- 风险:
+  - 如果把这种跨门槛
+    直接写成：
+    - “已经脱离 buzz”
+    - “semantic 主线已成功”
+  - 就会把
+    negative gate
+    的放行条件
+    误当成
+    正向听感结论
+- 处理要求:
+  - 当候选只是从
+    `auto_reject`
+    进入
+    `review_required`
+    时，
+    只能说明：
+    - 它值得进入人工听审池
+  - 在人工确认前，
+    正式表述必须保持为：
+    - 不再是 obvious-buzz
+      自动判废
+    - 但是否真正更像 speech，
+      仍待听审
+### 428. 当 target-side semantic forward consumer 已真实进入 Stage5 forward path、共享指标也改善、甚至跨过 obvious-buzz 机器门禁，但人工听审仍是 pure fuzz 时，应停止 static semantic 变体并上收到时序 `e_evt` 资产层
+- 现象:
+  - 这次
+    `target_sidecar_broadcast_v1`
+    已满足：
+    - semantic 真正进入 forward path
+    - shared metrics 有改善
+    - 机器门禁从
+      `auto_reject`
+      进入
+      `review_required`
+  - 但人工听审仍是：
+    - pure fuzz
+    - 无人声成分
+- 风险:
+  - 如果此时继续做：
+    - 再多几个 utterance-level 特征
+    - 再换一个 broadcast 拼接点
+    - 再试一个 static semantic 小变体
+  - 本质上仍是在错误层级上继续消耗时间
+- 处理要求:
+  - 一旦出现这种组合：
+    - forward-path 已接通
+    - 机器门禁未直接判死
+    - 但听感仍无 speech
+  - 就应把下一步正式上收到：
+    - time-aware / event-aware
+      semantic assets
+    - 更接近 design-state
+      `e_evt`
+      的 consumer 前置条件
+  - 不再继续停留在
+    target-only
+    static semantic
+    变体微调
+### 429. 当 semantic 缺口已经明确是“时序结构缺失”时，应先物化 sparse timing asset，而不是直接生成逐帧 dense JSON 特征
+- 现象:
+  - 当前需要的是：
+    - pause / terminal boundary
+    - clause span
+    的时间结构
+  - 但如果在资产层就直接写：
+    - 大体积逐帧 float 数组
+  - 会过早把未来 consumer
+    的具体表示形式写死
+- 风险:
+  - 资产体积膨胀
+  - 后续 consumer
+    一旦改 label expression，
+    就要重建整批 dense sidecar
+  - 也更容易把“资产层”误做成“某一版 consumer 的私有缓存”
+- 处理要求:
+  - 先把 timing 资产写成：
+    - sparse events
+    - sparse regions
+    - 可审计的 timeline
+  - 让后续不同 consumer
+    自己决定如何 rasterize /
+    embed /
+    aggregate
+### 430. 当 `C1 weak_event_hints` 已经含有 frame 索引时，下一步应直接复用它们生成正式 timing sidecar，而不是在下游 consumer 内重新猜时间位置
+- 现象:
+  - `target_weak_event_hints.jsonl`
+    已包含：
+    - `frame_index`
+    - `frame_start_index`
+    - `frame_end_index`
+  - 但如果没有正式资产层，
+    后续很容易在 consumer
+    里再写一套临时时间估计
+- 风险:
+  - 同一份弱时序语义
+    在不同调用链被重复实现
+  - 不同实现之间的边界定义
+    逐渐漂移
+  - 出问题时难以判断：
+    - 是资产层错
+    - 还是 consumer
+      自己的二次估计错
+- 处理要求:
+  - 一旦确认
+    `C1`
+    已经具备可用 frame 索引，
+    就应优先生成：
+    - 单一正式 timing sidecar
+  - consumer
+    只读这份 sidecar，
+    不再私下重算时间结构
+### 431. 当新语义资产已经生成后，下一步应先把它接入 package/index metadata，再启动 consumer 训练；否则一旦失败，无法分清是 plumbing 问题还是建模问题
+- 现象:
+  - 对新的
+    `target_event_timing_semantic_sidecar`
+    来说，
+    如果直接跳进 consumer 训练，
+    就会把两件事绑在一起：
+    - sidecar 是否真的带进 package
+    - consumer 是否真的学到了东西
+- 风险:
+  - 一旦训练结果继续失败，
+    很难判断：
+    - 是路径没接通
+    - 还是 consumer
+      设计无效
+  - 这会重复之前
+    MRSTFT / semantic
+    线里“先做实验，后补 plumbing 校验”的低效循环
+- 处理要求:
+  - 新 semantic asset
+    进入主线前，
+    先完成：
+    - package attach
+    - index summary
+    - package summary
+    的 metadata plumbing
+  - 只有 metadata
+    已独立验证通过后，
+    才进入下一轮 consumer smoke / overfit
+### 432. 当第一版 target-only weak timing framewise consumer 已真实接通 forward path，但 export 仍被 `auto_reject_obvious_buzz` 直接判死时，应停止同层 timing-channel 微调并上收到 parity / supervision 层
+- 现象:
+  - 这次
+    `target_timing_sidecar_framewise_v1`
+    已满足：
+    - timing sidecar
+      真正进入 forward path
+    - 输入维度
+      明确增加
+    - paired overfit24
+      量化也不是完全无变化
+  - 但 validation export
+    仍被：
+    - `all_records_auto_reject = true`
+    直接判废
+- 风险:
+  - 如果此时继续做：
+    - 再改几路 timing channels
+    - 再换 progress 编码
+    - 再多几个 boundary subtype
+  - 本质上仍是在
+    已被证明层级不足的
+    target-only Stage5 input
+    上继续消耗时间
+- 处理要求:
+  - 一旦出现这种组合：
+    - forward path 已接通
+    - timing consumer 已真实生效
+    - 但 machine gate
+      仍直接 obvious-buzz
+  - 就应正式停止：
+    - Stage5 target-only
+      weak timing consumer
+      变体
+  - 下一步改上收到：
+    - source-side / parity-aware
+      semantic assets
+    - 或更上游的
+      semantic supervision
+      路线
+### 433. 当 source-side parity semantic asset 只是由 paired target transfer 得到时，文档和字段命名必须显式保留“parity/bootstrap”边界，不能误写成 source-native semantic
+- 现象:
+  - 这轮新资产
+    来自：
+    - paired parallel
+      同内容 target semantic/timing
+    - 向 source frame axis
+      的投影
+  - 它并不是：
+    - source text clean
+    - source phone
+    - source forced alignment
+- 风险:
+  - 如果字段或报告写得过满，
+    很容易让后续判断误以为：
+    - source semantic
+      已补齐
+    - 甚至
+      `e_evt`
+      监督条件已经就位
+- 处理要求:
+  - contract / report / overview
+    必须保留：
+    - `parity`
+    - `bootstrap`
+    - `paired_target_transfer`
+    这些边界词
+  - 明确写清：
+    - 不是 source-native semantic
+    - 也不是 design-state
+      `e_evt`
+### 434. paired-parallel source semantic parity sidecar 接入 Stage5 时，attach key 必须使用 `source_record_id`，不能误用 `target_record_id` 或 pair record id
+- 现象:
+  - target-side semantic/timing
+    一直都是按：
+    - `target_record_id`
+    接的
+  - 但这轮新 sidecar
+    的主键变成了：
+    - `source_record_id`
+- 风险:
+  - 如果沿用旧逻辑，
+    很容易把 parity sidecar
+    错挂成 missing
+    或挂到错误样本
+  - 一旦后续 consumer
+    训练失败，
+    又会退回
+    “到底是模型无效，
+    还是 sidecar 根本没接上”
+    的老问题
+- 处理要求:
+  - package/index plumbing
+    对 source parity sidecar
+    必须显式使用：
+    - `source_record_id`
+  - 同时在 smoke
+    中核对：
+    - 顶层 path
+    - per-package present flag
+    - per-package overview
+    三层都真实出现

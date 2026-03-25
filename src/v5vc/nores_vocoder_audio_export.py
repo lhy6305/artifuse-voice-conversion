@@ -18,13 +18,23 @@ from v5vc.offline_vocoder_training import (
     compute_nores_vocoder_losses,
     extract_training_batch,
     extract_training_runtime,
+    frame_waveform_sequence,
     load_training_package_payload,
     reconstruct_waveform_from_frames,
 )
 from v5vc.proxy_audio_export import compute_proxy_activity_gate, smooth_noise
+from v5vc.stage5_low_activity_probe import compute_waveform_spectral_summary
 from v5vc.target_format_recovery import write_waveform_int16
 
 DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES = 3
+DEFAULT_STAGE5_BUZZ_REJECT_HEURISTIC_VERSION = "stage5_buzz_reject_v1"
+AUTO_REJECT_TEMPLATE_COSINE_MEAN = 0.985
+AUTO_REJECT_ADJACENT_COSINE_MEAN = 0.97
+AUTO_REJECT_TEMPLATE_GAP_VS_ALIGNED = 0.75
+AUTO_REJECT_ACTIVITY_CORR = 0.75
+AUTO_REJECT_HIGH_BAND_ENERGY_RATIO = 0.45
+AUTO_REJECT_HIGH_BAND_GAP = 0.2
+AUTO_REJECT_CENTROID_GAP_HZ = 2500.0
 
 
 def export_offline_mvp_nores_vocoder_audio(
@@ -187,6 +197,14 @@ def export_offline_mvp_nores_vocoder_audio(
                 decoded_pitch_matched_path=decoded_pitch_matched_path if pitch_match_metrics is not None else None,
                 audit_proxy_path=audit_proxy_path,
             )
+            buzz_reject_assessment = assess_stage5_decoded_buzz_reject(
+                decoded_waveform=decoded_waveform,
+                aligned_target=aligned_target,
+                predicted_activity=predicted_activity.cpu(),
+                sample_rate=int(runtime["sample_rate"]),
+                frame_length=int(runtime["frame_length"]),
+                hop_length=int(runtime["hop_length"]),
+            )
             exported_records.append(
                 {
                     "record_id": str(entry["record_id"]),
@@ -206,6 +224,7 @@ def export_offline_mvp_nores_vocoder_audio(
                     "proxy_audio_path": listening_audio_path.as_posix(),
                     "pitch_match_metrics": pitch_match_metrics,
                     "loss_metrics": loss_metrics,
+                    "buzz_reject_assessment": buzz_reject_assessment,
                 }
             )
 
@@ -243,6 +262,7 @@ def export_offline_mvp_nores_vocoder_audio(
         "dataset_index_path": dataset_index_path.as_posix(),
         "split_name": str(split_name),
         "sample_count": len(exported_records),
+        "buzz_reject_summary": summarize_stage5_buzz_reject_assessments(exported_records),
         "records": exported_records,
         "notes": [
             "aligned_target.wav is the frame-aligned target waveform used by the current Stage5 bootstrap objective.",
@@ -252,6 +272,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "audit_proxy.wav is a low-frequency audit render derived from decoded.wav and gated by aligned_target activity so current GUI listening is less fatiguing and target silence remains silent.",
             f"proxy_audio_path in the GUI-compatible manifest points to {resolved_listening_audio_source}.wav for primary listening; the non-primary audio is retained for technical inspection.",
             "This export is for human listening and checkpoint comparison; it is still not the final multi-resolution or adversarial vocoder route from the design doc.",
+            "buzz_reject_assessment is a conservative negative gate only: auto_reject_obvious_buzz can suppress clearly failed outputs, but review_required does not mean the sample is good.",
         ],
     }
     (output_dir / "nores_vocoder_audio_export.json").write_text(
@@ -405,6 +426,149 @@ def resolve_package_entries(
     return [entries[index] for index in indices[:sample_count]]
 
 
+def assess_stage5_decoded_buzz_reject(
+    *,
+    decoded_waveform: torch.Tensor,
+    aligned_target: torch.Tensor,
+    predicted_activity: torch.Tensor,
+    sample_rate: int,
+    frame_length: int,
+    hop_length: int,
+) -> dict[str, object]:
+    decoded_waveform_cpu = decoded_waveform.detach().cpu().to(torch.float32).view(-1)
+    aligned_target_cpu = aligned_target.detach().cpu().to(torch.float32).view(-1)[: decoded_waveform_cpu.shape[0]]
+    decoded_spectral = compute_waveform_spectral_summary(decoded_waveform_cpu, int(sample_rate))
+    aligned_spectral = compute_waveform_spectral_summary(aligned_target_cpu, int(sample_rate))
+    decoded_frames = frame_waveform_sequence(
+        waveform=decoded_waveform_cpu,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    aligned_frames = frame_waveform_sequence(
+        waveform=aligned_target_cpu,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    common_frame_count = min(int(decoded_frames.shape[0]), int(aligned_frames.shape[0]))
+    if common_frame_count <= 0:
+        return {
+            "heuristic_version": DEFAULT_STAGE5_BUZZ_REJECT_HEURISTIC_VERSION,
+            "status": "unknown",
+            "auto_reject": False,
+            "summary": "Unable to estimate buzz-reject status because decoded or aligned frames are unavailable.",
+            "signals": [],
+            "metrics": {},
+        }
+    decoded_frames = decoded_frames[:common_frame_count]
+    aligned_frames = aligned_frames[:common_frame_count]
+    predicted_activity_cpu = predicted_activity.detach().cpu().to(torch.float32).view(-1)[:common_frame_count]
+    decoded_frame_metrics = summarize_frame_sequence_metrics(decoded_frames)
+    aligned_frame_metrics = summarize_frame_sequence_metrics(aligned_frames)
+    decoded_frame_rms = decoded_frames.pow(2).mean(dim=1).sqrt()
+    aligned_frame_rms = aligned_frames.pow(2).mean(dim=1).sqrt()
+    decoded_activity_corr = compute_pearson_correlation(decoded_frame_rms, aligned_frame_rms)
+    predicted_activity_corr = compute_pearson_correlation(predicted_activity_cpu, aligned_frame_rms)
+    metrics = {
+        "decoded_zero_crossing_rate": round(float(compute_zero_cross_ratio(decoded_waveform_cpu)), 6),
+        "decoded_spectral_summary": decoded_spectral,
+        "aligned_spectral_summary": aligned_spectral,
+        "decoded_frame_template_cosine_mean": float(decoded_frame_metrics["template_cosine_mean"]),
+        "decoded_frame_adjacent_cosine_mean": float(decoded_frame_metrics["adjacent_cosine_mean"]),
+        "decoded_frame_rms_cv": float(decoded_frame_metrics["frame_rms_cv"]),
+        "aligned_frame_template_cosine_mean": float(aligned_frame_metrics["template_cosine_mean"]),
+        "aligned_frame_adjacent_cosine_mean": float(aligned_frame_metrics["adjacent_cosine_mean"]),
+        "aligned_frame_rms_cv": float(aligned_frame_metrics["frame_rms_cv"]),
+        "decoded_frame_template_cosine_gap_vs_aligned": round(
+            float(decoded_frame_metrics["template_cosine_mean"]) - float(aligned_frame_metrics["template_cosine_mean"]),
+            6,
+        ),
+        "decoded_frame_adjacent_cosine_gap_vs_aligned": round(
+            float(decoded_frame_metrics["adjacent_cosine_mean"]) - float(aligned_frame_metrics["adjacent_cosine_mean"]),
+            6,
+        ),
+        "decoded_frame_rms_to_aligned_frame_rms_corr": float(decoded_activity_corr),
+        "predicted_activity_to_aligned_frame_rms_corr": float(predicted_activity_corr),
+        "spectral_centroid_gap_hz": round(
+            abs(float(decoded_spectral["centroid_hz"]) - float(aligned_spectral["centroid_hz"])),
+            6,
+        ),
+        "spectral_high_band_energy_ratio_gap": round(
+            abs(
+                float(decoded_spectral["high_band_energy_ratio"])
+                - float(aligned_spectral["high_band_energy_ratio"])
+            ),
+            6,
+        ),
+    }
+    signals: list[str] = []
+    template_collapse = (
+        float(metrics["decoded_frame_template_cosine_mean"]) >= AUTO_REJECT_TEMPLATE_COSINE_MEAN
+        and float(metrics["decoded_frame_adjacent_cosine_mean"]) >= AUTO_REJECT_ADJACENT_COSINE_MEAN
+        and float(metrics["decoded_frame_template_cosine_gap_vs_aligned"]) >= AUTO_REJECT_TEMPLATE_GAP_VS_ALIGNED
+    )
+    envelope_following = (
+        float(metrics["decoded_frame_rms_to_aligned_frame_rms_corr"]) >= AUTO_REJECT_ACTIVITY_CORR
+        or float(metrics["predicted_activity_to_aligned_frame_rms_corr"]) >= AUTO_REJECT_ACTIVITY_CORR
+    )
+    extreme_high_band = (
+        float(decoded_spectral["high_band_energy_ratio"]) >= AUTO_REJECT_HIGH_BAND_ENERGY_RATIO
+        and float(metrics["spectral_high_band_energy_ratio_gap"]) >= AUTO_REJECT_HIGH_BAND_GAP
+        and float(metrics["spectral_centroid_gap_hz"]) >= AUTO_REJECT_CENTROID_GAP_HZ
+    )
+    if template_collapse:
+        signals.append(
+            "decoded short-time frames remain highly template-collapsed relative to aligned target diversity"
+        )
+    if envelope_following:
+        signals.append(
+            "decoded frame RMS mainly follows aligned target envelope while short-time structure stays collapsed"
+        )
+    if extreme_high_band:
+        signals.append(
+            "decoded spectral brightness remains far above aligned target and matches the historical harsh-buzz pattern"
+        )
+    auto_reject = bool((template_collapse and envelope_following) or extreme_high_band)
+    if auto_reject:
+        status = "auto_reject_obvious_buzz"
+        summary = (
+            "Decoded waveform matches the conservative Stage5 negative pattern for obvious buzz/template-collapse failure."
+        )
+    else:
+        status = "review_required"
+        summary = (
+            "Decoded waveform does not cross the conservative auto-reject gate; human review is still required before any positive claim."
+        )
+    return {
+        "heuristic_version": DEFAULT_STAGE5_BUZZ_REJECT_HEURISTIC_VERSION,
+        "status": status,
+        "auto_reject": auto_reject,
+        "summary": summary,
+        "signals": signals,
+        "metrics": metrics,
+    }
+
+
+def summarize_stage5_buzz_reject_assessments(records: list[dict[str, object]]) -> dict[str, object]:
+    assessments = [
+        dict(record.get("buzz_reject_assessment", {}))
+        for record in records
+        if isinstance(record.get("buzz_reject_assessment"), dict)
+    ]
+    auto_reject_count = sum(1 for item in assessments if bool(item.get("auto_reject", False)))
+    return {
+        "heuristic_version": DEFAULT_STAGE5_BUZZ_REJECT_HEURISTIC_VERSION,
+        "record_count": len(assessments),
+        "auto_reject_count": int(auto_reject_count),
+        "review_required_count": max(0, len(assessments) - auto_reject_count),
+        "all_records_auto_reject": bool(assessments) and auto_reject_count == len(assessments),
+        "auto_reject_record_ids": [
+            str(record["record_id"])
+            for record in records
+            if bool(dict(record.get("buzz_reject_assessment", {})).get("auto_reject", False))
+        ],
+    }
+
+
 def build_model_from_checkpoint(
     checkpoint_payload: dict[str, object],
     first_batch: dict[str, torch.Tensor],
@@ -538,6 +702,53 @@ def compute_zero_cross_ratio(waveform: torch.Tensor) -> float:
     previous = waveform[:-1]
     current = waveform[1:]
     return float(((previous * current) < 0.0).to(torch.float32).mean().item())
+
+
+def summarize_frame_sequence_metrics(frames: torch.Tensor) -> dict[str, float]:
+    if frames.ndim != 2:
+        raise ValueError(f"Expected frames shape [frames, samples], got {tuple(frames.shape)}")
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    frame_rms = frames_cpu.pow(2).mean(dim=1).sqrt()
+    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
+    normalized = centered / centered.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
+    adjacent_cosine = frames_cpu.new_zeros((0,), dtype=torch.float32)
+    if int(normalized.shape[0]) > 1:
+        adjacent_cosine = (normalized[:-1] * normalized[1:]).sum(dim=1)
+    template = centered.mean(dim=0)
+    template_direction = template / template.norm().clamp_min(1.0e-6)
+    template_cosine = (normalized * template_direction.unsqueeze(0)).sum(dim=1)
+    frame_rms_mean = float(frame_rms.mean().item())
+    frame_rms_std = float(frame_rms.std(unbiased=False).item())
+    return {
+        "frame_rms_mean": round(frame_rms_mean, 6),
+        "frame_rms_std": round(frame_rms_std, 6),
+        "frame_rms_cv": round(0.0 if abs(frame_rms_mean) <= 1.0e-8 else frame_rms_std / frame_rms_mean, 6),
+        "adjacent_cosine_mean": round(
+            0.0 if int(adjacent_cosine.numel()) <= 0 else float(adjacent_cosine.mean().item()),
+            6,
+        ),
+        "adjacent_cosine_abs_mean": round(
+            0.0 if int(adjacent_cosine.numel()) <= 0 else float(adjacent_cosine.abs().mean().item()),
+            6,
+        ),
+        "template_cosine_mean": round(float(template_cosine.mean().item()), 6),
+    }
+
+
+def compute_pearson_correlation(left: torch.Tensor, right: torch.Tensor) -> float:
+    left_cpu = left.detach().cpu().to(torch.float32).view(-1)
+    right_cpu = right.detach().cpu().to(torch.float32).view(-1)
+    common_length = min(int(left_cpu.shape[0]), int(right_cpu.shape[0]))
+    if common_length <= 1:
+        return 0.0
+    left_slice = left_cpu[:common_length]
+    right_slice = right_cpu[:common_length]
+    left_centered = left_slice - left_slice.mean()
+    right_centered = right_slice - right_slice.mean()
+    denominator = left_centered.norm() * right_centered.norm()
+    if float(denominator.item()) <= 1.0e-8:
+        return 0.0
+    return round(float((left_centered * right_centered).sum().item() / denominator.item()), 6)
 
 
 def pitch_match_decoded_waveform_to_reference(
@@ -722,6 +933,7 @@ def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, ob
                 "proxy_audio_path": record["proxy_audio_path"],
                 "pitch_match_metrics": record.get("pitch_match_metrics"),
                 "loss_metrics": record["loss_metrics"],
+                "buzz_reject_assessment": record.get("buzz_reject_assessment"),
             }
         )
     return {
@@ -739,6 +951,7 @@ def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, ob
         "dataset_index_path": summary["dataset_index_path"],
         "split_name": summary["split_name"],
         "sample_count": summary["sample_count"],
+        "buzz_reject_summary": summary.get("buzz_reject_summary"),
         "records": records,
         "notes": summary["notes"],
     }
@@ -758,6 +971,7 @@ def build_proxy_audio_export_markdown(summary: dict[str, object]) -> str:
         f"- pitch_match: {json.dumps(summary.get('pitch_match'), ensure_ascii=False)}",
         f"- waveform_decode: {json.dumps(summary.get('waveform_decode'), ensure_ascii=False)}",
         f"- sample_count: {summary['sample_count']}",
+        f"- buzz_reject_summary: {json.dumps(summary.get('buzz_reject_summary'), ensure_ascii=False)}",
         "",
         "## Records",
     ]
@@ -767,7 +981,8 @@ def build_proxy_audio_export_markdown(summary: dict[str, object]) -> str:
             f"input_audio_path={record['input_audio_path']} "
             f"listening_audio_path={record.get('listening_audio_path')} "
             f"decoded_pitch_matched_audio_path={record.get('decoded_pitch_matched_audio_path')} "
-            f"proxy_audio_path={record['proxy_audio_path']}"
+            f"proxy_audio_path={record['proxy_audio_path']} "
+            f"buzz_reject_status={dict(record.get('buzz_reject_assessment', {})).get('status')}"
         )
     lines.extend(["", "## Notes"])
     for note in summary["notes"]:
@@ -791,6 +1006,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- dataset_index_path: {summary['dataset_index_path']}",
         f"- split_name: {summary['split_name']}",
         f"- sample_count: {summary['sample_count']}",
+        f"- buzz_reject_summary: {json.dumps(summary.get('buzz_reject_summary'), ensure_ascii=False)}",
         "",
         "## Records",
     ]
@@ -798,6 +1014,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         lines.append(
             f"- record_id={record['record_id']} "
             f"loss_total={record['loss_metrics']['loss_total']} "
+            f"buzz_reject_status={dict(record.get('buzz_reject_assessment', {})).get('status')} "
             f"aligned_target_audio_path={record['aligned_target_audio_path']} "
             f"decoded_audio_path={record['decoded_audio_path']} "
             f"decoded_pitch_matched_audio_path={record.get('decoded_pitch_matched_audio_path')} "
