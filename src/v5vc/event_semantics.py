@@ -23,6 +23,14 @@ DEFAULT_TARGET_EVENT_TIMING_BOUNDARY_HALF_WIDTH_FRAMES = 2
 PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_SIDECAR_VERSION = "paired_parallel_source_semantic_parity_sidecar_v1"
 PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_LABEL_SPACE_VERSION = "source_paired_parallel_bootstrap_semantics_v1"
 PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_TRANSFER_TYPE = "paired_parallel_target_to_source_same_content_v1"
+TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1 = "hard_box_v1"
+TEACHER_E_EVT_TARGET_SHAPING_MODE_CENTER_WEIGHTED_FINAL_RAMP_V1 = (
+    "center_weighted_boundary_progressive_final_clause_v1"
+)
+TEACHER_E_EVT_TARGET_SHAPING_MODE_CHOICES = {
+    TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+    TEACHER_E_EVT_TARGET_SHAPING_MODE_CENTER_WEIGHTED_FINAL_RAMP_V1,
+}
 
 CURRENT_RUNTIME_EVENT_DIMENSIONS = (
     {
@@ -140,21 +148,38 @@ def build_current_runtime_event_semantics_meta() -> dict[str, object]:
     }
 
 
-def build_design_state_e_evt_v1_meta() -> dict[str, object]:
+def normalize_teacher_e_evt_target_shaping_mode(raw_mode: object) -> str:
+    shaping_mode = str(raw_mode or TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1).strip().lower()
+    if shaping_mode not in TEACHER_E_EVT_TARGET_SHAPING_MODE_CHOICES:
+        raise ValueError(
+            "teacher_e_evt_target_shaping_mode must be one of "
+            f"{sorted(TEACHER_E_EVT_TARGET_SHAPING_MODE_CHOICES)}, got {raw_mode!r}."
+        )
+    return shaping_mode
+
+
+def build_design_state_e_evt_v1_meta(
+    *,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+) -> dict[str, object]:
+    shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
     return {
         "event_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
         "event_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+        "teacher_e_evt_target_shaping_mode": shaping_mode,
         "event_dimensions": [dimension["name"] for dimension in DESIGN_STATE_E_EVT_V1_DIMENSIONS],
         "event_dimension_specs": [dict(dimension) for dimension in DESIGN_STATE_E_EVT_V1_DIMENSIONS],
         "bootstrap_sources": {
             "legacy_event_probs_version": CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION,
             "target_timing_contract_version": TARGET_EVENT_TIMING_SEMANTIC_SIDECAR_VERSION,
+            "source_parity_contract_version": PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_SIDECAR_VERSION,
         },
         "semantic_status": "bootstrap_design_state_bridge_not_final_teacher_truth",
         "notes": [
             "这不是最终 teacher 真值版 e_evt，而是当前仓库资产可支撑的 design-state bootstrap bridge。",
             "p_frication / p_stop_closure / p_burst / p_voicing / a_aper 由 legacy heuristic event_probs 桥接得到。",
             "p_pause_boundary / p_terminal_boundary / p_final_clause 由 target timing semantic sidecar 栅格化得到。",
+            f"当前 teacher_e_evt target shaping mode = {shaping_mode}。",
             "当前版本还不包含 place / manner 分类，也不能冒充完整最终设计稿语义。",
         ],
     }
@@ -165,8 +190,11 @@ def build_teacher_e_evt_v1_targets(
     legacy_event_probs: object,
     target_event_semantic_sidecar: dict[str, object] | None = None,
     target_event_timing_semantic_sidecar: dict[str, object] | None = None,
+    source_semantic_parity_sidecar: dict[str, object] | None = None,
     valid_frame_count: int | None = None,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> dict[str, object]:
+    shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
     if hasattr(legacy_event_probs, "detach"):
         legacy_tensor = legacy_event_probs.detach().to("cpu")
     else:
@@ -185,11 +213,16 @@ def build_teacher_e_evt_v1_targets(
     if frame_count <= 0:
         return {
             "tensor": legacy_tensor.new_zeros((0, len(DESIGN_STATE_E_EVT_V1_DIMENSIONS))),
-            "meta": build_design_state_e_evt_v1_meta(),
+            "meta": build_design_state_e_evt_v1_meta(
+                teacher_e_evt_target_shaping_mode=shaping_mode,
+            ),
             "summary": {
                 "frame_count": 0,
+                "teacher_e_evt_target_shaping_mode": shaping_mode,
                 "timing_sidecar_used": False,
+                "source_semantic_parity_used": False,
                 "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
+                "boundary_source": "none",
                 "timing_pause_frame_ratio": 0.0,
                 "timing_terminal_frame_ratio": 0.0,
                 "timing_final_clause_frame_ratio": 0.0,
@@ -203,11 +236,18 @@ def build_teacher_e_evt_v1_targets(
     delta_energy_rise = normalized_legacy[:, 5:6]
     delta_energy_fall = normalized_legacy[:, 6:7]
 
-    pause_boundary_mask, terminal_boundary_mask, final_clause_mask = rasterize_target_timing_semantic_sidecar(
+    (
+        pause_boundary_mask,
+        terminal_boundary_mask,
+        final_clause_mask,
+        boundary_source,
+    ) = rasterize_teacher_e_evt_boundary_semantics(
         target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
         frame_count=frame_count,
         device=normalized_legacy.device,
         dtype=normalized_legacy.dtype,
+        teacher_e_evt_target_shaping_mode=shaping_mode,
     )
     e_evt_tensor = normalized_legacy.new_zeros((frame_count, len(DESIGN_STATE_E_EVT_V1_DIMENSIONS)))
     e_evt_tensor[:, 0:1] = torch.maximum(high_zero_cross, high_zero_cross_voiced_like)
@@ -221,16 +261,62 @@ def build_teacher_e_evt_v1_targets(
 
     return {
         "tensor": e_evt_tensor.clamp(0.0, 1.0),
-        "meta": build_design_state_e_evt_v1_meta(),
+        "meta": build_design_state_e_evt_v1_meta(
+            teacher_e_evt_target_shaping_mode=shaping_mode,
+        ),
         "summary": {
             "frame_count": frame_count,
+            "teacher_e_evt_target_shaping_mode": shaping_mode,
             "timing_sidecar_used": isinstance(target_event_timing_semantic_sidecar, dict),
+            "source_semantic_parity_used": isinstance(source_semantic_parity_sidecar, dict),
             "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
+            "boundary_source": boundary_source,
             "timing_pause_frame_ratio": round(float(pause_boundary_mask.mean().item()), 6),
             "timing_terminal_frame_ratio": round(float(terminal_boundary_mask.mean().item()), 6),
             "timing_final_clause_frame_ratio": round(float(final_clause_mask.mean().item()), 6),
         },
     }
+
+
+def rasterize_teacher_e_evt_boundary_semantics(
+    *,
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    source_semantic_parity_sidecar: dict[str, object] | None,
+    frame_count: int,
+    device: object,
+    dtype: object,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+):
+    shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
+    if isinstance(source_semantic_parity_sidecar, dict):
+        pause_boundary_mask, terminal_boundary_mask, final_clause_mask = rasterize_source_semantic_parity_sidecar(
+            source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+            frame_count=frame_count,
+            device=device,
+            dtype=dtype,
+            teacher_e_evt_target_shaping_mode=shaping_mode,
+        )
+        return (
+            pause_boundary_mask,
+            terminal_boundary_mask,
+            final_clause_mask,
+            "source_semantic_parity_sidecar",
+        )
+    pause_boundary_mask, terminal_boundary_mask, final_clause_mask = rasterize_target_timing_semantic_sidecar(
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        frame_count=frame_count,
+        device=device,
+        dtype=dtype,
+        teacher_e_evt_target_shaping_mode=shaping_mode,
+    )
+    return (
+        pause_boundary_mask,
+        terminal_boundary_mask,
+        final_clause_mask,
+        "target_event_timing_semantic_sidecar"
+        if isinstance(target_event_timing_semantic_sidecar, dict)
+        else "none",
+    )
 
 
 def rasterize_target_timing_semantic_sidecar(
@@ -239,7 +325,9 @@ def rasterize_target_timing_semantic_sidecar(
     frame_count: int,
     device: object,
     dtype: object,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ):
+    shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
     pause_boundary_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
     terminal_boundary_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
     final_clause_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
@@ -261,9 +349,21 @@ def rasterize_target_timing_semantic_sidecar(
                 min(frame_count - 1, int(raw_event.get("frame_end_index", frame_start_index))),
             )
             if event_type == "pause_boundary_window":
-                pause_boundary_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+                apply_teacher_e_evt_boundary_window(
+                    boundary_mask=pause_boundary_mask,
+                    frame_start_index=frame_start_index,
+                    frame_end_index=frame_end_index,
+                    center_frame_index=raw_event.get("center_frame_index"),
+                    shaping_mode=shaping_mode,
+                )
             elif event_type == "terminal_boundary_window":
-                terminal_boundary_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+                apply_teacher_e_evt_boundary_window(
+                    boundary_mask=terminal_boundary_mask,
+                    frame_start_index=frame_start_index,
+                    frame_end_index=frame_end_index,
+                    center_frame_index=raw_event.get("center_frame_index"),
+                    shaping_mode=shaping_mode,
+                )
     clause_regions = time_aware_semantics.get("clause_regions")
     if isinstance(clause_regions, list):
         for raw_region in clause_regions:
@@ -277,8 +377,137 @@ def rasterize_target_timing_semantic_sidecar(
                 frame_start_index,
                 min(frame_count - 1, int(raw_region.get("frame_end_index", frame_start_index))),
             )
-            final_clause_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+            apply_teacher_e_evt_final_clause_region(
+                final_clause_mask=final_clause_mask,
+                frame_start_index=frame_start_index,
+                frame_end_index=frame_end_index,
+                shaping_mode=shaping_mode,
+            )
     return pause_boundary_mask, terminal_boundary_mask, final_clause_mask
+
+
+def rasterize_source_semantic_parity_sidecar(
+    *,
+    source_semantic_parity_sidecar: dict[str, object] | None,
+    frame_count: int,
+    device: object,
+    dtype: object,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+):
+    shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
+    pause_boundary_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
+    terminal_boundary_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
+    final_clause_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
+    if not isinstance(source_semantic_parity_sidecar, dict) or frame_count <= 0:
+        return pause_boundary_mask, terminal_boundary_mask, final_clause_mask
+
+    source_time_aware_semantics = source_semantic_parity_sidecar.get("source_time_aware_semantics")
+    if not isinstance(source_time_aware_semantics, dict):
+        return pause_boundary_mask, terminal_boundary_mask, final_clause_mask
+    boundary_events = source_time_aware_semantics.get("boundary_events")
+    if isinstance(boundary_events, list):
+        for raw_event in boundary_events:
+            if not isinstance(raw_event, dict):
+                continue
+            event_type = str(raw_event.get("event_type", "unknown"))
+            frame_start_index = max(0, min(frame_count - 1, int(raw_event.get("frame_start_index", 0))))
+            frame_end_index = max(
+                frame_start_index,
+                min(frame_count - 1, int(raw_event.get("frame_end_index", frame_start_index))),
+            )
+            if event_type == "pause_boundary_window":
+                apply_teacher_e_evt_boundary_window(
+                    boundary_mask=pause_boundary_mask,
+                    frame_start_index=frame_start_index,
+                    frame_end_index=frame_end_index,
+                    center_frame_index=raw_event.get("center_frame_index"),
+                    shaping_mode=shaping_mode,
+                )
+            elif event_type == "terminal_boundary_window":
+                apply_teacher_e_evt_boundary_window(
+                    boundary_mask=terminal_boundary_mask,
+                    frame_start_index=frame_start_index,
+                    frame_end_index=frame_end_index,
+                    center_frame_index=raw_event.get("center_frame_index"),
+                    shaping_mode=shaping_mode,
+                )
+    clause_regions = source_time_aware_semantics.get("clause_regions")
+    if isinstance(clause_regions, list):
+        for raw_region in clause_regions:
+            if not isinstance(raw_region, dict):
+                continue
+            clause_role = str(raw_region.get("clause_role", "unknown"))
+            if clause_role not in {"final", "single"}:
+                continue
+            frame_start_index = max(0, min(frame_count - 1, int(raw_region.get("frame_start_index", 0))))
+            frame_end_index = max(
+                frame_start_index,
+                min(frame_count - 1, int(raw_region.get("frame_end_index", frame_start_index))),
+            )
+            apply_teacher_e_evt_final_clause_region(
+                final_clause_mask=final_clause_mask,
+                frame_start_index=frame_start_index,
+                frame_end_index=frame_end_index,
+                shaping_mode=shaping_mode,
+            )
+    return pause_boundary_mask, terminal_boundary_mask, final_clause_mask
+
+
+def apply_teacher_e_evt_boundary_window(
+    *,
+    boundary_mask: torch.Tensor,
+    frame_start_index: int,
+    frame_end_index: int,
+    center_frame_index: object,
+    shaping_mode: str,
+) -> None:
+    if frame_end_index < frame_start_index:
+        return
+    if shaping_mode == TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1:
+        boundary_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+        return
+    center_index = int(center_frame_index if center_frame_index is not None else (frame_start_index + frame_end_index) // 2)
+    center_index = max(frame_start_index, min(frame_end_index, center_index))
+    frame_indices = torch.arange(
+        frame_start_index,
+        frame_end_index + 1,
+        dtype=torch.float32,
+        device=boundary_mask.device,
+    )
+    radius = max(abs(center_index - frame_start_index), abs(frame_end_index - center_index), 1)
+    values = 1.0 - (frame_indices - float(center_index)).abs() / float(radius + 1)
+    values = values.clamp(0.0, 1.0).to(dtype=boundary_mask.dtype).unsqueeze(-1)
+    boundary_mask[frame_start_index : frame_end_index + 1] = torch.maximum(
+        boundary_mask[frame_start_index : frame_end_index + 1],
+        values,
+    )
+
+
+def apply_teacher_e_evt_final_clause_region(
+    *,
+    final_clause_mask: torch.Tensor,
+    frame_start_index: int,
+    frame_end_index: int,
+    shaping_mode: str,
+) -> None:
+    if frame_end_index < frame_start_index:
+        return
+    if shaping_mode == TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1:
+        final_clause_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+        return
+    frame_indices = torch.arange(
+        frame_start_index,
+        frame_end_index + 1,
+        dtype=torch.float32,
+        device=final_clause_mask.device,
+    )
+    region_length = max(frame_end_index - frame_start_index + 1, 1)
+    values = ((frame_indices - float(frame_start_index)) + 1.0) / float(region_length)
+    values = values.clamp(0.0, 1.0).to(dtype=final_clause_mask.dtype).unsqueeze(-1)
+    final_clause_mask[frame_start_index : frame_end_index + 1] = torch.maximum(
+        final_clause_mask[frame_start_index : frame_end_index + 1],
+        values,
+    )
 
 
 def build_target_event_semantic_sidecar(

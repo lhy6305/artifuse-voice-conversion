@@ -1,0 +1,20 @@
+{
+  "loss_weights": {
+    "teacher_timing_pause_boundary": 0.05,
+    "teacher_timing_terminal_boundary": 0.075,
+    "teacher_timing_final_clause": 0.025
+  },
+  "semantic_supervision": {
+    "event_target_family": "teacher_e_evt_v1",
+    "event_projection_mode": "full_e_evt",
+    "timing_frame_routing_enabled": false,
+    "timing_ready_bonus": 0.0,
+    "timing_multi_clause_bonus": 0.0,
+    "timing_pause_present_bonus": 0.0,
+    "timing_terminal_present_bonus": 0.0,
+    "timing_nonboundary_scale": 1.0,
+    "timing_pause_boundary_boost": 1.0,
+    "timing_terminal_boundary_boost": 1.0,
+    "timing_final_clause_boost": 1.0
+  }
+}

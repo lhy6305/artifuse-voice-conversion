@@ -8,6 +8,7 @@ import torch
 
 from v5vc.ablation_eval import load_checkpoint
 from v5vc.event_semantics import (
+    TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
     build_current_runtime_event_semantics_meta,
     build_teacher_e_evt_v1_targets,
 )
@@ -41,6 +42,10 @@ def export_offline_mvp_teacher_downstream_contract(
     device: str,
     max_audio_sec: float | None,
     verify_against_full_pass: bool,
+    target_event_semantic_sidecar: dict[str, object] | None = None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None = None,
+    source_semantic_parity_sidecar: dict[str, object] | None = None,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> None:
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -121,6 +126,10 @@ def export_offline_mvp_teacher_downstream_contract(
         streaming_outputs=streaming_outputs,
         conditioning=conditioning,
         verification=verification,
+        target_event_semantic_sidecar=target_event_semantic_sidecar,
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     tensor_payload = build_tensor_payload(
         input_audio_path=input_audio_path,
@@ -132,6 +141,10 @@ def export_offline_mvp_teacher_downstream_contract(
         chunk_samples=effective_chunk_samples,
         streaming_outputs=streaming_outputs,
         conditioning=conditioning,
+        target_event_semantic_sidecar=target_event_semantic_sidecar,
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
 
     tensor_path = output_dir / "teacher_downstream_control_contract.pt"
@@ -184,6 +197,10 @@ def build_contract_payload(
     streaming_outputs: dict[str, object],
     conditioning: dict[str, object],
     verification: dict[str, object] | None,
+    target_event_semantic_sidecar: dict[str, object] | None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    source_semantic_parity_sidecar: dict[str, object] | None,
+    teacher_e_evt_target_shaping_mode: str,
 ) -> dict[str, object]:
     frame_count = int(streaming_outputs["frame_count"])
     source_acoustic_state = extract_source_acoustic_state(
@@ -201,11 +218,14 @@ def build_contract_payload(
     event_probs = streaming_outputs["event_probs"]
     teacher_e_evt = build_teacher_e_evt_v1_targets(
         legacy_event_probs=event_probs,
-        target_event_semantic_sidecar=None,
-        target_event_timing_semantic_sidecar=None,
+        target_event_semantic_sidecar=target_event_semantic_sidecar,
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
         valid_frame_count=frame_count,
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     e_evt_tensor = teacher_e_evt["tensor"]
+    event_presence_proxy = build_event_presence_proxy_from_e_evt(e_evt_tensor)
     event_semantics_meta = build_current_runtime_event_semantics_meta()
     return {
         "contract_version": CONTRACT_VERSION_V3,
@@ -295,7 +315,7 @@ def build_contract_payload(
             "E": summarize_tensor(energy_control),
             "energy_log": summarize_tensor(energy_log),
             "zero_cross_rate": summarize_tensor(zero_cross_rate),
-            "event_presence_proxy": summarize_tensor(e_evt_tensor.amax(dim=-1, keepdim=True)),
+            "event_presence_proxy": summarize_tensor(event_presence_proxy),
             "voiced_proxy": summarize_tensor(vuv),
             "energy_proxy": summarize_tensor(torch.sigmoid((energy_control + 4.0) * 2.0)),
         },
@@ -305,7 +325,11 @@ def build_contract_payload(
             "f0_hz / vuv / aper / E are produced by a deterministic source acoustic state extraction chain aligned to the teacher runtime frame grid.",
             "aper-v1 is a single scalar per frame in [0, 1], where 0 is more periodic and 1 is more aperiodic; it is intended for the noise branch only.",
             "Current legacy event_probs are still retained as diagnostic compatibility fields and still follow the offline_mvp_heuristic_event_target_v1 label space.",
-            "e_evt is now exported explicitly as a downstream bootstrap bridge; because this runtime packet has no target timing sidecar, the boundary-related e_evt dimensions remain zero-filled diagnostics rather than claimed true boundary supervision.",
+            (
+                "e_evt is now exported explicitly as a downstream bootstrap bridge; boundary-related dims are rasterized from the paired source semantic parity sidecar on the source frame axis."
+                if isinstance(source_semantic_parity_sidecar, dict)
+                else "e_evt is now exported explicitly as a downstream bootstrap bridge; because this runtime packet has no source-aware boundary sidecar, the boundary-related e_evt dimensions remain zero-filled diagnostics rather than claimed true boundary supervision."
+            ),
             "r_res and final_vocoder_waveform remain intentionally absent because Phase C3 stays on the no-res baseline route.",
         ],
     }
@@ -321,6 +345,10 @@ def build_tensor_payload(
     chunk_samples: int,
     streaming_outputs: dict[str, object],
     conditioning: dict[str, object],
+    target_event_semantic_sidecar: dict[str, object] | None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    source_semantic_parity_sidecar: dict[str, object] | None,
+    teacher_e_evt_target_shaping_mode: str,
 ) -> dict[str, object]:
     source_acoustic_state = extract_source_acoustic_state(
         waveform=waveform,
@@ -336,11 +364,14 @@ def build_tensor_payload(
     event_probs = streaming_outputs["event_probs"].to(torch.float32)
     teacher_e_evt = build_teacher_e_evt_v1_targets(
         legacy_event_probs=event_probs,
-        target_event_semantic_sidecar=None,
-        target_event_timing_semantic_sidecar=None,
+        target_event_semantic_sidecar=target_event_semantic_sidecar,
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
         valid_frame_count=int(event_probs.shape[0]),
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     e_evt_tensor = teacher_e_evt["tensor"].to(torch.float32)
+    event_presence_proxy = build_event_presence_proxy_from_e_evt(e_evt_tensor)
     f0_hz = source_acoustic_state["f0_hz"].to(torch.float32)
     vuv = source_acoustic_state["vuv"].to(torch.float32)
     aper = source_acoustic_state["aper"].to(torch.float32)
@@ -389,7 +420,7 @@ def build_tensor_payload(
             "energy_proxy": torch.sigmoid((energy_control + 4.0) * 2.0),
             "voiced_proxy": vuv,
             "aperiodicity_proxy": aper,
-            "event_presence_proxy": e_evt_tensor.amax(dim=-1, keepdim=True),
+            "event_presence_proxy": event_presence_proxy,
             "energy_change_proxy": torch.maximum(e_evt_tensor[:, 1:2], e_evt_tensor[:, 2:3]),
         },
         "conditioning": {
@@ -409,6 +440,16 @@ def summarize_tensor(tensor: torch.Tensor) -> dict[str, float]:
         "min": round(float(tensor.min().item()), 6),
         "max": round(float(tensor.max().item()), 6),
     }
+
+
+def build_event_presence_proxy_from_e_evt(e_evt_tensor: torch.Tensor) -> torch.Tensor:
+    if e_evt_tensor.ndim != 2 or int(e_evt_tensor.shape[0]) <= 0:
+        return torch.zeros((0, 1), dtype=e_evt_tensor.dtype, device=e_evt_tensor.device)
+    if int(e_evt_tensor.shape[-1]) >= 4:
+        acoustic_event_slice = e_evt_tensor[:, 0:4]
+    else:
+        acoustic_event_slice = e_evt_tensor
+    return acoustic_event_slice.amax(dim=-1, keepdim=True)
 
 
 def build_markdown(summary: dict[str, object]) -> str:

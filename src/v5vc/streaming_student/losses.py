@@ -84,6 +84,7 @@ def build_default_semantic_supervision_config() -> dict[str, object]:
     return {
         "enabled": False,
         "event_target_family": "teacher_e_evt_v1",
+        "event_projection_mode": "full_e_evt",
         "required_contract_version": "target_event_semantic_sidecar_v1",
         "required_timing_contract_version": "target_event_timing_semantic_sidecar_v1",
         "timing_frame_routing_enabled": True,
@@ -148,6 +149,7 @@ def resolve_semantic_supervision_config(
             effective[normalized_key] = bool(value)
         elif normalized_key in {
             "event_target_family",
+            "event_projection_mode",
             "required_contract_version",
             "required_timing_contract_version",
         }:
@@ -161,6 +163,13 @@ def resolve_semantic_supervision_config(
             "legacy_event_probs, teacher_e_evt_v1."
         )
     effective["event_target_family"] = event_target_family
+    event_projection_mode = str(effective["event_projection_mode"]).strip().lower()
+    if event_projection_mode not in {"full_e_evt", "acoustic_main_plus_timing_aux_v1"}:
+        raise ValueError(
+            "Stage3 semantic supervision event_projection_mode must be one of: "
+            "full_e_evt, acoustic_main_plus_timing_aux_v1."
+        )
+    effective["event_projection_mode"] = event_projection_mode
     if float(effective["min_multiplier"]) <= 0.0:
         raise ValueError("Stage3 semantic supervision min_multiplier must be > 0.")
     if float(effective["max_multiplier"]) < float(effective["min_multiplier"]):
@@ -171,8 +180,9 @@ def resolve_semantic_supervision_config(
 def resolve_teacher_event_supervision_targets(
     batch: Mapping[str, torch.Tensor | list[str] | list[dict[str, object] | None]],
     semantic_supervision: Mapping[str, object],
-) -> dict[str, torch.Tensor | str]:
+) -> dict[str, torch.Tensor | str | int | list[str]]:
     event_target_family = str(semantic_supervision.get("event_target_family", "teacher_e_evt_v1")).strip().lower()
+    event_projection_mode = str(semantic_supervision.get("event_projection_mode", "full_e_evt")).strip().lower()
     teacher_e_evt = batch["teacher_e_evt"]
     teacher_event_probs = batch["teacher_event_probs"]
     if not isinstance(teacher_e_evt, torch.Tensor):
@@ -180,10 +190,27 @@ def resolve_teacher_event_supervision_targets(
     if not isinstance(teacher_event_probs, torch.Tensor):
         raise ValueError("Stage3 batch is missing tensor teacher_event_probs.")
 
+    event_dim = int(teacher_e_evt.shape[-1])
+    event_channel_weight = teacher_e_evt.new_ones((1, 1, event_dim))
+    excluded_dims: list[str] = []
+    if event_projection_mode == "acoustic_main_plus_timing_aux_v1":
+        if event_target_family != "teacher_e_evt_v1":
+            raise ValueError(
+                "acoustic_main_plus_timing_aux_v1 requires event_target_family=teacher_e_evt_v1."
+            )
+        if event_dim < 8:
+            raise ValueError(
+                "acoustic_main_plus_timing_aux_v1 requires 8D teacher_e_evt_v1 targets."
+            )
+        event_channel_weight[..., 5:8] = 0.0
+        excluded_dims = ["p_pause_boundary", "p_terminal_boundary", "p_final_clause"]
+
     if event_target_family == "teacher_e_evt_v1":
         return {
             "event_target_family": "teacher_e_evt_v1",
+            "event_projection_mode": event_projection_mode,
             "event_target": teacher_e_evt,
+            "event_channel_weight": event_channel_weight,
             "event_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
             "event_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
             # Keep proxy targets fixed on named e_evt dims so A/B only changes event supervision family.
@@ -191,11 +218,19 @@ def resolve_teacher_event_supervision_targets(
             "proxy_target": teacher_e_evt,
             "proxy_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
             "proxy_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+            "main_supervised_dim_count": int((event_channel_weight > 0).to(torch.long).sum().item()),
+            "excluded_main_dims": excluded_dims,
         }
     if event_target_family == "legacy_event_probs":
+        if event_projection_mode != "full_e_evt":
+            raise ValueError(
+                "legacy_event_probs only supports event_projection_mode=full_e_evt."
+            )
         return {
             "event_target_family": "legacy_event_probs",
+            "event_projection_mode": event_projection_mode,
             "event_target": teacher_event_probs,
+            "event_channel_weight": event_channel_weight,
             "event_contract_version": CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION,
             "event_label_space_version": CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION,
             # Keep proxy targets fixed on named e_evt dims so A/B only changes event supervision family.
@@ -203,6 +238,8 @@ def resolve_teacher_event_supervision_targets(
             "proxy_target": teacher_e_evt,
             "proxy_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
             "proxy_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+            "main_supervised_dim_count": int((event_channel_weight > 0).to(torch.long).sum().item()),
+            "excluded_main_dims": excluded_dims,
         }
     raise ValueError(
         "Unsupported Stage3 event_target_family resolved at loss time: "
@@ -317,10 +354,13 @@ def compute_streaming_student_teacher_supervision_loss(
     )
     teacher_event_target = event_target_bundle["event_target"]
     teacher_proxy_target = event_target_bundle["proxy_target"]
+    event_channel_weight = event_target_bundle["event_channel_weight"]
     if not isinstance(teacher_event_target, torch.Tensor):
         raise ValueError("Resolved Stage3 teacher event target must be a torch Tensor.")
     if not isinstance(teacher_proxy_target, torch.Tensor):
         raise ValueError("Resolved Stage3 proxy event target must be a torch Tensor.")
+    if not isinstance(event_channel_weight, torch.Tensor):
+        raise ValueError("Resolved Stage3 event_channel_weight must be a torch Tensor.")
     teacher_acoustic = batch["teacher_acoustic"]
     student_proxy_acoustic = build_streaming_student_proxy_acoustic(outputs)
 
@@ -333,11 +373,13 @@ def compute_streaming_student_teacher_supervision_loss(
         logits=outputs["event_logits"],
         target=teacher_event_target,
         frame_weight=frame_weight * timing_frame_multipliers["teacher_event"],
+        channel_weight=event_channel_weight,
     )
     event_prior_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["event_prior_logits"],
         target=teacher_event_target,
         frame_weight=frame_weight * timing_frame_multipliers["teacher_event_prior"],
+        channel_weight=event_channel_weight,
     )
     timing_aux_targets, timing_aux_metrics = build_timing_auxiliary_targets(
         batch=batch,
@@ -490,8 +532,13 @@ def compute_streaming_student_teacher_supervision_loss(
         "teacher_confidence_weighted": bool(use_teacher_confidence),
         "effective_weight_sum": round(float(frame_weight.sum().detach().cpu().item()), 6),
         "teacher_event_target_family": str(event_target_bundle["event_target_family"]),
+        "teacher_event_projection_mode": str(event_target_bundle["event_projection_mode"]),
         "teacher_event_contract_version": str(event_target_bundle["event_contract_version"]),
         "teacher_event_label_space_version": str(event_target_bundle["event_label_space_version"]),
+        "teacher_event_main_supervised_dim_count": int(event_target_bundle["main_supervised_dim_count"]),
+        "teacher_event_main_excluded_dims": ",".join(
+            list(event_target_bundle.get("excluded_main_dims", []))
+        ),
         "teacher_event_proxy_target_family": str(event_target_bundle["proxy_target_family"]),
         "teacher_event_proxy_contract_version": str(event_target_bundle["proxy_contract_version"]),
         "teacher_event_proxy_label_space_version": str(
@@ -1003,9 +1050,13 @@ def masked_bce_with_logits(
     logits: torch.Tensor,
     target: torch.Tensor,
     frame_weight: torch.Tensor,
+    channel_weight: torch.Tensor | None = None,
 ) -> torch.Tensor:
-    numerator = (F.binary_cross_entropy_with_logits(logits, target, reduction="none") * frame_weight).sum()
-    denominator = frame_weight.sum().clamp_min(1.0)
+    effective_weight = frame_weight
+    if channel_weight is not None:
+        effective_weight = effective_weight * channel_weight.to(dtype=frame_weight.dtype, device=frame_weight.device)
+    numerator = (F.binary_cross_entropy_with_logits(logits, target, reduction="none") * effective_weight).sum()
+    denominator = effective_weight.sum().clamp_min(1.0)
     return numerator / denominator
 
 
@@ -1013,11 +1064,15 @@ def masked_bce_with_logits_per_sample(
     logits: torch.Tensor,
     target: torch.Tensor,
     frame_weight: torch.Tensor,
+    channel_weight: torch.Tensor | None = None,
 ) -> torch.Tensor:
+    effective_weight = frame_weight
+    if channel_weight is not None:
+        effective_weight = effective_weight * channel_weight.to(dtype=frame_weight.dtype, device=frame_weight.device)
     numerator = (
-        F.binary_cross_entropy_with_logits(logits, target, reduction="none") * frame_weight
+        F.binary_cross_entropy_with_logits(logits, target, reduction="none") * effective_weight
     ).sum(dim=tuple(range(1, logits.ndim)))
-    denominator = frame_weight.sum(dim=tuple(range(1, frame_weight.ndim))).clamp_min(1.0)
+    denominator = effective_weight.sum(dim=tuple(range(1, effective_weight.ndim))).clamp_min(1.0)
     return numerator / denominator
 
 
@@ -1025,6 +1080,7 @@ def masked_optional_bce_with_logits_per_sample(
     logits: torch.Tensor,
     target: torch.Tensor,
     frame_weight: torch.Tensor,
+    channel_weight: torch.Tensor | None = None,
 ) -> torch.Tensor:
     if logits.shape[-1] <= 0:
         return frame_weight.new_zeros((frame_weight.shape[0],))
@@ -1032,6 +1088,7 @@ def masked_optional_bce_with_logits_per_sample(
         logits=logits,
         target=target,
         frame_weight=frame_weight,
+        channel_weight=channel_weight,
     )
 
 

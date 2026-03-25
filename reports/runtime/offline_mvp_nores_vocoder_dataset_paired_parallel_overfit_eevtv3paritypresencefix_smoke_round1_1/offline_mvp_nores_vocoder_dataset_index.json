@@ -1,0 +1,518 @@
+{
+  "dataset_index_version": "offline_mvp_nores_vocoder_dataset_index_v1",
+  "generated_at": "2026-03-25T23:12:34",
+  "timing": {
+    "started_at": "2026-03-25T23:12:30",
+    "ended_at": "2026-03-25T23:12:34",
+    "duration_sec": 3.447277
+  },
+  "selection_mode": "file_order",
+  "train_split_path": null,
+  "validation_split_path": null,
+  "train_pair_spec_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_train_pairs.jsonl",
+  "validation_pair_spec_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_validation_pairs.jsonl",
+  "target_event_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl",
+  "target_event_timing_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_timing_semantic_sidecar/target_event_timing_semantic_sidecar.jsonl",
+  "source_semantic_parity_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/paired_parallel_source_semantic_parity_sidecar/paired_parallel_source_semantic_parity_sidecar.jsonl",
+  "semantic_consumer_mode": "none",
+  "train_packages": [
+    {
+      "record_id": "paired::parallel_firefly_107_to_target_firefly_107",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_107",
+      "target_record_id": "target::chapter3_17_firefly_107",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.62898,
+      "split_name": "train",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_eevtv3paritypresencefix_smoke_round1_1/packages/train/paired__parallel_firefly_107_to_target_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v3",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "multi_clause_single_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 2,
+        "semantic_pause_boundary_count": 1,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "target_event_timing_semantic_sidecar_present": true,
+      "target_timing_semantic_overview": {
+        "timing_source": "target_event_timing_semantic_sidecar",
+        "timing_contract_version": "target_event_timing_semantic_sidecar_v1",
+        "timing_label_space_version": "target_weak_time_aligned_semantics_v1",
+        "timing_inventory_status": "matched_semantic_sidecar",
+        "timing_alignment_type": "weak_punctuation_lexical_progress_v1",
+        "timing_label_status": "pending_upgrade",
+        "timeline_event_count": 4,
+        "clause_region_count": 2,
+        "pause_boundary_event_count": 1,
+        "terminal_boundary_event_count": 1,
+        "weak_time_alignment_ready_for_target_side_bootstrap": true
+      },
+      "source_semantic_parity_sidecar_present": true,
+      "source_semantic_parity_overview": {
+        "parity_source": "paired_parallel_source_semantic_parity_sidecar",
+        "parity_contract_version": "paired_parallel_source_semantic_parity_sidecar_v1",
+        "parity_label_space_version": "source_paired_parallel_bootstrap_semantics_v1",
+        "parity_status": "matched_target_semantic_and_timing",
+        "parity_transfer_type": "paired_parallel_target_to_source_same_content_v1",
+        "parity_label_status": "pending_upgrade",
+        "parity_utterance_structure_type": "multi_clause_single_terminal",
+        "parity_clause_count": 2,
+        "parity_pause_boundary_count": 1,
+        "parity_terminal_boundary_count": 1,
+        "semantic_ready_for_source_side_bootstrap": true,
+        "native_source_semantic_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "none",
+        "semantic_tag": "target_semantic_consumer_none",
+        "feature_dim": 0,
+        "feature_names": [],
+        "semantic_sidecar_present": true,
+        "timing_semantic_sidecar_present": true,
+        "source_semantic_parity_sidecar_present": true,
+        "feature_source": "disabled",
+        "feature_values": []
+      },
+      "frame_count": 657,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1654712,
+      "package_build_sec": 0.863993,
+      "package_status": "built_now"
+    },
+    {
+      "record_id": "paired::parallel_firefly_132_to_target_firefly_132",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_132",
+      "target_record_id": "target::chapter3_17_firefly_132",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.519977,
+      "split_name": "train",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_eevtv3paritypresencefix_smoke_round1_1/packages/train/paired__parallel_firefly_132_to_target_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v3",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "single_clause_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 1,
+        "semantic_pause_boundary_count": 0,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "target_event_timing_semantic_sidecar_present": true,
+      "target_timing_semantic_overview": {
+        "timing_source": "target_event_timing_semantic_sidecar",
+        "timing_contract_version": "target_event_timing_semantic_sidecar_v1",
+        "timing_label_space_version": "target_weak_time_aligned_semantics_v1",
+        "timing_inventory_status": "matched_semantic_sidecar",
+        "timing_alignment_type": "weak_punctuation_lexical_progress_v1",
+        "timing_label_status": "pending_upgrade",
+        "timeline_event_count": 2,
+        "clause_region_count": 1,
+        "pause_boundary_event_count": 0,
+        "terminal_boundary_event_count": 1,
+        "weak_time_alignment_ready_for_target_side_bootstrap": true
+      },
+      "source_semantic_parity_sidecar_present": true,
+      "source_semantic_parity_overview": {
+        "parity_source": "paired_parallel_source_semantic_parity_sidecar",
+        "parity_contract_version": "paired_parallel_source_semantic_parity_sidecar_v1",
+        "parity_label_space_version": "source_paired_parallel_bootstrap_semantics_v1",
+        "parity_status": "matched_target_semantic_and_timing",
+        "parity_transfer_type": "paired_parallel_target_to_source_same_content_v1",
+        "parity_label_status": "pending_upgrade",
+        "parity_utterance_structure_type": "single_clause_terminal",
+        "parity_clause_count": 1,
+        "parity_pause_boundary_count": 0,
+        "parity_terminal_boundary_count": 1,
+        "semantic_ready_for_source_side_bootstrap": true,
+        "native_source_semantic_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "none",
+        "semantic_tag": "target_semantic_consumer_none",
+        "feature_dim": 0,
+        "feature_names": [],
+        "semantic_sidecar_present": true,
+        "timing_semantic_sidecar_present": true,
+        "source_semantic_parity_sidecar_present": true,
+        "feature_source": "disabled",
+        "feature_values": []
+      },
+      "frame_count": 660,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1639002,
+      "package_build_sec": 0.768801,
+      "package_status": "built_now"
+    }
+  ],
+  "validation_packages": [
+    {
+      "record_id": "paired::parallel_firefly_107_to_target_firefly_107",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_107",
+      "target_record_id": "target::chapter3_17_firefly_107",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.62898,
+      "split_name": "validation",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_eevtv3paritypresencefix_smoke_round1_1/packages/validation/paired__parallel_firefly_107_to_target_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v3",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "multi_clause_single_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 2,
+        "semantic_pause_boundary_count": 1,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "target_event_timing_semantic_sidecar_present": true,
+      "target_timing_semantic_overview": {
+        "timing_source": "target_event_timing_semantic_sidecar",
+        "timing_contract_version": "target_event_timing_semantic_sidecar_v1",
+        "timing_label_space_version": "target_weak_time_aligned_semantics_v1",
+        "timing_inventory_status": "matched_semantic_sidecar",
+        "timing_alignment_type": "weak_punctuation_lexical_progress_v1",
+        "timing_label_status": "pending_upgrade",
+        "timeline_event_count": 4,
+        "clause_region_count": 2,
+        "pause_boundary_event_count": 1,
+        "terminal_boundary_event_count": 1,
+        "weak_time_alignment_ready_for_target_side_bootstrap": true
+      },
+      "source_semantic_parity_sidecar_present": true,
+      "source_semantic_parity_overview": {
+        "parity_source": "paired_parallel_source_semantic_parity_sidecar",
+        "parity_contract_version": "paired_parallel_source_semantic_parity_sidecar_v1",
+        "parity_label_space_version": "source_paired_parallel_bootstrap_semantics_v1",
+        "parity_status": "matched_target_semantic_and_timing",
+        "parity_transfer_type": "paired_parallel_target_to_source_same_content_v1",
+        "parity_label_status": "pending_upgrade",
+        "parity_utterance_structure_type": "multi_clause_single_terminal",
+        "parity_clause_count": 2,
+        "parity_pause_boundary_count": 1,
+        "parity_terminal_boundary_count": 1,
+        "semantic_ready_for_source_side_bootstrap": true,
+        "native_source_semantic_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "none",
+        "semantic_tag": "target_semantic_consumer_none",
+        "feature_dim": 0,
+        "feature_names": [],
+        "semantic_sidecar_present": true,
+        "timing_semantic_sidecar_present": true,
+        "source_semantic_parity_sidecar_present": true,
+        "feature_source": "disabled",
+        "feature_values": []
+      },
+      "frame_count": 657,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1654796,
+      "package_build_sec": 0.886034,
+      "package_status": "built_now"
+    },
+    {
+      "record_id": "paired::parallel_firefly_132_to_target_firefly_132",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav",
+      "source_record_id": "source::parallel/chapter3_17_firefly_132",
+      "target_record_id": "target::chapter3_17_firefly_132",
+      "record_mode": "paired_source_to_target",
+      "duration_sec": 2.519977,
+      "split_name": "validation",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_overfit_eevtv3paritypresencefix_smoke_round1_1/packages/validation/paired__parallel_firefly_132_to_target_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v3",
+      "target_event_semantic_sidecar_present": true,
+      "target_semantic_overview": {
+        "semantic_source": "target_event_semantic_sidecar",
+        "semantic_contract_version": "target_event_semantic_sidecar_v1",
+        "semantic_label_space_version": "target_lexical_structure_semantics_v1",
+        "semantic_inventory_status": "matched_inventory",
+        "semantic_label_status": "pending_upgrade",
+        "semantic_utterance_structure_type": "single_clause_terminal",
+        "semantic_final_terminal_type": "terminal_period",
+        "semantic_clause_count": 1,
+        "semantic_pause_boundary_count": 0,
+        "semantic_terminal_boundary_count": 1,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": true,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "target_event_timing_semantic_sidecar_present": true,
+      "target_timing_semantic_overview": {
+        "timing_source": "target_event_timing_semantic_sidecar",
+        "timing_contract_version": "target_event_timing_semantic_sidecar_v1",
+        "timing_label_space_version": "target_weak_time_aligned_semantics_v1",
+        "timing_inventory_status": "matched_semantic_sidecar",
+        "timing_alignment_type": "weak_punctuation_lexical_progress_v1",
+        "timing_label_status": "pending_upgrade",
+        "timeline_event_count": 2,
+        "clause_region_count": 1,
+        "pause_boundary_event_count": 0,
+        "terminal_boundary_event_count": 1,
+        "weak_time_alignment_ready_for_target_side_bootstrap": true
+      },
+      "source_semantic_parity_sidecar_present": true,
+      "source_semantic_parity_overview": {
+        "parity_source": "paired_parallel_source_semantic_parity_sidecar",
+        "parity_contract_version": "paired_parallel_source_semantic_parity_sidecar_v1",
+        "parity_label_space_version": "source_paired_parallel_bootstrap_semantics_v1",
+        "parity_status": "matched_target_semantic_and_timing",
+        "parity_transfer_type": "paired_parallel_target_to_source_same_content_v1",
+        "parity_label_status": "pending_upgrade",
+        "parity_utterance_structure_type": "single_clause_terminal",
+        "parity_clause_count": 1,
+        "parity_pause_boundary_count": 0,
+        "parity_terminal_boundary_count": 1,
+        "semantic_ready_for_source_side_bootstrap": true,
+        "native_source_semantic_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "none",
+        "semantic_tag": "target_semantic_consumer_none",
+        "feature_dim": 0,
+        "feature_names": [],
+        "semantic_sidecar_present": true,
+        "timing_semantic_sidecar_present": true,
+        "source_semantic_parity_sidecar_present": true,
+        "feature_source": "disabled",
+        "feature_values": []
+      },
+      "frame_count": 660,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 1639022,
+      "package_build_sec": 0.791671,
+      "package_status": "built_now"
+    }
+  ],
+  "notes": [
+    "This dataset index is a Stage5 package-level bridge built on top of the teacher-first contract path.",
+    "Each package still contains proxy spectral/gate targets rather than a final waveform decoder objective.",
+    "Current package generation may reload the teacher checkpoint per record, so this builder is a functional baseline rather than a throughput-optimized exporter.",
+    "If train_pair_spec_path / validation_pair_spec_path are set, teacher controls are exported from source_audio_path while aligned waveform targets come from target_audio_path.",
+    "When available, target_event_semantic_sidecar is attached by target_record_id and summarized in package/index metadata.",
+    "When available, target_event_timing_semantic_sidecar is attached by target_record_id and summarized in package/index metadata.",
+    "When available, paired_parallel_source_semantic_parity_sidecar is attached by source_record_id and summarized in package/index metadata.",
+    "semantic_consumer_mode controls whether target-side semantic sidecar remains metadata only or is broadcast into Stage5 branch features as a forward-path consumer."
+  ],
+  "summary": {
+    "train_package_count": 2,
+    "validation_package_count": 2,
+    "train": {
+      "package_count": 2,
+      "total_audio_duration_sec": 5.148957,
+      "total_frame_count": 1317,
+      "total_package_size_bytes": 3293714,
+      "total_package_build_sec": 1.632794,
+      "avg_package_build_sec": 0.816397,
+      "avg_package_size_bytes": 1646857.0,
+      "built_now_count": 2,
+      "reused_existing_count": 0,
+      "record_modes": [
+        "paired_source_to_target"
+      ],
+      "training_package_versions": [
+        "offline_mvp_nores_vocoder_train_targets_v2"
+      ],
+      "source_scaffold_versions": [
+        "offline_teacher_vocoder_input_scaffold_v3"
+      ],
+      "periodic_input_dims": [
+        36
+      ],
+      "noise_input_dims": [
+        36
+      ],
+      "harmonic_target_dims": [
+        32
+      ],
+      "noise_target_dims": [
+        32
+      ],
+      "versions_consistent": true,
+      "dims_consistent": true,
+      "semantic_sidecar_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_contract_version_counts": {
+          "target_event_semantic_sidecar_v1": 2
+        },
+        "semantic_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 2
+        }
+      },
+      "timing_semantic_sidecar_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "timing_contract_version_counts": {
+          "target_event_timing_semantic_sidecar_v1": 2
+        },
+        "timing_alignment_type_counts": {
+          "weak_punctuation_lexical_progress_v1": 2
+        },
+        "timing_label_status_counts": {
+          "pending_upgrade": 2
+        },
+        "timeline_event_count_mean": 3.0
+      },
+      "source_semantic_parity_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_ready_for_source_side_bootstrap_count": 2,
+        "parity_contract_version_counts": {
+          "paired_parallel_source_semantic_parity_sidecar_v1": 2
+        },
+        "parity_status_counts": {
+          "matched_target_semantic_and_timing": 2
+        },
+        "parity_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        }
+      }
+    },
+    "validation": {
+      "package_count": 2,
+      "total_audio_duration_sec": 5.148957,
+      "total_frame_count": 1317,
+      "total_package_size_bytes": 3293818,
+      "total_package_build_sec": 1.677705,
+      "avg_package_build_sec": 0.838853,
+      "avg_package_size_bytes": 1646909.0,
+      "built_now_count": 2,
+      "reused_existing_count": 0,
+      "record_modes": [
+        "paired_source_to_target"
+      ],
+      "training_package_versions": [
+        "offline_mvp_nores_vocoder_train_targets_v2"
+      ],
+      "source_scaffold_versions": [
+        "offline_teacher_vocoder_input_scaffold_v3"
+      ],
+      "periodic_input_dims": [
+        36
+      ],
+      "noise_input_dims": [
+        36
+      ],
+      "harmonic_target_dims": [
+        32
+      ],
+      "noise_target_dims": [
+        32
+      ],
+      "versions_consistent": true,
+      "dims_consistent": true,
+      "semantic_sidecar_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_contract_version_counts": {
+          "target_event_semantic_sidecar_v1": 2
+        },
+        "semantic_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 2
+        }
+      },
+      "timing_semantic_sidecar_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "timing_contract_version_counts": {
+          "target_event_timing_semantic_sidecar_v1": 2
+        },
+        "timing_alignment_type_counts": {
+          "weak_punctuation_lexical_progress_v1": 2
+        },
+        "timing_label_status_counts": {
+          "pending_upgrade": 2
+        },
+        "timeline_event_count_mean": 3.0
+      },
+      "source_semantic_parity_summary": {
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_ready_for_source_side_bootstrap_count": 2,
+        "parity_contract_version_counts": {
+          "paired_parallel_source_semantic_parity_sidecar_v1": 2
+        },
+        "parity_status_counts": {
+          "matched_target_semantic_and_timing": 2
+        },
+        "parity_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        }
+      }
+    },
+    "total_package_count": 4,
+    "total_package_size_bytes": 6587532,
+    "total_package_build_sec": 3.310499,
+    "index_build_duration_sec": 3.447277
+  }
+}

@@ -14306,3 +14306,239 @@
     新 family，
     直到历史 probe 路线
     全部迁完
+### 450. Stage5 downstream 即便已经把 noise branch 的 event family 从 legacy `event_probs` 切到显式 `e_evt`，若当前仍是 source-only / zero-filled-boundary bootstrap，就不能直接默认它已值得进入 fullsplit 或人工听审
+- 现象:
+  - 本轮
+    `offline_teacher_vocoder_input_scaffold_v3`
+    已真实消费：
+    - `e_evt`
+  - paired overfit24
+    也已完整跑到：
+    - validation training-sync export
+    - `stage5_buzz_reject_v1`
+      自动门禁
+  - 但结果仍是：
+    - `auto_reject_count = 2`
+    - `all_records_auto_reject = true`
+- 风险:
+  - 如果只看到：
+    - “Stage5 已显式吃到 `e_evt`”
+  - 就继续推：
+    - fullsplit
+    - 听审 bundle
+    - 同层 decode/gate
+      小修
+  - 就会把
+    plumbing 完成
+    误当成：
+    - 训练路线已站住
+- 处理要求:
+  - 以后只要新的 Stage5 route
+    仍属于：
+    - source-only bootstrap
+    - zero-filled boundary diagnostics
+  - 就必须先跑：
+    - paired overfit24
+    - validation export
+    - automatic buzz gate
+  - 只有门禁结果至少进入：
+    - `review_required`
+  - 才值得再交人工试听或扩 fullsplit
+### 451. 一旦 `e_evt` 开始承载 clause / boundary 结构维度，`event_presence_proxy` 就不能再偷懒写成 `amax(e_evt)`
+- 现象:
+  - 本轮把
+    `source_semantic_parity_sidecar`
+    直接接进了
+    Stage5 downstream
+    `e_evt`
+    contract，
+    使得：
+    - `p_pause_boundary`
+    - `p_terminal_boundary`
+    - `p_final_clause`
+    不再是 zero-filled
+  - 旧逻辑仍把：
+    - `event_presence_proxy = amax(e_evt)`
+  - 结果像
+    `132`
+    这种
+    `single_clause_terminal`
+    样本，
+    会因为
+    `p_final_clause = 1`
+    被误算成：
+    - `event_presence_proxy.mean = 1.0`
+- 风险:
+  - 这会直接污染：
+    - `noise_gate_target`
+    - `activity_gate`
+      相关 proxy
+    - 下游关于
+      `loss_total`
+      改善的判断
+  - 最后看起来像：
+    - 新 contract
+      有收益
+  - 实际只是：
+    - proxy 定义错了
+- 处理要求:
+  - 以后只要
+    `e_evt`
+    同时包含：
+    - acoustic event dims
+    - structural boundary / clause dims
+  - `event_presence_proxy`
+    就必须只从
+    acoustic event dims
+    计算
+  - 当前安全口径是：
+    - 只用
+      `p_frication / p_stop_closure / p_burst / p_voicing`
+  - 不得再把：
+    - `a_aper`
+    - `pause/terminal/final_clause`
+    混进 presence proxy
+### 452. Stage5 supervision-side `target_contract_mode` 接通，不等于当前 route 已值得继续扫 gate 公式
+- 现象:
+  - 本轮我把
+    Stage5 gate supervision
+    正式做成了显式：
+    - `target_contract_mode`
+  - 并新增：
+    - `teacher_e_evt_gate_targets_v1`
+  - package/index
+    都已真实记录：
+    - `target_contract_mode = teacher_e_evt_gate_targets_v1`
+  - 说明这次不是：
+    - metadata-only 标记
+    - 或旧包误复用
+- 风险:
+  - 很容易把：
+    - “显式 `e_evt`
+      gate targets
+      已接通”
+  - 误判成：
+    - Stage5 只差
+      `pause / terminal / a_aper`
+      之类的小公式细调
+  - 但本轮 paired overfit24
+    已直接给出否定证据：
+    - validation step24
+      `loss_total`
+      反而更差
+    - export
+      仍然
+      `all_records_auto_reject = true`
+- 处理要求:
+  - 以后只要新的
+    Stage5 supervision route
+    仍停留在：
+    - gate target
+      公式替换
+    - 同层 proxy
+      组合重写
+  - 就必须先跑：
+    - paired overfit24
+    - validation export
+    - automatic buzz gate
+  - 若结果仍是：
+    - `all_records_auto_reject = true`
+  - 就应直接停线，
+    不再继续扫
+    gate formula
+    细节
+### 453. 在当前 `teacher_e_evt_v1` bootstrap 阶段，不能先验认定“把结构位从主 event 头剥离，只交给 timing aux heads”一定更好
+- 现象:
+  - 直觉上看，
+    `p_pause_boundary / p_terminal_boundary / p_final_clause`
+    既然已经有
+    timing aux heads，
+    就很容易认为：
+    - 主
+      `teacher_event / teacher_event_prior`
+      不该再监督这 3 维
+  - 于是本轮把它做成了显式：
+    - `event_projection_mode = acoustic_main_plus_timing_aux_v1`
+  - dry-run
+    也确认了：
+    - 主 event 头
+      只剩 5 个 acoustic dims
+    - 结构位
+      只走 timing aux
+- 风险:
+  - 很容易把：
+    - “更像设计态的 head 解耦”
+  - 直接等同于：
+    - 当前短程优化也会更好
+  - 但本轮严格可比
+    12-step A/B
+    已给出反例：
+    - `loss_total`
+      更差
+    - `loss_total_semantic_disabled_reference`
+      更差
+    - `loss_teacher_event`
+      和
+      `loss_teacher_event_prior`
+      也更差
+- 处理要求:
+  - 以后只要新的
+    Stage3 contract
+    是：
+    - “主头与 aux 头职责重分配”
+  - 就必须做：
+    - 严格可比 A/B
+    - 而不能只凭语义上的
+      “更干净”
+      就继续扩实验
+  - 如果第一轮短 loop
+    已更差，
+    就应直接停掉该 loss-side
+    projection route，
+    上收到 teacher-label / target shaping
+    更上游的层级
+### 454. 不能把“Stage3 上游 target shaping 已经小幅变好”直接等同于“Stage5 buzz 已经接近解决”
+- 现象:
+  - 本轮 generation-side
+    `teacher_e_evt`
+    shaping
+    是少数真正站住的正向 A/B：
+    - Stage3
+      `loss_total`
+      和
+      `loss_total_semantic_disabled_reference`
+      都下降了
+  - 这很容易让人继续乐观外推：
+    - 既然 teacher-label
+      本身更合理了，
+      那 Stage5
+      应该也快起来了
+- 风险:
+  - 这种外推在当前系统里并不成立
+  - 本轮已经给出反证：
+    - 同版 shaped `teacher_e_evt`
+      推到 Stage5 downstream
+      `paired overfit24`
+      后，
+      共享指标反而更差
+    - validation export
+      仍是
+      `all_records_auto_reject = true`
+- 处理要求:
+  - 以后只要某条上游改动
+    在 Stage3
+    先出现正向信号，
+    也不能直接宣布：
+    - “主方向已打通”
+  - 必须立刻补一个
+    下游 fail-fast：
+    - 至少做
+      Stage5 overfit24
+      加 automatic buzz gate
+  - 如果下游仍是：
+    - 量化更差
+    - `all_records_auto_reject = true`
+  - 就应把该改动定性为：
+    - “上游局部正向，但尚未形成 downstream breakthrough”
+  - 不允许继续顺着同一版小 shaping
+    做参数细抠

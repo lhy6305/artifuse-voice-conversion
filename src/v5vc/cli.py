@@ -62,6 +62,7 @@ from v5vc.teacher_first_vc_demo import (
 )
 from v5vc.offline_vocoder_scaffold import prepare_offline_mvp_nores_vocoder_scaffold
 from v5vc.offline_vocoder_training import (
+    DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
     DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
     build_offline_mvp_nores_vocoder_dataset_packages,
     build_offline_mvp_nores_vocoder_training_package,
@@ -564,6 +565,15 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=None,
         help="Optional cap on target_train/validation/special_eval record counts for quick checks.",
+    )
+    streaming_student_teacher_parser.add_argument(
+        "--teacher-eevt-target-shaping-mode",
+        type=str,
+        default="hard_box_v1",
+        help=(
+            "Generation-side shaping mode for bootstrap teacher_e_evt labels. "
+            "Examples: hard_box_v1, center_weighted_boundary_progressive_final_clause_v1."
+        ),
     )
 
     streaming_student_training_data_parser = subparsers.add_parser(
@@ -1529,6 +1539,15 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Skip the full-utterance verification pass and export only chunked control outputs.",
     )
+    teacher_contract_parser.add_argument(
+        "--teacher-eevt-target-shaping-mode",
+        type=str,
+        default="hard_box_v1",
+        help=(
+            "Generation-side shaping mode used when explicit teacher e_evt is rasterized into the downstream contract. "
+            "Examples: hard_box_v1, center_weighted_boundary_progressive_final_clause_v1."
+        ),
+    )
 
     teacher_vocoder_scaffold_parser = subparsers.add_parser(
         "build-offline-mvp-teacher-vocoder-input-scaffold",
@@ -2229,6 +2248,14 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional override when older scaffold payloads do not carry runtime hop_length metadata.",
     )
+    nores_vocoder_targets_parser.add_argument(
+        "--target-contract-mode",
+        default=DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+        help=(
+            "How Stage5 periodic_gate_target / noise_gate_target are built inside the package: "
+            "legacy_proxy or teacher_e_evt_gate_targets_v1."
+        ),
+    )
     nores_vocoder_train_step_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-train-step",
         help="Run one training step on the minimal no-residual vocoder target package.",
@@ -2695,6 +2722,23 @@ def build_parser() -> argparse.ArgumentParser:
             "How target_event_semantic_sidecar is consumed during package build: "
             "none, target_sidecar_broadcast_v1, target_timing_sidecar_framewise_v1, or "
             "source_semantic_parity_framewise_v1."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
+        "--target-contract-mode",
+        default=DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+        help=(
+            "How Stage5 periodic_gate_target / noise_gate_target are built inside each package: "
+            "legacy_proxy or teacher_e_evt_gate_targets_v1."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
+        "--teacher-eevt-target-shaping-mode",
+        type=str,
+        default="hard_box_v1",
+        help=(
+            "Generation-side shaping mode used when Stage5 exports explicit teacher e_evt into the downstream contract. "
+            "Examples: hard_box_v1, center_weighted_boundary_progressive_final_clause_v1."
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(
@@ -4340,6 +4384,7 @@ def main(argv: list[str] | None = None) -> int:
             split_dir=args.split_dir,
             batch_size=args.batch_size,
             max_records_per_slice=args.max_records_per_slice,
+            teacher_e_evt_target_shaping_mode=args.teacher_eevt_target_shaping_mode,
         )
         return 0
     if args.command == "prepare-streaming-student-training-data":
@@ -4569,6 +4614,7 @@ def main(argv: list[str] | None = None) -> int:
             device=args.device,
             max_audio_sec=args.max_audio_sec,
             verify_against_full_pass=not bool(args.skip_full_pass_verify),
+            teacher_e_evt_target_shaping_mode=args.teacher_eevt_target_shaping_mode,
         )
         return 0
     if args.command == "audit-source-acoustic-state":
@@ -4708,6 +4754,7 @@ def main(argv: list[str] | None = None) -> int:
             sample_rate=args.sample_rate,
             frame_length=args.frame_length,
             hop_length=args.hop_length,
+            target_contract_mode=args.target_contract_mode,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-train-step":
@@ -4805,6 +4852,8 @@ def main(argv: list[str] | None = None) -> int:
             target_event_timing_semantic_sidecar_path=args.target_event_timing_semantic_sidecar,
             source_semantic_parity_sidecar_path=args.source_semantic_parity_sidecar,
             semantic_consumer_mode=args.semantic_consumer_mode,
+            target_contract_mode=args.target_contract_mode,
+            teacher_e_evt_target_shaping_mode=args.teacher_eevt_target_shaping_mode,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-dataset-training-loop":

@@ -21823,3 +21823,406 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
      还缺什么 boundary-aware
      `e_evt`
      资产
+## 2026-03-25 继续补充：Stage5 `C3` downstream `e_evt v3` 已完成 paired overfit24 fail-fast，当前 source-only bootstrap 版本不值得继续扩到 fullsplit 或人工试听
+- 正式报告：
+  - `docs/359_stage5_c3_downstream_eevt_overfit24_fail_fast_report.md`
+
+### 当前关键结果
+1. 我按最快闭环把
+   `offline_teacher_vocoder_input_scaffold_v3`
+   推到了：
+   - paired overfit24
+   - validation training-sync export
+   - `stage5_buzz_reject_v1`
+     自动门禁
+2. 新 route
+   输出目录：
+   - `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_paired_parallel_overfit24_eevtv3_round1_1/`
+   - `reports/runtime/offline_mvp_nores_vocoder_audio_export_paired_parallel_overfit24_eevtv3_validation_trainingsync_round1_1/`
+3. validation step24
+   相对旧
+   metadata-only baseline
+   没有变好：
+   - `loss_total: 0.572382 -> 0.584024`
+   - `loss_harmonic_envelope: 0.285243 -> 0.287515`
+   - `loss_noise_envelope: 0.052113 -> 0.055594`
+   - `loss_periodic_gate: 0.543894 -> 0.553126`
+   - `loss_noise_gate: 0.631239 -> 0.651450`
+4. 更关键的是：
+   - `buzz_reject_summary.auto_reject_count = 2`
+   - `buzz_reject_summary.all_records_auto_reject = true`
+   - 两条 validation
+     都仍是
+     `auto_reject_obvious_buzz`
+
+### 当前阶段判断更新
+1. `docs/358`
+   的 plumbing
+   仍然有工程价值：
+   - 它真实收掉了
+     Stage5 downstream
+     仍在消费 legacy
+     `event_probs`
+     的错位
+2. 但作为
+   “尽快打到人耳可听样本”
+   的实验路线，
+   当前
+   `source-only e_evt v3`
+   已被 fail-fast
+   否定
+3. 所以当前不应再继续做：
+   - fullsplit
+   - 人工试听 bundle
+   - 同层 decode / gate
+     小修
+
+### 更新后的下一步
+1. 正式停止：
+   - current
+     `source-only e_evt v3`
+     Stage5 overfit/fullsplit
+     扩展
+2. 若仍保留
+   `e_evt`
+   主线，
+   下一步必须上收到：
+   - 更强的 boundary-aware
+     `e_evt`
+     资产
+   - 或更明确的
+     Stage5 target contract /
+     supervision route
+3. 不再把
+   “Stage5 已显式消费 `e_evt`”
+   误解成：
+   - 当前 downstream
+     已值得继续烧训练预算
+## 2026-03-25 继续补充：Stage5 boundary-aware `e_evt` parity contract 与 `event_presence_proxy` 合同修复都已验证，但这条 consumer-side 路线仍被 fail-fast 否定
+- 正式报告：
+  - `docs/360_stage5_boundary_aware_eevt_parity_contract_fix_and_fail_fast_report.md`
+
+### 当前关键结果
+1. 我已把
+   `source_semantic_parity_sidecar`
+   直接接进
+   Stage5 downstream
+   `e_evt`
+   contract：
+   - `e_evt_summary.boundary_source = source_semantic_parity_sidecar`
+   - 不再只是
+     zero-filled boundary diagnostics
+2. 随后又定位并修掉了一个更深层 contract bug：
+   - 旧逻辑：
+     `event_presence_proxy = amax(e_evt)`
+   - 这会把：
+     `final_clause`
+     等结构维度
+     误当成整句事件存在
+   - 现在已改为：
+     只从
+     `p_frication / p_stop_closure / p_burst / p_voicing`
+     计算
+3. 修复前，
+   parity route
+   表面上曾有：
+   - `loss_total: 0.572382 -> 0.565315`
+   但这轮已被证实含有
+   `event_presence_proxy`
+   污染
+4. 修复后真正可采信的结果是：
+   - `validation step24 loss_total = 0.583198`
+   - 仍差于 baseline
+     `0.572382`
+5. 更关键的是，
+   修复后 export
+   仍然：
+   - `auto_reject_count = 2`
+   - `all_records_auto_reject = true`
+
+### 当前阶段判断更新
+1. 现在可以更硬地收口：
+   - 不是因为
+     `boundary-aware e_evt`
+     还差一个小 contract bug
+     才失败
+2. 即使：
+   - source parity boundary
+     已接进 contract
+   - `event_presence_proxy`
+     也已修正
+   以后，
+   这条 Stage5
+   consumer-side
+   `e_evt`
+   路线
+   仍然没有跨过
+   obvious buzz
+3. 因而这条线不应再继续做：
+   - fullsplit
+   - 人工试听
+   - gate / decode
+     小修
+
+### 更新后的下一步
+1. 正式停止：
+   - Stage5 current
+     `e_evt`
+     consumer-side
+     parity route
+2. 下一步应上收到：
+   - 更明确的
+     Stage5 target contract /
+     supervision route
+3. 同时把本轮新增结论写死：
+   - boundary-aware
+     `e_evt`
+     下，
+     `event_presence_proxy`
+     绝不能再用
+     `amax(e_evt)`
+## 2026-03-25 继续补充：Stage5 显式 `target_contract_mode` 与 `teacher_e_evt_gate_targets_v1` supervision route 已完成 fail-fast，当前也应正式判停
+- 正式报告：
+  - `docs/361_stage5_eevt_target_contract_supervision_route_fail_fast_report.md`
+
+### 当前关键结果
+1. 我已把
+   Stage5 package
+   内部的 gate supervision
+   升级为显式：
+   - `target_contract_mode`
+2. 新增模式：
+   - `legacy_proxy`
+   - `teacher_e_evt_gate_targets_v1`
+3. `teacher_e_evt_gate_targets_v1`
+   当前已真实生效：
+   - package/index
+     都记录：
+     `target_contract_mode = teacher_e_evt_gate_targets_v1`
+   - gate target
+     公式已改成：
+     - `periodic_gate_target = max(vuv, p_voicing)`
+     - `noise_gate_target`
+       从显式
+       `e_evt`
+       子维度构造
+   - 同时明确排除：
+     - `p_final_clause`
+4. 但 paired overfit24
+   validation step24
+   结果仍更差：
+   - `loss_total: 0.572382 -> 0.583764`
+   - `loss_noise_envelope: 0.052113 -> 0.054458`
+   - `loss_periodic_gate: 0.543894 -> 0.558537`
+   - `loss_noise_gate: 0.631239 -> 0.660759`
+5. validation export
+   也仍然：
+   - `auto_reject_count = 2`
+   - `all_records_auto_reject = true`
+
+### 当前阶段判断更新
+1. 到这一步可以更明确地说：
+   - 不只是
+     Stage5 input-side
+     semantic consumer
+     线走不通
+   - 连 supervision-side
+     显式 `e_evt`
+     gate contract
+     替换，
+     也还没有把系统拉出
+     obvious buzz
+2. 所以当前不能再继续误判：
+   - “Stage5 只差一个
+     gate target
+     小公式”
+3. 当前 Stage5
+   同层路线
+   应继续保持收口：
+   - 不做该公式的小扫参
+   - 不扩 fullsplit
+   - 不再交人工试听
+
+### 更新后的下一步
+1. 正式停止：
+   - `teacher_e_evt_gate_targets_v1`
+     current Stage5
+     supervision route
+2. 如果还要保留
+   `C-prime / v2-core`
+   主线，
+   下一步必须继续上收到：
+   - teacher / Stage3
+     更强的 target shaping
+   - 或更高层级的
+     contract redesign
+3. 不再把：
+   - `consumer-side e_evt`
+   - `target-side e_evt gate targets`
+   任一项的接通，
+   误解成：
+   - Stage5 已接近 emergence
+## 2026-03-25 继续补充：Stage3 `teacher_e_evt_v1` 的 timing-aux structural split 已做成显式合同 A/B，但当前也应 fail-fast 判停
+- 正式报告：
+  - `docs/362_stage3_eevt_timingaux_structural_split_ab_report.md`
+
+### 当前关键结果
+1. 我已把
+   Stage3 event 主监督
+   里的结构位 supervision
+   做成显式：
+   - `event_projection_mode`
+2. 当前两种模式：
+   - `full_e_evt`
+   - `acoustic_main_plus_timing_aux_v1`
+3. `acoustic_main_plus_timing_aux_v1`
+   的语义是：
+   - 主
+     `teacher_event / teacher_event_prior`
+     只监督前 5 个 acoustic dims
+   - `p_pause_boundary / p_terminal_boundary / p_final_clause`
+     从主 event 头剥离，
+     只走 timing aux heads
+4. dry-run 已确认：
+   - `teacher_event_main_supervised_dim_count = 5`
+   - `teacher_event_main_excluded_dims = p_pause_boundary,p_terminal_boundary,p_final_clause`
+   - timing aux loss
+     也已真实开启
+5. 但严格可比 12-step
+   上，
+   candidate
+   仍更差：
+   - `loss_total: 1.952654 -> 2.112254`
+   - `loss_total_semantic_disabled_reference: 1.796829 -> 1.936075`
+   - `loss_teacher_event: 0.590488 -> 0.691702`
+   - `loss_teacher_event_prior: 0.755913 -> 0.836328`
+
+### 当前阶段判断更新
+1. 这说明：
+   - 不是所有
+     “更像设计态的 head 解耦”
+     在当前 bootstrap 阶段
+     都会更好
+2. 至少在当前
+   `teacher_e_evt_v1`
+   质量下，
+   把结构位
+   从主 event 头
+   完全剥出去，
+   反而更差
+3. 所以当前不应继续做：
+   - `event_projection_mode`
+     小扫参
+   - `main_supervised_dim_count`
+     再调一组
+   - timing aux
+     细权重微调
+
+### 更新后的下一步
+1. 正式停止：
+   - Stage3
+     current
+     timing-aux structural split
+     loss-side route
+2. 如果继续保留
+   Stage3 主线，
+   下一步必须继续上收到：
+   - teacher-label 生成侧
+     的 target shaping
+   - 或更高层级的
+     `e_evt`
+     监督质量升级
+3. 不再把：
+   - “把结构位从主 event 头里剥离”
+   误解成：
+   - 当前 bootstrap
+     下一定更好
+## 2026-03-26 继续补充：Stage3 generation-side `teacher_e_evt` target shaping 首次给出正向 A/B，但同版 Stage5 downstream 仍 fail-fast
+- 正式报告：
+  - `docs/363_stage3_teacher_eevt_target_shaping_ab_report.md`
+  - `docs/364_stage5_shaped_teacher_eevt_downstream_fail_fast_report.md`
+
+### 当前关键结果
+1. 我已把
+   `teacher_e_evt_v1`
+   的 generation-side
+   label geometry
+   做成显式合同：
+   - `hard_box_v1`
+   - `center_weighted_boundary_progressive_final_clause_v1`
+2. shaped mode
+   的含义是：
+   - boundary window
+     从硬盒子
+     改成 center-weighted
+   - `final_clause`
+     从整段全 1
+     改成 progressive ramp
+3. Stage3 严格可比 12-step
+   首次给出正向结果：
+   - `loss_total: 1.952654 -> 1.927881`
+   - `loss_total_semantic_disabled_reference: 1.796829 -> 1.776346`
+   - `loss_teacher_event: 0.590488 -> 0.570513`
+   - `loss_teacher_event_prior: 0.755913 -> 0.737615`
+4. 这说明：
+   - 相比前面的
+     Stage3 loss-side
+     微调，
+     teacher-label generation-side
+     shaping
+     更值得继续投
+5. 但同一版 shaped `teacher_e_evt`
+   一旦推到现有
+   Stage5 downstream
+   `paired overfit24`
+   快速链路，
+   结果仍是否定：
+   - `loss_total: 0.572382 -> 0.582266`
+   - export
+     仍是：
+     - `auto_reject_count = 2`
+     - `all_records_auto_reject = true`
+
+### 当前阶段判断更新
+1. 现在可以更精确地说：
+   - generation-side
+     `teacher_e_evt`
+     shaping
+     不是白费劲
+   - 它至少已经在
+     Stage3
+     给出了第一条正向 A/B 证据
+2. 但也必须同时写死：
+   - 当前这版
+     `boundary softening + final_clause ramp`
+     仍然太弱，
+     不足以让 Stage5
+     脱离 obvious buzz
+3. 因而后续不应做：
+   - 这版 shaping
+     的小系数/小几何再扫
+   - 同层 Stage5
+     overfit/fullsplit
+     复跑
+   - 再次人工试听 bundle
+
+### 更新后的下一步
+1. 正式停止：
+   - current
+     shaped `teacher_e_evt`
+     downstream Stage5
+     route
+2. 若继续保留
+   teacher-label generation-side
+   主线，
+   下一步必须更强：
+   - 不再只改
+     boundary / final_clause
+     这 3 个结构位
+   - 而要上收到：
+     - `teacher_e_evt`
+       前 5 个 acoustic dims
+       的 bridge/label 质量升级
+     - 或更根本的
+       target state
+       生成侧重构

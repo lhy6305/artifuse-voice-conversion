@@ -12,6 +12,7 @@ import torch
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 
+from v5vc.event_semantics import TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
     build_record_source_semantic_parity_overview,
@@ -47,11 +48,16 @@ SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
 }
 DEFAULT_STAGE5_SEMANTIC_PACKAGE_ALPHA = 0.2
 DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE = "none"
+DEFAULT_STAGE5_TARGET_CONTRACT_MODE = "legacy_proxy"
 SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
     "none",
     "target_sidecar_broadcast_v1",
     "target_timing_sidecar_framewise_v1",
     "source_semantic_parity_framewise_v1",
+}
+SUPPORTED_STAGE5_TARGET_CONTRACT_MODES = {
+    "legacy_proxy",
+    "teacher_e_evt_gate_targets_v1",
 }
 STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES = [
     "clean_text_available",
@@ -110,6 +116,7 @@ def build_offline_mvp_nores_vocoder_training_package(
     target_event_timing_semantic_sidecar: dict[str, object] | None = None,
     source_semantic_parity_sidecar: dict[str, object] | None = None,
     semantic_consumer_mode: str = DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
+    target_contract_mode: str = DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
 ) -> None:
     scaffold_path = scaffold_path.resolve()
     target_audio_path = target_audio_path.resolve()
@@ -155,6 +162,7 @@ def build_offline_mvp_nores_vocoder_training_package(
         "offline_teacher_vocoder_input_scaffold_v3",
     }
     resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
+    resolved_target_contract_mode = normalize_stage5_target_contract_mode(target_contract_mode)
 
     waveform, actual_sample_rate = load_waveform(target_audio_path)
     if int(actual_sample_rate) != int(resolved_sample_rate):
@@ -180,6 +188,22 @@ def build_offline_mvp_nores_vocoder_training_package(
     voiced_proxy = available_controls["voiced_proxy"].to(torch.float32)
     aperiodicity_proxy = available_controls["aperiodicity_proxy"].to(torch.float32)
     event_presence_proxy = available_controls["event_presence_proxy"].to(torch.float32)
+    target_contract_summary = {
+        "target_contract_mode": resolved_target_contract_mode,
+        "contract_family": "legacy_proxy",
+        "has_v2_core": bool(has_v2_core),
+        "uses_explicit_e_evt": False,
+        "teacher_e_evt_target_shaping_mode": str(
+            dict(payload.get("e_evt_meta", {})).get(
+                "teacher_e_evt_target_shaping_mode",
+                TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+            )
+        ),
+        "e_evt_boundary_source": str(dict(payload.get("e_evt_summary", {})).get("boundary_source", "none")),
+        "periodic_gate_formula": "voiced_proxy",
+        "noise_gate_formula": "max(aperiodicity_proxy, event_presence_proxy)",
+        "excluded_e_evt_dimensions": [],
+    }
     if has_v2_core:
         vuv = available_controls["vuv"].to(torch.float32)
         aper = available_controls["aper"].to(torch.float32)
@@ -189,25 +213,57 @@ def build_offline_mvp_nores_vocoder_training_package(
             normalized_energy_control = normalized_energy_control.to(torch.float32)
         else:
             normalized_energy_control = normalize_energy_log_rms_for_stage5(energy_control)
-        periodic_gate_target = vuv.clamp(0.0, 1.0)
-        noise_gate_target = torch.maximum(aper * normalized_energy_control, event_presence_proxy).clamp(0.0, 1.0)
+        periodic_gate_target, noise_gate_target, target_contract_summary = build_stage5_gate_targets(
+            available_controls=available_controls,
+            resolved_target_contract_mode=resolved_target_contract_mode,
+            has_v2_core=True,
+            normalized_energy_control=normalized_energy_control,
+            event_presence_proxy=event_presence_proxy,
+            voiced_proxy=voiced_proxy,
+            aperiodicity_proxy=aperiodicity_proxy,
+            payload=payload,
+        )
         energy_proxy = normalized_energy_control.clamp(0.0, 1.0)
+        target_contract_summary["teacher_e_evt_target_shaping_mode"] = str(
+            dict(payload.get("e_evt_meta", {})).get(
+                "teacher_e_evt_target_shaping_mode",
+                TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+            )
+        )
         training_package_version = "offline_mvp_nores_vocoder_train_targets_v2"
         notes = [
             "This package provides a minimal Stage5 spectral reconstruction target set for the no-residual baseline route.",
             "Targets are frame-aligned to the teacher runtime semantics and remain a proxy objective, not the final waveform/GAN training contract from the design doc.",
-            "periodic_gate_target now uses explicit vuv, while noise_gate_target uses max(aper * E_log_rms_norm, event_presence_proxy) so unvoiced low-energy frames do not force the noise branch fully open.",
+            (
+                "periodic_gate_target / noise_gate_target are built from the selected target_contract_mode. "
+                "legacy_proxy keeps the existing v2 gate targets, while teacher_e_evt_gate_targets_v1 swaps "
+                "noise gating over to explicit e_evt sub-dimensions instead of generic event_presence_proxy."
+            ),
             "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
         ]
     else:
-        periodic_gate_target = voiced_proxy.clamp(0.0, 1.0)
-        noise_gate_target = torch.maximum(aperiodicity_proxy, event_presence_proxy).clamp(0.0, 1.0)
+        periodic_gate_target, noise_gate_target, target_contract_summary = build_stage5_gate_targets(
+            available_controls=available_controls,
+            resolved_target_contract_mode=resolved_target_contract_mode,
+            has_v2_core=False,
+            normalized_energy_control=None,
+            event_presence_proxy=event_presence_proxy,
+            voiced_proxy=voiced_proxy,
+            aperiodicity_proxy=aperiodicity_proxy,
+            payload=payload,
+        )
         energy_proxy = available_controls["energy_proxy"].to(torch.float32)
+        target_contract_summary["teacher_e_evt_target_shaping_mode"] = str(
+            dict(payload.get("e_evt_meta", {})).get(
+                "teacher_e_evt_target_shaping_mode",
+                TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+            )
+        )
         training_package_version = "offline_mvp_nores_vocoder_train_targets_v1"
         notes = [
             "This package provides a minimal Stage5 spectral reconstruction target set for the no-residual baseline route.",
             "Targets are frame-aligned to the teacher runtime semantics and remain a proxy objective, not the final waveform/GAN training contract from the design doc.",
-            "periodic_gate_target uses voiced_proxy, and noise_gate_target uses max(aperiodicity_proxy, event_presence_proxy).",
+            "periodic_gate_target / noise_gate_target follow the selected target_contract_mode; legacy_proxy is the only supported route on v1 scaffold payloads.",
             "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
         ]
     target_semantic_overview = build_record_semantic_overview(
@@ -293,6 +349,7 @@ def build_offline_mvp_nores_vocoder_training_package(
         "target_timing_semantic_overview": target_timing_semantic_overview,
         "source_semantic_parity_overview": source_semantic_parity_overview,
         "semantic_consumer": dict(semantic_consumer["summary"]),
+        "target_contract": dict(target_contract_summary),
         "frame_count": frame_count,
         "runtime": {
             "sample_rate": int(resolved_sample_rate),
@@ -332,6 +389,7 @@ def build_offline_mvp_nores_vocoder_training_package(
         "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
         "source_semantic_parity_overview": source_semantic_parity_overview,
         "semantic_consumer": dict(semantic_consumer["summary"]),
+        "target_contract": dict(target_contract_summary),
         "runtime": training_payload["runtime"],
         "frame_count": frame_count,
         "aligned_waveform_samples": int(aligned_waveform.shape[0]),
@@ -924,6 +982,8 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     target_event_timing_semantic_sidecar_path: Path | None = None,
     source_semantic_parity_sidecar_path: Path | None = None,
     semantic_consumer_mode: str = DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
+    target_contract_mode: str = DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> None:
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -957,6 +1017,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         validation_split_path=resolved_validation_split_path,
     )
     resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
+    resolved_target_contract_mode = normalize_stage5_target_contract_mode(target_contract_mode)
     semantic_sidecar_map = None
     timing_semantic_sidecar_map = None
     source_semantic_parity_sidecar_map = None
@@ -1032,6 +1093,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         timing_semantic_sidecar_map=timing_semantic_sidecar_map,
         source_semantic_parity_sidecar_map=source_semantic_parity_sidecar_map,
         semantic_consumer_mode=resolved_semantic_consumer_mode,
+        target_contract_mode=resolved_target_contract_mode,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -1041,6 +1103,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         max_audio_sec=max_audio_sec,
         verify_against_full_pass=verify_against_full_pass,
         skip_existing=skip_existing,
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     validation_entries = build_dataset_packages_for_split(
         records=validation_records,
@@ -1050,6 +1113,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         timing_semantic_sidecar_map=timing_semantic_sidecar_map,
         source_semantic_parity_sidecar_map=source_semantic_parity_sidecar_map,
         semantic_consumer_mode=resolved_semantic_consumer_mode,
+        target_contract_mode=resolved_target_contract_mode,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -1059,6 +1123,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         max_audio_sec=max_audio_sec,
         verify_against_full_pass=verify_against_full_pass,
         skip_existing=skip_existing,
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     run_ended_at = datetime.now()
     run_duration_sec = perf_counter() - run_started_perf
@@ -1098,6 +1163,8 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             else resolved_source_semantic_parity_sidecar_path.as_posix()
         ),
         "semantic_consumer_mode": resolved_semantic_consumer_mode,
+        "target_contract_mode": resolved_target_contract_mode,
+        "teacher_e_evt_target_shaping_mode": str(teacher_e_evt_target_shaping_mode),
         "train_packages": train_entries,
         "validation_packages": validation_entries,
         "notes": [
@@ -1112,6 +1179,8 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             "When available, target_event_timing_semantic_sidecar is attached by target_record_id and summarized in package/index metadata.",
             "When available, paired_parallel_source_semantic_parity_sidecar is attached by source_record_id and summarized in package/index metadata.",
             "semantic_consumer_mode controls whether target-side semantic sidecar remains metadata only or is broadcast into Stage5 branch features as a forward-path consumer.",
+            "target_contract_mode controls how Stage5 periodic_gate_target / noise_gate_target are built inside each package; this is the supervision-side contract, not another input-side semantic consumer.",
+            "teacher_e_evt_target_shaping_mode controls how explicit e_evt boundary/final-clause labels are rasterized before entering the Stage5 downstream/scaffold route.",
         ],
     }
     index_payload["summary"] = summarize_dataset_package_index(
@@ -1714,6 +1783,107 @@ def normalize_stage5_semantic_consumer_mode(mode: str) -> str:
             f"Expected one of {sorted(SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES)}."
         )
     return normalized
+
+
+def normalize_stage5_target_contract_mode(mode: str) -> str:
+    normalized = str(mode).strip().lower()
+    if normalized not in SUPPORTED_STAGE5_TARGET_CONTRACT_MODES:
+        raise ValueError(
+            f"Unsupported Stage5 target_contract_mode: {mode!r}. "
+            f"Expected one of {sorted(SUPPORTED_STAGE5_TARGET_CONTRACT_MODES)}."
+        )
+    return normalized
+
+
+def build_stage5_gate_targets(
+    *,
+    available_controls: dict[str, torch.Tensor],
+    resolved_target_contract_mode: str,
+    has_v2_core: bool,
+    normalized_energy_control: torch.Tensor | None,
+    event_presence_proxy: torch.Tensor,
+    voiced_proxy: torch.Tensor,
+    aperiodicity_proxy: torch.Tensor,
+    payload: dict[str, object],
+) -> tuple[torch.Tensor, torch.Tensor, dict[str, object]]:
+    e_evt_tensor = available_controls.get("e_evt")
+    e_evt_summary = dict(payload.get("e_evt_summary", {}))
+    if not has_v2_core:
+        if resolved_target_contract_mode != DEFAULT_STAGE5_TARGET_CONTRACT_MODE:
+            raise ValueError(
+                "teacher_e_evt_gate_targets_v1 requires offline_teacher_vocoder_input_scaffold_v2/v3 with explicit vuv/aper/E controls."
+            )
+        return (
+            voiced_proxy.clamp(0.0, 1.0),
+            torch.maximum(aperiodicity_proxy, event_presence_proxy).clamp(0.0, 1.0),
+            {
+                "target_contract_mode": resolved_target_contract_mode,
+                "contract_family": "legacy_proxy",
+                "has_v2_core": False,
+                "uses_explicit_e_evt": False,
+                "e_evt_boundary_source": str(e_evt_summary.get("boundary_source", "none")),
+                "periodic_gate_formula": "voiced_proxy",
+                "noise_gate_formula": "max(aperiodicity_proxy, event_presence_proxy)",
+                "excluded_e_evt_dimensions": [],
+            },
+        )
+
+    vuv = available_controls["vuv"].to(torch.float32)
+    aper = available_controls["aper"].to(torch.float32)
+    if normalized_energy_control is None:
+        raise ValueError("Stage5 v2-core gate target build requires normalized_energy_control.")
+    if resolved_target_contract_mode == DEFAULT_STAGE5_TARGET_CONTRACT_MODE:
+        return (
+            vuv.clamp(0.0, 1.0),
+            torch.maximum(aper * normalized_energy_control, event_presence_proxy).clamp(0.0, 1.0),
+            {
+                "target_contract_mode": resolved_target_contract_mode,
+                "contract_family": "legacy_proxy_v2",
+                "has_v2_core": True,
+                "uses_explicit_e_evt": False,
+                "e_evt_boundary_source": str(e_evt_summary.get("boundary_source", "none")),
+                "periodic_gate_formula": "vuv",
+                "noise_gate_formula": "max(aper * E_log_rms_norm, event_presence_proxy)",
+                "excluded_e_evt_dimensions": [],
+            },
+        )
+
+    if not isinstance(e_evt_tensor, torch.Tensor) or int(e_evt_tensor.shape[-1]) < 8:
+        raise ValueError(
+            "teacher_e_evt_gate_targets_v1 requires explicit 8D e_evt in scaffold available_controls."
+        )
+    e_evt_tensor = e_evt_tensor.to(torch.float32)
+    p_frication = e_evt_tensor[:, 0:1]
+    p_stop_closure = e_evt_tensor[:, 1:2]
+    p_burst = e_evt_tensor[:, 2:3]
+    p_voicing = e_evt_tensor[:, 3:4]
+    a_aper = e_evt_tensor[:, 4:5]
+    p_pause_boundary = e_evt_tensor[:, 5:6]
+    p_terminal_boundary = e_evt_tensor[:, 6:7]
+    articulation_noise = torch.cat([p_frication, p_stop_closure, p_burst, a_aper], dim=-1).amax(dim=-1, keepdim=True)
+    boundary_noise = torch.maximum(p_pause_boundary, p_terminal_boundary) * torch.maximum(
+        aper,
+        normalized_energy_control,
+    )
+    periodic_gate_target = torch.maximum(vuv, p_voicing).clamp(0.0, 1.0)
+    noise_gate_target = torch.maximum(
+        aper * normalized_energy_control,
+        torch.maximum(articulation_noise, boundary_noise),
+    ).clamp(0.0, 1.0)
+    return (
+        periodic_gate_target,
+        noise_gate_target,
+        {
+            "target_contract_mode": resolved_target_contract_mode,
+            "contract_family": "teacher_e_evt_gate_targets_v1",
+            "has_v2_core": True,
+            "uses_explicit_e_evt": True,
+            "e_evt_boundary_source": str(e_evt_summary.get("boundary_source", "none")),
+            "periodic_gate_formula": "max(vuv, p_voicing)",
+            "noise_gate_formula": "max(aper * E_log_rms_norm, max(max(p_frication, p_stop_closure, p_burst, a_aper), max(p_pause_boundary, p_terminal_boundary) * max(aper, E_log_rms_norm)))",
+            "excluded_e_evt_dimensions": ["p_final_clause"],
+        },
+    )
 
 
 def build_stage5_target_sidecar_broadcast_feature_values(
@@ -2375,6 +2545,7 @@ def build_dataset_packages_for_split(
     timing_semantic_sidecar_map: dict[str, dict[str, object]] | None,
     source_semantic_parity_sidecar_map: dict[str, dict[str, object]] | None,
     semantic_consumer_mode: str,
+    target_contract_mode: str,
     route_handoff_path: Path | None,
     checkpoint_path: Path | None,
     calibration_asset_path: Path | None,
@@ -2384,6 +2555,7 @@ def build_dataset_packages_for_split(
     max_audio_sec: float | None,
     verify_against_full_pass: bool,
     skip_existing: bool,
+    teacher_e_evt_target_shaping_mode: str,
 ) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
     for record in records:
@@ -2429,6 +2601,27 @@ def build_dataset_packages_for_split(
             existing_semantic_consumer = dict(existing_payload.get("semantic_consumer", {}))
             if str(existing_semantic_consumer.get("semantic_consumer_mode", "none")) != str(semantic_consumer_mode):
                 package_reused = False
+            existing_target_contract = dict(existing_payload.get("target_contract", {}))
+            if (
+                str(
+                    existing_target_contract.get(
+                        "target_contract_mode",
+                        DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+                    )
+                )
+                != str(target_contract_mode)
+            ):
+                package_reused = False
+            if (
+                str(
+                    existing_target_contract.get(
+                        "teacher_e_evt_target_shaping_mode",
+                        TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+                    )
+                )
+                != str(teacher_e_evt_target_shaping_mode)
+            ):
+                package_reused = False
         if not package_reused:
             export_offline_mvp_teacher_downstream_contract(
                 input_audio_path=source_audio_path,
@@ -2441,6 +2634,10 @@ def build_dataset_packages_for_split(
                 device=device,
                 max_audio_sec=max_audio_sec,
                 verify_against_full_pass=verify_against_full_pass,
+                target_event_semantic_sidecar=target_event_semantic_sidecar,
+                target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+                source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+                teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
             )
             build_offline_mvp_teacher_vocoder_input_scaffold(
                 contract_path=contract_dir / "teacher_downstream_control_contract.pt",
@@ -2459,6 +2656,7 @@ def build_dataset_packages_for_split(
                 target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
                 source_semantic_parity_sidecar=source_semantic_parity_sidecar,
                 semantic_consumer_mode=semantic_consumer_mode,
+                target_contract_mode=target_contract_mode,
             )
         package_payload = load_training_package_payload(package_path)
         package_build_sec = perf_counter() - record_started_perf
@@ -2494,6 +2692,7 @@ def build_dataset_packages_for_split(
                     package_payload.get("source_semantic_parity_overview", {})
                 ),
                 "semantic_consumer": dict(package_payload.get("semantic_consumer", {})),
+                "target_contract": dict(package_payload.get("target_contract", {})),
                 "frame_count": int(package_payload["frame_count"]),
                 "periodic_input_dim": int(package_payload["inputs"]["periodic_branch_features"].shape[-1]),
                 "noise_input_dim": int(package_payload["inputs"]["noise_branch_features"].shape[-1]),
@@ -2534,6 +2733,12 @@ def summarize_dataset_package_index(
         record_modes = sorted({str(entry.get("record_mode", "unknown")) for entry in entries})
         training_package_versions = sorted({str(entry.get("training_package_version", "unknown")) for entry in entries})
         source_scaffold_versions = sorted({str(entry.get("source_scaffold_version", "unknown")) for entry in entries})
+        target_contract_modes = sorted(
+            {
+                str(dict(entry.get("target_contract", {})).get("target_contract_mode", "unknown"))
+                for entry in entries
+            }
+        )
         periodic_input_dims = sorted({int(entry.get("periodic_input_dim", 0)) for entry in entries}) if entries else []
         noise_input_dims = sorted({int(entry.get("noise_input_dim", 0)) for entry in entries}) if entries else []
         harmonic_target_dims = sorted({int(entry.get("harmonic_target_dim", 0)) for entry in entries}) if entries else []
@@ -2557,11 +2762,16 @@ def summarize_dataset_package_index(
             "record_modes": record_modes,
             "training_package_versions": training_package_versions,
             "source_scaffold_versions": source_scaffold_versions,
+            "target_contract_modes": target_contract_modes,
             "periodic_input_dims": periodic_input_dims,
             "noise_input_dims": noise_input_dims,
             "harmonic_target_dims": harmonic_target_dims,
             "noise_target_dims": noise_target_dims,
-            "versions_consistent": len(training_package_versions) <= 1 and len(source_scaffold_versions) <= 1,
+            "versions_consistent": (
+                len(training_package_versions) <= 1
+                and len(source_scaffold_versions) <= 1
+                and len(target_contract_modes) <= 1
+            ),
             "dims_consistent": (
                 len(periodic_input_dims) <= 1
                 and len(noise_input_dims) <= 1
@@ -3718,6 +3928,7 @@ def build_training_package_markdown(summary: dict[str, object]) -> str:
         f"- source_semantic_parity_sidecar_present: {summary.get('source_semantic_parity_sidecar_present', False)}",
         f"- source_semantic_parity_overview: {json.dumps(summary.get('source_semantic_parity_overview', {}), ensure_ascii=False)}",
         f"- semantic_consumer: {json.dumps(summary.get('semantic_consumer', {}), ensure_ascii=False)}",
+        f"- target_contract: {json.dumps(summary.get('target_contract', {}), ensure_ascii=False)}",
         f"- runtime: {json.dumps(summary['runtime'], ensure_ascii=False)}",
         f"- frame_count: {summary['frame_count']}",
         f"- aligned_waveform_samples: {summary['aligned_waveform_samples']}",
@@ -3813,6 +4024,7 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         f"- target_event_timing_semantic_sidecar_path: {summary.get('target_event_timing_semantic_sidecar_path')}",
         f"- source_semantic_parity_sidecar_path: {summary.get('source_semantic_parity_sidecar_path')}",
         f"- semantic_consumer_mode: {summary.get('semantic_consumer_mode')}",
+        f"- target_contract_mode: {summary.get('target_contract_mode')}",
         f"- summary: {json.dumps(summary['summary'], ensure_ascii=False)}",
         "",
         "## Train Packages",
@@ -3831,6 +4043,7 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
             f"source_semantic_parity_sidecar_present={entry.get('source_semantic_parity_sidecar_present', False)} "
             f"source_semantic_parity_overview={json.dumps(entry.get('source_semantic_parity_overview', {}), ensure_ascii=False)} "
             f"semantic_consumer={json.dumps(entry.get('semantic_consumer', {}), ensure_ascii=False)} "
+            f"target_contract={json.dumps(entry.get('target_contract', {}), ensure_ascii=False)} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "
@@ -3855,6 +4068,7 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
             f"source_semantic_parity_sidecar_present={entry.get('source_semantic_parity_sidecar_present', False)} "
             f"source_semantic_parity_overview={json.dumps(entry.get('source_semantic_parity_overview', {}), ensure_ascii=False)} "
             f"semantic_consumer={json.dumps(entry.get('semantic_consumer', {}), ensure_ascii=False)} "
+            f"target_contract={json.dumps(entry.get('target_contract', {}), ensure_ascii=False)} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "

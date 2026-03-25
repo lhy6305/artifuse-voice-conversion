@@ -307,6 +307,8 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
                     "e_evt_label_space_version": str(e_evt_meta.get("event_label_space_version", "unknown")),
                     "e_evt_dimensions": list(e_evt_meta.get("event_dimensions", [])),
                     "e_evt_timing_sidecar_used": bool(e_evt_summary.get("timing_sidecar_used", False)),
+                    "e_evt_source_semantic_parity_used": bool(e_evt_summary.get("source_semantic_parity_used", False)),
+                    "e_evt_boundary_source": str(e_evt_summary.get("boundary_source", "none")),
                 }
             ),
         },
@@ -325,7 +327,11 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
                     else "noise_branch_features now consume aper / vuv / normalized E together with event_probs, while r_res remains intentionally absent on the no-res baseline route."
                 ),
                 (
-                    "Because this runtime packet has no target timing sidecar, the downstream e_evt boundary dimensions remain zero-filled diagnostics rather than claimed true boundary supervision."
+                    (
+                        "Downstream e_evt boundary dimensions are rasterized from paired source semantic parity sidecar on the source frame axis."
+                        if str(e_evt_summary.get("boundary_source", "none")) == "source_semantic_parity_sidecar"
+                        else "Because this runtime packet has no source-aware boundary sidecar, the downstream e_evt boundary dimensions remain zero-filled diagnostics rather than claimed true boundary supervision."
+                    )
                     if has_explicit_e_evt
                     else "Current event_probs still use the offline_mvp_heuristic_event_target_v1 label space and should not be confused with the design-time named e_evt semantics."
                 ),
