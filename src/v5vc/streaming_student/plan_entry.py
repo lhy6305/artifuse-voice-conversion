@@ -252,6 +252,10 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
         speaker_embed_dim=int(model_config["speaker_embed_dim"]),
         geom_embed_dim=int(model_config["geom_embed_dim"]),
         conditioning_dim=int(model_config["conditioning_dim"]),
+        teacher_hidden_projection_dim=int(model_config.get("teacher_hidden_projection_dim", 64)),
+        teacher_fused_hidden_projection_dim=int(
+            model_config.get("teacher_fused_hidden_projection_dim", 64)
+        ),
         r_res_dim=int(model_config["r_res_dim"]),
         frame_length=int(model_config["frame_length"]),
         hop_length=int(model_config["hop_length"]),
@@ -266,6 +270,9 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
     return {
         "frontend_outputs": {
             "shared_hidden": {"feature_dim": int(model_config["shared_dim"])},
+            "teacher_hidden_projection": {
+                "feature_dim": int(model_config.get("teacher_hidden_projection_dim", 64))
+            },
             "coarse_log_f0": {"feature_dim": 1},
             "vuv_logits": {"feature_dim": 1},
             "aperiodicity": {"feature_dim": 1},
@@ -282,6 +289,9 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
             },
         },
         "student_outputs": {
+            "teacher_fused_hidden_projection": {
+                "feature_dim": int(model_config.get("teacher_fused_hidden_projection_dim", 64))
+            },
             "z_art": {"feature_dim": int(model_config["z_art_dim"])},
             "event_logits": {"feature_dim": int(model_config["event_dim"])},
             "r_res": {"feature_dim": 0 if not bool(model_config.get("r_res_enabled", False)) else int(model_config["r_res_dim"])},

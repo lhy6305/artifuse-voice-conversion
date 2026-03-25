@@ -567,6 +567,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional cap on target_train/validation/special_eval record counts for quick checks.",
     )
     streaming_student_teacher_parser.add_argument(
+        "--teacher-eevt-bridge-mode",
+        type=str,
+        default="legacy_event_probs_v1",
+        help=(
+            "Generation-side bridge mode for the first 5 bootstrap teacher e_evt acoustic dims. "
+            "Examples: legacy_event_probs_v1, acoustic_guided_event_bridge_v1."
+        ),
+    )
+    streaming_student_teacher_parser.add_argument(
         "--teacher-eevt-target-shaping-mode",
         type=str,
         default="hard_box_v1",
@@ -1538,6 +1547,15 @@ def build_parser() -> argparse.ArgumentParser:
         "--skip-full-pass-verify",
         action="store_true",
         help="Skip the full-utterance verification pass and export only chunked control outputs.",
+    )
+    teacher_contract_parser.add_argument(
+        "--teacher-eevt-bridge-mode",
+        type=str,
+        default="legacy_event_probs_v1",
+        help=(
+            "Generation-side bridge mode used when explicit teacher e_evt is rasterized into the downstream contract. "
+            "Examples: legacy_event_probs_v1, acoustic_guided_event_bridge_v1."
+        ),
     )
     teacher_contract_parser.add_argument(
         "--teacher-eevt-target-shaping-mode",
@@ -2730,6 +2748,15 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "How Stage5 periodic_gate_target / noise_gate_target are built inside each package: "
             "legacy_proxy or teacher_e_evt_gate_targets_v1."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
+        "--teacher-eevt-bridge-mode",
+        type=str,
+        default="legacy_event_probs_v1",
+        help=(
+            "Generation-side bridge mode used when Stage5 exports explicit teacher e_evt into the downstream contract. "
+            "Examples: legacy_event_probs_v1, acoustic_guided_event_bridge_v1."
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(
@@ -4384,6 +4411,7 @@ def main(argv: list[str] | None = None) -> int:
             split_dir=args.split_dir,
             batch_size=args.batch_size,
             max_records_per_slice=args.max_records_per_slice,
+            teacher_e_evt_bridge_mode=args.teacher_eevt_bridge_mode,
             teacher_e_evt_target_shaping_mode=args.teacher_eevt_target_shaping_mode,
         )
         return 0
@@ -4614,6 +4642,7 @@ def main(argv: list[str] | None = None) -> int:
             device=args.device,
             max_audio_sec=args.max_audio_sec,
             verify_against_full_pass=not bool(args.skip_full_pass_verify),
+            teacher_e_evt_bridge_mode=args.teacher_eevt_bridge_mode,
             teacher_e_evt_target_shaping_mode=args.teacher_eevt_target_shaping_mode,
         )
         return 0
@@ -4853,6 +4882,7 @@ def main(argv: list[str] | None = None) -> int:
             source_semantic_parity_sidecar_path=args.source_semantic_parity_sidecar,
             semantic_consumer_mode=args.semantic_consumer_mode,
             target_contract_mode=args.target_contract_mode,
+            teacher_e_evt_bridge_mode=args.teacher_eevt_bridge_mode,
             teacher_e_evt_target_shaping_mode=args.teacher_eevt_target_shaping_mode,
         )
         return 0

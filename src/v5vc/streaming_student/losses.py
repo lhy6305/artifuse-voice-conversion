@@ -33,6 +33,8 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_energy_proxy": 0.25,
         "teacher_vuv_proxy": 0.15,
         "teacher_aper_proxy": 0.1,
+        "teacher_hidden_projection": 0.0,
+        "teacher_fused_hidden_projection": 0.0,
         "teacher_proxy_acoustic": 0.0,
         "teacher_proxy_temporal": 0.0,
         "log_f0_correction_l1": 0.01,
@@ -362,6 +364,10 @@ def compute_streaming_student_teacher_supervision_loss(
     if not isinstance(event_channel_weight, torch.Tensor):
         raise ValueError("Resolved Stage3 event_channel_weight must be a torch Tensor.")
     teacher_acoustic = batch["teacher_acoustic"]
+    teacher_hidden = batch["teacher_hidden"]
+    teacher_fused_hidden = batch["teacher_fused_hidden"]
+    student_hidden_projection = outputs["teacher_hidden_projection"]
+    student_fused_hidden_projection = outputs["teacher_fused_hidden_projection"]
     student_proxy_acoustic = build_streaming_student_proxy_acoustic(outputs)
 
     z_art_loss_per_sample = masked_mse_per_sample(
@@ -417,6 +423,16 @@ def compute_streaming_student_teacher_supervision_loss(
         target=teacher_proxy_target[..., 4:5],
         frame_weight=frame_weight,
     )
+    hidden_projection_loss_per_sample = masked_mse_per_sample(
+        prediction=student_hidden_projection,
+        target=teacher_hidden,
+        frame_weight=frame_weight,
+    )
+    fused_hidden_projection_loss_per_sample = masked_mse_per_sample(
+        prediction=student_fused_hidden_projection,
+        target=teacher_fused_hidden,
+        frame_weight=frame_weight,
+    )
     proxy_acoustic_loss_per_sample = masked_mse_per_sample(
         prediction=student_proxy_acoustic,
         target=teacher_acoustic,
@@ -453,6 +469,8 @@ def compute_streaming_student_teacher_supervision_loss(
     energy_proxy_loss = reduce_weighted_sample_loss(energy_proxy_loss_per_sample)
     vuv_proxy_loss = reduce_weighted_sample_loss(vuv_proxy_loss_per_sample)
     aper_proxy_loss = reduce_weighted_sample_loss(aper_proxy_loss_per_sample)
+    hidden_projection_loss = reduce_weighted_sample_loss(hidden_projection_loss_per_sample)
+    fused_hidden_projection_loss = reduce_weighted_sample_loss(fused_hidden_projection_loss_per_sample)
     proxy_acoustic_loss = reduce_weighted_sample_loss(proxy_acoustic_loss_per_sample)
     proxy_temporal_loss = reduce_weighted_sample_loss(proxy_temporal_loss_per_sample)
     log_f0_correction_l1 = reduce_weighted_sample_loss(log_f0_correction_l1_per_sample)
@@ -471,6 +489,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
+        + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
+        + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
         + proxy_temporal_loss * effective_weights["teacher_proxy_temporal"]
         + log_f0_correction_l1 * effective_weights["log_f0_correction_l1"]
@@ -486,6 +506,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * default_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * default_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * default_weights["teacher_aper_proxy"]
+        + hidden_projection_loss * default_weights["teacher_hidden_projection"]
+        + fused_hidden_projection_loss * default_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * default_weights["teacher_proxy_acoustic"]
         + proxy_temporal_loss * default_weights["teacher_proxy_temporal"]
         + log_f0_correction_l1 * default_weights["log_f0_correction_l1"]
@@ -501,6 +523,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
+        + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
+        + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
         + proxy_temporal_loss * effective_weights["teacher_proxy_temporal"]
         + log_f0_correction_l1 * effective_weights["log_f0_correction_l1"]
@@ -525,6 +549,11 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_teacher_energy_proxy": round(float(energy_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_vuv_proxy": round(float(vuv_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_aper_proxy": round(float(aper_proxy_loss.detach().cpu().item()), 6),
+        "loss_teacher_hidden_projection": round(float(hidden_projection_loss.detach().cpu().item()), 6),
+        "loss_teacher_fused_hidden_projection": round(
+            float(fused_hidden_projection_loss.detach().cpu().item()),
+            6,
+        ),
         "loss_teacher_proxy_acoustic": round(float(proxy_acoustic_loss.detach().cpu().item()), 6),
         "loss_teacher_proxy_temporal": round(float(proxy_temporal_loss.detach().cpu().item()), 6),
         "loss_log_f0_correction_l1": round(float(log_f0_correction_l1.detach().cpu().item()), 6),

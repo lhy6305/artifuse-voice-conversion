@@ -14542,3 +14542,105 @@
     - “上游局部正向，但尚未形成 downstream breakthrough”
   - 不允许继续顺着同一版小 shaping
     做参数细抠
+### 455. 不能把“前 5 维 acoustic bridge 在 Stage3 更好”误解成“当前 Stage5 no-res downstream 已值得继续扩实验”
+- 现象:
+  - 本轮把
+    `teacher_e_evt`
+    前 5 维
+    从
+    `legacy_event_probs_v1`
+    升级成
+    `acoustic_guided_event_bridge_v1`
+  - Stage3
+    严格可比 12-step
+    继续给出正向结果：
+    - `loss_total`
+      更低
+    - `loss_total_semantic_disabled_reference`
+      更低
+    - `loss_teacher_event / event_prior`
+      更低
+  - 这很容易让人进一步认为：
+    - 既然前 5 维 bridge
+      已经更像样，
+      那 Stage5
+      应该值得继续扩 fullsplit
+- 风险:
+  - 当前系统里，
+    这个推断仍然不成立
+  - 本轮直接给出反证：
+    - 同一 candidate
+      推到 Stage5 downstream
+      `paired overfit24`
+      后，
+      比旧 baseline
+      和上一版 shaped-only
+      都更差
+    - validation export
+      仍是
+      `all_records_auto_reject = true`
+- 处理要求:
+  - 以后只要新的
+    teacher-label generation-side
+    candidate
+    在 Stage3
+    先给出正向，
+    也不能默认：
+    - 继续顺着当前 Stage5
+      no-res downstream route
+      扩实验
+  - 必须先跑：
+    - paired overfit24
+    - automatic buzz gate
+  - 如果依旧：
+    - 更差
+    - `all_records_auto_reject = true`
+  - 就应把问题定性为：
+    - 当前下游承接层不对
+  - 而不是继续在同一 Stage5 路线上
+    追加听审和细调
+### 456. 不能把“`loss_teacher_fused_hidden_projection` 明显下降”直接解释成“Stage3 主线更接近突破”
+- 现象:
+  - 本轮给
+    Stage3
+    新增了显式：
+    - `teacher_hidden_projection`
+    - `teacher_fused_hidden_projection`
+  - 第一轮 candidate
+    只开：
+    - `teacher_fused_hidden_projection = 0.002`
+  - 它确实显著压低了：
+    - `loss_teacher_fused_hidden_projection`
+      `84.372002 -> 56.47525`
+- 风险:
+  - 如果只看这一个投影 loss，
+    很容易继续乐观外推：
+    - “student 更像 teacher 内部态了，
+      那主线应该更对了”
+  - 但本轮严格可比 12-step
+    已给出反证：
+    - `loss_total`
+      `1.848593 -> 1.955228`
+    - `loss_total_semantic_disabled_reference`
+      `1.738708 -> 1.845649`
+  - 说明：
+    - state-space imitation
+      自身下降
+      并不自动等于
+      主监督更好
+- 处理要求:
+  - 以后只要新增：
+    - hidden / fused_hidden / internal-state
+      这类 imitation loss
+  - 就必须同时检查：
+    - `loss_total`
+    - `loss_total_semantic_disabled_reference`
+    - `loss_teacher_event / event_prior`
+  - 如果只是 imitation loss
+    下降，
+    但共享主指标更差，
+    就应直接停掉该 route
+  - 不允许继续做：
+    - 同层小权重 sweep
+    - `hidden only`
+      的平移变体

@@ -25,6 +25,8 @@
     "speaker_embed_dim": 16,
     "geom_embed_dim": 8,
     "conditioning_dim": 32,
+    "teacher_hidden_projection_dim": 64,
+    "teacher_fused_hidden_projection_dim": 64,
     "r_res_dim": 16,
     "f0_correction_enabled": true,
     "aper_correction_enabled": true,

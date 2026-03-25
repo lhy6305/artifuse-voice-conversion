@@ -22226,3 +22226,152 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
      - 或更根本的
        target state
        生成侧重构
+## 2026-03-26 继续补充：Stage3 `teacher_e_evt` acoustic-bridge 继续正向，但 Stage5 downstream 再次 fail-fast
+- 正式报告：
+  - `docs/365_stage3_teacher_eevt_acoustic_bridge_ab_report.md`
+  - `docs/366_stage5_teacher_eevt_acoustic_bridge_downstream_fail_fast_report.md`
+
+### 当前关键结果
+1. 我已把
+   `teacher_e_evt`
+   前 5 个 acoustic dims
+   的 bridge
+   做成显式合同：
+   - `legacy_event_probs_v1`
+   - `acoustic_guided_event_bridge_v1`
+2. 当前 candidate
+   的含义是：
+   - 前 5 维
+     不再只搬
+     legacy event_probs
+   - 还会吃
+     teacher acoustic target
+     的
+     `energy / zero_cross / delta_energy`
+3. 在保持
+   `center_weighted_boundary_progressive_final_clause_v1`
+   不变的前提下，
+   Stage3 严格可比 12-step
+   继续正向：
+   - `loss_total: 1.927881 -> 1.897212`
+   - `loss_total_semantic_disabled_reference: 1.776346 -> 1.751405`
+   - `loss_teacher_event: 0.570513 -> 0.539711`
+   - `loss_teacher_event_prior: 0.737615 -> 0.714994`
+4. 但推到
+   Stage5 downstream
+   `paired overfit24`
+   后，
+   结果反而更差：
+   - baseline：
+     `loss_total = 0.572382`
+   - shaped-only：
+     `loss_total = 0.582266`
+   - acoustic-bridge：
+     `loss_total = 0.599406`
+5. validation export
+   仍是：
+   - `auto_reject_count = 2`
+   - `all_records_auto_reject = true`
+
+### 当前阶段判断更新
+1. 现在可以更明确地说：
+   - teacher-label generation-side
+     的确已经摸到
+     正向增益层
+2. 但同样也更明确地说明：
+   - 当前 Stage5 no-res downstream
+     不是这些上游改进的承接突破口
+3. 因而当前不应继续做：
+   - acoustic-bridge
+     在 Stage5
+     同层路线上的 overfit/fullsplit 扩展
+   - 当前 Stage5
+     人工试听包
+   - current bridge/shaping
+     的小参数细抠
+
+### 更新后的下一步
+1. 正式停止：
+   - current
+     Stage5 acoustic-bridge downstream route
+2. 若继续保留主线，
+   更合理的下一步是：
+   - 继续上收到
+     Stage3 / teacher target state
+     生成资产层
+   - 或重新评估
+     哪个下游层
+     才是真正能承接
+     这些上游正向改动的地方
+## 2026-03-26 继续补充：Stage3 `teacher_fused_hidden` projection 已接通，但第一轮严格可比 A/B 应 fail-fast 判停
+- 正式报告：
+  - `docs/367_stage3_teacher_fused_hidden_projection_ab_fail_report.md`
+
+### 当前关键结果
+1. 我已把
+   Stage3
+   显式 hidden-space
+   imitation
+   做成真实可训练合同：
+   - `shared_hidden -> teacher_hidden_projection`
+   - `student_hidden -> teacher_fused_hidden_projection`
+2. 当前第一轮只开：
+   - `teacher_fused_hidden_projection = 0.002`
+   没有把
+   `teacher_hidden_projection`
+   一起混进来
+3. 1-step smoke
+   已确认：
+   - `loss_teacher_hidden_projection`
+     和
+     `loss_teacher_fused_hidden_projection`
+     都不是挂空
+   - 但 raw scale
+     很大：
+     - `~40-80`
+4. 严格可比 12-step
+   上，
+   candidate
+   虽然压低了：
+   - `loss_teacher_fused_hidden_projection:
+      84.372002 -> 56.47525`
+   但整体更差：
+   - `loss_total:
+      1.848593 -> 1.955228`
+   - `loss_total_semantic_disabled_reference:
+      1.738708 -> 1.845649`
+5. `loss_teacher_event / event_prior`
+   只有极弱变化，
+   不足以支撑继续扩实验
+
+### 当前阶段判断更新
+1. 这说明：
+   - 当前 Stage3
+     不是
+     “只差一条显式 fused-hidden distillation”
+2. 更准确地说：
+   - simple state-space imitation
+     可以把 student
+     拉向 teacher 内部态
+   - 但没有同步转成
+     更好的主监督收敛
+3. 因而当前不应继续做：
+   - `teacher_fused_hidden_projection`
+     小权重 sweep
+   - `teacher_hidden_projection only`
+     平移变体
+
+### 更新后的下一步
+1. 正式停止：
+   - current
+     Stage3
+     hidden-projection route
+2. 若继续保留主线，
+   更合理的下一步仍是：
+   - 回到
+     teacher-label / target-state
+     生成资产层
+   - 或重新评估
+     哪个下游层
+     才真正能承接
+     上游正向改动

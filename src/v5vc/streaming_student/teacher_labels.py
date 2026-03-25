@@ -11,10 +11,13 @@ import torch
 from v5vc.ablation_eval import load_checkpoint
 from v5vc.data_scan import summarize_numeric
 from v5vc.event_semantics import (
+    TEACHER_E_EVT_BRIDGE_MODE_CHOICES,
+    TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     TEACHER_E_EVT_TARGET_SHAPING_MODE_CHOICES,
     TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
     build_design_state_e_evt_v1_meta,
     build_teacher_e_evt_v1_targets,
+    normalize_teacher_e_evt_bridge_mode,
     normalize_teacher_e_evt_target_shaping_mode,
 )
 from v5vc.manifest_builder import load_jsonl
@@ -56,8 +59,10 @@ def build_streaming_student_teacher_labels(
     split_dir: Path | None,
     batch_size: int,
     max_records_per_slice: int | None,
+    teacher_e_evt_bridge_mode: str = TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> None:
+    bridge_mode = normalize_teacher_e_evt_bridge_mode(teacher_e_evt_bridge_mode)
     shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
     data_output_dir = data_output_dir.resolve()
     report_output_dir = report_output_dir.resolve()
@@ -117,6 +122,7 @@ def build_streaming_student_teacher_labels(
                 batch_size=max(1, int(batch_size)),
                 records_dir=records_dir,
                 teacher_anchor=source["teacher_anchor"],
+                teacher_e_evt_bridge_mode=bridge_mode,
                 teacher_e_evt_target_shaping_mode=shaping_mode,
             )
             summary_slices[split_name] = export_result["summary"]
@@ -147,6 +153,8 @@ def build_streaming_student_teacher_labels(
         "frame_count": aggregate_frame_count,
         "batch_size": max(1, int(batch_size)),
         "max_records_per_slice": None if max_records_per_slice is None else int(max_records_per_slice),
+        "teacher_e_evt_bridge_mode": bridge_mode,
+        "teacher_e_evt_bridge_mode_choices": sorted(TEACHER_E_EVT_BRIDGE_MODE_CHOICES),
         "teacher_e_evt_target_shaping_mode": shaping_mode,
         "teacher_e_evt_target_shaping_mode_choices": sorted(TEACHER_E_EVT_TARGET_SHAPING_MODE_CHOICES),
         "feature_dims": {
@@ -164,6 +172,7 @@ def build_streaming_student_teacher_labels(
             "frame_confidence uses heuristic bootstrap_v1 and is meant for later weighting/filtering, not as a final confidence design.",
             "This export now materializes a bootstrap teacher_e_evt target so Stage3 can stop treating legacy heuristic event_probs as the final event contract.",
             "Stage3 may reuse these labels as assets, but should still keep its own training entry and loss contract separate from offline_mvp.",
+            f"teacher_e_evt bridge mode for this export = {bridge_mode}.",
             f"teacher_e_evt target shaping mode for this export = {shaping_mode}.",
         ],
     }
@@ -367,6 +376,7 @@ def export_split_teacher_labels(
     batch_size: int,
     records_dir: Path,
     teacher_anchor: dict[str, object],
+    teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
 ) -> dict[str, object]:
     index_rows: list[dict[str, object]] = []
@@ -385,6 +395,7 @@ def export_split_teacher_labels(
     timing_inventory_counts: Counter[str] = Counter()
     timing_label_status_counts: Counter[str] = Counter()
     timing_alignment_counts: Counter[str] = Counter()
+    teacher_event_bridge_counts: Counter[str] = Counter()
     teacher_event_target_shaping_counts: Counter[str] = Counter()
 
     if not records:
@@ -407,6 +418,7 @@ def export_split_teacher_labels(
                 "timing_inventory_status_counts": {},
                 "timing_label_status_counts": {},
                 "timing_alignment_type_counts": {},
+                "teacher_event_bridge_mode_counts": {},
                 "teacher_event_target_shaping_mode_counts": {},
                 "sample_record_ids": [],
             },
@@ -444,10 +456,12 @@ def export_split_teacher_labels(
                 split_name=split_name,
                 sample_index=sample_index,
                 outputs=outputs,
+                frame_targets=frame_targets,
                 frame_confidence=frame_confidence,
                 records_dir=records_dir,
                 teacher_anchor=teacher_anchor,
                 threshold=LOW_CONFIDENCE_THRESHOLD,
+                teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
                 teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
             )
             index_rows.append(export_row)
@@ -468,6 +482,7 @@ def export_split_teacher_labels(
             timing_inventory_counts[str(timing_overview["timing_inventory_status"])] += 1
             timing_label_status_counts[str(timing_overview["timing_label_status"])] += 1
             timing_alignment_counts[str(timing_overview["timing_alignment_type"] or "missing")] += 1
+            teacher_event_bridge_counts[str(export_row["teacher_event_bridge_mode"])] += 1
             teacher_event_target_shaping_counts[str(export_row["teacher_event_target_shaping_mode"])] += 1
 
     return {
@@ -489,6 +504,7 @@ def export_split_teacher_labels(
             "timing_inventory_status_counts": dict(sorted(timing_inventory_counts.items())),
             "timing_label_status_counts": dict(sorted(timing_label_status_counts.items())),
             "timing_alignment_type_counts": dict(sorted(timing_alignment_counts.items())),
+            "teacher_event_bridge_mode_counts": dict(sorted(teacher_event_bridge_counts.items())),
             "teacher_event_target_shaping_mode_counts": dict(sorted(teacher_event_target_shaping_counts.items())),
             "sample_record_ids": [str(row["record_id"]) for row in index_rows[:8]],
         },
@@ -500,10 +516,12 @@ def export_single_record(
     split_name: str,
     sample_index: int,
     outputs: dict[str, torch.Tensor],
+    frame_targets: dict[str, torch.Tensor],
     frame_confidence: torch.Tensor,
     records_dir: Path,
     teacher_anchor: dict[str, object],
     threshold: float,
+    teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
 ) -> dict[str, object]:
     record_id = str(record["record_id"])
@@ -515,9 +533,11 @@ def export_single_record(
     timing_overview = build_record_timing_semantic_overview(record)
     teacher_e_evt = build_teacher_e_evt_v1_targets(
         legacy_event_probs=outputs["event_probs"][sample_index],
+        teacher_acoustic_target=frame_targets["acoustic_target"][sample_index],
         target_event_semantic_sidecar=record.get("target_event_semantic_sidecar"),
         target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
         valid_frame_count=valid_frame_count,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     tensor_payload = {
@@ -574,6 +594,7 @@ def export_single_record(
         "semantic_final_terminal_type": str(semantic_overview["semantic_final_terminal_type"]),
         "teacher_event_contract_version": str(teacher_e_evt["meta"]["event_contract_version"]),
         "teacher_event_label_space_version": str(teacher_e_evt["meta"]["event_label_space_version"]),
+        "teacher_event_bridge_mode": str(teacher_e_evt["meta"]["teacher_e_evt_bridge_mode"]),
         "teacher_event_target_shaping_mode": str(teacher_e_evt["meta"]["teacher_e_evt_target_shaping_mode"]),
         "timing_source": str(timing_overview["timing_source"]),
         "timing_contract_version": timing_overview["timing_contract_version"],
@@ -669,6 +690,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- frame_count: {summary['frame_count']}",
         f"- batch_size: {summary['batch_size']}",
         f"- max_records_per_slice: {summary['max_records_per_slice']}",
+        f"- teacher_e_evt_bridge_mode: {summary['teacher_e_evt_bridge_mode']}",
         f"- teacher_e_evt_target_shaping_mode: {summary['teacher_e_evt_target_shaping_mode']}",
         f"- index_path: {summary['index_path']}",
         "",
@@ -698,6 +720,7 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"- timing_inventory_status_counts: {slice_summary['timing_inventory_status_counts']}",
                 f"- timing_label_status_counts: {slice_summary['timing_label_status_counts']}",
                 f"- timing_alignment_type_counts: {slice_summary['timing_alignment_type_counts']}",
+                f"- teacher_event_bridge_mode_counts: {slice_summary['teacher_event_bridge_mode_counts']}",
                 f"- teacher_event_target_shaping_mode_counts: {slice_summary['teacher_event_target_shaping_mode_counts']}",
                 f"- sample_record_ids: {slice_summary['sample_record_ids']}",
             ]

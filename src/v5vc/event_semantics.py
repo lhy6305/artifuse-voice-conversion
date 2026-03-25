@@ -23,6 +23,16 @@ DEFAULT_TARGET_EVENT_TIMING_BOUNDARY_HALF_WIDTH_FRAMES = 2
 PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_SIDECAR_VERSION = "paired_parallel_source_semantic_parity_sidecar_v1"
 PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_LABEL_SPACE_VERSION = "source_paired_parallel_bootstrap_semantics_v1"
 PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_TRANSFER_TYPE = "paired_parallel_target_to_source_same_content_v1"
+TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1 = "legacy_event_probs_v1"
+TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_GUIDED_EVENT_BRIDGE_V1 = "acoustic_guided_event_bridge_v1"
+TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1 = (
+    "acoustic_contextual_event_bridge_v1"
+)
+TEACHER_E_EVT_BRIDGE_MODE_CHOICES = {
+    TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+    TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_GUIDED_EVENT_BRIDGE_V1,
+    TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1,
+}
 TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1 = "hard_box_v1"
 TEACHER_E_EVT_TARGET_SHAPING_MODE_CENTER_WEIGHTED_FINAL_RAMP_V1 = (
     "center_weighted_boundary_progressive_final_clause_v1"
@@ -158,14 +168,27 @@ def normalize_teacher_e_evt_target_shaping_mode(raw_mode: object) -> str:
     return shaping_mode
 
 
+def normalize_teacher_e_evt_bridge_mode(raw_mode: object) -> str:
+    bridge_mode = str(raw_mode or TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1).strip().lower()
+    if bridge_mode not in TEACHER_E_EVT_BRIDGE_MODE_CHOICES:
+        raise ValueError(
+            "teacher_e_evt_bridge_mode must be one of "
+            f"{sorted(TEACHER_E_EVT_BRIDGE_MODE_CHOICES)}, got {raw_mode!r}."
+        )
+    return bridge_mode
+
+
 def build_design_state_e_evt_v1_meta(
     *,
+    teacher_e_evt_bridge_mode: str = TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> dict[str, object]:
+    bridge_mode = normalize_teacher_e_evt_bridge_mode(teacher_e_evt_bridge_mode)
     shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
     return {
         "event_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
         "event_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+        "teacher_e_evt_bridge_mode": bridge_mode,
         "teacher_e_evt_target_shaping_mode": shaping_mode,
         "event_dimensions": [dimension["name"] for dimension in DESIGN_STATE_E_EVT_V1_DIMENSIONS],
         "event_dimension_specs": [dict(dimension) for dimension in DESIGN_STATE_E_EVT_V1_DIMENSIONS],
@@ -177,7 +200,8 @@ def build_design_state_e_evt_v1_meta(
         "semantic_status": "bootstrap_design_state_bridge_not_final_teacher_truth",
         "notes": [
             "这不是最终 teacher 真值版 e_evt，而是当前仓库资产可支撑的 design-state bootstrap bridge。",
-            "p_frication / p_stop_closure / p_burst / p_voicing / a_aper 由 legacy heuristic event_probs 桥接得到。",
+            "p_frication / p_stop_closure / p_burst / p_voicing / a_aper 由 teacher_e_evt bridge mode 控制的 bootstrap 规则生成。",
+            f"当前 teacher_e_evt bridge mode = {bridge_mode}。",
             "p_pause_boundary / p_terminal_boundary / p_final_clause 由 target timing semantic sidecar 栅格化得到。",
             f"当前 teacher_e_evt target shaping mode = {shaping_mode}。",
             "当前版本还不包含 place / manner 分类，也不能冒充完整最终设计稿语义。",
@@ -188,12 +212,15 @@ def build_design_state_e_evt_v1_meta(
 def build_teacher_e_evt_v1_targets(
     *,
     legacy_event_probs: object,
+    teacher_acoustic_target: object | None = None,
     target_event_semantic_sidecar: dict[str, object] | None = None,
     target_event_timing_semantic_sidecar: dict[str, object] | None = None,
     source_semantic_parity_sidecar: dict[str, object] | None = None,
     valid_frame_count: int | None = None,
+    teacher_e_evt_bridge_mode: str = TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> dict[str, object]:
+    bridge_mode = normalize_teacher_e_evt_bridge_mode(teacher_e_evt_bridge_mode)
     shaping_mode = normalize_teacher_e_evt_target_shaping_mode(teacher_e_evt_target_shaping_mode)
     if hasattr(legacy_event_probs, "detach"):
         legacy_tensor = legacy_event_probs.detach().to("cpu")
@@ -210,15 +237,22 @@ def build_teacher_e_evt_v1_targets(
         frame_count = max(0, min(int(valid_frame_count), int(legacy_tensor.shape[0])))
         legacy_tensor = legacy_tensor[:frame_count]
     frame_count = int(legacy_tensor.shape[0])
+    acoustic_tensor = resolve_teacher_e_evt_acoustic_target(
+        teacher_acoustic_target=teacher_acoustic_target,
+        frame_count=frame_count,
+    )
     if frame_count <= 0:
         return {
             "tensor": legacy_tensor.new_zeros((0, len(DESIGN_STATE_E_EVT_V1_DIMENSIONS))),
             "meta": build_design_state_e_evt_v1_meta(
+                teacher_e_evt_bridge_mode=bridge_mode,
                 teacher_e_evt_target_shaping_mode=shaping_mode,
             ),
             "summary": {
                 "frame_count": 0,
+                "teacher_e_evt_bridge_mode": bridge_mode,
                 "teacher_e_evt_target_shaping_mode": shaping_mode,
+                "teacher_acoustic_target_used": acoustic_tensor is not None,
                 "timing_sidecar_used": False,
                 "source_semantic_parity_used": False,
                 "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
@@ -230,11 +264,17 @@ def build_teacher_e_evt_v1_targets(
         }
 
     normalized_legacy = legacy_tensor.to(torch.float32).clamp(0.0, 1.0)
-    high_zero_cross = normalized_legacy[:, 2:3]
-    low_zero_cross_voiced_like = normalized_legacy[:, 3:4]
-    high_zero_cross_voiced_like = normalized_legacy[:, 4:5]
-    delta_energy_rise = normalized_legacy[:, 5:6]
-    delta_energy_fall = normalized_legacy[:, 6:7]
+    (
+        p_frication,
+        p_stop_closure,
+        p_burst,
+        p_voicing,
+        a_aper,
+    ) = build_teacher_e_evt_acoustic_bridge_dims(
+        normalized_legacy=normalized_legacy,
+        teacher_acoustic_target=acoustic_tensor,
+        bridge_mode=bridge_mode,
+    )
 
     (
         pause_boundary_mask,
@@ -250,11 +290,11 @@ def build_teacher_e_evt_v1_targets(
         teacher_e_evt_target_shaping_mode=shaping_mode,
     )
     e_evt_tensor = normalized_legacy.new_zeros((frame_count, len(DESIGN_STATE_E_EVT_V1_DIMENSIONS)))
-    e_evt_tensor[:, 0:1] = torch.maximum(high_zero_cross, high_zero_cross_voiced_like)
-    e_evt_tensor[:, 1:2] = delta_energy_fall
-    e_evt_tensor[:, 2:3] = delta_energy_rise
-    e_evt_tensor[:, 3:4] = low_zero_cross_voiced_like
-    e_evt_tensor[:, 4:5] = high_zero_cross
+    e_evt_tensor[:, 0:1] = p_frication
+    e_evt_tensor[:, 1:2] = p_stop_closure
+    e_evt_tensor[:, 2:3] = p_burst
+    e_evt_tensor[:, 3:4] = p_voicing
+    e_evt_tensor[:, 4:5] = a_aper
     e_evt_tensor[:, 5:6] = pause_boundary_mask
     e_evt_tensor[:, 6:7] = terminal_boundary_mask
     e_evt_tensor[:, 7:8] = final_clause_mask
@@ -262,11 +302,14 @@ def build_teacher_e_evt_v1_targets(
     return {
         "tensor": e_evt_tensor.clamp(0.0, 1.0),
         "meta": build_design_state_e_evt_v1_meta(
+            teacher_e_evt_bridge_mode=bridge_mode,
             teacher_e_evt_target_shaping_mode=shaping_mode,
         ),
         "summary": {
             "frame_count": frame_count,
+            "teacher_e_evt_bridge_mode": bridge_mode,
             "teacher_e_evt_target_shaping_mode": shaping_mode,
+            "teacher_acoustic_target_used": acoustic_tensor is not None,
             "timing_sidecar_used": isinstance(target_event_timing_semantic_sidecar, dict),
             "source_semantic_parity_used": isinstance(source_semantic_parity_sidecar, dict),
             "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
@@ -276,6 +319,217 @@ def build_teacher_e_evt_v1_targets(
             "timing_final_clause_frame_ratio": round(float(final_clause_mask.mean().item()), 6),
         },
     }
+
+
+def resolve_teacher_e_evt_acoustic_target(
+    *,
+    teacher_acoustic_target: object | None,
+    frame_count: int,
+) -> torch.Tensor | None:
+    if teacher_acoustic_target is None:
+        return None
+    if not hasattr(teacher_acoustic_target, "detach"):
+        raise TypeError("teacher_acoustic_target must be a torch Tensor-like object when provided.")
+    acoustic_tensor = teacher_acoustic_target.detach().to("cpu")
+    if acoustic_tensor.ndim != 2:
+        raise ValueError(f"teacher_acoustic_target must have shape [T, C], got {tuple(acoustic_tensor.shape)}")
+    if acoustic_tensor.shape[-1] < 4:
+        raise ValueError(
+            "teacher_acoustic_target must expose at least 4 channels [energy, abs_mean, zero_cross, delta_energy], "
+            f"got {acoustic_tensor.shape[-1]}."
+        )
+    return acoustic_tensor[:frame_count].to(torch.float32)
+
+
+def build_teacher_e_evt_acoustic_bridge_dims(
+    *,
+    normalized_legacy: torch.Tensor,
+    teacher_acoustic_target: torch.Tensor | None,
+    bridge_mode: str,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    high_zero_cross = normalized_legacy[:, 2:3]
+    low_zero_cross_voiced_like = normalized_legacy[:, 3:4]
+    high_zero_cross_voiced_like = normalized_legacy[:, 4:5]
+    delta_energy_rise = normalized_legacy[:, 5:6]
+    delta_energy_fall = normalized_legacy[:, 6:7]
+    if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1:
+        return (
+            torch.maximum(high_zero_cross, high_zero_cross_voiced_like).clamp(0.0, 1.0),
+            delta_energy_fall.clamp(0.0, 1.0),
+            delta_energy_rise.clamp(0.0, 1.0),
+            low_zero_cross_voiced_like.clamp(0.0, 1.0),
+            high_zero_cross.clamp(0.0, 1.0),
+        )
+    if teacher_acoustic_target is None:
+        raise ValueError(
+            f"teacher_e_evt_bridge_mode={bridge_mode} requires teacher_acoustic_target."
+        )
+
+    energy = teacher_acoustic_target[:, 0:1]
+    zero_cross = teacher_acoustic_target[:, 2:3].clamp(0.0, 1.0)
+    delta_energy = teacher_acoustic_target[:, 3:4]
+    energy_norm = torch.sigmoid((energy + 4.0) * 2.0)
+    low_zero_cross_strength = torch.sigmoid((0.11 - zero_cross) * 18.0)
+    high_zero_cross_strength = torch.sigmoid((zero_cross - 0.12) * 18.0)
+    delta_rise = torch.sigmoid(delta_energy * 5.0)
+    delta_fall = torch.sigmoid(-delta_energy * 5.0)
+    closure_quiet_support = torch.sigmoid((-energy - 3.1) * 2.6)
+    burst_energy_support = torch.sigmoid((energy + 3.4) * 2.4)
+
+    p_voicing = torch.maximum(
+        low_zero_cross_voiced_like,
+        (low_zero_cross_strength * energy_norm).clamp(0.0, 1.0),
+    )
+    aper_from_acoustic = high_zero_cross_strength * (0.35 + 0.65 * energy_norm)
+    a_aper = torch.maximum(high_zero_cross, aper_from_acoustic).clamp(0.0, 1.0)
+
+    p_frication = torch.maximum(high_zero_cross, 0.65 * high_zero_cross_voiced_like)
+    p_frication = torch.maximum(
+        p_frication,
+        (a_aper * (0.5 + 0.5 * (1.0 - p_voicing)) * energy_norm).clamp(0.0, 1.0),
+    )
+    p_frication = (p_frication * (0.35 + 0.65 * (1.0 - p_voicing)) * (0.45 + 0.55 * energy_norm)).clamp(0.0, 1.0)
+
+    p_stop_closure = torch.maximum(delta_energy_fall, delta_fall)
+    p_stop_closure = (
+        p_stop_closure
+        * (0.4 + 0.6 * torch.maximum(closure_quiet_support, 1.0 - energy_norm))
+        * (0.55 + 0.45 * (1.0 - high_zero_cross_strength))
+    ).clamp(0.0, 1.0)
+
+    p_burst = torch.maximum(delta_energy_rise, delta_rise)
+    p_burst = (
+        p_burst
+        * (0.4 + 0.6 * burst_energy_support)
+        * (0.35 + 0.65 * torch.maximum(high_zero_cross_strength, a_aper))
+    ).clamp(0.0, 1.0)
+
+    if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_GUIDED_EVENT_BRIDGE_V1:
+        return (
+            p_frication.clamp(0.0, 1.0),
+            p_stop_closure.clamp(0.0, 1.0),
+            p_burst.clamp(0.0, 1.0),
+            p_voicing.clamp(0.0, 1.0),
+            a_aper.clamp(0.0, 1.0),
+        )
+
+    sustained_voicing = smooth_teacher_e_evt_bridge_channel(
+        p_voicing,
+        kernel_size=5,
+        reduction="mean",
+    )
+    sustained_aper = smooth_teacher_e_evt_bridge_channel(
+        a_aper,
+        kernel_size=5,
+        reduction="mean",
+    )
+    frication_seed = torch.maximum(high_zero_cross, 0.6 * high_zero_cross_voiced_like).clamp(0.0, 1.0)
+    sustained_frication_seed = smooth_teacher_e_evt_bridge_channel(
+        frication_seed,
+        kernel_size=5,
+        reduction="mean",
+    )
+    closure_seed = torch.maximum(delta_energy_fall, delta_fall).clamp(0.0, 1.0)
+    burst_seed = torch.maximum(delta_energy_rise, delta_rise).clamp(0.0, 1.0)
+    closure_region = (
+        closure_seed
+        * (0.35 + 0.65 * torch.maximum(closure_quiet_support, 1.0 - energy_norm))
+        * (0.45 + 0.55 * (1.0 - high_zero_cross_strength))
+    ).clamp(0.0, 1.0)
+    burst_region = (
+        burst_seed
+        * (0.35 + 0.65 * burst_energy_support)
+        * (0.35 + 0.65 * torch.maximum(high_zero_cross_strength, a_aper))
+    ).clamp(0.0, 1.0)
+    nearby_closure = smooth_teacher_e_evt_bridge_channel(
+        closure_region,
+        kernel_size=5,
+        reduction="max",
+    )
+    nearby_burst = smooth_teacher_e_evt_bridge_channel(
+        burst_region,
+        kernel_size=5,
+        reduction="max",
+    )
+    frication_context = (
+        torch.maximum(
+            sustained_frication_seed,
+            smooth_teacher_e_evt_bridge_channel(
+                sustained_aper * (1.0 - sustained_voicing) * energy_norm,
+                kernel_size=3,
+                reduction="mean",
+            ),
+        )
+        * (0.4 + 0.6 * energy_norm)
+        * (0.4 + 0.6 * (1.0 - sustained_voicing))
+    ).clamp(0.0, 1.0)
+    contextual_closure = (
+        closure_region
+        * (0.45 + 0.55 * nearby_burst)
+        * (0.5 + 0.5 * smooth_teacher_e_evt_bridge_channel(1.0 - energy_norm, kernel_size=3, reduction="mean"))
+    ).clamp(0.0, 1.0)
+    contextual_burst = (
+        burst_region
+        * (0.45 + 0.55 * nearby_closure)
+        * (0.45 + 0.55 * smooth_teacher_e_evt_bridge_channel(energy_norm, kernel_size=3, reduction="max"))
+    ).clamp(0.0, 1.0)
+    contextual_voicing = torch.maximum(
+        sustained_voicing,
+        smooth_teacher_e_evt_bridge_channel(
+            low_zero_cross_strength * energy_norm,
+            kernel_size=7,
+            reduction="mean",
+        ),
+    ).clamp(0.0, 1.0)
+    contextual_aper = torch.maximum(
+        sustained_aper,
+        smooth_teacher_e_evt_bridge_channel(
+            high_zero_cross_strength * (0.4 + 0.6 * energy_norm),
+            kernel_size=5,
+            reduction="mean",
+        ),
+    ).clamp(0.0, 1.0)
+    return (
+        frication_context,
+        contextual_closure,
+        contextual_burst,
+        contextual_voicing,
+        contextual_aper,
+    )
+
+
+def smooth_teacher_e_evt_bridge_channel(
+    channel: torch.Tensor,
+    *,
+    kernel_size: int,
+    reduction: str,
+) -> torch.Tensor:
+    if channel.ndim != 2 or channel.shape[-1] != 1:
+        raise ValueError(f"channel must have shape [T, 1], got {tuple(channel.shape)}")
+    normalized_reduction = str(reduction).strip().lower()
+    if normalized_reduction not in {"mean", "max"}:
+        raise ValueError(f"Unsupported reduction: {reduction}")
+    resolved_kernel = max(1, int(kernel_size))
+    if resolved_kernel % 2 == 0:
+        resolved_kernel += 1
+    if resolved_kernel == 1 or channel.shape[0] <= 1:
+        return channel.clamp(0.0, 1.0)
+    pad = resolved_kernel // 2
+    values = channel.transpose(0, 1).unsqueeze(0)
+    padded = torch.nn.functional.pad(values, (pad, pad), mode="replicate")
+    if normalized_reduction == "mean":
+        smoothed = torch.nn.functional.avg_pool1d(
+            padded,
+            kernel_size=resolved_kernel,
+            stride=1,
+        )
+    else:
+        smoothed = torch.nn.functional.max_pool1d(
+            padded,
+            kernel_size=resolved_kernel,
+            stride=1,
+        )
+    return smoothed.squeeze(0).transpose(0, 1).clamp(0.0, 1.0)
 
 
 def rasterize_teacher_e_evt_boundary_semantics(

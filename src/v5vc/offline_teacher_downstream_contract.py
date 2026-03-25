@@ -8,10 +8,12 @@ import torch
 
 from v5vc.ablation_eval import load_checkpoint
 from v5vc.event_semantics import (
+    TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
     build_current_runtime_event_semantics_meta,
     build_teacher_e_evt_v1_targets,
 )
+from v5vc.offline_mvp.losses import build_frame_targets
 from v5vc.offline_teacher_runtime import (
     OfflineMVPTeacherRuntime,
     compare_runtime_outputs,
@@ -45,6 +47,7 @@ def export_offline_mvp_teacher_downstream_contract(
     target_event_semantic_sidecar: dict[str, object] | None = None,
     target_event_timing_semantic_sidecar: dict[str, object] | None = None,
     source_semantic_parity_sidecar: dict[str, object] | None = None,
+    teacher_e_evt_bridge_mode: str = TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> None:
     output_dir = output_dir.resolve()
@@ -129,6 +132,7 @@ def export_offline_mvp_teacher_downstream_contract(
         target_event_semantic_sidecar=target_event_semantic_sidecar,
         target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
         source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     tensor_payload = build_tensor_payload(
@@ -144,6 +148,7 @@ def export_offline_mvp_teacher_downstream_contract(
         target_event_semantic_sidecar=target_event_semantic_sidecar,
         target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
         source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
 
@@ -200,6 +205,7 @@ def build_contract_payload(
     target_event_semantic_sidecar: dict[str, object] | None,
     target_event_timing_semantic_sidecar: dict[str, object] | None,
     source_semantic_parity_sidecar: dict[str, object] | None,
+    teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
 ) -> dict[str, object]:
     frame_count = int(streaming_outputs["frame_count"])
@@ -216,12 +222,20 @@ def build_contract_payload(
     energy_log = streaming_outputs["acoustic"][:, 0]
     zero_cross_rate = streaming_outputs["acoustic"][:, 2]
     event_probs = streaming_outputs["event_probs"]
+    frame_targets = build_frame_targets(
+        waveform=waveform.unsqueeze(0),
+        lengths=torch.tensor([int(waveform.shape[0])], dtype=torch.long),
+        frame_length=frame_length,
+        hop_length=hop_length,
+    )
     teacher_e_evt = build_teacher_e_evt_v1_targets(
         legacy_event_probs=event_probs,
+        teacher_acoustic_target=frame_targets["acoustic_target"][0],
         target_event_semantic_sidecar=target_event_semantic_sidecar,
         target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
         source_semantic_parity_sidecar=source_semantic_parity_sidecar,
         valid_frame_count=frame_count,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     e_evt_tensor = teacher_e_evt["tensor"]
@@ -348,6 +362,7 @@ def build_tensor_payload(
     target_event_semantic_sidecar: dict[str, object] | None,
     target_event_timing_semantic_sidecar: dict[str, object] | None,
     source_semantic_parity_sidecar: dict[str, object] | None,
+    teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
 ) -> dict[str, object]:
     source_acoustic_state = extract_source_acoustic_state(
@@ -362,12 +377,20 @@ def build_tensor_payload(
     zero_cross_rate = acoustic[:, 2:3]
     delta_energy = acoustic[:, 3:4]
     event_probs = streaming_outputs["event_probs"].to(torch.float32)
+    frame_targets = build_frame_targets(
+        waveform=waveform.unsqueeze(0),
+        lengths=torch.tensor([int(waveform.shape[0])], dtype=torch.long),
+        frame_length=frame_length,
+        hop_length=hop_length,
+    )
     teacher_e_evt = build_teacher_e_evt_v1_targets(
         legacy_event_probs=event_probs,
+        teacher_acoustic_target=frame_targets["acoustic_target"][0],
         target_event_semantic_sidecar=target_event_semantic_sidecar,
         target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
         source_semantic_parity_sidecar=source_semantic_parity_sidecar,
         valid_frame_count=int(event_probs.shape[0]),
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     e_evt_tensor = teacher_e_evt["tensor"].to(torch.float32)

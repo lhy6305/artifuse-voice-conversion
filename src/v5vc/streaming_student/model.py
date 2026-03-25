@@ -15,6 +15,7 @@ class UnifiedStreamingFrontend(nn.Module):
         frame_length: int,
         hop_length: int,
         event_prior_dim: int,
+        teacher_hidden_projection_dim: int,
         timing_aux_enabled: bool = False,
     ) -> None:
         super().__init__()
@@ -34,6 +35,7 @@ class UnifiedStreamingFrontend(nn.Module):
         self.aper_head = nn.Linear(shared_dim, 1)
         self.energy_head = nn.Linear(shared_dim, 1)
         self.event_prior_head = nn.Linear(shared_dim, event_prior_dim)
+        self.teacher_hidden_projection_head = nn.Linear(shared_dim, teacher_hidden_projection_dim)
         self.timing_pause_boundary_head = (
             nn.Linear(shared_dim, 1) if self.timing_aux_enabled else None
         )
@@ -66,6 +68,7 @@ class UnifiedStreamingFrontend(nn.Module):
             "aperiodicity": self.aper_head(shared_hidden),
             "energy": self.energy_head(shared_hidden),
             "event_prior_logits": self.event_prior_head(shared_hidden),
+            "teacher_hidden_projection": self.teacher_hidden_projection_head(shared_hidden),
         }
         if self.timing_pause_boundary_head is None:
             zero_aux = shared_hidden.new_zeros((shared_hidden.shape[0], shared_hidden.shape[1], 0))
@@ -91,6 +94,7 @@ class StudentControlHeads(nn.Module):
         speaker_embed_dim: int,
         geom_embed_dim: int,
         conditioning_dim: int,
+        teacher_fused_hidden_projection_dim: int,
         r_res_dim: int,
         r_res_enabled: bool,
         f0_correction_enabled: bool,
@@ -113,6 +117,10 @@ class StudentControlHeads(nn.Module):
             hidden_dim=student_dim,
             output_dim=student_dim,
             num_layers=student_layers,
+        )
+        self.teacher_fused_hidden_projection_head = nn.Linear(
+            student_dim,
+            teacher_fused_hidden_projection_dim,
         )
         self.z_art_head = nn.Linear(student_dim, z_art_dim)
         self.event_head = nn.Linear(student_dim, event_dim)
@@ -146,6 +154,7 @@ class StudentControlHeads(nn.Module):
         outputs = {
             "student_hidden": student_hidden,
             "conditioning": conditioning,
+            "teacher_fused_hidden_projection": self.teacher_fused_hidden_projection_head(student_hidden),
             "z_art": self.z_art_head(student_hidden),
             "event_logits": event_logits,
             "event_probs": torch.sigmoid(event_logits),
@@ -179,6 +188,8 @@ class StreamingStudentScaffold(nn.Module):
         speaker_embed_dim: int,
         geom_embed_dim: int,
         conditioning_dim: int,
+        teacher_hidden_projection_dim: int,
+        teacher_fused_hidden_projection_dim: int,
         r_res_dim: int,
         frame_length: int,
         hop_length: int,
@@ -195,6 +206,7 @@ class StreamingStudentScaffold(nn.Module):
             frame_length=frame_length,
             hop_length=hop_length,
             event_prior_dim=event_prior_dim,
+            teacher_hidden_projection_dim=teacher_hidden_projection_dim,
             timing_aux_enabled=timing_aux_enabled,
         )
         self.student = StudentControlHeads(
@@ -207,6 +219,7 @@ class StreamingStudentScaffold(nn.Module):
             speaker_embed_dim=speaker_embed_dim,
             geom_embed_dim=geom_embed_dim,
             conditioning_dim=conditioning_dim,
+            teacher_fused_hidden_projection_dim=teacher_fused_hidden_projection_dim,
             r_res_dim=r_res_dim,
             r_res_enabled=r_res_enabled,
             f0_correction_enabled=f0_correction_enabled,

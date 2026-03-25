@@ -13,6 +13,7 @@ import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 
 from v5vc.event_semantics import TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1
+from v5vc.event_semantics import TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
     build_record_source_semantic_parity_overview,
@@ -193,6 +194,12 @@ def build_offline_mvp_nores_vocoder_training_package(
         "contract_family": "legacy_proxy",
         "has_v2_core": bool(has_v2_core),
         "uses_explicit_e_evt": False,
+        "teacher_e_evt_bridge_mode": str(
+            dict(payload.get("e_evt_meta", {})).get(
+                "teacher_e_evt_bridge_mode",
+                TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+            )
+        ),
         "teacher_e_evt_target_shaping_mode": str(
             dict(payload.get("e_evt_meta", {})).get(
                 "teacher_e_evt_target_shaping_mode",
@@ -224,6 +231,12 @@ def build_offline_mvp_nores_vocoder_training_package(
             payload=payload,
         )
         energy_proxy = normalized_energy_control.clamp(0.0, 1.0)
+        target_contract_summary["teacher_e_evt_bridge_mode"] = str(
+            dict(payload.get("e_evt_meta", {})).get(
+                "teacher_e_evt_bridge_mode",
+                TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+            )
+        )
         target_contract_summary["teacher_e_evt_target_shaping_mode"] = str(
             dict(payload.get("e_evt_meta", {})).get(
                 "teacher_e_evt_target_shaping_mode",
@@ -253,6 +266,12 @@ def build_offline_mvp_nores_vocoder_training_package(
             payload=payload,
         )
         energy_proxy = available_controls["energy_proxy"].to(torch.float32)
+        target_contract_summary["teacher_e_evt_bridge_mode"] = str(
+            dict(payload.get("e_evt_meta", {})).get(
+                "teacher_e_evt_bridge_mode",
+                TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+            )
+        )
         target_contract_summary["teacher_e_evt_target_shaping_mode"] = str(
             dict(payload.get("e_evt_meta", {})).get(
                 "teacher_e_evt_target_shaping_mode",
@@ -983,6 +1002,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     source_semantic_parity_sidecar_path: Path | None = None,
     semantic_consumer_mode: str = DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
     target_contract_mode: str = DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+    teacher_e_evt_bridge_mode: str = TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> None:
     output_dir = output_dir.resolve()
@@ -1103,6 +1123,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         max_audio_sec=max_audio_sec,
         verify_against_full_pass=verify_against_full_pass,
         skip_existing=skip_existing,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     validation_entries = build_dataset_packages_for_split(
@@ -1123,6 +1144,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         max_audio_sec=max_audio_sec,
         verify_against_full_pass=verify_against_full_pass,
         skip_existing=skip_existing,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     run_ended_at = datetime.now()
@@ -1164,6 +1186,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         ),
         "semantic_consumer_mode": resolved_semantic_consumer_mode,
         "target_contract_mode": resolved_target_contract_mode,
+        "teacher_e_evt_bridge_mode": str(teacher_e_evt_bridge_mode),
         "teacher_e_evt_target_shaping_mode": str(teacher_e_evt_target_shaping_mode),
         "train_packages": train_entries,
         "validation_packages": validation_entries,
@@ -1180,6 +1203,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             "When available, paired_parallel_source_semantic_parity_sidecar is attached by source_record_id and summarized in package/index metadata.",
             "semantic_consumer_mode controls whether target-side semantic sidecar remains metadata only or is broadcast into Stage5 branch features as a forward-path consumer.",
             "target_contract_mode controls how Stage5 periodic_gate_target / noise_gate_target are built inside each package; this is the supervision-side contract, not another input-side semantic consumer.",
+            "teacher_e_evt_bridge_mode controls how the first 5 explicit e_evt acoustic dims are bridged before entering the Stage5 downstream/scaffold route.",
             "teacher_e_evt_target_shaping_mode controls how explicit e_evt boundary/final-clause labels are rasterized before entering the Stage5 downstream/scaffold route.",
         ],
     }
@@ -2555,6 +2579,7 @@ def build_dataset_packages_for_split(
     max_audio_sec: float | None,
     verify_against_full_pass: bool,
     skip_existing: bool,
+    teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
 ) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
@@ -2615,6 +2640,16 @@ def build_dataset_packages_for_split(
             if (
                 str(
                     existing_target_contract.get(
+                        "teacher_e_evt_bridge_mode",
+                        TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+                    )
+                )
+                != str(teacher_e_evt_bridge_mode)
+            ):
+                package_reused = False
+            if (
+                str(
+                    existing_target_contract.get(
                         "teacher_e_evt_target_shaping_mode",
                         TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
                     )
@@ -2637,6 +2672,7 @@ def build_dataset_packages_for_split(
                 target_event_semantic_sidecar=target_event_semantic_sidecar,
                 target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
                 source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+                teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
                 teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
             )
             build_offline_mvp_teacher_vocoder_input_scaffold(
