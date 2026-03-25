@@ -1,0 +1,294 @@
+{
+  "generated_at": "2026-03-26T00:56:51",
+  "route_handoff_path": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_route_handoff_round1_1_longwindow_final/route_handoff.json",
+  "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration.metrics.json",
+  "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+  "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+  "data_output_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels_eevt_directional_smoke_round1_1",
+  "report_output_dir": "F:/proj_dev/tmp/workdir4/reports/data/round1_1_streaming_student_teacher_labels_eevt_directional_smoke_round1_1",
+  "teacher_anchor": {
+    "experiment_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+    "experiment_metrics_path": "F:/proj_dev/tmp/workdir4/reports/experiments/EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration.metrics.json",
+    "route_policy": "default_minimax",
+    "route_selected_anchor_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "source": "route_handoff_anchor"
+  },
+  "index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels_eevt_directional_smoke_round1_1/teacher_label_index.jsonl",
+  "record_count": 6,
+  "frame_count": 8539,
+  "batch_size": 4,
+  "max_records_per_slice": 2,
+  "teacher_e_evt_bridge_mode": "acoustic_directional_transition_bridge_v1",
+  "teacher_e_evt_bridge_mode_choices": [
+    "acoustic_contextual_event_bridge_v1",
+    "acoustic_directional_transition_bridge_v1",
+    "acoustic_guided_event_bridge_v1",
+    "legacy_event_probs_v1"
+  ],
+  "teacher_e_evt_target_shaping_mode": "center_weighted_boundary_progressive_final_clause_v1",
+  "teacher_e_evt_target_shaping_mode_choices": [
+    "center_weighted_boundary_progressive_final_clause_v1",
+    "hard_box_v1"
+  ],
+  "feature_dims": {
+    "hidden": 64,
+    "fused_hidden": 64,
+    "z_art": 8,
+    "event_logits": 8,
+    "e_evt": 8,
+    "acoustic": 4,
+    "confidence": 1
+  },
+  "slices": {
+    "target_train": {
+      "record_count": 2,
+      "duration_stats_sec": {
+        "count": 2,
+        "min": 11.087982,
+        "max": 17.184989,
+        "mean": 14.136486,
+        "median": 14.136486,
+        "stdev": 3.048504
+      },
+      "frame_count_stats": {
+        "count": 2,
+        "min": 3054,
+        "max": 4735,
+        "mean": 3894.5,
+        "median": 3894.5,
+        "stdev": 840.5,
+        "sum": 7789
+      },
+      "confidence_mean_stats": {
+        "count": 2,
+        "min": 0.44205,
+        "max": 0.476281,
+        "mean": 0.459166,
+        "median": 0.459166,
+        "stdev": 0.017116
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 2,
+        "min": 0.368532,
+        "max": 0.483955,
+        "mean": 0.426243,
+        "median": 0.426243,
+        "stdev": 0.057711
+      },
+      "utterance_structure_type_counts": {
+        "multi_terminal": 1,
+        "other": 1
+      },
+      "final_terminal_type_counts": {
+        "none": 1,
+        "terminal_period": 1
+      },
+      "semantic_contract_version_counts": {
+        "target_event_semantic_sidecar_v1": 2
+      },
+      "semantic_inventory_status_counts": {
+        "matched_inventory": 2
+      },
+      "semantic_label_status_counts": {
+        "pending_upgrade": 2
+      },
+      "semantic_utterance_structure_type_counts": {
+        "multi_terminal": 1,
+        "other": 1
+      },
+      "semantic_final_terminal_type_counts": {
+        "none": 1,
+        "terminal_period": 1
+      },
+      "timing_contract_version_counts": {
+        "target_event_timing_semantic_sidecar_v1": 2
+      },
+      "timing_inventory_status_counts": {
+        "matched_semantic_sidecar": 2
+      },
+      "timing_label_status_counts": {
+        "pending_upgrade": 2
+      },
+      "timing_alignment_type_counts": {
+        "weak_punctuation_lexical_progress_v1": 2
+      },
+      "teacher_event_bridge_mode_counts": {
+        "acoustic_directional_transition_bridge_v1": 2
+      },
+      "teacher_event_target_shaping_mode_counts": {
+        "center_weighted_boundary_progressive_final_clause_v1": 2
+      },
+      "sample_record_ids": [
+        "target::archive_firefly_1",
+        "target::archive_firefly_10"
+      ]
+    },
+    "target_validation": {
+      "record_count": 2,
+      "duration_stats_sec": {
+        "count": 2,
+        "min": 0.612993,
+        "max": 0.975986,
+        "mean": 0.79449,
+        "median": 0.79449,
+        "stdev": 0.181497
+      },
+      "frame_count_stats": {
+        "count": 2,
+        "min": 167,
+        "max": 267,
+        "mean": 217.0,
+        "median": 217.0,
+        "stdev": 50.0,
+        "sum": 434
+      },
+      "confidence_mean_stats": {
+        "count": 2,
+        "min": 0.52687,
+        "max": 0.542329,
+        "mean": 0.534599,
+        "median": 0.534599,
+        "stdev": 0.00773
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 2,
+        "min": 0.149813,
+        "max": 0.161677,
+        "mean": 0.155745,
+        "median": 0.155745,
+        "stdev": 0.005932
+      },
+      "utterance_structure_type_counts": {
+        "single_clause_terminal": 2
+      },
+      "final_terminal_type_counts": {
+        "terminal_period": 2
+      },
+      "semantic_contract_version_counts": {
+        "target_event_semantic_sidecar_v1": 2
+      },
+      "semantic_inventory_status_counts": {
+        "matched_inventory": 2
+      },
+      "semantic_label_status_counts": {
+        "pending_upgrade": 2
+      },
+      "semantic_utterance_structure_type_counts": {
+        "single_clause_terminal": 2
+      },
+      "semantic_final_terminal_type_counts": {
+        "terminal_period": 2
+      },
+      "timing_contract_version_counts": {
+        "target_event_timing_semantic_sidecar_v1": 2
+      },
+      "timing_inventory_status_counts": {
+        "matched_semantic_sidecar": 2
+      },
+      "timing_label_status_counts": {
+        "pending_upgrade": 2
+      },
+      "timing_alignment_type_counts": {
+        "weak_punctuation_lexical_progress_v1": 2
+      },
+      "teacher_event_bridge_mode_counts": {
+        "acoustic_directional_transition_bridge_v1": 2
+      },
+      "teacher_event_target_shaping_mode_counts": {
+        "center_weighted_boundary_progressive_final_clause_v1": 2
+      },
+      "sample_record_ids": [
+        "target::chapter3_3_firefly_162",
+        "target::chapter3_20_firefly_184"
+      ]
+    },
+    "target_special_eval": {
+      "record_count": 2,
+      "duration_stats_sec": {
+        "count": 2,
+        "min": 0.470998,
+        "max": 0.69,
+        "mean": 0.580499,
+        "median": 0.580499,
+        "stdev": 0.109501
+      },
+      "frame_count_stats": {
+        "count": 2,
+        "min": 128,
+        "max": 188,
+        "mean": 158.0,
+        "median": 158.0,
+        "stdev": 30.0,
+        "sum": 316
+      },
+      "confidence_mean_stats": {
+        "count": 2,
+        "min": 0.472337,
+        "max": 0.556913,
+        "mean": 0.514625,
+        "median": 0.514625,
+        "stdev": 0.042288
+      },
+      "low_confidence_frame_ratio_stats": {
+        "count": 2,
+        "min": 0.039062,
+        "max": 0.303191,
+        "mean": 0.171126,
+        "median": 0.171126,
+        "stdev": 0.132065
+      },
+      "utterance_structure_type_counts": {
+        "nonverbal": 2
+      },
+      "final_terminal_type_counts": {
+        "none": 2
+      },
+      "semantic_contract_version_counts": {
+        "target_event_semantic_sidecar_v1": 2
+      },
+      "semantic_inventory_status_counts": {
+        "matched_inventory": 2
+      },
+      "semantic_label_status_counts": {
+        "pending_upgrade": 2
+      },
+      "semantic_utterance_structure_type_counts": {
+        "nonverbal": 2
+      },
+      "semantic_final_terminal_type_counts": {
+        "none": 2
+      },
+      "timing_contract_version_counts": {
+        "target_event_timing_semantic_sidecar_v1": 2
+      },
+      "timing_inventory_status_counts": {
+        "matched_semantic_sidecar": 2
+      },
+      "timing_label_status_counts": {
+        "pending_upgrade": 2
+      },
+      "timing_alignment_type_counts": {
+        "weak_punctuation_lexical_progress_v1": 2
+      },
+      "teacher_event_bridge_mode_counts": {
+        "acoustic_directional_transition_bridge_v1": 2
+      },
+      "teacher_event_target_shaping_mode_counts": {
+        "center_weighted_boundary_progressive_final_clause_v1": 2
+      },
+      "sample_record_ids": [
+        "target::no_text_voice/chapter3_17_firefly_106",
+        "target::no_text_voice/chapter3_18_firefly_101"
+      ]
+    }
+  },
+  "notes": [
+    "Teacher labels are pseudo labels exported from the formal offline_mvp route anchor, not physical ground truth.",
+    "frame_confidence uses heuristic bootstrap_v1 and is meant for later weighting/filtering, not as a final confidence design.",
+    "This export now materializes a bootstrap teacher_e_evt target so Stage3 can stop treating legacy heuristic event_probs as the final event contract.",
+    "Stage3 may reuse these labels as assets, but should still keep its own training entry and loss contract separate from offline_mvp.",
+    "teacher_e_evt bridge mode for this export = acoustic_directional_transition_bridge_v1.",
+    "teacher_e_evt target shaping mode for this export = center_weighted_boundary_progressive_final_clause_v1."
+  ]
+}

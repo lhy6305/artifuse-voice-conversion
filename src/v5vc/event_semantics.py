@@ -28,10 +28,14 @@ TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_GUIDED_EVENT_BRIDGE_V1 = "acoustic_guided_eve
 TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1 = (
     "acoustic_contextual_event_bridge_v1"
 )
+TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TRANSITION_BRIDGE_V1 = (
+    "acoustic_directional_transition_bridge_v1"
+)
 TEACHER_E_EVT_BRIDGE_MODE_CHOICES = {
     TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_GUIDED_EVENT_BRIDGE_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1,
+    TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TRANSITION_BRIDGE_V1,
 }
 TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1 = "hard_box_v1"
 TEACHER_E_EVT_TARGET_SHAPING_MODE_CENTER_WEIGHTED_FINAL_RAMP_V1 = (
@@ -489,10 +493,61 @@ def build_teacher_e_evt_acoustic_bridge_dims(
             reduction="mean",
         ),
     ).clamp(0.0, 1.0)
+    if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1:
+        return (
+            frication_context,
+            contextual_closure,
+            contextual_burst,
+            contextual_voicing,
+            contextual_aper,
+        )
+    future_burst_support = pool_teacher_e_evt_bridge_channel(
+        burst_region,
+        left_context=0,
+        right_context=3,
+        reduction="max",
+    )
+    past_closure_support = pool_teacher_e_evt_bridge_channel(
+        closure_region,
+        left_context=3,
+        right_context=0,
+        reduction="max",
+    )
+    past_quiet_support = pool_teacher_e_evt_bridge_channel(
+        1.0 - energy_norm,
+        left_context=2,
+        right_context=0,
+        reduction="mean",
+    )
+    future_energy_support = pool_teacher_e_evt_bridge_channel(
+        energy_norm,
+        left_context=0,
+        right_context=2,
+        reduction="max",
+    )
+    directional_transition_support = torch.maximum(
+        future_burst_support,
+        past_closure_support,
+    ).clamp(0.0, 1.0)
+    directional_frication = (
+        frication_context
+        * (1.0 - 0.22 * directional_transition_support * contextual_voicing)
+        * (0.88 + 0.12 * (1.0 - past_closure_support))
+    ).clamp(0.0, 1.0)
+    directional_closure = (
+        closure_region
+        * (0.3 + 0.7 * future_burst_support)
+        * (0.45 + 0.55 * past_quiet_support)
+    ).clamp(0.0, 1.0)
+    directional_burst = (
+        burst_region
+        * (0.3 + 0.7 * past_closure_support)
+        * (0.45 + 0.55 * future_energy_support)
+    ).clamp(0.0, 1.0)
     return (
-        frication_context,
-        contextual_closure,
-        contextual_burst,
+        directional_frication,
+        directional_closure,
+        directional_burst,
         contextual_voicing,
         contextual_aper,
     )
@@ -512,21 +567,44 @@ def smooth_teacher_e_evt_bridge_channel(
     resolved_kernel = max(1, int(kernel_size))
     if resolved_kernel % 2 == 0:
         resolved_kernel += 1
-    if resolved_kernel == 1 or channel.shape[0] <= 1:
+    context = resolved_kernel // 2
+    return pool_teacher_e_evt_bridge_channel(
+        channel,
+        left_context=context,
+        right_context=context,
+        reduction=normalized_reduction,
+    )
+
+
+def pool_teacher_e_evt_bridge_channel(
+    channel: torch.Tensor,
+    *,
+    left_context: int,
+    right_context: int,
+    reduction: str,
+) -> torch.Tensor:
+    if channel.ndim != 2 or channel.shape[-1] != 1:
+        raise ValueError(f"channel must have shape [T, 1], got {tuple(channel.shape)}")
+    normalized_reduction = str(reduction).strip().lower()
+    if normalized_reduction not in {"mean", "max"}:
+        raise ValueError(f"Unsupported reduction: {reduction}")
+    resolved_left = max(0, int(left_context))
+    resolved_right = max(0, int(right_context))
+    kernel_size = resolved_left + resolved_right + 1
+    if kernel_size <= 1 or channel.shape[0] <= 1:
         return channel.clamp(0.0, 1.0)
-    pad = resolved_kernel // 2
     values = channel.transpose(0, 1).unsqueeze(0)
-    padded = torch.nn.functional.pad(values, (pad, pad), mode="replicate")
+    padded = torch.nn.functional.pad(values, (resolved_left, resolved_right), mode="replicate")
     if normalized_reduction == "mean":
         smoothed = torch.nn.functional.avg_pool1d(
             padded,
-            kernel_size=resolved_kernel,
+            kernel_size=kernel_size,
             stride=1,
         )
     else:
         smoothed = torch.nn.functional.max_pool1d(
             padded,
-            kernel_size=resolved_kernel,
+            kernel_size=kernel_size,
             stride=1,
         )
     return smoothed.squeeze(0).transpose(0, 1).clamp(0.0, 1.0)
