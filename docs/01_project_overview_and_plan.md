@@ -98,7 +98,16 @@
   - 永久停止一切 Stage5 验证
 - 更准确的下一步应是：
   - 先形成 `downstream handoff candidates` 清单
-  - 每个候选写清：
+  - 当前最高优先级候选是：
+    - `Stage3 student-control packet v1`
+  - 这条候选现在已经有最小实现与 smoke export
+  - 并把
+    - `proxy-acoustic / proxy-audio`
+    作为进入新 Stage5 route 前的 cheap screen
+  - 当前 cheap screen 结论是：
+    - `packet v1` 已成立
+    - 但结构增益还不够硬，暂不足以直接开启新的 Stage5 adapter
+  - 每个候选都必须写清：
     - 所在层级
     - 预期承接机制
     - 最小验证实验
@@ -107,12 +116,24 @@
 ## 当前推荐下一步
 1. 以 `acoustic_directional_transition_bridge_v1` 作为新的 Stage3 reference 固定口径。
 2. 不再继续重跑当前旧 `Stage5 no-res downstream` 作为默认承接层。
-3. 新开一份面向实施的候选清单，题目建议：
-   - `Stage3-to-Stage5 downstream handoff candidates`
-4. 在候选清单完成前，不再新增：
-   - Stage5 同层 decode 小实验
-   - Stage5 同层 semantic/timing consumer 小实验
-   - 同类 objective / weight 微扫
+3. 当前新的默认实施顺序是：
+   - 先用已实现的 `Stage3 student-control packet v1`
+   - 再做 `proxy-acoustic / proxy-audio` cheap screen
+   - 当前 screen 只给出“non-regressing but not enough”
+   - 因此下一步先补 `F0 / aper / E` control calibration，而不是直接进入新的 Stage5 adapter/scaffold smoke
+4. 当前候选清单报告：
+   - `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
+5. 当前实现与 smoke：
+   - `docs/371_stage3_student_control_packet_v1_bootstrap_and_proxy_screen_smoke_report.md`
+6. 当前关键边界：
+   - `e_evt` 已可按 named-control candidate 导出
+   - 但 `F0 / aper / E` 仍是 proxy/control status，不应误写成已完成的 Stage5-ready contract
+7. 当前 cheap screen 报告：
+   - `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
+8. 在新的 handoff family 通过更强 cheap screen 前，不再新增：
+  - Stage5 同层 decode 小实验
+  - Stage5 同层 semantic/timing consumer 小实验
+  - 同类 objective / weight 微扫
 
 ## 关键参考报告
 - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
@@ -123,6 +144,9 @@
 - `docs/367_stage3_teacher_fused_hidden_projection_ab_fail_report.md`
 - `docs/368_stage3_teacher_eevt_directional_transition_bridge_ab_report.md`
 - `docs/369_oneoff_evaluation_of_1md_recommendations.md`
+- `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
+- `docs/371_stage3_student_control_packet_v1_bootstrap_and_proxy_screen_smoke_report.md`
+- `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。

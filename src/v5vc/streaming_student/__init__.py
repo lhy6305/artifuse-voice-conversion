@@ -2,6 +2,9 @@ from v5vc.streaming_student.calibration_assets import build_streaming_student_ca
 from v5vc.streaming_student.calibration_estimator import estimate_streaming_student_calibration
 from v5vc.streaming_student.checkpoint_eval_entry import evaluate_streaming_student_checkpoint
 from v5vc.streaming_student.checkpoint_selection_entry import select_streaming_student_best_checkpoint
+from v5vc.streaming_student.downstream_control_packet import (
+    export_streaming_student_downstream_control_packet,
+)
 from v5vc.streaming_student.eval_bridge import build_streaming_student_eval_bridge
 from v5vc.streaming_student.model import StreamingStudentScaffold
 from v5vc.streaming_student.plan_entry import prepare_streaming_student_stage
@@ -20,6 +23,7 @@ __all__ = [
     "estimate_streaming_student_calibration",
     "evaluate_streaming_student_checkpoint",
     "select_streaming_student_best_checkpoint",
+    "export_streaming_student_downstream_control_packet",
     "build_streaming_student_eval_bridge",
     "build_streaming_student_teacher_labels",
     "prepare_streaming_student_paired_training_data",

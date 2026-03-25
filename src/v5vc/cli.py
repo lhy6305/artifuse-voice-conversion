@@ -95,6 +95,7 @@ from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_w
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
     build_streaming_student_calibration_assets,
+    export_streaming_student_downstream_control_packet,
     build_streaming_student_eval_bridge,
     build_streaming_student_teacher_labels,
     evaluate_streaming_student_checkpoint,
@@ -1044,6 +1045,69 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional label prefix for exported wav filenames. Defaults to checkpoint experiment_id.",
     )
     streaming_student_proxy_audio_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration for each exported audio item.",
+    )
+    streaming_student_downstream_control_parser = subparsers.add_parser(
+        "export-streaming-student-downstream-control-packet",
+        help="Export Stage3 named-control packet candidates for downstream handoff screening.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        required=True,
+        help="Checkpoint path produced by the Stage3 training loop scaffold.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--teacher-label-index",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl"),
+        help="Teacher-label index jsonl exported for Stage3.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--calibration-asset",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"),
+        help="Calibration asset consumed as global conditioning for Stage3 batches.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--split-dir",
+        type=Path,
+        default=None,
+        help="Optional split directory override. Defaults to data.split_dir from checkpoint config.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--split-name",
+        default="target_validation",
+        choices=["target_train", "target_validation", "target_special_eval"],
+        help="Target split to sample for downstream packet export.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/streaming_student_downstream_control_packet"),
+        help="Directory for exported Stage3 downstream packet records and metadata.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=3,
+        help="Number of evenly spaced records to export when target_record_ids are omitted.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--target-record-ids",
+        nargs="+",
+        default=None,
+        help="Optional explicit target record_ids to export instead of evenly spaced sampling.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
+        "--branch-label",
+        default=None,
+        help="Optional label prefix for exported packet metadata. Defaults to checkpoint experiment_id.",
+    )
+    streaming_student_downstream_control_parser.add_argument(
         "--max-audio-sec",
         type=float,
         default=None,
@@ -4508,6 +4572,20 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     if args.command == "export-streaming-student-proxy-audio":
         export_streaming_student_proxy_audio(
+            checkpoint_path=args.checkpoint,
+            output_dir=args.output_dir,
+            teacher_label_index_path=args.teacher_label_index,
+            calibration_asset_path=args.calibration_asset,
+            split_dir=args.split_dir,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            branch_label=args.branch_label,
+            max_audio_sec=args.max_audio_sec,
+        )
+        return 0
+    if args.command == "export-streaming-student-downstream-control-packet":
+        export_streaming_student_downstream_control_packet(
             checkpoint_path=args.checkpoint,
             output_dir=args.output_dir,
             teacher_label_index_path=args.teacher_label_index,
