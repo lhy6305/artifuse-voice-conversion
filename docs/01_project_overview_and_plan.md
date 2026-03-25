@@ -21347,3 +21347,338 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
      或
      boundary/clause-aware
      target contract
+## 2026-03-25 继续补充：paired Stage3 route 已进入合同核查，先修 source parity 元数据，再确认真实 source-target 帧失配
+- 正式报告：
+  - `docs/350_stage5_source_semantic_parity_duration_metadata_repair_report.md`
+  - `docs/351_stage3_paired_source_target_contract_dry_run_report.md`
+
+### 当前关键结果
+1. `paired_parallel_source_semantic_parity_sidecar`
+   之前错误信任了
+   pair spec
+   的
+   `source_audio.duration_sec`
+2. 修复后，
+   source parity
+   已改为读取真实 wav
+   元数据：
+   - `source_estimated_frame_count`
+     从旧的
+     `1068/968`
+     回到真实的
+     `657/660`
+   - `source_to_target_duration_ratio`
+     也从伪造的
+     `1.436329`
+     回到真实的
+     `0.930744`
+3. paired Stage3
+   dry-run
+   也已确认：
+   - source parity
+     对 source 帧轴
+     已对齐：
+     `source_parity_frame_delta_per_sample = [0, 0]`
+   - 但 source input
+     对 target teacher
+     仍不对齐：
+     - `teacher_frame_lengths = [723, 693]`
+     - `model_frame_lengths = [657, 660]`
+     - `delta_per_sample = [-66, -33]`
+
+### 当前阶段判断更新
+1. 现在可以正式写死：
+   - 旧 pair spec
+     里的 source duration metadata
+     不可信
+   - 旧 source parity
+     的长时长结论
+     也不可信
+2. 当前真正成立的结构事实是：
+   - source parity sidecar
+     已修正
+   - paired Stage3
+     仍缺：
+     source-target frame bridge
+3. 所以下一步不应：
+   - 直接开
+     paired Stage3
+     training loop
+   - 或把
+     target teacher frame
+     直接硬贴到
+     source frame 轴
+
+### 更新后的下一步
+1. 以本轮
+   paired dry-run
+   为 paired Stage3
+   的正式合同底稿
+2. 下一步优先：
+   - 设计第一版
+     source-target frame bridge
+     或 paired alignment contract
+3. 继续保持：
+   - source parity sidecar
+     只按
+     `source_record_id`
+     attach
+   - 不再信任
+     pair spec
+     内嵌的 source duration metadata
+## 2026-03-25 继续补充：teacher-first 风险门已升级到 reference-relative v2，旧绝对阈值不再单独主导结论
+- 正式报告：
+  - `docs/352_teacher_first_reference_relative_risk_gate_upgrade_report.md`
+
+### 当前关键结果
+1. `teacher_first_vc_demo`
+   现在会缓存：
+   - 当前 checkpoint
+   - 当前 decode branch
+   对应的
+   reference decoder behavior
+2. `applicability_risk`
+   已从旧的
+   `risk_v1`
+   升级为：
+   - `teacher_first_runtime_risk_v2_reference_relative`
+3. 新结果下：
+   - 默认链路：
+     `elevated_risk`
+     且
+     `reference_shift.abs_z_median = 1.696638`
+     `outside_q01_q99_fraction = 0.5`
+   - 当前最佳 inference-only
+     候选：
+     `elevated_risk`
+     但
+     `reference_shift.abs_z_median = 0.929385`
+     `outside_q01_q99_fraction = 0.125`
+
+### 当前阶段判断更新
+1. 现在不能再把：
+   - `centroid > 3200`
+   - `high_band_energy_ratio > 0.25`
+   直接等同于：
+   - obvious buzz
+2. 更准确的说法应改成：
+   - 当前 teacher-first
+     用户线
+     已有 reference-relative
+     风险门
+   - 默认链路
+     仍需复核
+   - 当前最佳 inference-only
+     候选
+     更接近 reference
+     分布
+3. 但这仍不等于：
+   - user-line
+     已正式转正
+
+### 更新后的下一步
+1. teacher-first
+   后续治理默认使用：
+   - `risk_v2`
+2. 下一步优先：
+   - 以
+     `reference_shift`
+     为主指标，
+     做少量 inference-only
+     候选继续比较
+   - 不再回到
+     旧绝对阈值
+     争论
+## 2026-03-25 继续补充：teacher-first riskv2 最小试听包已整理，当前可以听，但还不能宣布 buzz 已解决
+- 正式报告：
+  - `docs/353_teacher_first_riskv2_quick_listening_bundle_report.md`
+
+### 当前关键结果
+1. 当前 user-line
+   已能稳定导出：
+   - 默认链路
+   - 当前最佳 inference-only
+     候选
+2. 最小试听包已整理到：
+   - `reports/audio/teacher_first_riskv2_quick_compare_20260325/`
+3. 当前更准确的对外表述应是：
+   - 可以听
+   - 但还不能写成
+     buzz
+     已解决
+
+### 当前阶段判断更新
+1. 这一步不是：
+   - 再抠小参数
+2. 而是：
+   - 修风险门
+   - 整理当前最小可听对照
+3. 真正要不要继续这条线，
+   取决于：
+   - 听感上
+     是否已经出现
+     人声轮廓
+## 2026-03-25 继续补充：teacher-first riskv2 最小试听确认失败，inference-only 小修线正式判停
+- 正式报告：
+  - `docs/354_teacher_first_riskv2_quick_listening_fail_and_inference_tweak_stop_report.md`
+
+### 当前关键结果
+1. 当前两条
+   teacher-first
+   候选：
+   - `default_postenv_decoded`
+   - `affine_refmean_gateoff_decoded`
+   都已完成人工听审
+2. 人工结论一致：
+   - 两者均为纯 buzz
+   - 没有任何稳定人声结构
+3. 这说明：
+   - `risk_v2`
+     的治理升级
+     仍然有价值
+   - 但它没有把
+     user-line
+     变成可接受音频
+
+### 当前阶段判断更新
+1. 现在不能再继续：
+   - normalization
+     小改
+   - gate on/off
+     小改
+   - control override
+     小改
+2. teacher-first
+   当前这条
+   inference-only
+   小修线，
+   已正式判停
+3. 下一步要回到：
+   - 更高层级的结构问题
+   - 或重新评估主方案
+## 2026-03-25 继续补充：多轮 pure buzz 后，主线已正式收束回 `C-prime / v2-core`，当前最大缺口是 `e_evt` 而不是声码器末端
+- 正式报告：
+  - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
+
+### 当前关键结果
+1. 现在已有足够证据正式停止以下方向：
+   - Stage5 loss 微调线
+   - Stage5 target-only semantic / timing consumer 变体
+   - Stage3 timing weighting / routing 微调
+   - paired Stage3 直接训练设想
+   - teacher-first inference-only 末端小修
+2. 当前代码审计已确认：
+   - `f0_hz / vuv / aper / E`
+     的 source acoustic state extraction chain
+     已真实在链上
+   - `event_probs`
+     仍是 heuristic
+     旧标签空间，
+     不是 design-state
+     `e_evt`
+3. Stage3 当前仍主要监督：
+   - `teacher_z_art`
+   - `teacher_event_probs`
+   而不是显式
+   `teacher_e_evt`
+
+### 当前阶段判断更新
+1. 现在不能再把：
+   - `loss_stft`
+     改善
+   - `reference_shift`
+     改善
+   - risk 状态降级
+   当成：
+   - 人声已经开始出现
+2. 当前真正缺的不是：
+   - 再加一个 loss
+   - 再换一个 gate
+   - 再做一个 target-only sidecar
+3. 当前唯一仍然自洽的主线应写死为：
+   - `C-prime / v2-core / no-res`
+   - 重点补：
+     - `design-state e_evt`
+     - teacher -> Stage3 -> Stage5
+       的真实语义链
+
+### 更新后的下一步
+1. 先定义并落地：
+   - `e_evt_v1`
+     合同
+2. 把
+   `teacher_labels / data / losses`
+   从
+   `teacher_event_probs`
+   升级到：
+   - `teacher_e_evt`
+   并保留旧字段兼容
+3. 完成 contract-level smoke 后，
+   再回到：
+   - Stage5 `C3`
+     no-res baseline
+     重训验证
+## 2026-03-25 继续补充：Stage3 `teacher_e_evt_v1` bootstrap 已真实接通，最小多步 loop 已通过
+- 正式报告：
+  - `docs/356_stage3_teacher_eevt_v1_bootstrap_plumbing_and_short_loop_report.md`
+
+### 当前关键结果
+1. `event_semantics.py`
+   已新增：
+   - `design_state_e_evt_v1`
+   - `build_teacher_e_evt_v1_targets(...)`
+2. `teacher_labels`
+   现已正式导出：
+   - `e_evt`
+   - `e_evt_meta`
+   - `e_evt_summary`
+   并在 index 中写出：
+   - `teacher_event_contract_version = design_state_e_evt_v1`
+3. Stage3
+   `data / losses`
+   已真实消费：
+   - `teacher_e_evt`
+   不再只依赖：
+   - `teacher_event_probs`
+4. 验证已经通过：
+   - 全量 teacher-label 重导
+   - training-data dry-run
+   - supervision dry-run
+   - 1-step train smoke
+   - 12-step short loop
+
+### 当前阶段判断更新
+1. 现在可以正式说：
+   - Stage3
+     显式
+     `teacher_e_evt`
+     合同
+     已经接通
+2. 但仍要继续保持：
+   - 这是 bootstrap bridge
+   - 不是最终完整 teacher 真值
+3. 所以下一步不该直接宣布：
+   - `e_evt`
+     问题已解决
+4. 更准确的下一问是：
+   - `teacher_e_evt_v1`
+     相比 legacy
+     `teacher_event_probs`
+     是否在严格可比短 loop 下
+     真有净收益
+
+### 更新后的下一步
+1. 给 Stage3
+   增加显式
+   event target family
+   开关：
+   - `legacy_event_probs`
+   - `teacher_e_evt_v1`
+2. 在此基础上做：
+   - 第一轮严格可比短 loop
+3. 只有在这一步站稳后，
+   才继续往：
+   - Stage5 `C3`
+     event contract
+     下游消费
+   推进

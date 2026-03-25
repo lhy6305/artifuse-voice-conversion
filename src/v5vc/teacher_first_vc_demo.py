@@ -73,12 +73,20 @@ DEFAULT_AUDIBLE_COMPARE_ACTIVE_CHECKPOINT_SELECTION_PATH = Path(
     "reports/runtime/offline_mvp_nores_vocoder_checkpoint_selection_waveform_stft_rmsguard02_activitygate02_gate72_deterministic_contractv2_normfix_round1_1/nores_vocoder_checkpoint_selection.json"
 )
 DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION = "teacher_first_runtime_risk_v1"
+DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION_V2 = "teacher_first_runtime_risk_v2_reference_relative"
+DEFAULT_RUNTIME_REFERENCE_DECODER_BEHAVIOR_CACHE_DIR = Path(
+    "reports/runtime/offline_mvp_teacher_first_vc_reference_decoder_behavior_cache"
+)
 HIGH_RISK_SPECTRAL_CENTROID_HZ = 3200.0
 HIGH_RISK_SPECTRAL_ROLLOFF95_HZ = 22000.0
 HIGH_RISK_HIGH_BAND_ENERGY_RATIO = 0.25
 ELEVATED_RISK_SPECTRAL_CENTROID_HZ = 3100.0
 ELEVATED_RISK_SPECTRAL_ROLLOFF95_HZ = 21500.0
 ELEVATED_RISK_HIGH_BAND_ENERGY_RATIO = 0.15
+HIGH_RISK_REFERENCE_SHIFT_ABS_Z_MEDIAN = 3.0
+HIGH_RISK_REFERENCE_SHIFT_OUTSIDE_FRACTION = 0.75
+ELEVATED_RISK_REFERENCE_SHIFT_ABS_Z_MEDIAN = 1.0
+ELEVATED_RISK_REFERENCE_SHIFT_OUTSIDE_FRACTION = 0.25
 DECODER_PROBE_CONTROL_FAMILY_ALIASES = {
     "z_art": "z_art",
     "zart": "z_art",
@@ -437,6 +445,7 @@ def run_offline_mvp_teacher_first_vc_demo(
     branch_label: str | None = None
     decoded_waveform: torch.Tensor | None = None
     sample_rate: int | None = None
+    reference_decoder_behavior_summary: dict[str, object] | None = None
     stage_state: dict[str, object] = {
         "current_stage": "teacher_source_resolution",
         "completed_stages": [],
@@ -580,6 +589,19 @@ def run_offline_mvp_teacher_first_vc_demo(
             use_decoder_branch_condition_adapter=bool(model.use_decoder_branch_condition_adapter),
             use_residual_shape_branch_condition_adapter=bool(model.use_residual_shape_branch_condition_adapter),
         )
+        reference_decoder_behavior_summary = load_or_build_runtime_reference_decoder_behavior_summary(
+            checkpoint_payload=checkpoint_payload,
+            checkpoint_path=resolved_vocoder_checkpoint_path,
+            selection_summary=selection_summary,
+            selection_target=selection_target,
+            use_predicted_activity_gate=bool(use_predicted_activity_gate),
+            predicted_activity_gate_floor=float(predicted_activity_gate_floor),
+            predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+            predicted_activity_gate_apply_mode=resolved_apply_mode,
+            reference_package_paths=list(reference_package_paths or []),
+            reference_package_limit=int(reference_package_limit),
+            device=resolved_device,
+        )
         summary = build_summary_payload(
             status="succeeded",
             input_audio_path=input_audio_path,
@@ -607,6 +629,7 @@ def run_offline_mvp_teacher_first_vc_demo(
             branch_label=branch_label,
             decoded_waveform=decoded_waveform,
             sample_rate=sample_rate,
+            reference_decoder_behavior_summary=reference_decoder_behavior_summary,
             completed_stages=list(stage_state.get("completed_stages", [])),
             skipped_stages=list(stage_state.get("skipped_stages", [])),
             current_stage=None,
@@ -649,6 +672,7 @@ def run_offline_mvp_teacher_first_vc_demo(
             branch_label=branch_label,
             decoded_waveform=decoded_waveform,
             sample_rate=sample_rate,
+            reference_decoder_behavior_summary=reference_decoder_behavior_summary,
             completed_stages=list(stage_state.get("completed_stages", [])),
             skipped_stages=list(stage_state.get("skipped_stages", [])),
             current_stage=current_stage,
@@ -986,6 +1010,7 @@ def build_summary_payload(
     branch_label: str | None,
     decoded_waveform: torch.Tensor | None,
     sample_rate: int | None,
+    reference_decoder_behavior_summary: dict[str, object] | None,
     completed_stages: list[str],
     skipped_stages: list[str],
     current_stage: str | None,
@@ -995,12 +1020,25 @@ def build_summary_payload(
     decoded_audio_sec = None
     decoded_waveform_rms = None
     decoded_spectral_summary = None
+    decoded_scalar_metrics = None
     if decoded_waveform is not None and sample_rate:
         decoded_audio_sec = round(float(decoded_waveform.shape[0] / sample_rate), 6)
         decoded_waveform_rms = round(float(decoded_waveform.pow(2).mean().sqrt().item()), 6)
         decoded_spectral_summary = compute_waveform_spectral_summary(decoded_waveform, int(sample_rate))
+        decoded_scalar_metrics = {
+            "decoded_waveform_rms": float(decoded_waveform_rms),
+            "decoded_abs_mean": round(float(decoded_waveform.abs().mean().item()), 6),
+            "decoded_peak_abs": round(float(decoded_waveform.abs().max().item()), 6),
+            "decoded_zero_crossing_rate": round(float(compute_zero_crossing_rate(decoded_waveform)), 6),
+            "decoded_spectral_centroid_hz": float(decoded_spectral_summary["centroid_hz"]),
+            "decoded_spectral_bandwidth_hz": float(decoded_spectral_summary["bandwidth_hz"]),
+            "decoded_spectral_rolloff95_hz": float(decoded_spectral_summary["rolloff95_hz"]),
+            "decoded_spectral_high_band_energy_ratio": float(decoded_spectral_summary["high_band_energy_ratio"]),
+        }
     applicability_risk = assess_runtime_applicability_risk(
         decoded_spectral_summary=decoded_spectral_summary,
+        decoded_scalar_metrics=decoded_scalar_metrics,
+        reference_decoder_behavior_summary=reference_decoder_behavior_summary,
         use_predicted_activity_gate=bool(use_predicted_activity_gate),
         predicted_activity_gate_apply_mode=str(predicted_activity_gate_apply_mode),
     )
@@ -1068,8 +1106,10 @@ def build_summary_payload(
             "predicted_activity_gate_apply_mode": predicted_activity_gate_apply_mode,
             "normalization": normalization_summary,
             "decoded_spectral_summary": decoded_spectral_summary,
+            "decoded_scalar_metrics": decoded_scalar_metrics,
         },
         "applicability_risk": applicability_risk,
+        "reference_decoder_behavior": reference_decoder_behavior_summary,
         "pipeline": {
             "current_stage": current_stage,
             "completed_stages": list(completed_stages),
@@ -1121,9 +1161,81 @@ def build_pipeline_layers(
     return layers
 
 
+def load_or_build_runtime_reference_decoder_behavior_summary(
+    *,
+    checkpoint_payload: dict[str, object] | None,
+    checkpoint_path: Path | None,
+    selection_summary: dict[str, object] | None,
+    selection_target: str,
+    use_predicted_activity_gate: bool,
+    predicted_activity_gate_floor: float,
+    predicted_activity_gate_smoothing_frames: int,
+    predicted_activity_gate_apply_mode: str,
+    reference_package_paths: list[Path],
+    reference_package_limit: int,
+    device: torch.device,
+) -> dict[str, object] | None:
+    if checkpoint_payload is None or checkpoint_path is None:
+        return None
+    resolved_reference_packages = resolve_reference_package_paths(
+        reference_package_paths=reference_package_paths,
+        reference_package_limit=reference_package_limit,
+    )
+    if not resolved_reference_packages:
+        return None
+    branch_label = infer_branch_label(
+        checkpoint_path=checkpoint_path,
+        selection_summary=selection_summary,
+        selection_target=selection_target,
+        use_predicted_activity_gate=bool(use_predicted_activity_gate),
+        predicted_activity_gate_floor=float(predicted_activity_gate_floor),
+        predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+        predicted_activity_gate_apply_mode=str(predicted_activity_gate_apply_mode),
+        decoder_branch_mean_mix_alpha=0.0,
+        use_decoder_branch_condition_adapter=False,
+        use_residual_shape_branch_condition_adapter=False,
+    )
+    cache_dir = (
+        DEFAULT_RUNTIME_REFERENCE_DECODER_BEHAVIOR_CACHE_DIR.resolve()
+        / sanitize_cache_component(str(branch_label))
+        / f"packages_{len(resolved_reference_packages):03d}"
+    )
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    summary_json_path = cache_dir / "reference_decoder_behavior_summary.json"
+    if summary_json_path.exists():
+        return json.loads(summary_json_path.read_text(encoding="utf-8"))
+    summary = build_reference_decoder_behavior_summary(
+        reference_package_paths=resolved_reference_packages,
+        checkpoint_payload=checkpoint_payload,
+        checkpoint_path=checkpoint_path,
+        selection_summary=selection_summary,
+        device=device,
+        use_predicted_activity_gate=bool(use_predicted_activity_gate),
+        predicted_activity_gate_floor=float(predicted_activity_gate_floor),
+        predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+        predicted_activity_gate_apply_mode=str(predicted_activity_gate_apply_mode),
+    )
+    summary_json_path.write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    return summary
+
+
+def sanitize_cache_component(value: str) -> str:
+    normalized = "".join(
+        char if char.isalnum() or char in {"-", "_", "."} else "_"
+        for char in str(value)
+    ).strip("._")
+    return normalized or "unknown"
+
+
 def assess_runtime_applicability_risk(
     *,
     decoded_spectral_summary: dict[str, object] | None,
+    decoded_scalar_metrics: dict[str, float] | None,
+    reference_decoder_behavior_summary: dict[str, object] | None,
     use_predicted_activity_gate: bool,
     predicted_activity_gate_apply_mode: str,
 ) -> dict[str, object]:
@@ -1135,15 +1247,57 @@ def assess_runtime_applicability_risk(
             "signals": [],
             "recommended_actions": [],
         }
+    heuristic_version = DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION
+    reference_shift = None
+    reference_checkpoint_path = None
+    reference_branch_label = None
+    if isinstance(reference_decoder_behavior_summary, dict):
+        metric_distribution = reference_decoder_behavior_summary.get("metric_distribution")
+        if isinstance(metric_distribution, dict) and isinstance(decoded_scalar_metrics, dict):
+            heuristic_version = DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION_V2
+            reference_shift = analyze_decoder_metric_shift(
+                candidate_metrics=dict(decoded_scalar_metrics),
+                reference_metric_distribution=dict(metric_distribution),
+            )
+            reference_checkpoint_path = reference_decoder_behavior_summary.get("checkpoint_path")
+            reference_branch_label = reference_decoder_behavior_summary.get("branch_label")
     centroid_hz = float(decoded_spectral_summary["centroid_hz"])
     rolloff95_hz = float(decoded_spectral_summary["rolloff95_hz"])
     high_band_energy_ratio = float(decoded_spectral_summary["high_band_energy_ratio"])
     high_risk_signals = []
     elevated_risk_signals = []
+    if isinstance(reference_shift, dict):
+        abs_z_median = float(reference_shift.get("abs_z_median", 0.0))
+        outside_fraction = float(reference_shift.get("outside_q01_q99_fraction", 0.0))
+        if abs_z_median >= HIGH_RISK_REFERENCE_SHIFT_ABS_Z_MEDIAN:
+            high_risk_signals.append(
+                "decoded scalar behavior is far from the cached in-distribution decoder reference: "
+                f"abs_z_median={abs_z_median:.6f} >= {HIGH_RISK_REFERENCE_SHIFT_ABS_Z_MEDIAN:.2f}"
+            )
+        elif abs_z_median >= ELEVATED_RISK_REFERENCE_SHIFT_ABS_Z_MEDIAN:
+            elevated_risk_signals.append(
+                "decoded scalar behavior is moderately shifted from the cached in-distribution decoder reference: "
+                f"abs_z_median={abs_z_median:.6f} >= {ELEVATED_RISK_REFERENCE_SHIFT_ABS_Z_MEDIAN:.2f}"
+            )
+        if outside_fraction >= HIGH_RISK_REFERENCE_SHIFT_OUTSIDE_FRACTION:
+            high_risk_signals.append(
+                "decoded scalar behavior falls outside the cached in-distribution q01-q99 envelope too often: "
+                f"outside_fraction={outside_fraction:.6f} >= {HIGH_RISK_REFERENCE_SHIFT_OUTSIDE_FRACTION:.2f}"
+            )
+        elif outside_fraction >= ELEVATED_RISK_REFERENCE_SHIFT_OUTSIDE_FRACTION:
+            elevated_risk_signals.append(
+                "decoded scalar behavior falls outside the cached in-distribution q01-q99 envelope often enough to require review: "
+                f"outside_fraction={outside_fraction:.6f} >= {ELEVATED_RISK_REFERENCE_SHIFT_OUTSIDE_FRACTION:.2f}"
+            )
     if high_band_energy_ratio >= HIGH_RISK_HIGH_BAND_ENERGY_RATIO:
-        high_risk_signals.append(
-            f"decoded high-band-energy ratio {high_band_energy_ratio:.6f} exceeds the current high-risk threshold {HIGH_RISK_HIGH_BAND_ENERGY_RATIO:.2f}"
-        )
+        if reference_shift is None:
+            high_risk_signals.append(
+                f"decoded high-band-energy ratio {high_band_energy_ratio:.6f} exceeds the current high-risk threshold {HIGH_RISK_HIGH_BAND_ENERGY_RATIO:.2f}"
+            )
+        else:
+            elevated_risk_signals.append(
+                f"decoded high-band-energy ratio {high_band_energy_ratio:.6f} remains above the legacy high-risk threshold {HIGH_RISK_HIGH_BAND_ENERGY_RATIO:.2f}; keep human review enabled."
+            )
     elif high_band_energy_ratio >= ELEVATED_RISK_HIGH_BAND_ENERGY_RATIO:
         elevated_risk_signals.append(
             f"decoded high-band-energy ratio {high_band_energy_ratio:.6f} exceeds the elevated-risk threshold {ELEVATED_RISK_HIGH_BAND_ENERGY_RATIO:.2f}"
@@ -1157,9 +1311,14 @@ def assess_runtime_applicability_risk(
             f"decoded rolloff95 {rolloff95_hz:.3f} Hz exceeds the elevated-risk threshold {ELEVATED_RISK_SPECTRAL_ROLLOFF95_HZ:.1f} Hz"
         )
     if centroid_hz >= HIGH_RISK_SPECTRAL_CENTROID_HZ:
-        high_risk_signals.append(
-            f"decoded spectral centroid {centroid_hz:.3f} Hz exceeds the current high-risk threshold {HIGH_RISK_SPECTRAL_CENTROID_HZ:.1f} Hz"
-        )
+        if reference_shift is None:
+            high_risk_signals.append(
+                f"decoded spectral centroid {centroid_hz:.3f} Hz exceeds the current high-risk threshold {HIGH_RISK_SPECTRAL_CENTROID_HZ:.1f} Hz"
+            )
+        else:
+            elevated_risk_signals.append(
+                f"decoded spectral centroid {centroid_hz:.3f} Hz remains above the legacy high-risk threshold {HIGH_RISK_SPECTRAL_CENTROID_HZ:.1f} Hz; keep human review enabled."
+            )
     elif centroid_hz >= ELEVATED_RISK_SPECTRAL_CENTROID_HZ:
         elevated_risk_signals.append(
             f"decoded spectral centroid {centroid_hz:.3f} Hz exceeds the elevated-risk threshold {ELEVATED_RISK_SPECTRAL_CENTROID_HZ:.1f} Hz"
@@ -1167,16 +1326,16 @@ def assess_runtime_applicability_risk(
     if high_risk_signals:
         status = "high_risk"
         summary = (
-            "Decoded spectral behavior crosses the current high-risk buzzing heuristics derived from the 2026-03-21 user-line decoder probe."
+            "Decoded behavior is too far from the currently cached in-distribution decoder reference and should still be treated as obvious buzzing risk."
         )
     elif len(elevated_risk_signals) >= 2:
         status = "elevated_risk"
         summary = (
-            "Decoded spectral behavior crosses multiple elevated-risk heuristics and may sit near the known buzzing boundary."
+            "Decoded behavior is closer to the current decoder reference than the obvious-buzz regime, but it still needs review before being treated as healthy audio."
         )
     else:
         status = "low_risk"
-        summary = "Decoded spectral behavior does not cross the current buzzing heuristics."
+        summary = "Decoded behavior stays within the current reference-relative guardrails and does not trigger the obvious-buzz heuristics."
     signals = high_risk_signals if high_risk_signals else elevated_risk_signals
     recommended_actions = []
     if status in {"high_risk", "elevated_risk"}:
@@ -1186,12 +1345,15 @@ def assess_runtime_applicability_risk(
             "If the risk persists across decode settings, treat the current Stage5 checkpoint as out-of-distribution for this user-line control payload.",
         ]
     return {
-        "heuristic_version": DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION,
+        "heuristic_version": heuristic_version,
         "status": status,
         "summary": summary,
         "use_predicted_activity_gate": bool(use_predicted_activity_gate),
         "predicted_activity_gate_apply_mode": str(predicted_activity_gate_apply_mode),
         "decoded_spectral_summary": decoded_spectral_summary,
+        "reference_decoder_behavior_checkpoint_path": reference_checkpoint_path,
+        "reference_decoder_behavior_branch_label": reference_branch_label,
+        "reference_shift": reference_shift,
         "signals": signals,
         "recommended_actions": recommended_actions,
     }
@@ -1262,6 +1424,7 @@ def build_markdown(summary: dict[str, object]) -> str:
     vocoder = dict(summary["vocoder"])
     waveform_decode = dict(summary["waveform_decode"])
     applicability_risk = dict(summary.get("applicability_risk", {}))
+    reference_decoder_behavior = dict(summary.get("reference_decoder_behavior", {}))
     pipeline = dict(summary.get("pipeline", {}))
     artifacts = dict(summary["artifacts"])
     failure = summary.get("failure")
@@ -1307,8 +1470,16 @@ def build_markdown(summary: dict[str, object]) -> str:
         "## Applicability Risk",
         f"- status: {applicability_risk.get('status')}",
         f"- summary: {applicability_risk.get('summary')}",
+        f"- heuristic_version: {applicability_risk.get('heuristic_version')}",
+        f"- reference_shift: {json.dumps(applicability_risk.get('reference_shift'), ensure_ascii=False)}",
         f"- signals: {json.dumps(applicability_risk.get('signals'), ensure_ascii=False)}",
         f"- recommended_actions: {json.dumps(applicability_risk.get('recommended_actions'), ensure_ascii=False)}",
+        "",
+        "## Reference Decoder Behavior",
+        f"- checkpoint_path: {reference_decoder_behavior.get('checkpoint_path')}",
+        f"- branch_label: {reference_decoder_behavior.get('branch_label')}",
+        f"- case_count: {reference_decoder_behavior.get('case_count')}",
+        f"- metric_distribution: {json.dumps(reference_decoder_behavior.get('metric_distribution'), ensure_ascii=False)}",
         "",
         "## Pipeline",
         f"- current_stage: {pipeline.get('current_stage')}",

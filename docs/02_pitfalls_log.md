@@ -13858,3 +13858,336 @@
   - 下一步改去做：
     - 更强的 target shaping
     - 或显式 boundary/clause-aware target contract
+### 439. paired source-target 路线里，不能信任 pair spec 内嵌的 `source_audio.duration_sec`；source-side 资产必须以真实 wav 元数据为准
+- 现象:
+  - 这轮 paired overfit smoke
+    里，
+    pair spec
+    声称：
+    - `107`
+      source duration
+      是 `3.881224`
+    - `132`
+      source duration
+      是 `3.51873`
+  - 但实际 wav
+    元数据是：
+    - `107`
+      `2.39`
+    - `132`
+      `2.4`
+  - 旧版
+    `paired_parallel_source_semantic_parity_sidecar`
+    因为盲信了
+    pair spec，
+    也把
+    `source_estimated_frame_count`
+    错算成：
+    - `1068`
+    - `968`
+- 风险:
+  - 如果继续把
+    pair spec
+    里的 source duration
+    当真，
+    会同时污染：
+    - source parity sidecar
+    - paired route
+      的 frame projection
+    - 后续所有
+      source-target
+      对齐判断
+- 处理要求:
+  - source-side 相关资产
+    一律以：
+    - 真实 wav
+      元数据
+    为准
+  - pair spec
+    内嵌的
+    `source_audio.duration_sec`
+    只能当作
+    可审计 metadata，
+    不能当作
+    构图真值
+### 440. 即使 source parity sidecar 已修正到真实 source 帧轴，source waveform 与 target teacher frames 仍不天然对齐；没有 bridge 前禁止直接开 paired Stage3 训练
+- 现象:
+  - 这轮修完
+    source parity
+    后，
+    paired Stage3
+    dry-run
+    已确认：
+    - `source_parity_frame_delta_per_sample = [0, 0]`
+  - 但同一批样本上：
+    - `teacher_frame_lengths = [723, 693]`
+    - `model_frame_lengths = [657, 660]`
+    - `delta_per_sample = [-66, -33]`
+  - 对应实际时长比：
+    - `source_to_target_duration_ratio = [0.909098, 0.95239]`
+- 风险:
+  - 如果这时直接把
+    target teacher frames
+    硬监督到
+    source frame 轴，
+    本质上是在训练：
+    - 错位 supervision
+    - 错位 event/acoustic
+      对齐
+  - 这种错位很可能比
+    “没有 semantic”
+    还更糟
+- 处理要求:
+  - 在 paired Stage3
+    里，
+    先建立：
+    - source-target frame bridge
+    - 或 paired alignment contract
+  - bridge
+    没有成立前，
+    不得把
+    paired dry-run
+    误写成
+    “已经可训练”
+### 441. teacher-first 用户线的频谱绝对阈值会随 checkpoint / decode branch 漂移；不能再只靠固定 `centroid` 与 `high_band_energy_ratio` 阈值判 obvious buzz
+- 现象:
+  - 旧
+    `teacher_first_runtime_risk_v1`
+    主要依赖：
+    - `spectral_centroid >= 3200`
+    - `high_band_energy_ratio >= 0.25`
+  - 但在
+    `contractv2_normfix`
+    当前 reference decoder
+    分布上，
+    in-distribution
+    reference case
+    自身也接近：
+    - `decoded_spectral_centroid_hz ≈ 5859`
+    - `decoded_spectral_high_band_energy_ratio ≈ 0.345`
+  - 结果就是：
+    - 接近 reference
+      的 user-line 样本
+      也会被误判成
+      `high_risk`
+- 风险:
+  - 如果继续只用
+    固定绝对阈值，
+    会把：
+    - “明显坏样本”
+    - “接近 reference
+       但仍需复核的样本”
+    混成一类
+  - 会误导后续路线选择
+- 处理要求:
+  - teacher-first
+    用户线
+    的风险治理，
+    默认改成：
+    - reference-relative
+      判定
+  - 固定绝对阈值
+    只保留为：
+    - 保底提示
+    - 不再单独决定
+      `high_risk`
+### 442. `reference_shift` 改善不等于人声出现；若人工听审仍是 pure buzz，就必须停止 inference-only 小修线
+- 现象:
+  - 这轮
+    teacher-first
+    user-line
+    已经完成：
+    - `risk_v2`
+      升级
+    - 最小试听包
+      对照
+  - 数字上，
+    当前最佳候选
+    相比默认链路
+    的确更接近
+    reference decoder
+    分布
+  - 但人工听审结论仍然是：
+    - `default_postenv_decoded`
+      pure buzz
+    - `affine_refmean_gateoff_decoded`
+      pure buzz
+- 风险:
+  - 如果这时继续根据：
+    - `abs_z_median`
+      变小了
+    - `outside_q01_q99_fraction`
+      变小了
+    就继续扫更多
+    inference-only
+    参数，
+    很容易再次陷入：
+    - 数字在改善
+    - 但声音本质没变
+    的细节沉没
+- 处理要求:
+  - 一旦人工确认：
+    - 仍是 pure buzz
+    - 没有人声结构
+  - 就应正式停止：
+    - normalization
+    - gate
+    - control override
+    这类
+    inference-only
+    小修线
+  - 后续改去做：
+    - 更上游结构问题
+    - 或主方案重评估
+### 443. 当多条同层实验都只带来数值改善却仍无人声 emergence 时，必须停止继续扫同层细节，回到主方案级 contract 重评估
+- 现象:
+  - 本轮先后出现：
+    - MRSTFT short-window
+      权重接通
+    - target semantic / timing
+      consumer 接通
+    - source parity consumer
+      接通
+    - teacher-first
+      `risk_v2`
+      与
+      `reference_shift`
+      指标改善
+  - 但人工听审或机器门禁结论仍然反复指向：
+    - pure buzz
+    - pure fuzz
+    - `all_records_auto_reject = true`
+- 风险:
+  - 如果这时继续围绕：
+    - loss 权重
+    - gate on/off
+    - normalization
+    - target-only sidecar
+    - timing boost
+    做更多同层微调，
+    很容易再次陷入：
+    - 指标在动
+    - 声音本质没变
+    的细节沉没
+- 处理要求:
+  - 当同层多条线都已证明：
+    - 没有人声 emergence
+  - 就必须停止：
+    - 同层继续扫参
+    - demo 末端继续修补
+  - 应立即回到：
+    - 主方案级
+      contract / control semantics
+      重评估
+### 444. `contract_v2` 里的 `event_probs` 仍是 heuristic 旧标签空间；在 `teacher_event_probs` 没升级成显式 `teacher_e_evt` 前，不能把当前链路误写成设计态 event contract 已落地
+- 现象:
+  - 当前
+    `offline_teacher_downstream_control_v2`
+    已经正式带上：
+    - `f0_hz`
+    - `vuv`
+    - `aper`
+    - `E`
+  - 但同一条链上的 event 侧仍然是：
+    - `event_probs`
+    - `offline_mvp_heuristic_event_target_v1`
+  - Stage3
+    的
+    `teacher_labels / data / losses`
+    也仍主要使用：
+    - `teacher_event_probs`
+- 风险:
+  - 如果把这条现状误写成：
+    - `e_evt`
+      已经接通
+  - 后续就会错误地把：
+    - Stage5 semantic consumer 失败
+    - Stage3 timing semantic 微调失败
+    解读成：
+    - 设计态 event contract
+      已被充分否定
+  - 实际上被反复否定的，
+    主要还是旧 heuristic
+    `event_probs`
+    及其 target-only bootstrap 变体
+- 处理要求:
+  - 文档与代码里必须继续显式区分：
+    - legacy `event_probs`
+    - design-state `e_evt`
+  - 在
+    `teacher_labels`
+    没显式升级出
+    `teacher_e_evt`
+    前，
+    不得把当前监督链写成
+    `e_evt`
+    已完成
+### 445. 一旦 Stage3 event 监督从 legacy `event_probs` 升级到命名 `teacher_e_evt`，所有 helper 都必须停止假设 `event_probs[...,0]` 仍然是旧活动门
+- 现象:
+  - 这轮
+    `teacher_e_evt_v1`
+    接通后，
+    Stage3
+    的 `event_probs`
+    虽然维度数仍是 `8`
+    ，
+    但语义已经不再等于旧：
+    - `energy_gate`
+    - `abs_delta_gate`
+    - ...
+  - 尤其原先很多 helper
+    会默认把：
+    - `event_probs[..., 0]`
+    当成
+    “事件存在”或“活动门”
+- 风险:
+  - 如果这种假设不一起改，
+    就会出现：
+    - 主监督已切到
+      `teacher_e_evt`
+    - 但 proxy / 辅助路径
+      仍按旧维度语义解释
+  - 最终会制造：
+    - loss 看似通了
+    - 但辅助行为悄悄漂移
+    的隐性错线
+- 处理要求:
+  - 每次升级 event contract
+    后，
+    必须审计所有直接按下标读取
+    `event_probs`
+    的 helper
+  - 若确实只需要弱“事件存在” proxy，
+    优先改成：
+    - `amax(event_probs)`
+    - 或显式按命名维度聚合
+  - 禁止继续默认：
+    - `dim0 == activity gate`
+### 446. 用 `max-records-per-slice` 导出的局部 teacher-label 索引，不能直接拿去喂完整 split 的 Stage3 training-data / supervision dry-run
+- 现象:
+  - 本轮为了 quick smoke，
+    先用：
+    - `build-streaming-student-teacher-labels --max-records-per-slice 2`
+    导出了一个局部 teacher-label 索引
+  - 随后直接用这份索引跑完整 split 的：
+    - `prepare-streaming-student-training-data`
+  - 结果立刻报：
+    - `Teacher-label index missing ... records for target_train`
+- 风险:
+  - 这类报错容易被误判成：
+    - 新合同接线失败
+    - data loader 坏了
+  - 实际只是：
+    - teacher-label 索引覆盖范围
+      和当前 split
+      不一致
+- 处理要求:
+  - 如果 teacher-label export
+    只导了局部记录，
+    后续 dry-run
+    也必须使用：
+    - 对应子集 split
+    - 或同样受限的 batch slice
+  - 如果后续命令仍使用完整 split，
+    就必须先导出：
+    - 全量 teacher labels

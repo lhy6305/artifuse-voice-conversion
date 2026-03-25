@@ -5,12 +5,15 @@ import shutil
 from collections import Counter
 from pathlib import Path
 import wave
+import torch
 
 from v5vc.c1_weak_event_hints import estimate_frame_count
 from v5vc.manifest_builder import load_jsonl
 
 
 CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION = "offline_mvp_heuristic_event_target_v1"
+DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION = "design_state_e_evt_v1"
+DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION = "design_state_e_evt_bootstrap_bridge_v1"
 TARGET_EVENT_SEMANTIC_SIDECAR_VERSION = "target_event_semantic_sidecar_v1"
 TARGET_EVENT_SEMANTIC_LABEL_SPACE_VERSION = "target_lexical_structure_semantics_v1"
 TARGET_EVENT_TIMING_SEMANTIC_SIDECAR_VERSION = "target_event_timing_semantic_sidecar_v1"
@@ -72,6 +75,57 @@ CURRENT_RUNTIME_EVENT_DIMENSIONS = (
     },
 )
 
+DESIGN_STATE_E_EVT_V1_DIMENSIONS = (
+    {
+        "index": 0,
+        "name": "p_frication",
+        "category": "design_state_bootstrap_probability",
+        "description": "由 legacy event_probs 的高过零率维度桥接而来的摩擦倾向概率。",
+    },
+    {
+        "index": 1,
+        "name": "p_stop_closure",
+        "category": "design_state_bootstrap_probability",
+        "description": "由 legacy event_probs 的能量下降维度桥接而来的闭塞倾向概率。",
+    },
+    {
+        "index": 2,
+        "name": "p_burst",
+        "category": "design_state_bootstrap_probability",
+        "description": "由 legacy event_probs 的能量上升维度桥接而来的爆破倾向概率。",
+    },
+    {
+        "index": 3,
+        "name": "p_voicing",
+        "category": "design_state_bootstrap_probability",
+        "description": "由 legacy event_probs 的低过零率 voiced-like 维度桥接而来的浊音概率。",
+    },
+    {
+        "index": 4,
+        "name": "a_aper",
+        "category": "design_state_bootstrap_scalar",
+        "description": "由 legacy event_probs 的高过零率维度桥接而来的非周期性强度。",
+    },
+    {
+        "index": 5,
+        "name": "p_pause_boundary",
+        "category": "design_state_bootstrap_probability",
+        "description": "由 target timing semantic sidecar 的 pause boundary window 栅格化得到的停顿边界概率。",
+    },
+    {
+        "index": 6,
+        "name": "p_terminal_boundary",
+        "category": "design_state_bootstrap_probability",
+        "description": "由 target timing semantic sidecar 的 terminal boundary window 栅格化得到的终止边界概率。",
+    },
+    {
+        "index": 7,
+        "name": "p_final_clause",
+        "category": "design_state_bootstrap_probability",
+        "description": "由 target timing semantic sidecar 的 final/single clause region 栅格化得到的句尾子句概率。",
+    },
+)
+
 
 def build_current_runtime_event_semantics_meta() -> dict[str, object]:
     return {
@@ -84,6 +138,147 @@ def build_current_runtime_event_semantics_meta() -> dict[str, object]:
             "不能再当作设计稿中的命名 e_evt 语义。"
         ),
     }
+
+
+def build_design_state_e_evt_v1_meta() -> dict[str, object]:
+    return {
+        "event_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
+        "event_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+        "event_dimensions": [dimension["name"] for dimension in DESIGN_STATE_E_EVT_V1_DIMENSIONS],
+        "event_dimension_specs": [dict(dimension) for dimension in DESIGN_STATE_E_EVT_V1_DIMENSIONS],
+        "bootstrap_sources": {
+            "legacy_event_probs_version": CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION,
+            "target_timing_contract_version": TARGET_EVENT_TIMING_SEMANTIC_SIDECAR_VERSION,
+        },
+        "semantic_status": "bootstrap_design_state_bridge_not_final_teacher_truth",
+        "notes": [
+            "这不是最终 teacher 真值版 e_evt，而是当前仓库资产可支撑的 design-state bootstrap bridge。",
+            "p_frication / p_stop_closure / p_burst / p_voicing / a_aper 由 legacy heuristic event_probs 桥接得到。",
+            "p_pause_boundary / p_terminal_boundary / p_final_clause 由 target timing semantic sidecar 栅格化得到。",
+            "当前版本还不包含 place / manner 分类，也不能冒充完整最终设计稿语义。",
+        ],
+    }
+
+
+def build_teacher_e_evt_v1_targets(
+    *,
+    legacy_event_probs: object,
+    target_event_semantic_sidecar: dict[str, object] | None = None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None = None,
+    valid_frame_count: int | None = None,
+) -> dict[str, object]:
+    if hasattr(legacy_event_probs, "detach"):
+        legacy_tensor = legacy_event_probs.detach().to("cpu")
+    else:
+        raise TypeError("legacy_event_probs must be a torch Tensor-like object.")
+    if legacy_tensor.ndim != 2:
+        raise ValueError(f"legacy_event_probs must have shape [T, C], got {tuple(legacy_tensor.shape)}")
+    if legacy_tensor.shape[-1] < 8:
+        raise ValueError(
+            "legacy_event_probs must expose at least 8 channels to build the bootstrap e_evt_v1 target, "
+            f"got {legacy_tensor.shape[-1]}."
+        )
+    if valid_frame_count is not None:
+        frame_count = max(0, min(int(valid_frame_count), int(legacy_tensor.shape[0])))
+        legacy_tensor = legacy_tensor[:frame_count]
+    frame_count = int(legacy_tensor.shape[0])
+    if frame_count <= 0:
+        return {
+            "tensor": legacy_tensor.new_zeros((0, len(DESIGN_STATE_E_EVT_V1_DIMENSIONS))),
+            "meta": build_design_state_e_evt_v1_meta(),
+            "summary": {
+                "frame_count": 0,
+                "timing_sidecar_used": False,
+                "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
+                "timing_pause_frame_ratio": 0.0,
+                "timing_terminal_frame_ratio": 0.0,
+                "timing_final_clause_frame_ratio": 0.0,
+            },
+        }
+
+    normalized_legacy = legacy_tensor.to(torch.float32).clamp(0.0, 1.0)
+    high_zero_cross = normalized_legacy[:, 2:3]
+    low_zero_cross_voiced_like = normalized_legacy[:, 3:4]
+    high_zero_cross_voiced_like = normalized_legacy[:, 4:5]
+    delta_energy_rise = normalized_legacy[:, 5:6]
+    delta_energy_fall = normalized_legacy[:, 6:7]
+
+    pause_boundary_mask, terminal_boundary_mask, final_clause_mask = rasterize_target_timing_semantic_sidecar(
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        frame_count=frame_count,
+        device=normalized_legacy.device,
+        dtype=normalized_legacy.dtype,
+    )
+    e_evt_tensor = normalized_legacy.new_zeros((frame_count, len(DESIGN_STATE_E_EVT_V1_DIMENSIONS)))
+    e_evt_tensor[:, 0:1] = torch.maximum(high_zero_cross, high_zero_cross_voiced_like)
+    e_evt_tensor[:, 1:2] = delta_energy_fall
+    e_evt_tensor[:, 2:3] = delta_energy_rise
+    e_evt_tensor[:, 3:4] = low_zero_cross_voiced_like
+    e_evt_tensor[:, 4:5] = high_zero_cross
+    e_evt_tensor[:, 5:6] = pause_boundary_mask
+    e_evt_tensor[:, 6:7] = terminal_boundary_mask
+    e_evt_tensor[:, 7:8] = final_clause_mask
+
+    return {
+        "tensor": e_evt_tensor.clamp(0.0, 1.0),
+        "meta": build_design_state_e_evt_v1_meta(),
+        "summary": {
+            "frame_count": frame_count,
+            "timing_sidecar_used": isinstance(target_event_timing_semantic_sidecar, dict),
+            "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
+            "timing_pause_frame_ratio": round(float(pause_boundary_mask.mean().item()), 6),
+            "timing_terminal_frame_ratio": round(float(terminal_boundary_mask.mean().item()), 6),
+            "timing_final_clause_frame_ratio": round(float(final_clause_mask.mean().item()), 6),
+        },
+    }
+
+
+def rasterize_target_timing_semantic_sidecar(
+    *,
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    frame_count: int,
+    device: object,
+    dtype: object,
+):
+    pause_boundary_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
+    terminal_boundary_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
+    final_clause_mask = torch.zeros((frame_count, 1), dtype=dtype, device=device)
+    if not isinstance(target_event_timing_semantic_sidecar, dict) or frame_count <= 0:
+        return pause_boundary_mask, terminal_boundary_mask, final_clause_mask
+
+    time_aware_semantics = target_event_timing_semantic_sidecar.get("time_aware_semantics")
+    if not isinstance(time_aware_semantics, dict):
+        return pause_boundary_mask, terminal_boundary_mask, final_clause_mask
+    boundary_events = time_aware_semantics.get("boundary_events")
+    if isinstance(boundary_events, list):
+        for raw_event in boundary_events:
+            if not isinstance(raw_event, dict):
+                continue
+            event_type = str(raw_event.get("event_type", "unknown"))
+            frame_start_index = max(0, min(frame_count - 1, int(raw_event.get("frame_start_index", 0))))
+            frame_end_index = max(
+                frame_start_index,
+                min(frame_count - 1, int(raw_event.get("frame_end_index", frame_start_index))),
+            )
+            if event_type == "pause_boundary_window":
+                pause_boundary_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+            elif event_type == "terminal_boundary_window":
+                terminal_boundary_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+    clause_regions = time_aware_semantics.get("clause_regions")
+    if isinstance(clause_regions, list):
+        for raw_region in clause_regions:
+            if not isinstance(raw_region, dict):
+                continue
+            clause_role = str(raw_region.get("clause_role", "unknown"))
+            if clause_role not in {"final", "single"}:
+                continue
+            frame_start_index = max(0, min(frame_count - 1, int(raw_region.get("frame_start_index", 0))))
+            frame_end_index = max(
+                frame_start_index,
+                min(frame_count - 1, int(raw_region.get("frame_end_index", frame_start_index))),
+            )
+            final_clause_mask[frame_start_index : frame_end_index + 1, 0] = 1.0
+    return pause_boundary_mask, terminal_boundary_mask, final_clause_mask
 
 
 def build_target_event_semantic_sidecar(

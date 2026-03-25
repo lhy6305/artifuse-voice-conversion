@@ -252,7 +252,7 @@ def compute_streaming_student_teacher_supervision_loss(
         dtype=frame_weight.dtype,
     )
 
-    teacher_event_probs = batch["teacher_event_probs"]
+    teacher_e_evt = batch["teacher_e_evt"]
     teacher_acoustic = batch["teacher_acoustic"]
     student_proxy_acoustic = build_streaming_student_proxy_acoustic(outputs)
 
@@ -263,12 +263,12 @@ def compute_streaming_student_teacher_supervision_loss(
     )
     event_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["event_logits"],
-        target=teacher_event_probs,
+        target=teacher_e_evt,
         frame_weight=frame_weight * timing_frame_multipliers["teacher_event"],
     )
     event_prior_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["event_prior_logits"],
-        target=teacher_event_probs,
+        target=teacher_e_evt,
         frame_weight=frame_weight * timing_frame_multipliers["teacher_event_prior"],
     )
     timing_aux_targets, timing_aux_metrics = build_timing_auxiliary_targets(
@@ -299,12 +299,12 @@ def compute_streaming_student_teacher_supervision_loss(
     )
     vuv_proxy_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["vuv_logits"],
-        target=teacher_event_probs[..., 3:4],
+        target=teacher_e_evt[..., 3:4],
         frame_weight=frame_weight,
     )
     aper_proxy_loss_per_sample = masked_mse_per_sample(
         prediction=outputs["aperiodicity"],
-        target=teacher_event_probs[..., 2:3],
+        target=teacher_e_evt[..., 4:5],
         frame_weight=frame_weight,
     )
     proxy_acoustic_loss_per_sample = masked_mse_per_sample(

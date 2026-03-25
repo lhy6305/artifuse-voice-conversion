@@ -1,0 +1,245 @@
+{
+  "contract_version": "offline_teacher_downstream_control_v2",
+  "generated_at": "2026-03-25T22:00:15",
+  "input_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav",
+  "teacher": {
+    "experiment_id": "EXP-20260316-043-offline-mvp-d87-round1-1-d26-init-post-d59-singleton-sparse-micropause-sampler-d22late-teacherweight-outer-punctuation-zartretarget-lateretention-200step-calibration",
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/offline_mvp/checkpoints/EXP-20260316-043.step200.pt",
+    "route_handoff_path": "F:/proj_dev/tmp/workdir4/reports/eval/offline_mvp_route_handoff_round1_1_longwindow_final/route_handoff.json"
+  },
+  "runtime": {
+    "device": "cpu",
+    "sample_rate": 44100,
+    "frame_length": 400,
+    "hop_length": 160,
+    "frame_ms": 9.070295,
+    "hop_ms": 3.628118,
+    "chunk_samples": 1600,
+    "chunk_ms": 36.281179,
+    "frame_count": 657
+  },
+  "conditioning": {
+    "asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+    "asset_status": "heuristic_bootstrap_estimated",
+    "speaker_dim": 16,
+    "geom_dim": 8,
+    "alpha": 1.15
+  },
+  "source_acoustic_state": {
+    "version": "source_acoustic_state_extraction_v1",
+    "aper_version": "aper-v1",
+    "stats": {
+      "frame_count": 657,
+      "voiced_frame_count": 505,
+      "voiced_ratio": 0.768645,
+      "f0_floor_hz": 50.0,
+      "f0_ceil_hz": 550.0,
+      "analysis_frame_length": 2646
+    }
+  },
+  "event_semantics": {
+    "event_probs_version": "offline_mvp_heuristic_event_target_v1",
+    "event_prob_dimensions": [
+      "energy_gate",
+      "abs_delta_gate",
+      "high_zero_cross",
+      "low_zero_cross_voiced_like",
+      "high_zero_cross_voiced_like",
+      "delta_energy_rise",
+      "delta_energy_fall",
+      "energy_norm"
+    ],
+    "event_prob_dimension_specs": [
+      {
+        "index": 0,
+        "name": "energy_gate",
+        "category": "heuristic_frame_target",
+        "description": "基于能量阈值的启发式活动门，不是设计态 fric/closure/burst 语义。"
+      },
+      {
+        "index": 1,
+        "name": "abs_delta_gate",
+        "category": "heuristic_frame_target",
+        "description": "基于帧间幅度变化的启发式变化门，不是显式事件类别。"
+      },
+      {
+        "index": 2,
+        "name": "high_zero_cross",
+        "category": "heuristic_frame_target",
+        "description": "基于过零率的高噪声启发式指标，不等价于设计态 fric 类别。"
+      },
+      {
+        "index": 3,
+        "name": "low_zero_cross_voiced_like",
+        "category": "heuristic_frame_target",
+        "description": "基于低过零率的浊音倾向启发式指标，不是设计态 p_voicing。"
+      },
+      {
+        "index": 4,
+        "name": "high_zero_cross_voiced_like",
+        "category": "heuristic_frame_target",
+        "description": "带 voiced-like 门的高过零率启发式指标，不是命名辅音语义。"
+      },
+      {
+        "index": 5,
+        "name": "delta_energy_rise",
+        "category": "heuristic_frame_target",
+        "description": "基于能量上升的启发式变化指标，不是显式 burst 标签。"
+      },
+      {
+        "index": 6,
+        "name": "delta_energy_fall",
+        "category": "heuristic_frame_target",
+        "description": "基于能量下降的启发式变化指标，不是显式 closure 标签。"
+      },
+      {
+        "index": 7,
+        "name": "energy_norm",
+        "category": "heuristic_frame_target",
+        "description": "归一化能量启发式指标，不是设计态 event semantic。"
+      }
+    ],
+    "semantic_status": "heuristic_frame_targets_not_design_e_evt",
+    "recommended_contract_interpretation": "当前 event_probs 只能解释为旧 offline MVP 启发式帧级事件目标，不能再当作设计稿中的命名 e_evt 语义。"
+  },
+  "provided_keys": {
+    "v2_core": [
+      "frame_start_ms",
+      "z_art",
+      "event_probs",
+      "f0_hz",
+      "vuv",
+      "aper",
+      "E",
+      "conditioning.s_spk_target",
+      "conditioning.s_geom_target",
+      "conditioning.alpha"
+    ],
+    "v2_optional": [],
+    "v2_diagnostic": [
+      "event_logits",
+      "hidden",
+      "fused_hidden",
+      "acoustic.energy_log",
+      "acoustic.abs_mean",
+      "acoustic.zero_cross_rate",
+      "acoustic.delta_energy"
+    ]
+  },
+  "derived_proxy_keys": [
+    "energy_proxy",
+    "voiced_proxy",
+    "aperiodicity_proxy",
+    "event_presence_proxy",
+    "energy_change_proxy"
+  ],
+  "missing_design_keys": [
+    "r_res",
+    "final_vocoder_waveform"
+  ],
+  "summary_stats": {
+    "f0_hz": {
+      "mean": 141.166183,
+      "std": 121.473145,
+      "min": 0.0,
+      "max": 551.25
+    },
+    "vuv": {
+      "mean": 0.651802,
+      "std": 0.344295,
+      "min": 0.143741,
+      "max": 0.97768
+    },
+    "aper": {
+      "mean": 0.307822,
+      "std": 0.40465,
+      "min": 0.000503,
+      "max": 1.0
+    },
+    "E": {
+      "mean": -1.27528,
+      "std": 0.664491,
+      "min": -2.343884,
+      "max": -0.334794
+    },
+    "energy_log": {
+      "mean": -2.575375,
+      "std": 1.266122,
+      "min": -4.634507,
+      "max": -1.10177
+    },
+    "zero_cross_rate": {
+      "mean": 0.0706,
+      "std": 0.011727,
+      "min": 0.054541,
+      "max": 0.089526
+    },
+    "event_presence_proxy": {
+      "mean": 0.67196,
+      "std": 0.167787,
+      "min": 0.418394,
+      "max": 0.866302
+    },
+    "voiced_proxy": {
+      "mean": 0.651802,
+      "std": 0.344295,
+      "min": 0.143741,
+      "max": 0.97768
+    },
+    "energy_proxy": {
+      "mean": 0.990426,
+      "std": 0.011384,
+      "min": 0.964846,
+      "max": 0.999345
+    }
+  },
+  "verification": {
+    "frame_count_equal": true,
+    "frame_alignment_equal": true,
+    "output_metrics": {
+      "hidden": {
+        "shape_equal": true,
+        "max_abs_diff": 5.96e-07,
+        "mean_abs_diff": 1e-09,
+        "allclose_atol_5e-6": true
+      },
+      "fused_hidden": {
+        "shape_equal": true,
+        "max_abs_diff": 1.311e-06,
+        "mean_abs_diff": 1e-09,
+        "allclose_atol_5e-6": true
+      },
+      "z_art": {
+        "shape_equal": true,
+        "max_abs_diff": 1.79e-07,
+        "mean_abs_diff": 1e-09,
+        "allclose_atol_5e-6": true
+      },
+      "event_logits": {
+        "shape_equal": true,
+        "max_abs_diff": 4.77e-07,
+        "mean_abs_diff": 1e-09,
+        "allclose_atol_5e-6": true
+      },
+      "event_probs": {
+        "shape_equal": true,
+        "max_abs_diff": 7.5e-08,
+        "mean_abs_diff": 0.0,
+        "allclose_atol_5e-6": true
+      },
+      "acoustic": {
+        "shape_equal": true,
+        "max_abs_diff": 1.192e-06,
+        "mean_abs_diff": 1e-09,
+        "allclose_atol_5e-6": true
+      }
+    }
+  },
+  "notes": [
+    "This contract upgrades the teacher-first downstream packet to the C-prime v2-core baseline for the experimental Stage5 route.",
+    "f0_hz / vuv / aper / E are produced by a deterministic source acoustic state extraction chain aligned to the teacher runtime frame grid.",
+    "aper-v1 is a single scalar per frame in [0, 1], where 0 is more periodic and 1 is more aperiodic; it is intended for the noise branch only.",
+    "Current event_probs still follow the offline_mvp_heuristic_event_target_v1 label space and should not be misread as the final named e_evt semantics from the design doc.",
+    "r_res and final_vocoder_waveform remain intentionally absent because Phase C3 stays on the no-res baseline route."
+  ]
+}

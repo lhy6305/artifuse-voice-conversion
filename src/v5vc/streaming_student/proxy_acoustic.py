@@ -7,7 +7,7 @@ def build_streaming_student_proxy_acoustic(outputs: dict[str, torch.Tensor]) -> 
     energy_log = outputs["energy"].to(torch.float32)
     voiced_prob = torch.sigmoid(outputs["vuv_logits"].to(torch.float32))
     aper_proxy = torch.sigmoid(outputs["aperiodicity"].to(torch.float32))
-    event_presence = outputs["event_probs"][..., 0:1].to(torch.float32)
+    event_presence = outputs["event_probs"].to(torch.float32).amax(dim=-1, keepdim=True)
 
     rms_like = torch.sqrt(torch.pow(10.0, energy_log).clamp_min(1.0e-8))
     abs_mean = (0.82 * rms_like + 0.06 * event_presence + 0.04 * voiced_prob).clamp(0.005, 0.6)

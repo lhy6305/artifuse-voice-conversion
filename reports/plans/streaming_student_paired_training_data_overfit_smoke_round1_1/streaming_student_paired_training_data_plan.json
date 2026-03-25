@@ -1,19 +1,19 @@
 {
-  "generated_at": "2026-03-25T21:41:50",
+  "generated_at": "2026-03-25T21:42:51",
   "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
   "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl",
   "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
   "timing": {
-    "started_at": "2026-03-25T21:41:50",
-    "ended_at": "2026-03-25T21:41:50",
-    "duration_sec": 0.103542
+    "started_at": "2026-03-25T21:42:51",
+    "ended_at": "2026-03-25T21:42:51",
+    "duration_sec": 0.085604
   },
   "split": {
     "record_mode": "paired_source_to_target_stage3_contract",
     "train_pair_spec_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_train_pairs.jsonl",
     "validation_pair_spec_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_validation_pairs.jsonl",
     "target_event_timing_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_timing_semantic_sidecar/target_event_timing_semantic_sidecar.jsonl",
-    "source_semantic_parity_sidecar_path": null,
+    "source_semantic_parity_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/paired_parallel_source_semantic_parity_sidecar/paired_parallel_source_semantic_parity_sidecar.jsonl",
     "train_pair_count": 2,
     "validation_pair_count": 2
   },
@@ -178,46 +178,55 @@
         "44100": 2
       },
       "source_semantic_parity_sidecar_summary": {
-        "present_count": 0,
-        "missing_count": 2,
-        "semantic_ready_for_source_side_bootstrap_count": 0,
-        "parity_contract_version_counts": {},
-        "parity_status_counts": {},
-        "semantic_label_status_counts": {},
-        "semantic_utterance_structure_type_counts": {}
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_ready_for_source_side_bootstrap_count": 2,
+        "parity_contract_version_counts": {
+          "paired_parallel_source_semantic_parity_sidecar_v1": 2
+        },
+        "parity_status_counts": {
+          "matched_target_semantic_and_timing": 2
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 2
+        },
+        "semantic_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        }
       },
       "source_parity_alignment": {
         "source_parity_duration_sec": [
-          0.0,
-          0.0
+          2.39,
+          2.4
         ],
         "source_parity_estimated_frame_counts": [
-          0,
-          0
-        ],
-        "source_parity_duration_metadata_drift_sec": [
-          -2.39,
-          -2.4
-        ],
-        "source_parity_frame_delta_per_sample": [
           657,
           660
         ],
+        "source_parity_duration_metadata_drift_sec": [
+          0.0,
+          0.0
+        ],
+        "source_parity_frame_delta_per_sample": [
+          0,
+          0
+        ],
         "source_parity_duration_metadata_drift_stats": {
           "count": 2,
-          "min": -2.4,
-          "max": -2.39,
-          "mean": -2.395,
-          "median": -2.395,
-          "stdev": 0.005
+          "min": 0.0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "stdev": 0.0
         },
         "source_parity_frame_delta_stats": {
           "count": 2,
-          "min": 657,
-          "max": 660,
-          "mean": 658.5,
-          "median": 658.5,
-          "stdev": 1.5
+          "min": 0,
+          "max": 0,
+          "mean": 0.0,
+          "median": 0.0,
+          "stdev": 0.0
         }
       },
       "timing_semantic_sidecar_summary": {
@@ -493,46 +502,55 @@
         "44100": 2
       },
       "source_semantic_parity_sidecar_summary": {
-        "present_count": 0,
-        "missing_count": 2,
-        "semantic_ready_for_source_side_bootstrap_count": 0,
-        "parity_contract_version_counts": {},
-        "parity_status_counts": {},
-        "semantic_label_status_counts": {},
-        "semantic_utterance_structure_type_counts": {}
+        "present_count": 2,
+        "missing_count": 0,
+        "semantic_ready_for_source_side_bootstrap_count": 2,
+        "parity_contract_version_counts": {
+          "paired_parallel_source_semantic_parity_sidecar_v1": 2
+        },
+        "parity_status_counts": {
+          "matched_target_semantic_and_timing": 2
+        },
+        "semantic_label_status_counts": {
+          "pending_upgrade": 2
+        },
+        "semantic_utterance_structure_type_counts": {
+          "multi_clause_single_terminal": 1,
+          "single_clause_terminal": 1
+        }
       },
       "source_parity_alignment": {
         "source_parity_duration_sec": [
-          0.0,
-          0.0
+          2.39,
+          2.4
         ],
         "source_parity_estimated_frame_counts": [
-          0,
-          0
-        ],
-        "source_parity_duration_metadata_drift_sec": [
-          -2.39,
-          -2.4
-        ],
-        "source_parity_frame_delta_per_sample": [
           657,
           660
         ],
+        "source_parity_duration_metadata_drift_sec": [
+          0.0,
+          0.0
+        ],
+        "source_parity_frame_delta_per_sample": [
+          0,
+          0
+        ],
         "source_parity_duration_metadata_drift_stats": {
           "count": 2,
-          "min": -2.4,
-          "max": -2.39,
-          "mean": -2.395,
-          "median": -2.395,
-          "stdev": 0.005
+          "min": 0.0,
+          "max": 0.0,
+          "mean": 0.0,
+          "median": 0.0,
+          "stdev": 0.0
         },
         "source_parity_frame_delta_stats": {
           "count": 2,
-          "min": 657,
-          "max": 660,
-          "mean": 658.5,
-          "median": 658.5,
-          "stdev": 1.5
+          "min": 0,
+          "max": 0,
+          "mean": 0.0,
+          "median": 0.0,
+          "stdev": 0.0
         }
       },
       "timing_semantic_sidecar_summary": {

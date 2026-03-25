@@ -6,6 +6,7 @@ from pathlib import Path
 
 import torch
 
+from v5vc.event_semantics import build_teacher_e_evt_v1_targets
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
     build_record_source_semantic_parity_overview,
@@ -45,6 +46,7 @@ class StreamingStudentTargetExample:
     teacher_z_art: torch.Tensor
     teacher_event_logits: torch.Tensor
     teacher_event_probs: torch.Tensor
+    teacher_e_evt: torch.Tensor
     teacher_acoustic: torch.Tensor
     teacher_frame_confidence: torch.Tensor
     teacher_confidence_mean: float
@@ -73,6 +75,7 @@ class StreamingStudentPairedExample:
     teacher_z_art: torch.Tensor
     teacher_event_logits: torch.Tensor
     teacher_event_probs: torch.Tensor
+    teacher_e_evt: torch.Tensor
     teacher_acoustic: torch.Tensor
     teacher_frame_confidence: torch.Tensor
     teacher_confidence_mean: float
@@ -410,6 +413,14 @@ def load_streaming_student_target_examples_from_records(
             raise ValueError(
                 f"Teacher-label record_id mismatch: manifest={record_id} teacher={teacher_record_id}"
             )
+        teacher_e_evt_payload = teacher_payload.get("e_evt")
+        if not isinstance(teacher_e_evt_payload, torch.Tensor):
+            teacher_e_evt_payload = build_teacher_e_evt_v1_targets(
+                legacy_event_probs=teacher_payload["event_probs"].to(torch.float32),
+                target_event_semantic_sidecar=record.get("target_event_semantic_sidecar"),
+                target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
+                valid_frame_count=int(teacher_payload["frame_mask"].to(torch.bool).sum().item()),
+            )["tensor"]
         examples.append(
             StreamingStudentTargetExample(
                 record_id=record_id,
@@ -428,6 +439,7 @@ def load_streaming_student_target_examples_from_records(
                 teacher_z_art=teacher_payload["z_art"].to(torch.float32),
                 teacher_event_logits=teacher_payload["event_logits"].to(torch.float32),
                 teacher_event_probs=teacher_payload["event_probs"].to(torch.float32),
+                teacher_e_evt=teacher_e_evt_payload.to(torch.float32),
                 teacher_acoustic=teacher_payload["acoustic"].to(torch.float32),
                 teacher_frame_confidence=teacher_payload["frame_confidence"].to(torch.float32),
                 teacher_confidence_mean=float(teacher_row.get("confidence_mean", 0.0)),
@@ -455,6 +467,14 @@ def load_streaming_student_paired_examples_from_records(
             )
         source_semantic_parity_overview = build_record_source_semantic_parity_overview(record)
         target_timing_semantic_overview = build_record_timing_semantic_overview(record)
+        teacher_e_evt_payload = teacher_payload.get("e_evt")
+        if not isinstance(teacher_e_evt_payload, torch.Tensor):
+            teacher_e_evt_payload = build_teacher_e_evt_v1_targets(
+                legacy_event_probs=teacher_payload["event_probs"].to(torch.float32),
+                target_event_semantic_sidecar=None,
+                target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
+                valid_frame_count=int(teacher_payload["frame_mask"].to(torch.bool).sum().item()),
+            )["tensor"]
         examples.append(
             StreamingStudentPairedExample(
                 pair_record_id=str(record["record_id"]),
@@ -477,6 +497,7 @@ def load_streaming_student_paired_examples_from_records(
                 teacher_z_art=teacher_payload["z_art"].to(torch.float32),
                 teacher_event_logits=teacher_payload["event_logits"].to(torch.float32),
                 teacher_event_probs=teacher_payload["event_probs"].to(torch.float32),
+                teacher_e_evt=teacher_e_evt_payload.to(torch.float32),
                 teacher_acoustic=teacher_payload["acoustic"].to(torch.float32),
                 teacher_frame_confidence=teacher_payload["frame_confidence"].to(torch.float32),
                 teacher_confidence_mean=float(teacher_row.get("confidence_mean", 0.0)),
@@ -576,6 +597,7 @@ def collate_streaming_student_batch(
     teacher_z_art = torch.zeros((len(examples), max_teacher_frames, z_art_dim), dtype=torch.float32)
     teacher_event_logits = torch.zeros((len(examples), max_teacher_frames, event_dim), dtype=torch.float32)
     teacher_event_probs = torch.zeros((len(examples), max_teacher_frames, event_dim), dtype=torch.float32)
+    teacher_e_evt = torch.zeros((len(examples), max_teacher_frames, event_dim), dtype=torch.float32)
     teacher_acoustic = torch.zeros((len(examples), max_teacher_frames, acoustic_dim), dtype=torch.float32)
     teacher_frame_confidence = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
 
@@ -587,6 +609,7 @@ def collate_streaming_student_batch(
         teacher_z_art[index, :frame_count] = example.teacher_z_art[:frame_count]
         teacher_event_logits[index, :frame_count] = example.teacher_event_logits[:frame_count]
         teacher_event_probs[index, :frame_count] = example.teacher_event_probs[:frame_count]
+        teacher_e_evt[index, :frame_count] = example.teacher_e_evt[:frame_count]
         teacher_acoustic[index, :frame_count] = example.teacher_acoustic[:frame_count]
         teacher_frame_confidence[index, :frame_count] = example.teacher_frame_confidence[:frame_count]
 
@@ -610,6 +633,7 @@ def collate_streaming_student_batch(
         "teacher_z_art": teacher_z_art,
         "teacher_event_logits": teacher_event_logits,
         "teacher_event_probs": teacher_event_probs,
+        "teacher_e_evt": teacher_e_evt,
         "teacher_acoustic": teacher_acoustic,
         "teacher_frame_confidence": teacher_frame_confidence,
         "teacher_confidence_means": torch.tensor(
@@ -657,6 +681,7 @@ def collate_streaming_student_paired_batch(
             teacher_z_art=example.teacher_z_art,
             teacher_event_logits=example.teacher_event_logits,
             teacher_event_probs=example.teacher_event_probs,
+            teacher_e_evt=example.teacher_e_evt,
             teacher_acoustic=example.teacher_acoustic,
             teacher_frame_confidence=example.teacher_frame_confidence,
             teacher_confidence_mean=example.teacher_confidence_mean,

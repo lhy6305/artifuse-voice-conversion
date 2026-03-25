@@ -10,6 +10,10 @@ import torch
 
 from v5vc.ablation_eval import load_checkpoint
 from v5vc.data_scan import summarize_numeric
+from v5vc.event_semantics import (
+    build_design_state_e_evt_v1_meta,
+    build_teacher_e_evt_v1_targets,
+)
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
     TEXT_FEATURE_VERSION_LEGACY_V0,
@@ -142,6 +146,7 @@ def build_streaming_student_teacher_labels(
             "fused_hidden": int(checkpoint_config["model"]["hidden_dim"]),
             "z_art": int(checkpoint_config["model"]["z_art_dim"]),
             "event_logits": int(checkpoint_config["model"]["event_dim"]),
+            "e_evt": int(checkpoint_config["model"]["event_dim"]),
             "acoustic": int(checkpoint_config["model"]["acoustic_dim"]),
             "confidence": 1,
         },
@@ -149,6 +154,7 @@ def build_streaming_student_teacher_labels(
         "notes": [
             "Teacher labels are pseudo labels exported from the formal offline_mvp route anchor, not physical ground truth.",
             "frame_confidence uses heuristic bootstrap_v1 and is meant for later weighting/filtering, not as a final confidence design.",
+            "This export now materializes a bootstrap teacher_e_evt target so Stage3 can stop treating legacy heuristic event_probs as the final event contract.",
             "Stage3 may reuse these labels as assets, but should still keep its own training entry and loss contract separate from offline_mvp.",
         ],
     }
@@ -489,11 +495,19 @@ def export_single_record(
     valid_frame_count = int(frame_mask.sum().item())
     if valid_frame_count <= 0:
         raise ValueError(f"Teacher export encountered zero valid frames for {record_id}.")
+    semantic_overview = build_record_semantic_overview(record)
+    timing_overview = build_record_timing_semantic_overview(record)
+    teacher_e_evt = build_teacher_e_evt_v1_targets(
+        legacy_event_probs=outputs["event_probs"][sample_index],
+        target_event_semantic_sidecar=record.get("target_event_semantic_sidecar"),
+        target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
+        valid_frame_count=valid_frame_count,
+    )
     tensor_payload = {
         "record_id": record_id,
         "split_name": split_name,
         "teacher_anchor": dict(teacher_anchor),
-        "export_format": "offline_mvp_teacher_labels_v1",
+        "export_format": "offline_mvp_teacher_labels_v2",
         "confidence_estimator": "bootstrap_v1",
         "frame_count": valid_frame_count,
         "frame_mask": trim_tensor(outputs["frame_mask"][sample_index], valid_frame_count),
@@ -502,6 +516,9 @@ def export_single_record(
         "z_art": trim_tensor(outputs["z_art"][sample_index], valid_frame_count),
         "event_logits": trim_tensor(outputs["event_logits"][sample_index], valid_frame_count),
         "event_probs": trim_tensor(outputs["event_probs"][sample_index], valid_frame_count),
+        "e_evt": trim_tensor(teacher_e_evt["tensor"], valid_frame_count),
+        "e_evt_meta": dict(teacher_e_evt["meta"]),
+        "e_evt_summary": dict(teacher_e_evt["summary"]),
         "acoustic": trim_tensor(outputs["acoustic"][sample_index], valid_frame_count),
         "frame_confidence": trim_tensor(frame_confidence[sample_index], valid_frame_count),
     }
@@ -513,8 +530,6 @@ def export_single_record(
     low_confidence_ratio = float((record_confidence < threshold).to(torch.float32).mean().item())
     weak_event_hints = record.get("weak_event_hints")
     target_special_supervision = record.get("target_special_supervision")
-    semantic_overview = build_record_semantic_overview(record)
-    timing_overview = build_record_timing_semantic_overview(record)
     return {
         "record_id": record_id,
         "split_name": split_name,
@@ -540,6 +555,8 @@ def export_single_record(
         "semantic_label_status": str(semantic_overview["semantic_label_status"]),
         "semantic_utterance_structure_type": str(semantic_overview["semantic_utterance_structure_type"]),
         "semantic_final_terminal_type": str(semantic_overview["semantic_final_terminal_type"]),
+        "teacher_event_contract_version": str(teacher_e_evt["meta"]["event_contract_version"]),
+        "teacher_event_label_space_version": str(teacher_e_evt["meta"]["event_label_space_version"]),
         "timing_source": str(timing_overview["timing_source"]),
         "timing_contract_version": timing_overview["timing_contract_version"],
         "timing_label_space_version": timing_overview["timing_label_space_version"],
