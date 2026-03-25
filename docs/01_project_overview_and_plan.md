@@ -21149,3 +21149,201 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    - source-parity aware consumer
    - 或更上游
      supervision route
+## 2026-03-25 继续补充：第一版 source-aware parity consumer 已接通，但仍被机器门禁直接判为 obvious buzz
+- 正式报告：
+  - `docs/347_stage5_source_semantic_parity_consumer_round1_fail_and_supervision_route_report.md`
+
+### 当前关键结果
+1. 已新增：
+   - `semantic_consumer_mode = source_semantic_parity_framewise_v1`
+2. 新 consumer
+   确认真实进入 forward path：
+   - 输入维度从
+     `36 / 36`
+     变成
+     `46 / 46`
+3. paired overfit24
+   相对 metadata-only baseline：
+   - `loss_total: 0.572382 -> 0.560476`
+   - `loss_harmonic_envelope: 0.285243 -> 0.276871`
+   - `loss_noise_envelope: 0.052113 -> 0.051777`
+4. 但更关键的是：
+   - validation export
+     仍是：
+     - `auto_reject_count = 2`
+     - `all_records_auto_reject = true`
+
+### 当前阶段判断更新
+1. 这说明：
+   - 仅把 semantic
+     升级为
+     source-aware parity timeline
+   - 仍不足以在
+     Stage5 input-side
+     推出 speech emergence
+2. 所以主线不应继续停留在：
+   - Stage5 source-aware
+     consumer
+     变体微调
+3. 下一步应正式上收到：
+   - teacher / student
+     semantic supervision
+     路线
+
+### 更新后的下一步
+1. 停止继续做：
+   - Stage5
+     source parity consumer
+2. 转向：
+   - 更上游的
+     source-target parity-aware
+     semantic supervision
+     资产 / 训练链
+## 2026-03-25 继续补充：Stage3 target timing semantic supervision 已接通，但“只靠 timing bonus 重加权”短 loop 信号偏弱
+- 正式报告：
+  - `docs/348_stage3_target_timing_semantic_supervision_plumbing_and_short_loop_report.md`
+
+### 当前关键结果
+1. `target_event_timing_semantic_sidecar`
+   已正式接入：
+   - `streaming_student`
+     config
+   - data batch
+   - teacher-label summary
+   - supervision dry-run
+   - one-step train
+   - short train loop
+2. dry-run 已确认：
+   - `timing_sidecar_present_ratio = 1.0`
+   - `semantic_timing_ready_sample_ratio = 1.0`
+   - `semantic_base_multiplier_mean`
+     会按 timing 结构真实抬升
+3. teacher-label smoke
+   也已确认：
+   - index row
+     现在会写出
+     `timing_alignment_type / timing_clause_region_count / timing_pause_boundary_event_count / timing_terminal_boundary_event_count`
+4. 严格可比
+   12-step sampled validation
+   上，
+   更可比的
+   `loss_total_semantic_disabled_reference`
+   基本打平：
+   - baseline:
+     `8.181766`
+   - timing-enabled:
+     `8.181019`
+
+### 当前阶段判断更新
+1. 这说明：
+   - Stage3 timing semantic supervision
+     plumbing
+     已经真实成立
+2. 但也同时说明：
+   - 如果只把 timing semantic
+     当成
+     sample-level weighting bonus，
+     当前收益太弱，
+     不值得继续沉没在
+     bonus 微调
+3. 所以下一条更值钱的主线不是：
+   - 再扫一组
+     `timing_*_bonus`
+4. 而是：
+   - 把 timing semantic
+     升级成更强的
+     target shaping /
+     boundary-aware mask /
+     selective loss routing
+
+### 更新后的下一步
+1. 保留本轮
+   timing semantic
+   plumbing
+   作为 Stage3 正式底座
+2. 下一步优先：
+   - 设计第一版
+     timing-aware
+     event-prior target shaping
+     或
+     boundary/clause-aware mask supervision
+3. 继续保持：
+   - 不把
+     `source_semantic_parity_sidecar`
+     硬塞进当前
+     target-only
+     Stage3 record route
+## 2026-03-25 继续补充：Stage3 timing-aware frame routing 也已验证，但收益仍弱，不再继续扫 routing 参数
+- 正式报告：
+  - `docs/349_stage3_target_timing_frame_routing_short_loop_report.md`
+
+### 当前关键结果
+1. 新增的
+   timing-aware frame routing
+   已真实进入：
+   - `teacher_event_prior`
+   - `teacher_event`
+   - `teacher_z_art`
+   的逐帧 loss
+2. dry-run / train-step / train-loop
+   都已出现：
+   - `timing_frame_routing_enabled`
+   - `timing_frame_mask_applied_ratio`
+   - `timing_boundary_frame_ratio`
+   - `timing_event_prior_frame_multiplier_mean`
+3. 严格可比的
+   12-step sampled validation
+   上：
+   - baseline:
+     `loss_total_semantic_disabled_reference = 8.181766`
+   - routing-enabled:
+     `8.180736`
+4. 但共享 proxy loss
+   没有给出足够强的净改善：
+   - `loss_teacher_event`
+     更差
+   - `loss_teacher_event_prior`
+     更差
+   - `loss_teacher_z_art`
+     也略差
+
+### 当前阶段判断更新
+1. 现在可以正式写死：
+   - target timing semantic
+     在 Stage3
+     的
+     weighting
+     和
+     frame routing
+     两个层级
+     都已经真实试过
+2. 但这两个层级
+   当前都只给出：
+   - 很弱的可比收益
+   - 不足以支持继续扫参数
+3. 所以下一步不应继续做：
+   - `timing_*_bonus`
+   - `timing_*_boost`
+   - `nonboundary_scale`
+   这类微调
+4. 更值钱的下一步是：
+   - 更强的
+     timing-aware target shaping
+   - 或显式
+     boundary/clause-aware
+     target contract
+
+### 更新后的下一步
+1. 正式停止：
+   - Stage3 timing weighting
+     微调
+   - Stage3 timing frame routing
+     微调
+2. 下一步优先：
+   - 设计并实现
+     第一版
+     timing-aware
+     event-prior target shaping
+     或
+     boundary/clause-aware
+     target contract

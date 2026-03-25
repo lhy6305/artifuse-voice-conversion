@@ -15,10 +15,12 @@ class UnifiedStreamingFrontend(nn.Module):
         frame_length: int,
         hop_length: int,
         event_prior_dim: int,
+        timing_aux_enabled: bool = False,
     ) -> None:
         super().__init__()
         self.frame_length = frame_length
         self.hop_length = hop_length
+        self.timing_aux_enabled = bool(timing_aux_enabled)
         self.input_proj = nn.Linear(2, frontend_dim)
         self.input_norm = nn.LayerNorm(frontend_dim)
         self.encoder = build_mlp(
@@ -32,6 +34,15 @@ class UnifiedStreamingFrontend(nn.Module):
         self.aper_head = nn.Linear(shared_dim, 1)
         self.energy_head = nn.Linear(shared_dim, 1)
         self.event_prior_head = nn.Linear(shared_dim, event_prior_dim)
+        self.timing_pause_boundary_head = (
+            nn.Linear(shared_dim, 1) if self.timing_aux_enabled else None
+        )
+        self.timing_terminal_boundary_head = (
+            nn.Linear(shared_dim, 1) if self.timing_aux_enabled else None
+        )
+        self.timing_final_clause_head = (
+            nn.Linear(shared_dim, 1) if self.timing_aux_enabled else None
+        )
 
     def forward(
         self,
@@ -46,7 +57,7 @@ class UnifiedStreamingFrontend(nn.Module):
         )
         hidden = self.input_norm(self.input_proj(frames))
         shared_hidden = self.encoder(hidden)
-        return {
+        outputs = {
             "frame_mask": frame_mask,
             "frame_features": frames,
             "shared_hidden": shared_hidden,
@@ -56,6 +67,16 @@ class UnifiedStreamingFrontend(nn.Module):
             "energy": self.energy_head(shared_hidden),
             "event_prior_logits": self.event_prior_head(shared_hidden),
         }
+        if self.timing_pause_boundary_head is None:
+            zero_aux = shared_hidden.new_zeros((shared_hidden.shape[0], shared_hidden.shape[1], 0))
+            outputs["timing_pause_boundary_logits"] = zero_aux
+            outputs["timing_terminal_boundary_logits"] = zero_aux
+            outputs["timing_final_clause_logits"] = zero_aux
+        else:
+            outputs["timing_pause_boundary_logits"] = self.timing_pause_boundary_head(shared_hidden)
+            outputs["timing_terminal_boundary_logits"] = self.timing_terminal_boundary_head(shared_hidden)
+            outputs["timing_final_clause_logits"] = self.timing_final_clause_head(shared_hidden)
+        return outputs
 
 
 class StudentControlHeads(nn.Module):
@@ -164,6 +185,7 @@ class StreamingStudentScaffold(nn.Module):
         r_res_enabled: bool,
         f0_correction_enabled: bool,
         aper_correction_enabled: bool,
+        timing_aux_enabled: bool = False,
     ) -> None:
         super().__init__()
         self.frontend = UnifiedStreamingFrontend(
@@ -173,6 +195,7 @@ class StreamingStudentScaffold(nn.Module):
             frame_length=frame_length,
             hop_length=hop_length,
             event_prior_dim=event_prior_dim,
+            timing_aux_enabled=timing_aux_enabled,
         )
         self.student = StudentControlHeads(
             shared_dim=shared_dim,

@@ -10,7 +10,10 @@ from v5vc.streaming_student.supervision_entry import prepare_streaming_student_s
 from v5vc.streaming_student.teacher_labels import build_streaming_student_teacher_labels
 from v5vc.streaming_student.training_loop_entry import run_streaming_student_training_loop
 from v5vc.streaming_student.train_step_entry import run_streaming_student_training_step
-from v5vc.streaming_student.training_data_entry import prepare_streaming_student_training_data
+from v5vc.streaming_student.training_data_entry import (
+    prepare_streaming_student_paired_training_data,
+    prepare_streaming_student_training_data,
+)
 
 __all__ = [
     "build_streaming_student_calibration_assets",
@@ -19,6 +22,7 @@ __all__ = [
     "select_streaming_student_best_checkpoint",
     "build_streaming_student_eval_bridge",
     "build_streaming_student_teacher_labels",
+    "prepare_streaming_student_paired_training_data",
     "prepare_streaming_student_training_data",
     "prepare_streaming_student_supervision",
     "export_streaming_student_proxy_audio",

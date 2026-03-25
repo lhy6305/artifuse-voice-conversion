@@ -8,11 +8,18 @@ import torch
 
 from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
+    build_record_source_semantic_parity_overview,
+    build_record_timing_semantic_overview,
     attach_target_event_semantic_sidecar,
+    attach_target_event_timing_semantic_sidecar,
     attach_target_special_supervision,
     attach_target_weak_event_hints,
+    infer_paired_parallel_source_semantic_parity_sidecar_path,
     infer_target_event_semantic_sidecar_path,
+    infer_target_event_timing_semantic_sidecar_path,
+    load_paired_parallel_source_semantic_parity_sidecar_map,
     load_target_event_semantic_sidecar_map,
+    load_target_event_timing_semantic_sidecar_map,
     load_target_special_supervision_map,
     load_target_weak_event_hint_map,
     load_waveform,
@@ -30,7 +37,36 @@ class StreamingStudentTargetExample:
     weak_event_hints: dict[str, object] | None
     target_special_supervision: dict[str, object] | None
     target_event_semantic_sidecar: dict[str, object] | None
+    target_event_timing_semantic_sidecar: dict[str, object] | None
     teacher_label_path: Path
+    teacher_frame_mask: torch.Tensor
+    teacher_hidden: torch.Tensor
+    teacher_fused_hidden: torch.Tensor
+    teacher_z_art: torch.Tensor
+    teacher_event_logits: torch.Tensor
+    teacher_event_probs: torch.Tensor
+    teacher_acoustic: torch.Tensor
+    teacher_frame_confidence: torch.Tensor
+    teacher_confidence_mean: float
+    teacher_low_confidence_frame_ratio: float
+
+
+@dataclass
+class StreamingStudentPairedExample:
+    pair_record_id: str
+    split_name: str
+    source_record_id: str
+    target_record_id: str
+    source_audio_path: Path
+    target_audio_path: Path
+    sample_rate: int
+    waveform: torch.Tensor
+    source_semantic_parity_sidecar: dict[str, object] | None
+    source_semantic_parity_overview: dict[str, object]
+    target_event_timing_semantic_sidecar: dict[str, object] | None
+    target_timing_semantic_overview: dict[str, object]
+    teacher_label_path: Path
+    teacher_split_name: str
     teacher_frame_mask: torch.Tensor
     teacher_hidden: torch.Tensor
     teacher_fused_hidden: torch.Tensor
@@ -108,6 +144,72 @@ def load_streaming_student_target_records_by_split(
     return records_by_split, split_summary
 
 
+def load_streaming_student_paired_records_by_split(
+    config_path: Path,
+    config: dict[str, object],
+    teacher_label_index_path: Path,
+    train_pair_spec_path: Path,
+    validation_pair_spec_path: Path | None,
+) -> tuple[dict[str, list[dict[str, object]]], dict[str, object]]:
+    config_path = config_path.resolve()
+    teacher_label_index_path = teacher_label_index_path.resolve()
+    resolved_train_pair_spec_path = train_pair_spec_path.resolve()
+    resolved_validation_pair_spec_path = (
+        None if validation_pair_spec_path is None else validation_pair_spec_path.resolve()
+    )
+    teacher_index_map = {
+        str(row["record_id"]): dict(row)
+        for row in load_jsonl(teacher_label_index_path)
+    }
+    timing_sidecar_path = resolve_target_event_timing_semantic_sidecar_path(
+        config_path=config_path,
+        config=config,
+    )
+    timing_sidecar_map = None
+    if timing_sidecar_path is not None and timing_sidecar_path.exists():
+        timing_sidecar_map = load_target_event_timing_semantic_sidecar_map(timing_sidecar_path)
+    parity_sidecar_path = resolve_source_semantic_parity_sidecar_path(
+        config_path=config_path,
+        config=config,
+    )
+    parity_sidecar_map = None
+    if parity_sidecar_path is not None and parity_sidecar_path.exists():
+        parity_sidecar_map = load_paired_parallel_source_semantic_parity_sidecar_map(parity_sidecar_path)
+
+    train_pairs = attach_streaming_student_paired_contract_metadata(
+        records=load_jsonl(resolved_train_pair_spec_path),
+        teacher_index_map=teacher_index_map,
+        timing_sidecar_map=timing_sidecar_map,
+        parity_sidecar_map=parity_sidecar_map,
+        split_name="train",
+    )
+    validation_pairs = attach_streaming_student_paired_contract_metadata(
+        records=[] if resolved_validation_pair_spec_path is None else load_jsonl(resolved_validation_pair_spec_path),
+        teacher_index_map=teacher_index_map,
+        timing_sidecar_map=timing_sidecar_map,
+        parity_sidecar_map=parity_sidecar_map,
+        split_name="validation",
+    )
+    return {
+        "train": train_pairs,
+        "validation": validation_pairs,
+    }, {
+        "record_mode": "paired_source_to_target_stage3_contract",
+        "train_pair_spec_path": resolved_train_pair_spec_path.as_posix(),
+        "validation_pair_spec_path": (
+            None if resolved_validation_pair_spec_path is None else resolved_validation_pair_spec_path.as_posix()
+        ),
+        "target_event_timing_semantic_sidecar_path": (
+            None if timing_sidecar_path is None else timing_sidecar_path.as_posix()
+        ),
+        "source_semantic_parity_sidecar_path": (
+            None if parity_sidecar_path is None else parity_sidecar_path.as_posix()
+        ),
+        "train_pair_count": len(train_pairs),
+        "validation_pair_count": len(validation_pairs),
+    }
+
+
 def resolve_split_dir(
     config_path: Path,
     config: dict[str, object],
@@ -154,6 +256,15 @@ def attach_sidecars_if_available(
             attached_records,
             load_target_event_semantic_sidecar_map(semantic_sidecar_path),
         )
+    timing_sidecar_path = resolve_target_event_timing_semantic_sidecar_path(
+        config_path=config_path,
+        config=config,
+    )
+    if timing_sidecar_path is not None and timing_sidecar_path.exists():
+        attached_records = attach_target_event_timing_semantic_sidecar(
+            attached_records,
+            load_target_event_timing_semantic_sidecar_map(timing_sidecar_path),
+        )
     return attached_records
 
 
@@ -178,6 +289,40 @@ def resolve_target_event_semantic_sidecar_path(
         raw_value=config.get("data", {}).get("split_dir"),
     )
     return infer_target_event_semantic_sidecar_path(split_dir)
+
+
+def resolve_target_event_timing_semantic_sidecar_path(
+    config_path: Path,
+    config: dict[str, object],
+) -> Path | None:
+    resolved = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("target_event_timing_semantic_sidecar_path"),
+    )
+    if resolved is not None:
+        return resolved
+    split_dir = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("split_dir"),
+    )
+    return infer_target_event_timing_semantic_sidecar_path(split_dir)
+
+
+def resolve_source_semantic_parity_sidecar_path(
+    config_path: Path,
+    config: dict[str, object],
+) -> Path | None:
+    resolved = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("source_semantic_parity_sidecar_path"),
+    )
+    if resolved is not None:
+        return resolved
+    split_dir = resolve_optional_path(
+        config_path=config_path,
+        raw_value=config.get("data", {}).get("split_dir"),
+    )
+    return infer_paired_parallel_source_semantic_parity_sidecar_path(split_dir)
 
 
 def attach_teacher_label_index(
@@ -214,6 +359,42 @@ def attach_teacher_label_index(
     return attached_records
 
 
+def attach_streaming_student_paired_contract_metadata(
+    records: list[dict[str, object]],
+    teacher_index_map: dict[str, dict[str, object]],
+    timing_sidecar_map: dict[str, dict[str, object]] | None,
+    parity_sidecar_map: dict[str, dict[str, object]] | None,
+    split_name: str,
+) -> list[dict[str, object]]:
+    attached_records: list[dict[str, object]] = []
+    missing_target_ids: list[str] = []
+    for record in records:
+        target_record_id = str(record.get("target_record_id", ""))
+        if not target_record_id:
+            raise ValueError(f"Paired Stage3 record missing target_record_id for split={split_name}: {record}")
+        teacher_row = teacher_index_map.get(target_record_id)
+        if teacher_row is None:
+            missing_target_ids.append(target_record_id)
+            continue
+        updated = dict(record)
+        updated["teacher_label_index"] = teacher_row
+        updated["target_event_timing_semantic_sidecar"] = (
+            None if timing_sidecar_map is None else timing_sidecar_map.get(target_record_id)
+        )
+        source_record_id = str(record.get("source_record_id", ""))
+        updated["source_semantic_parity_sidecar"] = (
+            None if parity_sidecar_map is None or not source_record_id else parity_sidecar_map.get(source_record_id)
+        )
+        attached_records.append(updated)
+    if missing_target_ids:
+        preview = ", ".join(missing_target_ids[:8])
+        raise ValueError(
+            "Teacher-label index missing paired target records "
+            f"for {split_name}: count={len(missing_target_ids)} preview={preview}"
+        )
+    return attached_records
+
+
 def load_streaming_student_target_examples_from_records(
     records: list[dict[str, object]],
 ) -> list[StreamingStudentTargetExample]:
@@ -239,7 +420,57 @@ def load_streaming_student_target_examples_from_records(
                 weak_event_hints=record.get("weak_event_hints"),
                 target_special_supervision=record.get("target_special_supervision"),
                 target_event_semantic_sidecar=record.get("target_event_semantic_sidecar"),
+                target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
                 teacher_label_path=teacher_label_path,
+                teacher_frame_mask=teacher_payload["frame_mask"].to(torch.bool),
+                teacher_hidden=teacher_payload["hidden"].to(torch.float32),
+                teacher_fused_hidden=teacher_payload["fused_hidden"].to(torch.float32),
+                teacher_z_art=teacher_payload["z_art"].to(torch.float32),
+                teacher_event_logits=teacher_payload["event_logits"].to(torch.float32),
+                teacher_event_probs=teacher_payload["event_probs"].to(torch.float32),
+                teacher_acoustic=teacher_payload["acoustic"].to(torch.float32),
+                teacher_frame_confidence=teacher_payload["frame_confidence"].to(torch.float32),
+                teacher_confidence_mean=float(teacher_row.get("confidence_mean", 0.0)),
+                teacher_low_confidence_frame_ratio=float(teacher_row.get("low_confidence_frame_ratio", 0.0)),
+            )
+        )
+    return examples
+
+
+def load_streaming_student_paired_examples_from_records(
+    records: list[dict[str, object]],
+) -> list[StreamingStudentPairedExample]:
+    examples: list[StreamingStudentPairedExample] = []
+    for record in records:
+        teacher_row = dict(record.get("teacher_label_index", {}))
+        teacher_label_path = Path(str(teacher_row["teacher_label_path"])).resolve()
+        teacher_payload = torch.load(teacher_label_path, map_location="cpu", weights_only=False)
+        waveform, sample_rate = load_waveform(Path(record["source_audio_path"]), max_duration_sec=None)
+        target_record_id = str(record.get("target_record_id"))
+        teacher_record_id = str(teacher_payload.get("record_id"))
+        if teacher_record_id != target_record_id:
+            raise ValueError(
+                "Paired Stage3 teacher-label target_record_id mismatch: "
+                f"pair_target={target_record_id} teacher={teacher_record_id}"
+            )
+        source_semantic_parity_overview = build_record_source_semantic_parity_overview(record)
+        target_timing_semantic_overview = build_record_timing_semantic_overview(record)
+        examples.append(
+            StreamingStudentPairedExample(
+                pair_record_id=str(record["record_id"]),
+                split_name=str(record.get("split", "unknown")),
+                source_record_id=str(record["source_record_id"]),
+                target_record_id=target_record_id,
+                source_audio_path=Path(str(record["source_audio_path"])).resolve(),
+                target_audio_path=Path(str(record["target_audio_path"])).resolve(),
+                sample_rate=sample_rate,
+                waveform=waveform,
+                source_semantic_parity_sidecar=record.get("source_semantic_parity_sidecar"),
+                source_semantic_parity_overview=source_semantic_parity_overview,
+                target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
+                target_timing_semantic_overview=target_timing_semantic_overview,
+                teacher_label_path=teacher_label_path,
+                teacher_split_name=str(teacher_row.get("split_name", "unknown")),
                 teacher_frame_mask=teacher_payload["frame_mask"].to(torch.bool),
                 teacher_hidden=teacher_payload["hidden"].to(torch.float32),
                 teacher_fused_hidden=teacher_payload["fused_hidden"].to(torch.float32),
@@ -395,5 +626,61 @@ def collate_streaming_student_batch(
         "weak_event_hints": [example.weak_event_hints for example in examples],
         "target_special_supervision": [example.target_special_supervision for example in examples],
         "target_event_semantic_sidecar": [example.target_event_semantic_sidecar for example in examples],
+        "target_event_timing_semantic_sidecar": [
+            example.target_event_timing_semantic_sidecar for example in examples
+        ],
         "conditioning_summary": dict(conditioning_asset["summary"]),
     }
+
+
+def collate_streaming_student_paired_batch(
+    examples: list[StreamingStudentPairedExample],
+    conditioning_asset: dict[str, object],
+) -> dict[str, torch.Tensor | list[str] | list[dict[str, object] | None]]:
+    if not examples:
+        raise ValueError("Stage3 paired collate received an empty example list.")
+    base_examples = [
+        StreamingStudentTargetExample(
+            record_id=example.pair_record_id,
+            split_name=example.split_name,
+            audio_path=example.source_audio_path,
+            sample_rate=example.sample_rate,
+            waveform=example.waveform,
+            weak_event_hints=None,
+            target_special_supervision=None,
+            target_event_semantic_sidecar=None,
+            target_event_timing_semantic_sidecar=example.target_event_timing_semantic_sidecar,
+            teacher_label_path=example.teacher_label_path,
+            teacher_frame_mask=example.teacher_frame_mask,
+            teacher_hidden=example.teacher_hidden,
+            teacher_fused_hidden=example.teacher_fused_hidden,
+            teacher_z_art=example.teacher_z_art,
+            teacher_event_logits=example.teacher_event_logits,
+            teacher_event_probs=example.teacher_event_probs,
+            teacher_acoustic=example.teacher_acoustic,
+            teacher_frame_confidence=example.teacher_frame_confidence,
+            teacher_confidence_mean=example.teacher_confidence_mean,
+            teacher_low_confidence_frame_ratio=example.teacher_low_confidence_frame_ratio,
+        )
+        for example in examples
+    ]
+    batch = collate_streaming_student_batch(
+        examples=base_examples,
+        conditioning_asset=conditioning_asset,
+    )
+    batch["pair_record_ids"] = [example.pair_record_id for example in examples]
+    batch["source_record_ids"] = [example.source_record_id for example in examples]
+    batch["target_record_ids"] = [example.target_record_id for example in examples]
+    batch["teacher_split_names"] = [example.teacher_split_name for example in examples]
+    batch["source_audio_paths"] = [example.source_audio_path.as_posix() for example in examples]
+    batch["target_audio_paths"] = [example.target_audio_path.as_posix() for example in examples]
+    batch["source_semantic_parity_sidecar"] = [
+        example.source_semantic_parity_sidecar for example in examples
+    ]
+    batch["source_semantic_parity_overview"] = [
+        dict(example.source_semantic_parity_overview) for example in examples
+    ]
+    batch["target_timing_semantic_overview"] = [
+        dict(example.target_timing_semantic_overview) for example in examples
+    ]
+    return batch

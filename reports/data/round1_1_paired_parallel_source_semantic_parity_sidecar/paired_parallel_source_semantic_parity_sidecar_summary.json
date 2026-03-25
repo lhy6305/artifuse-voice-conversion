@@ -31,9 +31,9 @@
   },
   "source_estimated_frame_count_stats": {
     "count": 2,
-    "min": 968,
-    "max": 1068,
-    "mean": 1018.0
+    "min": 657,
+    "max": 660,
+    "mean": 658.5
   },
   "lexical_char_count_stats": {
     "count": 2,
@@ -67,13 +67,26 @@
   },
   "source_to_target_duration_ratio_stats": {
     "count": 2,
-    "min": 1.396334,
-    "max": 1.476323,
-    "mean": 1.436329
+    "min": 0.909098,
+    "max": 0.95239,
+    "mean": 0.930744
+  },
+  "source_duration_metadata_drift_sec_stats": {
+    "count": 2,
+    "min": 1.11873,
+    "max": 1.491224,
+    "mean": 1.304977
+  },
+  "target_duration_metadata_drift_sec_stats": {
+    "count": 2,
+    "min": 0.0,
+    "max": 0.0,
+    "mean": 0.0
   },
   "notes": [
     "这份 sidecar 不是 native source text semantic，而是利用 paired parallel 同内容 target 语义做的 source-side parity bootstrap。",
     "source frame timing 由 target lexical ratios 投影到 source duration 上，不是 source forced alignment。",
+    "source/target duration 现在优先读取真实 wav 元数据，不再盲信 pair spec 里的 duration_sec。",
     "它的意义是补 source-side / parity-aware semantic assets，不应误写成 source-native semantic 已完成。"
   ]
 }

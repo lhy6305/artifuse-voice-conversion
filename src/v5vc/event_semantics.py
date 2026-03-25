@@ -4,6 +4,7 @@ import json
 import shutil
 from collections import Counter
 from pathlib import Path
+import wave
 
 from v5vc.c1_weak_event_hints import estimate_frame_count
 from v5vc.manifest_builder import load_jsonl
@@ -519,8 +520,10 @@ def group_parallel_pair_rows_by_source_record_id(pair_spec_paths: list[Path]) ->
             target_audio_path = str(row.get("target_audio_path") or "")
             if not source_audio_path or not target_audio_path:
                 raise ValueError(f"Pair spec row missing source_audio_path/target_audio_path: {pair_spec_path}")
-            source_duration_sec = resolve_pair_duration_sec(row=row, field_name="source_audio")
-            target_duration_sec = resolve_pair_duration_sec(row=row, field_name="target_audio")
+            source_duration_sec_pair_spec = resolve_pair_duration_sec(row=row, field_name="source_audio")
+            target_duration_sec_pair_spec = resolve_pair_duration_sec(row=row, field_name="target_audio")
+            source_duration_sec = read_wave_duration_sec(Path(source_audio_path))
+            target_duration_sec = read_wave_duration_sec(Path(target_audio_path))
             grouped = grouped_by_source.get(source_record_id)
             if grouped is None:
                 grouped = {
@@ -531,6 +534,8 @@ def group_parallel_pair_rows_by_source_record_id(pair_spec_paths: list[Path]) ->
                     "target_audio_path": target_audio_path,
                     "source_duration_sec": source_duration_sec,
                     "target_duration_sec": target_duration_sec,
+                    "source_duration_sec_pair_spec": source_duration_sec_pair_spec,
+                    "target_duration_sec_pair_spec": target_duration_sec_pair_spec,
                     "pair_record_ids": [str(row.get("record_id") or source_record_id)],
                     "split_memberships": [str(row.get("split", "unknown"))],
                     "pair_spec_paths": [pair_spec_path.as_posix()],
@@ -555,6 +560,16 @@ def group_parallel_pair_rows_by_source_record_id(pair_spec_paths: list[Path]) ->
             if abs(float(grouped["target_duration_sec"]) - float(target_duration_sec)) > 1e-6:
                 raise ValueError(
                     "Conflicting target_duration_sec for source semantic parity bootstrap: "
+                    f"source={source_record_id}"
+                )
+            if abs(float(grouped["source_duration_sec_pair_spec"]) - float(source_duration_sec_pair_spec)) > 1e-6:
+                raise ValueError(
+                    "Conflicting source_duration_sec pair-spec metadata for source semantic parity bootstrap: "
+                    f"source={source_record_id}"
+                )
+            if abs(float(grouped["target_duration_sec_pair_spec"]) - float(target_duration_sec_pair_spec)) > 1e-6:
+                raise ValueError(
+                    "Conflicting target_duration_sec pair-spec metadata for source semantic parity bootstrap: "
                     f"source={source_record_id}"
                 )
             pair_record_id = str(row.get("record_id") or source_record_id)
@@ -583,6 +598,15 @@ def resolve_pair_duration_sec(
     if "duration_sec" in direct_audio:
         return float(direct_audio["duration_sec"])
     raise ValueError(f"Pair spec row missing duration_sec for {field_name}.")
+
+
+def read_wave_duration_sec(path: Path) -> float:
+    with wave.open(str(path), "rb") as wav_file:
+        frame_count = wav_file.getnframes()
+        sample_rate = wav_file.getframerate()
+    if sample_rate <= 0:
+        raise ValueError(f"Invalid sample_rate in {path}")
+    return round(frame_count / sample_rate, 6)
 
 
 def build_paired_parallel_source_semantic_parity_row(
@@ -695,6 +719,16 @@ def build_paired_parallel_source_semantic_parity_row(
         "target_audio_path": str(grouped_pair_row["target_audio_path"]),
         "source_duration_sec": round(source_duration_sec, 6),
         "target_duration_sec": round(target_duration_sec, 6),
+        "source_duration_sec_pair_spec": round(float(grouped_pair_row["source_duration_sec_pair_spec"]), 6),
+        "target_duration_sec_pair_spec": round(float(grouped_pair_row["target_duration_sec_pair_spec"]), 6),
+        "source_duration_metadata_drift_sec": round(
+            float(grouped_pair_row["source_duration_sec_pair_spec"]) - source_duration_sec,
+            6,
+        ),
+        "target_duration_metadata_drift_sec": round(
+            float(grouped_pair_row["target_duration_sec_pair_spec"]) - target_duration_sec,
+            6,
+        ),
         "source_estimated_frame_count": int(source_frame_count),
         "semantic_contract_version": PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_SIDECAR_VERSION,
         "semantic_label_space_version": PAIRED_PARALLEL_SOURCE_SEMANTIC_PARITY_LABEL_SPACE_VERSION,
@@ -1101,6 +1135,14 @@ def build_paired_parallel_source_semantic_parity_summary(
         round(float(row["source_duration_sec"]) / max(1e-9, float(row["target_duration_sec"])), 6)
         for row in parity_rows
     ]
+    source_duration_metadata_drift_values = [
+        round(float(row.get("source_duration_metadata_drift_sec", 0.0)), 6)
+        for row in parity_rows
+    ]
+    target_duration_metadata_drift_values = [
+        round(float(row.get("target_duration_metadata_drift_sec", 0.0)), 6)
+        for row in parity_rows
+    ]
     source_ready_count = 0
     for row in parity_rows:
         for split_name in list(row.get("split_memberships", [])):
@@ -1132,9 +1174,12 @@ def build_paired_parallel_source_semantic_parity_summary(
         "terminal_boundary_event_count_stats": build_numeric_summary(terminal_counts),
         "timeline_event_count_stats": build_numeric_summary(timeline_counts),
         "source_to_target_duration_ratio_stats": build_numeric_summary(duration_ratio_values),
+        "source_duration_metadata_drift_sec_stats": build_numeric_summary(source_duration_metadata_drift_values),
+        "target_duration_metadata_drift_sec_stats": build_numeric_summary(target_duration_metadata_drift_values),
         "notes": [
             "这份 sidecar 不是 native source text semantic，而是利用 paired parallel 同内容 target 语义做的 source-side parity bootstrap。",
             "source frame timing 由 target lexical ratios 投影到 source duration 上，不是 source forced alignment。",
+            "source/target duration 现在优先读取真实 wav 元数据，不再盲信 pair spec 里的 duration_sec。",
             "它的意义是补 source-side / parity-aware semantic assets，不应误写成 source-native semantic 已完成。",
         ],
     }
@@ -1366,6 +1411,8 @@ def render_paired_parallel_source_semantic_parity_markdown(summary: dict[str, ob
         f"- terminal_boundary_event_count_stats: `{summary['terminal_boundary_event_count_stats']}`",
         f"- timeline_event_count_stats: `{summary['timeline_event_count_stats']}`",
         f"- source_to_target_duration_ratio_stats: `{summary['source_to_target_duration_ratio_stats']}`",
+        f"- source_duration_metadata_drift_sec_stats: `{summary['source_duration_metadata_drift_sec_stats']}`",
+        f"- target_duration_metadata_drift_sec_stats: `{summary['target_duration_metadata_drift_sec_stats']}`",
         "",
         "## 结构分布",
         f"- utterance_structure_type_counts: `{summary['utterance_structure_type_counts']}`",

@@ -14,14 +14,18 @@ from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import (
     TEXT_FEATURE_VERSION_LEGACY_V0,
     attach_target_event_semantic_sidecar,
+    attach_target_event_timing_semantic_sidecar,
     attach_target_special_supervision,
     attach_target_weak_event_hints,
     build_record_semantic_overview,
+    build_record_timing_semantic_overview,
     build_char_vocab,
     collate_target_batch,
     infer_target_event_semantic_sidecar_path,
+    infer_target_event_timing_semantic_sidecar_path,
     load_target_examples_from_records,
     load_target_event_semantic_sidecar_map,
+    load_target_event_timing_semantic_sidecar_map,
     load_target_special_supervision_map,
     load_target_weak_event_hint_map,
 )
@@ -297,6 +301,18 @@ def load_target_records_by_split(
         semantic_map = load_target_event_semantic_sidecar_map(target_event_semantic_sidecar_path)
         for split_name, records in records_by_split.items():
             records_by_split[split_name] = attach_target_event_semantic_sidecar(records, semantic_map)
+    target_event_timing_semantic_sidecar_path = resolve_target_event_timing_semantic_sidecar_path(
+        split_dir=split_dir,
+        checkpoint_config=checkpoint_config,
+        workspace_root=workspace_root,
+    )
+    if (
+        target_event_timing_semantic_sidecar_path is not None
+        and target_event_timing_semantic_sidecar_path.exists()
+    ):
+        timing_map = load_target_event_timing_semantic_sidecar_map(target_event_timing_semantic_sidecar_path)
+        for split_name, records in records_by_split.items():
+            records_by_split[split_name] = attach_target_event_timing_semantic_sidecar(records, timing_map)
     if max_records_per_slice is not None and max_records_per_slice > 0:
         for split_name in records_by_split:
             records_by_split[split_name] = records_by_split[split_name][: max_records_per_slice]
@@ -312,6 +328,17 @@ def resolve_target_event_semantic_sidecar_path(
     if raw_value not in {None, ""}:
         return resolve_path_ref(raw_value, workspace_root=workspace_root)
     return infer_target_event_semantic_sidecar_path(split_dir)
+
+
+def resolve_target_event_timing_semantic_sidecar_path(
+    split_dir: Path,
+    checkpoint_config: dict[str, object],
+    workspace_root: Path,
+) -> Path | None:
+    raw_value = checkpoint_config["data"].get("target_event_timing_semantic_sidecar_path")
+    if raw_value not in {None, ""}:
+        return resolve_path_ref(raw_value, workspace_root=workspace_root)
+    return infer_target_event_timing_semantic_sidecar_path(split_dir)
 
 
 def export_split_teacher_labels(
@@ -338,6 +365,10 @@ def export_split_teacher_labels(
     semantic_label_status_counts: Counter[str] = Counter()
     semantic_structure_counts: Counter[str] = Counter()
     semantic_terminal_counts: Counter[str] = Counter()
+    timing_contract_counts: Counter[str] = Counter()
+    timing_inventory_counts: Counter[str] = Counter()
+    timing_label_status_counts: Counter[str] = Counter()
+    timing_alignment_counts: Counter[str] = Counter()
 
     if not records:
         return {
@@ -355,6 +386,10 @@ def export_split_teacher_labels(
                 "semantic_label_status_counts": {},
                 "semantic_utterance_structure_type_counts": {},
                 "semantic_final_terminal_type_counts": {},
+                "timing_contract_version_counts": {},
+                "timing_inventory_status_counts": {},
+                "timing_label_status_counts": {},
+                "timing_alignment_type_counts": {},
                 "sample_record_ids": [],
             },
         }
@@ -409,6 +444,11 @@ def export_split_teacher_labels(
             semantic_label_status_counts[str(semantic_overview["semantic_label_status"])] += 1
             semantic_structure_counts[str(semantic_overview["semantic_utterance_structure_type"])] += 1
             semantic_terminal_counts[str(semantic_overview["semantic_final_terminal_type"])] += 1
+            timing_overview = build_record_timing_semantic_overview(record)
+            timing_contract_counts[str(timing_overview["timing_contract_version"] or "missing")] += 1
+            timing_inventory_counts[str(timing_overview["timing_inventory_status"])] += 1
+            timing_label_status_counts[str(timing_overview["timing_label_status"])] += 1
+            timing_alignment_counts[str(timing_overview["timing_alignment_type"] or "missing")] += 1
 
     return {
         "index_rows": index_rows,
@@ -425,6 +465,10 @@ def export_split_teacher_labels(
             "semantic_label_status_counts": dict(sorted(semantic_label_status_counts.items())),
             "semantic_utterance_structure_type_counts": dict(sorted(semantic_structure_counts.items())),
             "semantic_final_terminal_type_counts": dict(sorted(semantic_terminal_counts.items())),
+            "timing_contract_version_counts": dict(sorted(timing_contract_counts.items())),
+            "timing_inventory_status_counts": dict(sorted(timing_inventory_counts.items())),
+            "timing_label_status_counts": dict(sorted(timing_label_status_counts.items())),
+            "timing_alignment_type_counts": dict(sorted(timing_alignment_counts.items())),
             "sample_record_ids": [str(row["record_id"]) for row in index_rows[:8]],
         },
     }
@@ -470,6 +514,7 @@ def export_single_record(
     weak_event_hints = record.get("weak_event_hints")
     target_special_supervision = record.get("target_special_supervision")
     semantic_overview = build_record_semantic_overview(record)
+    timing_overview = build_record_timing_semantic_overview(record)
     return {
         "record_id": record_id,
         "split_name": split_name,
@@ -495,6 +540,15 @@ def export_single_record(
         "semantic_label_status": str(semantic_overview["semantic_label_status"]),
         "semantic_utterance_structure_type": str(semantic_overview["semantic_utterance_structure_type"]),
         "semantic_final_terminal_type": str(semantic_overview["semantic_final_terminal_type"]),
+        "timing_source": str(timing_overview["timing_source"]),
+        "timing_contract_version": timing_overview["timing_contract_version"],
+        "timing_label_space_version": timing_overview["timing_label_space_version"],
+        "timing_inventory_status": str(timing_overview["timing_inventory_status"]),
+        "timing_alignment_type": timing_overview["timing_alignment_type"],
+        "timing_label_status": str(timing_overview["timing_label_status"]),
+        "timing_clause_region_count": int(timing_overview["clause_region_count"]),
+        "timing_pause_boundary_event_count": int(timing_overview["pause_boundary_event_count"]),
+        "timing_terminal_boundary_event_count": int(timing_overview["terminal_boundary_event_count"]),
         "special_proximity_score": (
             None
             if not isinstance(target_special_supervision, dict)
@@ -604,6 +658,10 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"- semantic_label_status_counts: {slice_summary['semantic_label_status_counts']}",
                 f"- semantic_utterance_structure_type_counts: {slice_summary['semantic_utterance_structure_type_counts']}",
                 f"- semantic_final_terminal_type_counts: {slice_summary['semantic_final_terminal_type_counts']}",
+                f"- timing_contract_version_counts: {slice_summary['timing_contract_version_counts']}",
+                f"- timing_inventory_status_counts: {slice_summary['timing_inventory_status_counts']}",
+                f"- timing_label_status_counts: {slice_summary['timing_label_status_counts']}",
+                f"- timing_alignment_type_counts: {slice_summary['timing_alignment_type_counts']}",
                 f"- sample_record_ids: {slice_summary['sample_record_ids']}",
             ]
         )

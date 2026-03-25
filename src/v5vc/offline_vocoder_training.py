@@ -50,6 +50,7 @@ SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
     "none",
     "target_sidecar_broadcast_v1",
     "target_timing_sidecar_framewise_v1",
+    "source_semantic_parity_framewise_v1",
 }
 STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES = [
     "clean_text_available",
@@ -70,6 +71,18 @@ STAGE5_TARGET_TIMING_SIDECAR_FEATURE_NAMES = [
     "clause_role_final",
     "clause_progress_norm",
     "utterance_progress_norm",
+    "pause_boundary_window",
+    "terminal_boundary_window",
+    "boundary_any_window",
+]
+STAGE5_SOURCE_PARITY_FRAMEWISE_FEATURE_NAMES = [
+    "clause_active",
+    "clause_role_single",
+    "clause_role_initial",
+    "clause_role_middle",
+    "clause_role_final",
+    "clause_progress_norm",
+    "source_utterance_progress_norm",
     "pause_boundary_window",
     "terminal_boundary_window",
     "boundary_any_window",
@@ -229,6 +242,11 @@ def build_offline_mvp_nores_vocoder_training_package(
         target_event_timing_semantic_sidecar=(
             dict(target_event_timing_semantic_sidecar)
             if isinstance(target_event_timing_semantic_sidecar, dict)
+            else None
+        ),
+        source_semantic_parity_sidecar=(
+            dict(source_semantic_parity_sidecar)
+            if isinstance(source_semantic_parity_sidecar, dict)
             else None
         ),
         frame_count=frame_count,
@@ -1828,10 +1846,102 @@ def build_stage5_target_timing_sidecar_feature_tensors(
     }
 
 
+def build_stage5_source_semantic_parity_feature_tensors(
+    source_semantic_parity_sidecar: dict[str, object] | None,
+    frame_count: int,
+) -> tuple[torch.Tensor, dict[str, object]]:
+    feature_dim = len(STAGE5_SOURCE_PARITY_FRAMEWISE_FEATURE_NAMES)
+    resolved_frame_count = max(1, int(frame_count))
+    features = torch.zeros((resolved_frame_count, feature_dim), dtype=torch.float32)
+    if resolved_frame_count > 1:
+        features[:, 6] = torch.linspace(0.0, 1.0, resolved_frame_count, dtype=torch.float32)
+    if not isinstance(source_semantic_parity_sidecar, dict):
+        return features, {
+            "feature_source": "zeros_missing_source_semantic_parity_sidecar",
+            "timeline_event_count": 0,
+            "clause_region_count": 0,
+            "pause_boundary_event_count": 0,
+            "terminal_boundary_event_count": 0,
+        }
+
+    source_time_aware_semantics = (
+        dict(source_semantic_parity_sidecar.get("source_time_aware_semantics", {}))
+        if isinstance(source_semantic_parity_sidecar.get("source_time_aware_semantics"), dict)
+        else {}
+    )
+    clause_regions = (
+        list(source_time_aware_semantics.get("clause_regions", []))
+        if isinstance(source_time_aware_semantics.get("clause_regions"), list)
+        else []
+    )
+    boundary_events = (
+        list(source_time_aware_semantics.get("boundary_events", []))
+        if isinstance(source_time_aware_semantics.get("boundary_events"), list)
+        else []
+    )
+    timeline_events = (
+        list(source_time_aware_semantics.get("timeline_events", []))
+        if isinstance(source_time_aware_semantics.get("timeline_events"), list)
+        else []
+    )
+    pause_boundary_event_count = 0
+    terminal_boundary_event_count = 0
+
+    for clause in clause_regions:
+        start_index = min(resolved_frame_count - 1, max(0, int(clause.get("frame_start_index", 0))))
+        end_index = min(
+            resolved_frame_count - 1,
+            max(start_index, int(clause.get("frame_end_index", start_index))),
+        )
+        frame_span = max(1, end_index - start_index + 1)
+        features[start_index : end_index + 1, 0] = 1.0
+        clause_role = str(clause.get("clause_role", "unknown"))
+        if clause_role == "single":
+            features[start_index : end_index + 1, 1] = 1.0
+        elif clause_role == "initial":
+            features[start_index : end_index + 1, 2] = 1.0
+        elif clause_role == "middle":
+            features[start_index : end_index + 1, 3] = 1.0
+        elif clause_role == "final":
+            features[start_index : end_index + 1, 4] = 1.0
+        if frame_span == 1:
+            features[start_index : end_index + 1, 5] = 1.0
+        else:
+            features[start_index : end_index + 1, 5] = torch.linspace(
+                0.0,
+                1.0,
+                frame_span,
+                dtype=torch.float32,
+            )
+
+    for event in boundary_events:
+        event_type = str(event.get("event_type", "unknown"))
+        start_index = min(resolved_frame_count - 1, max(0, int(event.get("frame_start_index", 0))))
+        end_index = min(
+            resolved_frame_count - 1,
+            max(start_index, int(event.get("frame_end_index", start_index))),
+        )
+        if event_type == "pause_boundary_window":
+            features[start_index : end_index + 1, 7] = 1.0
+            pause_boundary_event_count += 1
+        elif event_type == "terminal_boundary_window":
+            features[start_index : end_index + 1, 8] = 1.0
+            terminal_boundary_event_count += 1
+    features[:, 9] = torch.maximum(features[:, 7], features[:, 8])
+    return features, {
+        "feature_source": "paired_parallel_source_semantic_parity_sidecar",
+        "timeline_event_count": len(timeline_events),
+        "clause_region_count": len(clause_regions),
+        "pause_boundary_event_count": pause_boundary_event_count,
+        "terminal_boundary_event_count": terminal_boundary_event_count,
+    }
+
+
 def build_stage5_semantic_consumer_features(
     *,
     target_event_semantic_sidecar: dict[str, object] | None,
     target_event_timing_semantic_sidecar: dict[str, object] | None,
+    source_semantic_parity_sidecar: dict[str, object] | None,
     frame_count: int,
     mode: str,
 ) -> dict[str, object]:
@@ -1850,6 +1960,7 @@ def build_stage5_semantic_consumer_features(
                 "feature_names": [],
                 "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
                 "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
                 "feature_source": "disabled",
                 "feature_values": [],
             },
@@ -1875,33 +1986,62 @@ def build_stage5_semantic_consumer_features(
                 "feature_names": feature_names,
                 "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
                 "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
                 "feature_source": feature_source,
                 "feature_values": [round(float(item), 6) for item in values],
             },
         }
+    if resolved_mode == "target_timing_sidecar_framewise_v1":
+        feature_names = list(STAGE5_TARGET_TIMING_SIDECAR_FEATURE_NAMES)
+        feature_tensor, timing_summary = build_stage5_target_timing_sidecar_feature_tensors(
+            target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+            frame_count=int(frame_count),
+        )
+        return {
+            "feature_dim": int(feature_tensor.shape[-1]),
+            "semantic_tag": "target_timing_sidecar_framewise_v1",
+            "periodic_broadcast_features": feature_tensor,
+            "noise_broadcast_features": feature_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "target_timing_sidecar_framewise_v1",
+                "feature_dim": int(feature_tensor.shape[-1]),
+                "feature_names": feature_names,
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+                "feature_source": timing_summary["feature_source"],
+                "timing_timeline_event_count": int(timing_summary["timeline_event_count"]),
+                "timing_clause_region_count": int(timing_summary["clause_region_count"]),
+                "timing_pause_boundary_event_count": int(timing_summary["pause_boundary_event_count"]),
+                "timing_terminal_boundary_event_count": int(timing_summary["terminal_boundary_event_count"]),
+                "feature_values": [],
+            },
+        }
 
-    feature_names = list(STAGE5_TARGET_TIMING_SIDECAR_FEATURE_NAMES)
-    feature_tensor, timing_summary = build_stage5_target_timing_sidecar_feature_tensors(
-        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+    feature_names = list(STAGE5_SOURCE_PARITY_FRAMEWISE_FEATURE_NAMES)
+    feature_tensor, parity_summary = build_stage5_source_semantic_parity_feature_tensors(
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
         frame_count=int(frame_count),
     )
     return {
         "feature_dim": int(feature_tensor.shape[-1]),
-        "semantic_tag": "target_timing_sidecar_framewise_v1",
+        "semantic_tag": "source_semantic_parity_framewise_v1",
         "periodic_broadcast_features": feature_tensor,
         "noise_broadcast_features": feature_tensor,
         "summary": {
             "semantic_consumer_mode": resolved_mode,
-            "semantic_tag": "target_timing_sidecar_framewise_v1",
+            "semantic_tag": "source_semantic_parity_framewise_v1",
             "feature_dim": int(feature_tensor.shape[-1]),
             "feature_names": feature_names,
             "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
             "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
-            "feature_source": timing_summary["feature_source"],
-            "timing_timeline_event_count": int(timing_summary["timeline_event_count"]),
-            "timing_clause_region_count": int(timing_summary["clause_region_count"]),
-            "timing_pause_boundary_event_count": int(timing_summary["pause_boundary_event_count"]),
-            "timing_terminal_boundary_event_count": int(timing_summary["terminal_boundary_event_count"]),
+            "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+            "feature_source": parity_summary["feature_source"],
+            "source_parity_timeline_event_count": int(parity_summary["timeline_event_count"]),
+            "source_parity_clause_region_count": int(parity_summary["clause_region_count"]),
+            "source_parity_pause_boundary_event_count": int(parity_summary["pause_boundary_event_count"]),
+            "source_parity_terminal_boundary_event_count": int(parity_summary["terminal_boundary_event_count"]),
             "feature_values": [],
         },
     }

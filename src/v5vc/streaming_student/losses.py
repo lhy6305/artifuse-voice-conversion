@@ -22,6 +22,9 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_z_art": 1.0,
         "teacher_event": 1.0,
         "teacher_event_prior": 0.5,
+        "teacher_timing_pause_boundary": 0.0,
+        "teacher_timing_terminal_boundary": 0.0,
+        "teacher_timing_final_clause": 0.0,
         "teacher_energy_proxy": 0.25,
         "teacher_vuv_proxy": 0.15,
         "teacher_aper_proxy": 0.1,
@@ -76,12 +79,25 @@ def build_default_semantic_supervision_config() -> dict[str, object]:
     return {
         "enabled": False,
         "required_contract_version": "target_event_semantic_sidecar_v1",
+        "required_timing_contract_version": "target_event_timing_semantic_sidecar_v1",
+        "timing_frame_routing_enabled": True,
         "clean_text_bonus": 0.08,
         "multi_clause_bonus": 0.08,
         "multi_terminal_bonus": 0.10,
         "clause_ge4_bonus": 0.08,
         "pause_multi_bonus": 0.05,
         "terminal_present_bonus": 0.05,
+        "timing_ready_bonus": 0.04,
+        "timing_multi_clause_bonus": 0.04,
+        "timing_pause_present_bonus": 0.03,
+        "timing_terminal_present_bonus": 0.03,
+        "timing_nonboundary_scale": 0.92,
+        "timing_pause_boundary_boost": 1.20,
+        "timing_terminal_boundary_boost": 1.35,
+        "timing_final_clause_boost": 1.05,
+        "timing_event_prior_mask_alpha": 1.0,
+        "timing_event_mask_alpha": 0.35,
+        "timing_z_art_mask_alpha": 0.20,
         "nonverbal_penalty": 0.20,
         "event_prior_alpha": 1.0,
         "event_alpha": 0.35,
@@ -122,9 +138,9 @@ def resolve_semantic_supervision_config(
 
     for key, value in merged.items():
         normalized_key = str(key)
-        if normalized_key == "enabled":
+        if normalized_key in {"enabled", "timing_frame_routing_enabled"}:
             effective[normalized_key] = bool(value)
-        elif normalized_key == "required_contract_version":
+        elif normalized_key in {"required_contract_version", "required_timing_contract_version"}:
             effective[normalized_key] = None if value in {None, ""} else str(value)
         else:
             effective[normalized_key] = float(value)
@@ -228,6 +244,13 @@ def compute_streaming_student_teacher_supervision_loss(
         device=frame_weight.device,
         dtype=frame_weight.dtype,
     )
+    timing_frame_multipliers, timing_frame_metrics = build_timing_frame_loss_multipliers(
+        batch=batch,
+        semantic_supervision=semantic_config,
+        teacher_frame_mask=frame_mask,
+        device=frame_weight.device,
+        dtype=frame_weight.dtype,
+    )
 
     teacher_event_probs = batch["teacher_event_probs"]
     teacher_acoustic = batch["teacher_acoustic"]
@@ -236,16 +259,37 @@ def compute_streaming_student_teacher_supervision_loss(
     z_art_loss_per_sample = masked_mse_per_sample(
         prediction=outputs["z_art"],
         target=batch["teacher_z_art"],
-        frame_weight=frame_weight,
+        frame_weight=frame_weight * timing_frame_multipliers["teacher_z_art"],
     )
     event_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["event_logits"],
         target=teacher_event_probs,
-        frame_weight=frame_weight,
+        frame_weight=frame_weight * timing_frame_multipliers["teacher_event"],
     )
     event_prior_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["event_prior_logits"],
         target=teacher_event_probs,
+        frame_weight=frame_weight * timing_frame_multipliers["teacher_event_prior"],
+    )
+    timing_aux_targets, timing_aux_metrics = build_timing_auxiliary_targets(
+        batch=batch,
+        teacher_frame_mask=frame_mask,
+        device=frame_weight.device,
+        dtype=frame_weight.dtype,
+    )
+    timing_pause_boundary_loss_per_sample = masked_optional_bce_with_logits_per_sample(
+        logits=outputs["timing_pause_boundary_logits"],
+        target=timing_aux_targets["pause_boundary"],
+        frame_weight=frame_weight,
+    )
+    timing_terminal_boundary_loss_per_sample = masked_optional_bce_with_logits_per_sample(
+        logits=outputs["timing_terminal_boundary_logits"],
+        target=timing_aux_targets["terminal_boundary"],
+        frame_weight=frame_weight,
+    )
+    timing_final_clause_loss_per_sample = masked_optional_bce_with_logits_per_sample(
+        logits=outputs["timing_final_clause_logits"],
+        target=timing_aux_targets["final_clause"],
         frame_weight=frame_weight,
     )
     energy_proxy_loss_per_sample = masked_mse_per_sample(
@@ -293,6 +337,9 @@ def compute_streaming_student_teacher_supervision_loss(
         event_prior_loss_per_sample,
         semantic_loss_multipliers["teacher_event_prior"],
     )
+    timing_pause_boundary_loss = reduce_weighted_sample_loss(timing_pause_boundary_loss_per_sample)
+    timing_terminal_boundary_loss = reduce_weighted_sample_loss(timing_terminal_boundary_loss_per_sample)
+    timing_final_clause_loss = reduce_weighted_sample_loss(timing_final_clause_loss_per_sample)
     energy_proxy_loss = reduce_weighted_sample_loss(energy_proxy_loss_per_sample)
     vuv_proxy_loss = reduce_weighted_sample_loss(vuv_proxy_loss_per_sample)
     aper_proxy_loss = reduce_weighted_sample_loss(aper_proxy_loss_per_sample)
@@ -308,6 +355,9 @@ def compute_streaming_student_teacher_supervision_loss(
         z_art_loss * effective_weights["teacher_z_art"]
         + event_loss * effective_weights["teacher_event"]
         + event_prior_loss * effective_weights["teacher_event_prior"]
+        + timing_pause_boundary_loss * effective_weights["teacher_timing_pause_boundary"]
+        + timing_terminal_boundary_loss * effective_weights["teacher_timing_terminal_boundary"]
+        + timing_final_clause_loss * effective_weights["teacher_timing_final_clause"]
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
@@ -320,6 +370,9 @@ def compute_streaming_student_teacher_supervision_loss(
         z_art_loss * default_weights["teacher_z_art"]
         + event_loss * default_weights["teacher_event"]
         + event_prior_loss * default_weights["teacher_event_prior"]
+        + timing_pause_boundary_loss * default_weights["teacher_timing_pause_boundary"]
+        + timing_terminal_boundary_loss * default_weights["teacher_timing_terminal_boundary"]
+        + timing_final_clause_loss * default_weights["teacher_timing_final_clause"]
         + energy_proxy_loss * default_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * default_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * default_weights["teacher_aper_proxy"]
@@ -332,6 +385,9 @@ def compute_streaming_student_teacher_supervision_loss(
         z_art_loss_reference * effective_weights["teacher_z_art"]
         + event_loss_reference * effective_weights["teacher_event"]
         + event_prior_loss_reference * effective_weights["teacher_event_prior"]
+        + timing_pause_boundary_loss * effective_weights["teacher_timing_pause_boundary"]
+        + timing_terminal_boundary_loss * effective_weights["teacher_timing_terminal_boundary"]
+        + timing_final_clause_loss * effective_weights["teacher_timing_final_clause"]
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
@@ -350,6 +406,12 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_teacher_z_art": round(float(z_art_loss.detach().cpu().item()), 6),
         "loss_teacher_event": round(float(event_loss.detach().cpu().item()), 6),
         "loss_teacher_event_prior": round(float(event_prior_loss.detach().cpu().item()), 6),
+        "loss_teacher_timing_pause_boundary": round(float(timing_pause_boundary_loss.detach().cpu().item()), 6),
+        "loss_teacher_timing_terminal_boundary": round(
+            float(timing_terminal_boundary_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_timing_final_clause": round(float(timing_final_clause_loss.detach().cpu().item()), 6),
         "loss_teacher_energy_proxy": round(float(energy_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_vuv_proxy": round(float(vuv_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_aper_proxy": round(float(aper_proxy_loss.detach().cpu().item()), 6),
@@ -361,6 +423,8 @@ def compute_streaming_student_teacher_supervision_loss(
         "effective_weight_sum": round(float(frame_weight.sum().detach().cpu().item()), 6),
     }
     metrics.update(semantic_metrics)
+    metrics.update(timing_frame_metrics)
+    metrics.update(timing_aux_metrics)
     return total_loss, metrics
 
 
@@ -373,7 +437,11 @@ def build_semantic_loss_multipliers(
     sidecars = batch.get("target_event_semantic_sidecar")
     if not isinstance(sidecars, list):
         sidecars = []
-    batch_size = len(sidecars)
+    timing_sidecars = batch.get("target_event_timing_semantic_sidecar")
+    if not isinstance(timing_sidecars, list):
+        timing_sidecars = []
+    record_ids = batch.get("record_ids")
+    batch_size = len(record_ids) if isinstance(record_ids, list) else max(len(sidecars), len(timing_sidecars))
     if batch_size <= 0:
         unit = torch.ones((0, 1, 1), dtype=dtype, device=device)
         return {
@@ -383,9 +451,14 @@ def build_semantic_loss_multipliers(
         }, {
             "semantic_supervision_enabled": bool(semantic_supervision.get("enabled", False)),
             "semantic_sidecar_present_ratio": 0.0,
+            "timing_sidecar_present_ratio": 0.0,
             "semantic_weight_applied_ratio": 0.0,
             "semantic_clean_text_sample_ratio": 0.0,
             "semantic_nonverbal_sample_ratio": 0.0,
+            "semantic_timing_ready_sample_ratio": 0.0,
+            "semantic_timing_multi_clause_sample_ratio": 0.0,
+            "semantic_timing_pause_present_sample_ratio": 0.0,
+            "semantic_timing_terminal_present_sample_ratio": 0.0,
             "semantic_base_multiplier_mean": 1.0,
             "semantic_event_prior_multiplier_mean": 1.0,
             "semantic_event_multiplier_mean": 1.0,
@@ -394,17 +467,35 @@ def build_semantic_loss_multipliers(
 
     base_multiplier = torch.ones((batch_size, 1, 1), dtype=dtype, device=device)
     present_count = 0
+    timing_present_count = 0
     applied_count = 0
     clean_text_count = 0
     nonverbal_count = 0
+    timing_ready_count = 0
+    timing_multi_clause_count = 0
+    timing_pause_present_count = 0
+    timing_terminal_present_count = 0
     enabled = bool(semantic_supervision.get("enabled", False))
     required_contract_version = semantic_supervision.get("required_contract_version")
     required_contract_version = None if required_contract_version in {None, ""} else str(required_contract_version)
+    required_timing_contract_version = semantic_supervision.get("required_timing_contract_version")
+    required_timing_contract_version = (
+        None
+        if required_timing_contract_version in {None, ""}
+        else str(required_timing_contract_version)
+    )
 
-    for index, row in enumerate(sidecars):
-        if not isinstance(row, dict):
+    for index in range(batch_size):
+        row = sidecars[index] if index < len(sidecars) else None
+        timing_row = timing_sidecars[index] if index < len(timing_sidecars) else None
+        semantic_row_valid = isinstance(row, dict)
+        timing_row_valid = isinstance(timing_row, dict)
+        if semantic_row_valid:
+            present_count += 1
+        if timing_row_valid:
+            timing_present_count += 1
+        if not semantic_row_valid:
             continue
-        present_count += 1
         if required_contract_version is not None:
             if str(row.get("semantic_contract_version", "")) != required_contract_version:
                 continue
@@ -440,6 +531,41 @@ def build_semantic_loss_multipliers(
             multiplier += float(semantic_supervision["pause_multi_bonus"])
         if int(boundary_semantics.get("terminal_boundary_count", 0)) >= 1:
             multiplier += float(semantic_supervision["terminal_present_bonus"])
+        if timing_row_valid:
+            if required_timing_contract_version is None or (
+                str(timing_row.get("semantic_contract_version", "")) == required_timing_contract_version
+            ):
+                timing_alignment = (
+                    dict(timing_row.get("timing_alignment", {}))
+                    if isinstance(timing_row.get("timing_alignment"), dict)
+                    else {}
+                )
+                timing_semantics = (
+                    dict(timing_row.get("time_aware_semantics", {}))
+                    if isinstance(timing_row.get("time_aware_semantics"), dict)
+                    else {}
+                )
+                coverage_summary = (
+                    dict(timing_semantics.get("coverage_summary", {}))
+                    if isinstance(timing_semantics.get("coverage_summary"), dict)
+                    else {}
+                )
+                alignment_type = str(timing_alignment.get("alignment_type", "unknown"))
+                clause_region_count = int(coverage_summary.get("clause_region_count", 0))
+                pause_boundary_event_count = int(coverage_summary.get("pause_boundary_event_count", 0))
+                terminal_boundary_event_count = int(coverage_summary.get("terminal_boundary_event_count", 0))
+                if alignment_type not in {"", "unknown"}:
+                    multiplier += float(semantic_supervision["timing_ready_bonus"])
+                    timing_ready_count += 1
+                if clause_region_count >= 2:
+                    multiplier += float(semantic_supervision["timing_multi_clause_bonus"])
+                    timing_multi_clause_count += 1
+                if pause_boundary_event_count >= 1:
+                    multiplier += float(semantic_supervision["timing_pause_present_bonus"])
+                    timing_pause_present_count += 1
+                if terminal_boundary_event_count >= 1:
+                    multiplier += float(semantic_supervision["timing_terminal_present_bonus"])
+                    timing_terminal_present_count += 1
         if enabled:
             applied_count += 1
             base_multiplier[index, 0, 0] = float(
@@ -455,9 +581,23 @@ def build_semantic_loss_multipliers(
     metrics: dict[str, float | bool] = {
         "semantic_supervision_enabled": enabled,
         "semantic_sidecar_present_ratio": round(present_count / max(1, batch_size), 6),
+        "timing_sidecar_present_ratio": round(timing_present_count / max(1, batch_size), 6),
         "semantic_weight_applied_ratio": round(applied_count / max(1, batch_size), 6),
         "semantic_clean_text_sample_ratio": round(clean_text_count / max(1, batch_size), 6),
         "semantic_nonverbal_sample_ratio": round(nonverbal_count / max(1, batch_size), 6),
+        "semantic_timing_ready_sample_ratio": round(timing_ready_count / max(1, batch_size), 6),
+        "semantic_timing_multi_clause_sample_ratio": round(
+            timing_multi_clause_count / max(1, batch_size),
+            6,
+        ),
+        "semantic_timing_pause_present_sample_ratio": round(
+            timing_pause_present_count / max(1, batch_size),
+            6,
+        ),
+        "semantic_timing_terminal_present_sample_ratio": round(
+            timing_terminal_present_count / max(1, batch_size),
+            6,
+        ),
         "semantic_base_multiplier_mean": round(float(base_multiplier.mean().detach().cpu().item()), 6),
         "semantic_event_prior_multiplier_mean": round(
             float(event_prior_multiplier.mean().detach().cpu().item()),
@@ -470,6 +610,267 @@ def build_semantic_loss_multipliers(
         "teacher_z_art": z_art_multiplier,
         "teacher_event": event_multiplier,
         "teacher_event_prior": event_prior_multiplier,
+    }, metrics
+
+
+def build_timing_frame_loss_multipliers(
+    batch: dict[str, torch.Tensor | list[str] | list[dict[str, object] | None]],
+    semantic_supervision: Mapping[str, object],
+    teacher_frame_mask: torch.Tensor,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> tuple[dict[str, torch.Tensor], dict[str, float | bool]]:
+    batch_size, max_frames = teacher_frame_mask.shape
+    unit = torch.ones((batch_size, max_frames, 1), dtype=dtype, device=device)
+    sidecars = batch.get("target_event_timing_semantic_sidecar")
+    if not isinstance(sidecars, list):
+        sidecars = []
+    enabled = bool(semantic_supervision.get("enabled", False))
+    routing_enabled = bool(semantic_supervision.get("timing_frame_routing_enabled", False))
+    required_timing_contract_version = semantic_supervision.get("required_timing_contract_version")
+    required_timing_contract_version = (
+        None
+        if required_timing_contract_version in {None, ""}
+        else str(required_timing_contract_version)
+    )
+    if batch_size <= 0:
+        return {
+            "teacher_z_art": unit,
+            "teacher_event": unit,
+            "teacher_event_prior": unit,
+        }, {
+            "timing_frame_routing_enabled": enabled and routing_enabled,
+            "timing_frame_mask_applied_ratio": 0.0,
+            "timing_boundary_frame_ratio": 0.0,
+            "timing_terminal_boundary_frame_ratio": 0.0,
+            "timing_final_clause_frame_ratio": 0.0,
+            "timing_event_prior_frame_multiplier_mean": 1.0,
+            "timing_event_frame_multiplier_mean": 1.0,
+            "timing_z_art_frame_multiplier_mean": 1.0,
+        }
+
+    base_multiplier = torch.ones((batch_size, max_frames, 1), dtype=dtype, device=device)
+    if not enabled or not routing_enabled:
+        return {
+            "teacher_z_art": unit,
+            "teacher_event": unit,
+            "teacher_event_prior": unit,
+        }, {
+            "timing_frame_routing_enabled": False,
+            "timing_frame_mask_applied_ratio": 0.0,
+            "timing_boundary_frame_ratio": 0.0,
+            "timing_terminal_boundary_frame_ratio": 0.0,
+            "timing_final_clause_frame_ratio": 0.0,
+            "timing_event_prior_frame_multiplier_mean": 1.0,
+            "timing_event_frame_multiplier_mean": 1.0,
+            "timing_z_art_frame_multiplier_mean": 1.0,
+        }
+
+    nonboundary_scale = float(semantic_supervision["timing_nonboundary_scale"])
+    pause_boundary_boost = float(semantic_supervision["timing_pause_boundary_boost"])
+    terminal_boundary_boost = float(semantic_supervision["timing_terminal_boundary_boost"])
+    final_clause_boost = float(semantic_supervision["timing_final_clause_boost"])
+    event_prior_mask_alpha = float(semantic_supervision["timing_event_prior_mask_alpha"])
+    event_mask_alpha = float(semantic_supervision["timing_event_mask_alpha"])
+    z_art_mask_alpha = float(semantic_supervision["timing_z_art_mask_alpha"])
+
+    applied_count = 0
+    total_valid_frame_count = 0
+    boundary_frame_count = 0
+    terminal_boundary_frame_count = 0
+    final_clause_frame_count = 0
+
+    for index in range(batch_size):
+        valid_frame_count = int(teacher_frame_mask[index].to(torch.long).sum().item())
+        total_valid_frame_count += valid_frame_count
+        if valid_frame_count <= 0:
+            continue
+        row = sidecars[index] if index < len(sidecars) else None
+        if not isinstance(row, dict):
+            continue
+        if required_timing_contract_version is not None:
+            if str(row.get("semantic_contract_version", "")) != required_timing_contract_version:
+                continue
+        time_aware_semantics = (
+            dict(row.get("time_aware_semantics", {}))
+            if isinstance(row.get("time_aware_semantics"), dict)
+            else {}
+        )
+        boundary_events = (
+            list(time_aware_semantics.get("boundary_events", []))
+            if isinstance(time_aware_semantics.get("boundary_events"), list)
+            else []
+        )
+        clause_regions = (
+            list(time_aware_semantics.get("clause_regions", []))
+            if isinstance(time_aware_semantics.get("clause_regions"), list)
+            else []
+        )
+        if not boundary_events and not clause_regions:
+            continue
+
+        pause_boundary_mask = torch.zeros((valid_frame_count,), dtype=torch.bool, device=device)
+        terminal_boundary_mask = torch.zeros((valid_frame_count,), dtype=torch.bool, device=device)
+        final_clause_mask = torch.zeros((valid_frame_count,), dtype=torch.bool, device=device)
+
+        for event in boundary_events:
+            frame_start_index = max(0, min(valid_frame_count - 1, int(event.get("frame_start_index", 0))))
+            frame_end_index = max(0, min(valid_frame_count - 1, int(event.get("frame_end_index", frame_start_index))))
+            if frame_end_index < frame_start_index:
+                continue
+            event_type = str(event.get("event_type", "unknown"))
+            if event_type == "pause_boundary_window":
+                pause_boundary_mask[frame_start_index : frame_end_index + 1] = True
+            elif event_type == "terminal_boundary_window":
+                terminal_boundary_mask[frame_start_index : frame_end_index + 1] = True
+
+        for region in clause_regions:
+            clause_role = str(region.get("clause_role", "unknown"))
+            if clause_role not in {"final", "single"}:
+                continue
+            frame_start_index = max(0, min(valid_frame_count - 1, int(region.get("frame_start_index", 0))))
+            frame_end_index = max(0, min(valid_frame_count - 1, int(region.get("frame_end_index", frame_start_index))))
+            if frame_end_index < frame_start_index:
+                continue
+            final_clause_mask[frame_start_index : frame_end_index + 1] = True
+
+        sample_multiplier = torch.full((valid_frame_count, 1), nonboundary_scale, dtype=dtype, device=device)
+        pause_boundary_mask_2d = pause_boundary_mask.unsqueeze(-1)
+        terminal_boundary_mask_2d = terminal_boundary_mask.unsqueeze(-1)
+        final_clause_nonboundary_mask_2d = (final_clause_mask & ~pause_boundary_mask & ~terminal_boundary_mask).unsqueeze(-1)
+        sample_multiplier = torch.where(
+            pause_boundary_mask_2d,
+            sample_multiplier.new_full((valid_frame_count, 1), pause_boundary_boost),
+            sample_multiplier,
+        )
+        sample_multiplier = torch.where(
+            terminal_boundary_mask_2d,
+            sample_multiplier.new_full((valid_frame_count, 1), terminal_boundary_boost),
+            sample_multiplier,
+        )
+        sample_multiplier = torch.where(
+            final_clause_nonboundary_mask_2d,
+            sample_multiplier * final_clause_boost,
+            sample_multiplier,
+        )
+        base_multiplier[index, :valid_frame_count] = sample_multiplier
+        applied_count += 1
+        boundary_frame_count += int((pause_boundary_mask | terminal_boundary_mask).to(torch.long).sum().item())
+        terminal_boundary_frame_count += int(terminal_boundary_mask.to(torch.long).sum().item())
+        final_clause_frame_count += int(final_clause_mask.to(torch.long).sum().item())
+
+    valid_frame_mask = teacher_frame_mask.to(dtype=dtype).unsqueeze(-1)
+    base_multiplier = torch.where(valid_frame_mask > 0.0, base_multiplier, torch.ones_like(base_multiplier))
+    event_prior_multiplier = 1.0 + (base_multiplier - 1.0) * event_prior_mask_alpha
+    event_multiplier = 1.0 + (base_multiplier - 1.0) * event_mask_alpha
+    z_art_multiplier = 1.0 + (base_multiplier - 1.0) * z_art_mask_alpha
+    metrics: dict[str, float | bool] = {
+        "timing_frame_routing_enabled": True,
+        "timing_frame_mask_applied_ratio": round(applied_count / max(1, batch_size), 6),
+        "timing_boundary_frame_ratio": round(boundary_frame_count / max(1, total_valid_frame_count), 6),
+        "timing_terminal_boundary_frame_ratio": round(
+            terminal_boundary_frame_count / max(1, total_valid_frame_count),
+            6,
+        ),
+        "timing_final_clause_frame_ratio": round(final_clause_frame_count / max(1, total_valid_frame_count), 6),
+        "timing_event_prior_frame_multiplier_mean": round(
+            float(masked_tensor_mean(event_prior_multiplier, valid_frame_mask).detach().cpu().item()),
+            6,
+        ),
+        "timing_event_frame_multiplier_mean": round(
+            float(masked_tensor_mean(event_multiplier, valid_frame_mask).detach().cpu().item()),
+            6,
+        ),
+        "timing_z_art_frame_multiplier_mean": round(
+            float(masked_tensor_mean(z_art_multiplier, valid_frame_mask).detach().cpu().item()),
+            6,
+        ),
+    }
+    return {
+        "teacher_z_art": z_art_multiplier,
+        "teacher_event": event_multiplier,
+        "teacher_event_prior": event_prior_multiplier,
+    }, metrics
+
+
+def build_timing_auxiliary_targets(
+    batch: dict[str, torch.Tensor | list[str] | list[dict[str, object] | None]],
+    teacher_frame_mask: torch.Tensor,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> tuple[dict[str, torch.Tensor], dict[str, float | bool]]:
+    batch_size, max_frames = teacher_frame_mask.shape
+    pause_boundary_target = torch.zeros((batch_size, max_frames, 1), dtype=dtype, device=device)
+    terminal_boundary_target = torch.zeros((batch_size, max_frames, 1), dtype=dtype, device=device)
+    final_clause_target = torch.zeros((batch_size, max_frames, 1), dtype=dtype, device=device)
+    sidecars = batch.get("target_event_timing_semantic_sidecar")
+    if not isinstance(sidecars, list):
+        sidecars = []
+    present_count = 0
+    for index in range(batch_size):
+        valid_frame_count = int(teacher_frame_mask[index].to(torch.long).sum().item())
+        if valid_frame_count <= 0:
+            continue
+        row = sidecars[index] if index < len(sidecars) else None
+        if not isinstance(row, dict):
+            continue
+        present_count += 1
+        time_aware_semantics = (
+            dict(row.get("time_aware_semantics", {}))
+            if isinstance(row.get("time_aware_semantics"), dict)
+            else {}
+        )
+        boundary_events = (
+            list(time_aware_semantics.get("boundary_events", []))
+            if isinstance(time_aware_semantics.get("boundary_events"), list)
+            else []
+        )
+        clause_regions = (
+            list(time_aware_semantics.get("clause_regions", []))
+            if isinstance(time_aware_semantics.get("clause_regions"), list)
+            else []
+        )
+        for event in boundary_events:
+            frame_start_index = max(0, min(valid_frame_count - 1, int(event.get("frame_start_index", 0))))
+            frame_end_index = max(0, min(valid_frame_count - 1, int(event.get("frame_end_index", frame_start_index))))
+            if frame_end_index < frame_start_index:
+                continue
+            event_type = str(event.get("event_type", "unknown"))
+            if event_type == "pause_boundary_window":
+                pause_boundary_target[index, frame_start_index : frame_end_index + 1, 0] = 1.0
+            elif event_type == "terminal_boundary_window":
+                terminal_boundary_target[index, frame_start_index : frame_end_index + 1, 0] = 1.0
+        for region in clause_regions:
+            clause_role = str(region.get("clause_role", "unknown"))
+            if clause_role not in {"final", "single"}:
+                continue
+            frame_start_index = max(0, min(valid_frame_count - 1, int(region.get("frame_start_index", 0))))
+            frame_end_index = max(0, min(valid_frame_count - 1, int(region.get("frame_end_index", frame_start_index))))
+            if frame_end_index < frame_start_index:
+                continue
+            final_clause_target[index, frame_start_index : frame_end_index + 1, 0] = 1.0
+
+    valid_frame_mask = teacher_frame_mask.to(dtype=dtype).unsqueeze(-1)
+    valid_frame_count = float(valid_frame_mask.sum().detach().cpu().item())
+    metrics: dict[str, float | bool] = {
+        "timing_aux_target_present_ratio": round(present_count / max(1, batch_size), 6),
+        "timing_aux_pause_boundary_frame_ratio": round(
+            float((pause_boundary_target * valid_frame_mask).sum().detach().cpu().item()) / max(1.0, valid_frame_count),
+            6,
+        ),
+        "timing_aux_terminal_boundary_frame_ratio": round(
+            float((terminal_boundary_target * valid_frame_mask).sum().detach().cpu().item()) / max(1.0, valid_frame_count),
+            6,
+        ),
+        "timing_aux_final_clause_frame_ratio": round(
+            float((final_clause_target * valid_frame_mask).sum().detach().cpu().item()) / max(1.0, valid_frame_count),
+            6,
+        ),
+    }
+    return {
+        "pause_boundary": pause_boundary_target,
+        "terminal_boundary": terminal_boundary_target,
+        "final_clause": final_clause_target,
     }, metrics
 
 
@@ -544,6 +945,20 @@ def masked_bce_with_logits_per_sample(
     return numerator / denominator
 
 
+def masked_optional_bce_with_logits_per_sample(
+    logits: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+) -> torch.Tensor:
+    if logits.shape[-1] <= 0:
+        return frame_weight.new_zeros((frame_weight.shape[0],))
+    return masked_bce_with_logits_per_sample(
+        logits=logits,
+        target=target,
+        frame_weight=frame_weight,
+    )
+
+
 def masked_temporal_mse(
     prediction: torch.Tensor,
     target: torch.Tensor,
@@ -588,3 +1003,12 @@ def reduce_weighted_sample_loss(
     if normalized_sample_weight.numel() != loss_per_sample.numel():
         raise ValueError("Sample weight size mismatch for Stage3 semantic supervision.")
     return (loss_per_sample * normalized_sample_weight).mean()
+
+
+def masked_tensor_mean(
+    tensor: torch.Tensor,
+    mask: torch.Tensor,
+) -> torch.Tensor:
+    weighted = tensor * mask.to(device=tensor.device, dtype=tensor.dtype)
+    denominator = mask.to(device=tensor.device, dtype=tensor.dtype).sum().clamp_min(1.0)
+    return weighted.sum() / denominator

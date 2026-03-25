@@ -1,0 +1,9 @@
+{
+  "semantic_supervision": {
+    "required_timing_contract_version": "target_event_timing_semantic_sidecar_v1",
+    "timing_ready_bonus": 0.0,
+    "timing_multi_clause_bonus": 0.0,
+    "timing_pause_present_bonus": 0.0,
+    "timing_terminal_present_bonus": 0.0
+  }
+}

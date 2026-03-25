@@ -13680,3 +13680,181 @@
     - per-package present flag
     - per-package overview
     三层都真实出现
+### 435. 当 source-aware parity consumer 已真实进入 Stage5 forward path，且共享量化指标虽略有改善，但 export 仍被 `auto_reject_obvious_buzz` 直接判死时，不应再继续做 Stage5 输入侧 semantic channel 微调
+- 现象:
+  - 这次
+    `source_semantic_parity_framewise_v1`
+    已满足：
+    - source parity asset
+      存在
+    - metadata
+      接通
+    - forward path
+      真实生效
+    - shared metrics
+      也不是完全无变化
+  - 但 validation export
+    仍被：
+    - `all_records_auto_reject = true`
+    直接判废
+- 风险:
+  - 如果此时继续做：
+    - 再换 feature 组合
+    - 再改 progress 定义
+    - 再叠少量全局 semantic 标量
+  - 本质上仍是在
+    已被证明层级不足的
+    Stage5 input-side
+    做局部微调
+- 处理要求:
+  - 一旦出现这种组合：
+    - source-aware consumer
+      已真实接通
+    - shared metrics
+      略优
+    - 但 machine gate
+      仍直接 obvious-buzz
+  - 就应正式停止：
+    - Stage5 semantic consumer
+      变体
+  - 下一步改上收到：
+    - teacher / student
+      semantic supervision
+      路线
+### 436. 当前 Stage3 `streaming_student` 是 target-only record route，`target_event_timing_semantic_sidecar` 可以直接接，但 `source_semantic_parity_sidecar` 不能被硬塞进来
+- 现象:
+  - 这轮上收后，
+    很容易顺手把：
+    - target timing sidecar
+    - source parity sidecar
+    一起往
+    Stage3 supervision
+    里塞
+  - 但当前
+    `streaming_student`
+    读的是：
+    - `target_train`
+    - `target_validation`
+    - `target_special_eval`
+    目标侧记录
+- 风险:
+  - `target_event_timing_semantic_sidecar`
+    是按
+    `target_record_id`
+    建的，
+    可以自然 attach
+  - `source_semantic_parity_sidecar`
+    却是按
+    `source_record_id`
+    建的
+  - 如果不经过成对 source-target
+    student route
+    或显式映射层，
+    强行接入只会制造：
+    - 假 present
+    - 假 missing
+    - 或语义错位
+- 处理要求:
+  - 当前 Stage3
+    先只接：
+    - target timing semantic
+  - source parity
+    只在：
+    - paired source-target student route
+    - 或显式 source-target mapping
+    成立后再接
+### 437. 当 Stage3 timing semantic 已真实进入 supervision，但短 loop 上 `loss_total_semantic_disabled_reference` 基本打平时，不应继续沉没在 `timing_*_bonus` 微调
+- 现象:
+  - 这轮已经满足：
+    - timing sidecar
+      进入 batch
+    - timing-aware multiplier
+      进入 loss
+    - one-step train
+      和 short loop
+      都已跑通
+  - 但严格可比的
+    12-step sampled validation
+    上：
+    - baseline:
+      `loss_total_semantic_disabled_reference = 8.181766`
+    - timing-enabled:
+      `8.181019`
+  - 信号极弱
+- 风险:
+  - 如果这时继续做：
+    - `timing_ready_bonus`
+      再调一点
+    - `timing_pause_present_bonus`
+      再扫一点
+    - 再开更长但同构的
+      pure-weighting loop
+  - 很容易重复
+    Stage5 那些
+    “结构没变，
+    只在权重上打转”
+    的时间浪费
+- 处理要求:
+  - 一旦确认：
+    - plumbing
+      已真实接通
+    - 可比 validation
+      基本打平
+  - 就应停止：
+    - `timing_*_bonus`
+      微调
+  - 下一步改去做：
+    - timing-aware target shaping
+    - boundary/clause-aware mask
+    - selective loss routing
+### 438. 当 Stage3 timing semantic 已进一步进入 frame-level routing，但严格可比 validation 仍只给出极小收益时，也不应继续扫 routing 参数
+- 现象:
+  - 这轮已经把
+    `target_event_timing_semantic_sidecar`
+    从
+    sample-level weighting
+    再推进到：
+    - frame-level routing
+  - 并且不是伪接线：
+    - dry-run
+      有
+      `timing_frame_mask_applied_ratio`
+    - train-step
+      有
+      `timing_event_prior_frame_multiplier_mean`
+    - train-loop
+      也有同类指标
+  - 但严格可比
+    12-step sampled validation
+    上：
+    - baseline:
+      `loss_total_semantic_disabled_reference = 8.181766`
+    - routing-enabled:
+      `8.180736`
+  - 改善极小，
+    而
+    `loss_teacher_event / loss_teacher_event_prior / loss_teacher_z_art`
+    还略差
+- 风险:
+  - 如果此时继续做：
+    - `timing_pause_boundary_boost`
+      再扫一组
+    - `timing_terminal_boundary_boost`
+      再扫一组
+    - `timing_nonboundary_scale`
+      再扫一组
+  - 本质上只是把
+    “弱信号 routing”
+    再做一轮参数清洗，
+    时间收益比很低
+- 处理要求:
+  - 一旦确认：
+    - timing routing
+      已真实接通
+    - validation
+      只给出极小收益
+  - 就应正式停止：
+    - routing 参数微调
+  - 下一步改去做：
+    - 更强的 target shaping
+    - 或显式 boundary/clause-aware target contract

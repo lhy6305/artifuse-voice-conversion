@@ -1,0 +1,7 @@
+{
+  "loss_weights": {
+    "teacher_timing_pause_boundary": 0.05,
+    "teacher_timing_terminal_boundary": 0.075,
+    "teacher_timing_final_clause": 0.025
+  }
+}

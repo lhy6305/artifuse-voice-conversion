@@ -1,0 +1,244 @@
+{
+  "experiment_id": "streaming_student_stage_timingsemantic_round1_1",
+  "created_at": "2026-03-25T21:07:46",
+  "config_path": "F:/proj_dev/tmp/workdir4/configs/streaming_student_stage_template.json",
+  "timing": {
+    "started_at": "2026-03-25T21:07:46",
+    "ended_at": "2026-03-25T21:07:46",
+    "duration_sec": 0.043826
+  },
+  "phase": {
+    "name": "stage3_streaming_student_scaffold",
+    "mode": "streaming_student_stage",
+    "run_stage": "scaffold_bootstrap",
+    "teacher_required": true,
+    "student_required": true,
+    "vocoder_required": false
+  },
+  "data": {
+    "manifest_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/manifests",
+    "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "split": {
+      "strategy": "materialized_split",
+      "split_dir": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/splits/hybrid_stratified_blocked",
+      "option_name": "hybrid_stratified_blocked",
+      "description": "推荐方案：目标主集按时长/文本长度做均匀覆盖抽样，no_text_voice 8 条单独作为 challenge eval；源侧按时间轴做跨全局的 blocked holdout。",
+      "counts": {
+        "target_train": 592,
+        "target_validation": 66,
+        "target_special_eval": 8,
+        "source_train": 483,
+        "source_validation": 54
+      }
+    },
+    "target_manifest_count": 666,
+    "source_manifest_count": 537,
+    "target_train_count": 592,
+    "target_validation_count": 66,
+    "target_special_eval_count": 8,
+    "source_train_count": 483,
+    "source_validation_count": 54,
+    "target_weak_event_hints_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+    "target_special_supervision_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_special_supervision/target_special_supervision_sidecar.jsonl",
+    "target_event_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl",
+    "target_event_timing_semantic_sidecar_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/target_event_timing_semantic_sidecar/target_event_timing_semantic_sidecar.jsonl"
+  },
+  "model": {
+    "name": "streaming_student_stage_scaffold",
+    "r_res_enabled": false,
+    "frame_length": 400,
+    "hop_length": 160,
+    "shared_dim": 96,
+    "frontend_dim": 96,
+    "frontend_layers": 2,
+    "student_dim": 96,
+    "student_layers": 2,
+    "z_art_dim": 8,
+    "event_dim": 8,
+    "event_prior_dim": 8,
+    "speaker_embed_dim": 16,
+    "geom_embed_dim": 8,
+    "conditioning_dim": 32,
+    "r_res_dim": 16,
+    "f0_correction_enabled": true,
+    "aper_correction_enabled": true
+  },
+  "contracts": {
+    "frontend_outputs": {
+      "shared_hidden": {
+        "feature_dim": 96
+      },
+      "coarse_log_f0": {
+        "feature_dim": 1
+      },
+      "vuv_logits": {
+        "feature_dim": 1
+      },
+      "aperiodicity": {
+        "feature_dim": 1
+      },
+      "energy": {
+        "feature_dim": 1
+      },
+      "event_prior_logits": {
+        "feature_dim": 8
+      }
+    },
+    "student_outputs": {
+      "z_art": {
+        "feature_dim": 8
+      },
+      "event_logits": {
+        "feature_dim": 8
+      },
+      "r_res": {
+        "feature_dim": 0
+      },
+      "log_f0_correction": {
+        "feature_dim": 1
+      },
+      "aper_correction": {
+        "feature_dim": 1
+      }
+    },
+    "conditioning_inputs": {
+      "speaker_embedding": {
+        "feature_dim": 16
+      },
+      "geom_embedding": {
+        "feature_dim": 8
+      },
+      "conditioning_hidden": {
+        "feature_dim": 32
+      }
+    },
+    "offline_mvp_eval_bridge": {
+      "stable_keys": [
+        "frame_mask",
+        "z_art",
+        "event_logits",
+        "coarse_log_f0",
+        "vuv_logits",
+        "aperiodicity",
+        "energy"
+      ],
+      "notes": [
+        "Keep frame_length and hop_length aligned with offline_mvp to preserve frame-level comparability.",
+        "Treat r_res as disabled during scaffold bootstrap; do not let new eval tooling depend on it yet.",
+        "Bridge layer should summarize stage3 outputs into offline_mvp-style control tables before real evaluation reuse."
+      ]
+    }
+  },
+  "dry_run": {
+    "synthetic_batch_size": 2,
+    "synthetic_waveform_length": 6400,
+    "input_shapes": {
+      "waveform": [
+        2,
+        6400
+      ],
+      "lengths": [
+        2
+      ],
+      "speaker_embedding": [
+        2,
+        16
+      ],
+      "geom_embedding": [
+        2,
+        8
+      ]
+    },
+    "output_shapes": {
+      "frame_mask": [
+        2,
+        38
+      ],
+      "frame_features": [
+        2,
+        38,
+        2
+      ],
+      "shared_hidden": [
+        2,
+        38,
+        96
+      ],
+      "coarse_log_f0": [
+        2,
+        38,
+        1
+      ],
+      "vuv_logits": [
+        2,
+        38,
+        1
+      ],
+      "aperiodicity": [
+        2,
+        38,
+        1
+      ],
+      "energy": [
+        2,
+        38,
+        1
+      ],
+      "event_prior_logits": [
+        2,
+        38,
+        8
+      ],
+      "student_hidden": [
+        2,
+        38,
+        96
+      ],
+      "conditioning": [
+        2,
+        38,
+        32
+      ],
+      "z_art": [
+        2,
+        38,
+        8
+      ],
+      "event_logits": [
+        2,
+        38,
+        8
+      ],
+      "event_probs": [
+        2,
+        38,
+        8
+      ],
+      "r_res": [
+        2,
+        38,
+        0
+      ],
+      "log_f0_correction": [
+        2,
+        38,
+        1
+      ],
+      "aper_correction": [
+        2,
+        38,
+        1
+      ]
+    },
+    "status": "scaffold_ready"
+  },
+  "next_steps": [
+    "Add teacher-label dataset wiring for frontend/student supervision without reusing offline_mvp training loops directly.",
+    "Define calibration asset format for s_spk_target, s_geom_target, and alpha before any real student training.",
+    "Build a stage3 eval bridge that maps scaffold outputs into offline_mvp-compatible control summaries before opening new experiments."
+  ],
+  "notes": [
+    "Stage3 bootstrap keeps the same frame contract as offline_mvp for evaluation bridge planning.",
+    "r_res stays disabled until the frontend/student contract and calibration assets are stable."
+  ]
+}

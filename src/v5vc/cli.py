@@ -99,6 +99,7 @@ from v5vc.streaming_student import (
     evaluate_streaming_student_checkpoint,
     estimate_streaming_student_calibration,
     export_streaming_student_proxy_audio,
+    prepare_streaming_student_paired_training_data,
     prepare_streaming_student_stage,
     prepare_streaming_student_supervision,
     prepare_streaming_student_training_data,
@@ -604,6 +605,53 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=4,
         help="Dry-run batch size used per target slice.",
+    )
+
+    streaming_student_paired_training_data_parser = subparsers.add_parser(
+        "prepare-streaming-student-paired-training-data",
+        help="Build the paired Stage3 source-input plus target-teacher contract and quantify frame mismatch.",
+    )
+    streaming_student_paired_training_data_parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/streaming_student_stage_template.json"),
+        help="Stage3 scaffold config template path.",
+    )
+    streaming_student_paired_training_data_parser.add_argument(
+        "--teacher-label-index",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl"),
+        help="Teacher-label index jsonl exported for Stage3.",
+    )
+    streaming_student_paired_training_data_parser.add_argument(
+        "--calibration-asset",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"),
+        help="Calibration asset consumed as global conditioning for Stage3 batches.",
+    )
+    streaming_student_paired_training_data_parser.add_argument(
+        "--train-pair-spec",
+        type=Path,
+        default=Path("data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_train_pairs.jsonl"),
+        help="Paired source-to-target jsonl used for the train dry-run slice.",
+    )
+    streaming_student_paired_training_data_parser.add_argument(
+        "--validation-pair-spec",
+        type=Path,
+        default=Path("data_prep/round1_1/stage5_paired_source_to_target_overfit_smoke/parallel_validation_pairs.jsonl"),
+        help="Optional paired source-to-target jsonl used for the validation dry-run slice.",
+    )
+    streaming_student_paired_training_data_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/plans/streaming_student_paired_training_data"),
+        help="Directory for paired Stage3 training-data dry-run summaries.",
+    )
+    streaming_student_paired_training_data_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=4,
+        help="Dry-run batch size used per paired slice.",
     )
 
     streaming_student_supervision_parser = subparsers.add_parser(
@@ -2645,7 +2693,8 @@ def build_parser() -> argparse.ArgumentParser:
         default="none",
         help=(
             "How target_event_semantic_sidecar is consumed during package build: "
-            "none, target_sidecar_broadcast_v1, or target_timing_sidecar_framewise_v1."
+            "none, target_sidecar_broadcast_v1, target_timing_sidecar_framewise_v1, or "
+            "source_semantic_parity_framewise_v1."
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(
@@ -4300,6 +4349,17 @@ def main(argv: list[str] | None = None) -> int:
             teacher_label_index_path=args.teacher_label_index,
             calibration_asset_path=args.calibration_asset,
             split_dir=args.split_dir,
+            batch_size=args.batch_size,
+        )
+        return 0
+    if args.command == "prepare-streaming-student-paired-training-data":
+        prepare_streaming_student_paired_training_data(
+            config_path=args.config,
+            output_dir=args.output_dir,
+            teacher_label_index_path=args.teacher_label_index,
+            calibration_asset_path=args.calibration_asset,
+            train_pair_spec_path=args.train_pair_spec,
+            validation_pair_spec_path=args.validation_pair_spec,
             batch_size=args.batch_size,
         )
         return 0

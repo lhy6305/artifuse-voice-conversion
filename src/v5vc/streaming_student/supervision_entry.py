@@ -89,6 +89,9 @@ def prepare_streaming_student_supervision(
                 "dry_run_batch_size": len(batch["record_ids"]),
                 "sample_record_ids": list(batch["record_ids"]),
                 "semantic_sidecar_summary": summarize_semantic_sidecars(batch["target_event_semantic_sidecar"]),
+                "timing_semantic_sidecar_summary": summarize_timing_semantic_sidecars(
+                    batch["target_event_timing_semantic_sidecar"]
+                ),
                 "loss_metrics": metrics,
                 "loss_total_tensor": round(float(total_loss.detach().cpu().item()), 6),
             }
@@ -117,7 +120,7 @@ def prepare_streaming_student_supervision(
         "notes": [
             "This stage defines only the minimum teacher-supervised dry-run losses needed to move beyond pure data wiring.",
             "Current supervision intentionally avoids forcing a hidden-state distillation term because Stage3 and offline_mvp hidden dimensions are not yet aligned.",
-            "Current semantic supervision only reweights teacher_event_prior / teacher_event / teacher_z_art by target-side structure semantics; it does not pretend to add phone/manner/place labels.",
+            "Current semantic supervision only reweights teacher_event_prior / teacher_event / teacher_z_art by target-side structure and timing semantics; it does not pretend to add phone/manner/place labels.",
             "Frontend proxy terms are heuristic and should be treated as bootstrap supervision, not final semantic commitments.",
         ],
         "next_steps": [
@@ -170,6 +173,52 @@ def summarize_semantic_sidecars(
     }
 
 
+def summarize_timing_semantic_sidecars(
+    sidecars: list[dict[str, object] | None],
+) -> dict[str, object]:
+    contract_counts: dict[str, int] = {}
+    label_status_counts: dict[str, int] = {}
+    alignment_type_counts: dict[str, int] = {}
+    present_count = 0
+    multi_clause_count = 0
+    pause_present_count = 0
+    terminal_present_count = 0
+    for row in sidecars:
+        if not isinstance(row, dict):
+            continue
+        present_count += 1
+        contract_key = str(row.get("semantic_contract_version", "unknown"))
+        contract_counts[contract_key] = contract_counts.get(contract_key, 0) + 1
+        upgrade_status = row.get("upgrade_status")
+        if isinstance(upgrade_status, dict):
+            label_key = str(upgrade_status.get("label_status", "unknown"))
+            label_status_counts[label_key] = label_status_counts.get(label_key, 0) + 1
+        timing_alignment = row.get("timing_alignment")
+        if isinstance(timing_alignment, dict):
+            alignment_key = str(timing_alignment.get("alignment_type", "unknown"))
+            alignment_type_counts[alignment_key] = alignment_type_counts.get(alignment_key, 0) + 1
+        coverage_summary = {}
+        time_aware_semantics = row.get("time_aware_semantics")
+        if isinstance(time_aware_semantics, dict) and isinstance(time_aware_semantics.get("coverage_summary"), dict):
+            coverage_summary = dict(time_aware_semantics["coverage_summary"])
+        if int(coverage_summary.get("clause_region_count", 0)) >= 2:
+            multi_clause_count += 1
+        if int(coverage_summary.get("pause_boundary_event_count", 0)) >= 1:
+            pause_present_count += 1
+        if int(coverage_summary.get("terminal_boundary_event_count", 0)) >= 1:
+            terminal_present_count += 1
+    return {
+        "present_count": present_count,
+        "missing_count": max(0, len(sidecars) - present_count),
+        "timing_contract_version_counts": dict(sorted(contract_counts.items())),
+        "timing_label_status_counts": dict(sorted(label_status_counts.items())),
+        "timing_alignment_type_counts": dict(sorted(alignment_type_counts.items())),
+        "timing_multi_clause_count": multi_clause_count,
+        "timing_pause_present_count": pause_present_count,
+        "timing_terminal_present_count": terminal_present_count,
+    }
+
+
 def build_markdown(summary: dict[str, object]) -> str:
     lines = [
         "# Stage3 Streaming Student Supervision Plan",
@@ -194,6 +243,7 @@ def build_markdown(summary: dict[str, object]) -> str:
                 f"- dry_run_batch_size: {payload['dry_run_batch_size']}",
                 f"- sample_record_ids: {payload['sample_record_ids']}",
                 f"- semantic_sidecar_summary: {json.dumps(payload['semantic_sidecar_summary'], ensure_ascii=False)}",
+                f"- timing_semantic_sidecar_summary: {json.dumps(payload['timing_semantic_sidecar_summary'], ensure_ascii=False)}",
                 f"- loss_metrics: {json.dumps(payload['loss_metrics'], ensure_ascii=False)}",
                 "",
             ]

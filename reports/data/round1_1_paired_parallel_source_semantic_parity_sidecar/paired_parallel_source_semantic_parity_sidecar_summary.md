@@ -13,13 +13,15 @@
 
 ## 统计
 - semantic_ready_for_source_side_bootstrap_count: `2`
-- source_estimated_frame_count_stats: `{'count': 2, 'min': 968, 'max': 1068, 'mean': 1018.0}`
+- source_estimated_frame_count_stats: `{'count': 2, 'min': 657, 'max': 660, 'mean': 658.5}`
 - lexical_char_count_stats: `{'count': 2, 'min': 10, 'max': 10, 'mean': 10.0}`
 - clause_region_count_stats: `{'count': 2, 'min': 1, 'max': 2, 'mean': 1.5}`
 - pause_boundary_event_count_stats: `{'count': 2, 'min': 0, 'max': 1, 'mean': 0.5}`
 - terminal_boundary_event_count_stats: `{'count': 2, 'min': 1, 'max': 1, 'mean': 1.0}`
 - timeline_event_count_stats: `{'count': 2, 'min': 2, 'max': 4, 'mean': 3.0}`
-- source_to_target_duration_ratio_stats: `{'count': 2, 'min': 1.396334, 'max': 1.476323, 'mean': 1.436329}`
+- source_to_target_duration_ratio_stats: `{'count': 2, 'min': 0.909098, 'max': 0.95239, 'mean': 0.930744}`
+- source_duration_metadata_drift_sec_stats: `{'count': 2, 'min': 1.11873, 'max': 1.491224, 'mean': 1.304977}`
+- target_duration_metadata_drift_sec_stats: `{'count': 2, 'min': 0.0, 'max': 0.0, 'mean': 0.0}`
 
 ## 结构分布
 - utterance_structure_type_counts: `{'multi_clause_single_terminal': 1, 'single_clause_terminal': 1}`

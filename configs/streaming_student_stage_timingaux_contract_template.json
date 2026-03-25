@@ -1,0 +1,78 @@
+{
+  "data": {
+    "manifest_dir": "data_prep/round1_1/manifests",
+    "split_dir": "data_prep/round1_1/splits/hybrid_stratified_blocked",
+    "target_weak_event_hints_path": "data_prep/round1_1/c1_weak_event_hints/target_weak_event_hints.jsonl",
+    "target_special_supervision_path": "data_prep/round1_1/target_special_supervision/target_special_supervision_sidecar.jsonl",
+    "target_event_semantic_sidecar_path": "data_prep/round1_1/target_event_semantic_sidecar/target_event_semantic_sidecar.jsonl",
+    "target_event_timing_semantic_sidecar_path": "data_prep/round1_1/target_event_timing_semantic_sidecar/target_event_timing_semantic_sidecar.jsonl",
+    "target_validation_count": 8,
+    "source_validation_count": 8
+  },
+  "model": {
+    "name": "streaming_student_stage_timingaux_contract",
+    "r_res_enabled": false,
+    "frame_length": 400,
+    "hop_length": 160,
+    "shared_dim": 96,
+    "frontend_dim": 96,
+    "frontend_layers": 2,
+    "student_dim": 96,
+    "student_layers": 2,
+    "z_art_dim": 8,
+    "event_dim": 8,
+    "event_prior_dim": 8,
+    "speaker_embed_dim": 16,
+    "geom_embed_dim": 8,
+    "conditioning_dim": 32,
+    "r_res_dim": 16,
+    "f0_correction_enabled": true,
+    "aper_correction_enabled": true,
+    "timing_aux_enabled": true
+  },
+  "training": {
+    "mode": "streaming_student_stage",
+    "run_stage": "scaffold_bootstrap",
+    "teacher_required": true,
+    "student_required": true,
+    "vocoder_required": false,
+    "seed": 20260317
+  },
+  "semantic_supervision": {
+    "enabled": true,
+    "required_contract_version": "target_event_semantic_sidecar_v1",
+    "required_timing_contract_version": "target_event_timing_semantic_sidecar_v1",
+    "timing_frame_routing_enabled": false,
+    "clean_text_bonus": 0.08,
+    "multi_clause_bonus": 0.08,
+    "multi_terminal_bonus": 0.1,
+    "clause_ge4_bonus": 0.08,
+    "pause_multi_bonus": 0.05,
+    "terminal_present_bonus": 0.05,
+    "timing_ready_bonus": 0.0,
+    "timing_multi_clause_bonus": 0.0,
+    "timing_pause_present_bonus": 0.0,
+    "timing_terminal_present_bonus": 0.0,
+    "timing_nonboundary_scale": 1.0,
+    "timing_pause_boundary_boost": 1.0,
+    "timing_terminal_boundary_boost": 1.0,
+    "timing_final_clause_boost": 1.0,
+    "timing_event_prior_mask_alpha": 1.0,
+    "timing_event_mask_alpha": 0.35,
+    "timing_z_art_mask_alpha": 0.2,
+    "nonverbal_penalty": 0.2,
+    "event_prior_alpha": 1.0,
+    "event_alpha": 0.35,
+    "z_art_alpha": 0.2,
+    "min_multiplier": 0.75,
+    "max_multiplier": 1.45
+  },
+  "planning": {
+    "synthetic_batch_size": 2,
+    "synthetic_waveform_length": 6400,
+    "notes": [
+      "Stage3 timing auxiliary contract keeps semantic weighting/routing disabled so timing supervision can be isolated via explicit auxiliary targets.",
+      "r_res stays disabled until the frontend/student contract and calibration assets are stable."
+    ]
+  }
+}
