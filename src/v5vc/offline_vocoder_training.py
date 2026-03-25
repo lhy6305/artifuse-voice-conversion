@@ -701,6 +701,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
                 "periodic_waveform_stft": float(periodic_waveform_stft_weight),
                 "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
+                "multires_stft_short": float(multires_stft_short_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -948,6 +949,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
+    multires_stft_short_weight: float = 0.0,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -1080,6 +1082,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                 periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+                multires_stft_short_weight=multires_stft_short_weight,
             )
             accumulated_loss = total_loss if accumulated_loss is None else accumulated_loss + total_loss
             package_metrics.append(
@@ -1153,6 +1156,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                     periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                     periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+                    multires_stft_short_weight=multires_stft_short_weight,
                     validation_source="validation_packages",
                 )
             else:
@@ -1183,6 +1187,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                     periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                     periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+                    multires_stft_short_weight=multires_stft_short_weight,
                     validation_source="train_packages_reused",
                 )
             validation_history.append(validation_payload_summary)
@@ -1264,6 +1269,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
                 "periodic_waveform_stft": float(periodic_waveform_stft_weight),
                 "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
+                "multires_stft_short": float(multires_stft_short_weight),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1830,6 +1836,30 @@ def compute_stft_reconstruction_loss(
     return F.l1_loss(torch.log1p(predicted_spec.abs()), torch.log1p(target_spec.abs()))
 
 
+def compute_multires_stft_reconstruction_loss(
+    predicted_waveform: torch.Tensor,
+    target_waveform: torch.Tensor,
+    *,
+    frame_lengths: list[int],
+) -> torch.Tensor:
+    if not frame_lengths:
+        raise ValueError("frame_lengths must not be empty for multi-resolution STFT reconstruction loss.")
+    losses: list[torch.Tensor] = []
+    for frame_length in frame_lengths:
+        resolved_frame_length = int(frame_length)
+        if resolved_frame_length <= 0:
+            raise ValueError(f"Invalid frame_length for multi-resolution STFT loss: {frame_length!r}")
+        losses.append(
+            compute_stft_reconstruction_loss(
+                predicted_waveform=predicted_waveform,
+                target_waveform=target_waveform,
+                frame_length=resolved_frame_length,
+                hop_length=max(resolved_frame_length // 4, 1),
+            )
+        )
+    return torch.stack(losses).mean()
+
+
 def compute_waveform_high_band_energy_ratio(
     waveform: torch.Tensor,
     sample_rate: int,
@@ -2131,6 +2161,7 @@ def compute_nores_vocoder_losses(
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
+    multires_stft_short_weight: float = 0.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
         reconstruction_frame_gain_apply_mode
@@ -2173,6 +2204,7 @@ def compute_nores_vocoder_losses(
     periodic_waveform_frame_rms_floor_loss = harmonic_loss.new_zeros(())
     periodic_waveform_stft_loss = harmonic_loss.new_zeros(())
     periodic_waveform_high_band_excess_loss = harmonic_loss.new_zeros(())
+    multires_stft_short_loss = harmonic_loss.new_zeros(())
     periodic_waveform_frame_rms_mean = 0.0
     aligned_active_frame_rms_mean = 0.0
     decoded_waveform_rms = 0.0
@@ -2205,6 +2237,7 @@ def compute_nores_vocoder_losses(
         or float(periodic_waveform_frame_rms_floor_weight) > 0.0
         or float(periodic_waveform_stft_weight) > 0.0
         or float(periodic_waveform_high_band_excess_weight) > 0.0
+        or float(multires_stft_short_weight) > 0.0
     ):
         if aligned_waveform is None:
             raise ValueError("aligned_waveform is required when waveform/structure losses are enabled.")
@@ -2228,6 +2261,12 @@ def compute_nores_vocoder_losses(
             frame_length=int(frame_length),
             hop_length=int(hop_length),
         )
+        if float(multires_stft_short_weight) > 0.0:
+            multires_stft_short_loss = compute_multires_stft_reconstruction_loss(
+                predicted_waveform=decoded_waveform,
+                target_waveform=target_waveform,
+                frame_lengths=[256, 512, int(frame_length)],
+            )
         rms_guard_loss, decoded_rms_tensor, target_rms_tensor = compute_rms_guard_loss(
             predicted_waveform=decoded_waveform,
             target_waveform=target_waveform,
@@ -2339,6 +2378,7 @@ def compute_nores_vocoder_losses(
         + periodic_waveform_frame_rms_floor_loss * float(periodic_waveform_frame_rms_floor_weight)
         + periodic_waveform_stft_loss * float(periodic_waveform_stft_weight)
         + periodic_waveform_high_band_excess_loss * float(periodic_waveform_high_band_excess_weight)
+        + multires_stft_short_loss * float(multires_stft_short_weight)
     )
     metrics = {
         "loss_total": round(float(total_loss.detach().cpu().item()), 6),
@@ -2383,6 +2423,10 @@ def compute_nores_vocoder_losses(
         ),
         "loss_periodic_waveform_high_band_excess": round(
             float(periodic_waveform_high_band_excess_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_mrstft_short_256_512_1024": round(
+            float(multires_stft_short_loss.detach().cpu().item()),
             6,
         ),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
@@ -2433,6 +2477,7 @@ def run_nores_vocoder_validation_pass(
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
+    multires_stft_short_weight: float = 0.0,
 ) -> dict[str, object]:
     model.eval()
     with torch.no_grad():
@@ -2469,6 +2514,7 @@ def run_nores_vocoder_validation_pass(
             periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
             periodic_waveform_stft_weight=periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+            multires_stft_short_weight=multires_stft_short_weight,
         )
     return {
         "step": int(step),
@@ -2533,6 +2579,7 @@ def run_nores_vocoder_dataset_validation_pass(
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
+    multires_stft_short_weight: float = 0.0,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
     model.eval()
@@ -2580,6 +2627,7 @@ def run_nores_vocoder_dataset_validation_pass(
                 periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                 periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+                multires_stft_short_weight=multires_stft_short_weight,
             )
             package_metrics.append(
                 {

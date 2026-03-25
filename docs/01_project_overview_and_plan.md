@@ -20329,3 +20329,196 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    下一步应把 Stage5 主线再上移到：
    - 更强 waveform target family
    - 或真正不同的 vocoder head
+## 2026-03-25 继续补充：`recurrent_fusedbranch020` 人工听审失败，Stage5 局部微调主线正式停止，恢复 `C-prime / v2-core`
+- 正式报告：
+  - `docs/332_stage5_recurrent_fusedbranch020_human_audit_fail_and_cprime_reactivation_report.md`
+
+### 当前关键结果
+1. 用户已完成
+   `docs/331_stage5_acttmpl005_delta6_human_audit_fail_and_recurrent_fusedbranch020_bundle_report.md`
+   中的
+   `recurrent_fusedbranch020`
+   对比听审
+2. 主观结论是：
+   - 仍不存在人声结构
+   - 仍是单声调 buzz
+   - 唯一可感知变化是：
+     音调比 baseline overfit72 更高
+3. 到这一步，
+   paired overfit
+   已连续排掉：
+   - baseline
+   - `acttmpl005_delta6`
+   - `recurrent_fusedbranch020`
+4. 当前可以正式写硬：
+   - 继续围绕 Stage5
+     `waveform head / objective / recurrent / fusion-side`
+     做同类小结构迭代，
+     信息增量已经很低
+
+### 当前阶段判断更新
+1. 当前主问题已不再像：
+   - “再换一组 Stage5 局部设置”
+2. 更像：
+   - 现有 proxy contract
+     本身没有把主干拉到
+     有资格长出人声的状态
+3. 因此当前主线应恢复到：
+   - `docs/281_teacher_first_v2_cprime_reconstruction_assessment_and_handoff.md`
+   - `docs/282_teacher_first_v2_core_acoustic_state_and_c3_boundary_design.md`
+   已拍板的
+   `C-prime / v2-core`
+
+### 更新后的下一步
+1. 不再继续发新的 Stage5 同类听审包
+2. 下一任务直接进入：
+   - `teacher_downstream_control_contract_v2`
+     实施拆解
+3. 第一发最小可执行任务是：
+   - 明确并接入
+     `f0_hz / vuv / aper / E`
+     的生成链、
+     数值口径、
+     时间轴对齐方式
+   - 然后重建
+     Stage5 package
+     和
+     no-res baseline
+## 2026-03-25 继续补充：Stage5 short-window MRSTFT 权重已补齐到 dataset-loop CLI，旧的全零日志不再代表实验结论
+- 正式报告：
+  - `docs/333_stage5_mrstft_short_weight_plumbing_fix_report.md`
+
+### 当前关键结果
+1. 已确认此前
+   `mrstftshort020`
+   smoke
+   中
+   `loss_mrstft_short_256_512_1024`
+   长期为 `0.0`
+   的根因不是
+   MRSTFT
+   已被实验否定，
+   而是：
+   - `run-offline-mvp-nores-vocoder-dataset-training-loop`
+     的 CLI 分支
+     没把
+     `--multires-stft-short-weight`
+     传到
+     dataset training loop
+2. 同时，
+   dataset-loop summary
+   顶层
+   `training.loss_weights`
+   也漏记了
+   `multires_stft_short`，
+   导致旧日志无法直接确认新权重是否生效
+3. 上述两处已补齐，
+   并用新的
+   CLI 1-step smoke
+   验证通过：
+   - `training.loss_weights.multires_stft_short = 0.2`
+   - `step_history[0].loss_metrics.loss_mrstft_short_256_512_1024 = 1.305642`
+   - `validation_history[0].loss_metrics.loss_mrstft_short_256_512_1024 = 1.103331`
+4. 当前可正式写硬：
+   - 旧的
+     `paired_parallel_overfit24_mrstftshort020_smoke_round1_1`
+     结果
+     不能作为
+     short-window MRSTFT
+     的实验结论
+5. 原计划的
+   `overfit24_mrstftshort020`
+   smoke
+   已按修复后口径重跑到：
+   - `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_paired_parallel_overfit24_mrstftshort020_smoke_round1_2/`
+   关键结果为：
+   - `validation step24 loss_total = 0.914235`
+   - `validation step24 loss_mrstft_short_256_512_1024 = 0.336557`
+
+### 当前阶段判断更新
+1. 当前短窗 MRSTFT
+   的状态应从：
+   - “已测过但无效”
+   改写为：
+   - “底层实现已就位，
+      但直到今天才真正接通到
+      dataset-level CLI”
+2. 这意味着
+   `round1_2`
+   才是第一轮可解释的正式 smoke，
+   而不是旧的
+   `round1_1`
+
+### 更新后的下一步
+1. 以
+   `paired_parallel_overfit24_mrstftshort020_smoke_round1_2`
+   为有效结果，
+   对比旧 baseline /
+   共享指标，
+   判断 short-window MRSTFT
+   是否真的带来正向增益
+2. 只有在这个新口径下仍成立时，
+   才能把
+   “MRSTFT 无明显收益”
+   写成实验结论
+## 2026-03-25 继续补充：short-window MRSTFT 在可比 `activitygate000` baseline 下未形成净收益
+- 正式报告：
+  - `docs/334_stage5_mrstft_short_weight_comparable_baseline_recheck_report.md`
+
+### 当前关键结果
+1. 为避免把
+   `activity_gate_weight`
+   变化混进来，
+   已补跑严格可比 baseline：
+   - `reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_paired_parallel_overfit24_activitygate000_baseline_round1_1/`
+2. 它与
+   `paired_parallel_overfit24_mrstftshort020_smoke_round1_2`
+   保持相同：
+   - dataset
+   - `24` 步
+   - `packages_per_step = 2`
+   - `--use-predicted-activity-gate`
+   - `activity_gate_weight = 0.0`
+   唯一区别是：
+   - baseline
+     没有
+     `multires_stft_short`
+3. step24 validation 对照结果：
+   - baseline
+     - `loss_total = 0.856925`
+     - `loss_stft = 0.364725`
+     - `loss_waveform = 0.159988`
+   - MRSTFT
+     - `loss_total = 0.914235`
+     - `loss_stft = 0.337852`
+     - `loss_waveform = 0.161479`
+     - `loss_mrstft_short_256_512_1024 = 0.336557`
+4. 这说明：
+   - short-window MRSTFT
+     确实压低了
+     单分辨率
+     `loss_stft`
+   - 但当前权重
+     `0.2`
+     下，
+     并没有带来更好的整体共享指标平衡
+
+### 当前阶段判断更新
+1. 当前不能把
+   `multires_stft_short_weight = 0.2`
+   提升为默认
+2. 更准确的状态应写成：
+   - 已接通
+   - 已确认会改变优化轨迹
+   - 但当前权重下净收益不足
+
+### 更新后的下一步
+1. 若继续追这条线，
+   更合理的是做
+   `0.05 / 0.1`
+   这类低权重最小 sweep
+2. 若当前优先级回到更高层主线，
+   则可把 short-window MRSTFT
+   暂时收口为：
+   - 已验证可用，
+     但暂不默认启用

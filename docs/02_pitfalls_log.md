@@ -13128,3 +13128,111 @@
       这类更上游约束
   - 目标是让新实验真正回答：
     - “结构改线是否比 loss 微调更接近 speech emergence”
+### 419. 当更高一层的 `recurrent + fusion-side` 结构候选也只把 buzz 的音调推高、仍无人声结构时，应停止继续在 Stage5 局部结构上扫
+- 现象:
+  - `recurrent_fusedbranch020`
+    已经不是：
+    - baseline
+    - 也不是单纯 decode-side objective
+  - 但用户人工听审结果仍是：
+    - 无人声结构
+    - 单声调 buzz
+    - 只是音调比 baseline 更高
+- 风险:
+  - 若把这种结果理解成：
+    - “已经更接近说话了”
+    - “再做几组 recurrent / fusion-side 微调”
+    很容易继续在 buzz manifold
+    内部换工作点
+- 处理要求:
+  - 一旦出现这种结果，
+    应把当前 Stage5 局部微调主线正式停止
+  - 下一步转回：
+    - `C-prime / v2-core contract`
+    - 也就是先补齐
+      `f0_hz / vuv / aper / E`
+      再重训 no-res baseline
+### 420. 当新 loss 已在底层实现、CLI 也声明了参数时，不能默认认为 dataset-level 训练入口一定已经把它传到底；必须沿真实调用链核对到最终 summary
+- 现象:
+  - 这次
+    short-window MRSTFT
+    已经完成了：
+    - parser 参数
+      `--multires-stft-short-weight`
+    - `compute_nores_vocoder_losses(...)`
+      内部实现
+    - dataset loop / validation
+      下层函数签名
+  - 但
+    `run-offline-mvp-nores-vocoder-dataset-training-loop`
+    的 CLI 主分支
+    仍漏掉：
+    - `multires_stft_short_weight=args.multires_stft_short_weight`
+  - 结果就是：
+    - 训练日志里的
+      `loss_mrstft_short_256_512_1024`
+      一直是 `0.0`
+    - 但这不是实验结论，
+      只是参数根本没传到底
+- 风险:
+  - 若只因为：
+    - 代码里已经有 loss 实现
+    - CLI help 里已经看得到参数
+    - summary 名字里写了某个新实验
+    就默认认为新 objective
+    已在训练中生效，
+    很容易把
+    “plumbing 未接通”
+    误读成
+    “objective 无效”
+- 处理要求:
+  - 每次新增训练 loss / weight
+    后，
+    至少核对三层：
+    - CLI 主分支是否显式转发
+    - 训练 summary
+      `training.loss_weights`
+      是否记录该权重
+    - step / validation metrics
+      是否出现对应非零值
+  - 若任何一层缺失，
+    先修 plumbing，
+    不把全零日志写成实验判断
+### 421. 当补齐新 loss 的 plumbing 后，若发现候选实验与旧 baseline 还混入了别的权重变化，不能继续沿用旧对照下结论；必须先补跑严格可比 baseline
+- 现象:
+  - 这次
+    short-window MRSTFT
+    接通后，
+    第一眼看上去
+    `round1_2`
+    比旧的
+    `round1_1`
+    validation 更低
+  - 但随后核对发现：
+    - `round1_2`
+      的
+      `activity_gate_weight = 0.0`
+    - 旧的
+      `round1_1`
+      是
+      `activity_gate_weight = 0.2`
+- 风险:
+  - 若直接把这两份结果当作：
+    - “只新增了
+       MRSTFT”
+    的 A/B 对照，
+    会把别的权重变化也误算成
+    MRSTFT
+    收益或损失
+- 处理要求:
+  - 一旦发现旧对照不再严格同口径，
+    必须先补跑：
+    - 同 dataset
+    - 同步数
+    - 同 seed
+    - 同其余 loss 权重
+    只差目标候选本身的一份 baseline
+  - 只有在这个严格可比 baseline 下，
+    才能把
+    “当前候选是否有净收益”
+    写成正式判断

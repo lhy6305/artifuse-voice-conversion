@@ -2889,6 +2889,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Optional loss weight for suppressing periodic-only reconstructed waveform high-band energy ratio above the aligned target.",
     )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--multires-stft-short-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for short-window MRSTFT reconstruction using frame lengths 256, 512, and the runtime frame length.",
+    )
     nores_vocoder_review_parser = subparsers.add_parser(
         "review-offline-mvp-nores-vocoder-checkpoints",
         help="Review validation checkpoint trajectories for the no-residual vocoder dataset loop summary.",
@@ -4544,6 +4550,7 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
             periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
+            multires_stft_short_weight=args.multires_stft_short_weight,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -4581,6 +4588,7 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
             periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
+            multires_stft_short_weight=args.multires_stft_short_weight,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -4644,6 +4652,7 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
             periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
+            multires_stft_short_weight=args.multires_stft_short_weight,
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":
