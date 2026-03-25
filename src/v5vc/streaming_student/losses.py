@@ -7,6 +7,11 @@ from pathlib import Path
 import torch
 import torch.nn.functional as F
 
+from v5vc.event_semantics import (
+    CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION,
+    DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
+    DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+)
 from v5vc.streaming_student.proxy_acoustic import build_streaming_student_proxy_acoustic
 
 
@@ -78,6 +83,7 @@ def load_teacher_supervision_payload(path: Path) -> dict[str, object]:
 def build_default_semantic_supervision_config() -> dict[str, object]:
     return {
         "enabled": False,
+        "event_target_family": "teacher_e_evt_v1",
         "required_contract_version": "target_event_semantic_sidecar_v1",
         "required_timing_contract_version": "target_event_timing_semantic_sidecar_v1",
         "timing_frame_routing_enabled": True,
@@ -140,15 +146,68 @@ def resolve_semantic_supervision_config(
         normalized_key = str(key)
         if normalized_key in {"enabled", "timing_frame_routing_enabled"}:
             effective[normalized_key] = bool(value)
-        elif normalized_key in {"required_contract_version", "required_timing_contract_version"}:
+        elif normalized_key in {
+            "event_target_family",
+            "required_contract_version",
+            "required_timing_contract_version",
+        }:
             effective[normalized_key] = None if value in {None, ""} else str(value)
         else:
             effective[normalized_key] = float(value)
+    event_target_family = str(effective["event_target_family"]).strip().lower()
+    if event_target_family not in {"legacy_event_probs", "teacher_e_evt_v1"}:
+        raise ValueError(
+            "Stage3 semantic supervision event_target_family must be one of: "
+            "legacy_event_probs, teacher_e_evt_v1."
+        )
+    effective["event_target_family"] = event_target_family
     if float(effective["min_multiplier"]) <= 0.0:
         raise ValueError("Stage3 semantic supervision min_multiplier must be > 0.")
     if float(effective["max_multiplier"]) < float(effective["min_multiplier"]):
         raise ValueError("Stage3 semantic supervision max_multiplier must be >= min_multiplier.")
     return effective
+
+
+def resolve_teacher_event_supervision_targets(
+    batch: Mapping[str, torch.Tensor | list[str] | list[dict[str, object] | None]],
+    semantic_supervision: Mapping[str, object],
+) -> dict[str, torch.Tensor | str]:
+    event_target_family = str(semantic_supervision.get("event_target_family", "teacher_e_evt_v1")).strip().lower()
+    teacher_e_evt = batch["teacher_e_evt"]
+    teacher_event_probs = batch["teacher_event_probs"]
+    if not isinstance(teacher_e_evt, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_e_evt.")
+    if not isinstance(teacher_event_probs, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_event_probs.")
+
+    if event_target_family == "teacher_e_evt_v1":
+        return {
+            "event_target_family": "teacher_e_evt_v1",
+            "event_target": teacher_e_evt,
+            "event_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
+            "event_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+            # Keep proxy targets fixed on named e_evt dims so A/B only changes event supervision family.
+            "proxy_target_family": "teacher_e_evt_v1",
+            "proxy_target": teacher_e_evt,
+            "proxy_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
+            "proxy_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+        }
+    if event_target_family == "legacy_event_probs":
+        return {
+            "event_target_family": "legacy_event_probs",
+            "event_target": teacher_event_probs,
+            "event_contract_version": CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION,
+            "event_label_space_version": CURRENT_RUNTIME_EVENT_SEMANTICS_VERSION,
+            # Keep proxy targets fixed on named e_evt dims so A/B only changes event supervision family.
+            "proxy_target_family": "teacher_e_evt_v1",
+            "proxy_target": teacher_e_evt,
+            "proxy_contract_version": DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
+            "proxy_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
+        }
+    raise ValueError(
+        "Unsupported Stage3 event_target_family resolved at loss time: "
+        f"{event_target_family}"
+    )
 
 
 def resolve_teacher_supervision_weight_schedule(
@@ -227,7 +286,7 @@ def compute_streaming_student_teacher_supervision_loss(
     weights: dict[str, float] | None = None,
     use_teacher_confidence: bool = True,
     semantic_supervision: Mapping[str, object] | None = None,
-) -> tuple[torch.Tensor, dict[str, float | bool]]:
+) -> tuple[torch.Tensor, dict[str, float | bool | str]]:
     default_weights = build_default_teacher_supervision_weights()
     effective_weights = resolve_teacher_supervision_weights(overrides=weights)
     semantic_config = resolve_semantic_supervision_config(config=semantic_supervision)
@@ -252,7 +311,16 @@ def compute_streaming_student_teacher_supervision_loss(
         dtype=frame_weight.dtype,
     )
 
-    teacher_e_evt = batch["teacher_e_evt"]
+    event_target_bundle = resolve_teacher_event_supervision_targets(
+        batch=batch,
+        semantic_supervision=semantic_config,
+    )
+    teacher_event_target = event_target_bundle["event_target"]
+    teacher_proxy_target = event_target_bundle["proxy_target"]
+    if not isinstance(teacher_event_target, torch.Tensor):
+        raise ValueError("Resolved Stage3 teacher event target must be a torch Tensor.")
+    if not isinstance(teacher_proxy_target, torch.Tensor):
+        raise ValueError("Resolved Stage3 proxy event target must be a torch Tensor.")
     teacher_acoustic = batch["teacher_acoustic"]
     student_proxy_acoustic = build_streaming_student_proxy_acoustic(outputs)
 
@@ -263,12 +331,12 @@ def compute_streaming_student_teacher_supervision_loss(
     )
     event_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["event_logits"],
-        target=teacher_e_evt,
+        target=teacher_event_target,
         frame_weight=frame_weight * timing_frame_multipliers["teacher_event"],
     )
     event_prior_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["event_prior_logits"],
-        target=teacher_e_evt,
+        target=teacher_event_target,
         frame_weight=frame_weight * timing_frame_multipliers["teacher_event_prior"],
     )
     timing_aux_targets, timing_aux_metrics = build_timing_auxiliary_targets(
@@ -299,12 +367,12 @@ def compute_streaming_student_teacher_supervision_loss(
     )
     vuv_proxy_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=outputs["vuv_logits"],
-        target=teacher_e_evt[..., 3:4],
+        target=teacher_proxy_target[..., 3:4],
         frame_weight=frame_weight,
     )
     aper_proxy_loss_per_sample = masked_mse_per_sample(
         prediction=outputs["aperiodicity"],
-        target=teacher_e_evt[..., 4:5],
+        target=teacher_proxy_target[..., 4:5],
         frame_weight=frame_weight,
     )
     proxy_acoustic_loss_per_sample = masked_mse_per_sample(
@@ -421,6 +489,14 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_aper_correction_l1": round(float(aper_correction_l1.detach().cpu().item()), 6),
         "teacher_confidence_weighted": bool(use_teacher_confidence),
         "effective_weight_sum": round(float(frame_weight.sum().detach().cpu().item()), 6),
+        "teacher_event_target_family": str(event_target_bundle["event_target_family"]),
+        "teacher_event_contract_version": str(event_target_bundle["event_contract_version"]),
+        "teacher_event_label_space_version": str(event_target_bundle["event_label_space_version"]),
+        "teacher_event_proxy_target_family": str(event_target_bundle["proxy_target_family"]),
+        "teacher_event_proxy_contract_version": str(event_target_bundle["proxy_contract_version"]),
+        "teacher_event_proxy_label_space_version": str(
+            event_target_bundle["proxy_label_space_version"]
+        ),
     }
     metrics.update(semantic_metrics)
     metrics.update(timing_frame_metrics)

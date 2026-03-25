@@ -14191,3 +14191,118 @@
   - 如果后续命令仍使用完整 split，
     就必须先导出：
     - 全量 teacher labels
+### 447. 一旦 Stage3 validation / summary 开始记录字符串型 contract 指标，聚合器就不能再默认把所有 metric 强制转成 float
+- 现象:
+  - 本轮为了让 A/B
+    结果自解释，
+    在 Stage3 loss metrics
+    中新增了：
+    - `teacher_event_target_family`
+    - `teacher_event_contract_version`
+    - `teacher_event_proxy_target_family`
+  - 旧的
+    `average_metric_dicts(...)`
+    仍默认把全部字段
+    当数值求均值
+  - 结果默认组第一次
+    `round1_1`
+    在 step6 validation
+    直接报错：
+    - `could not convert string to float: 'teacher_e_evt_v1'`
+- 风险:
+  - 这类错误容易让人误判成：
+    - 训练本体坏了
+    - 新 contract target
+      不能训练
+  - 实际问题只是：
+    - summary 聚合器
+      没升级到
+      mixed-type metrics
+- 处理要求:
+  - 以后只要 summary
+    里开始出现：
+    - contract version
+    - target family
+    - mode
+    这类离散字段，
+    聚合器必须显式区分：
+    - bool
+    - numeric
+    - categorical string
+  - 数值字段再求均值，
+    离散字段应保留唯一值
+    或返回唯一值集合
+### 448. source-only teacher downstream packet 即使已经显式导出 `e_evt`，也不能把没有 target timing sidecar 的后三个 boundary 维度误写成“真的接通了 boundary-aware e_evt”
+- 现象:
+  - 本轮
+    `offline_teacher_downstream_control_v3`
+    已新增：
+    - `e_evt`
+    - `e_evt_meta`
+    - `e_evt_summary`
+  - Stage5 downstream scaffold
+    也已开始消费：
+    - `e_evt`
+  - 但当前 teacher-first runtime
+    只有：
+    - source audio
+    - legacy event_probs
+    - source acoustic state
+  - 没有：
+    - target timing sidecar
+- 风险:
+  - 如果忽略这个边界，
+    就会把当前
+    source-only downstream bootstrap
+    误写成：
+    - 完整 boundary-aware
+      `e_evt`
+      已落地
+  - 这会导致后续错误解读：
+    - 若 user-line 听感仍失败，
+      就误判成
+      完整 `e_evt`
+      也被否定
+- 处理要求:
+  - 文档必须显式写出：
+    - 当前 downstream `e_evt`
+      的 boundary 维度
+      是 zero-filled diagnostics
+  - 在没有 target timing 资产前，
+    不得把这条线写成：
+    - 完整 event contract
+      已完成
+### 449. 一旦 Stage5 branch semantic 名称从 `event_probs` 切到 `e_evt`，所有 inference-only family override / probe alias 层都必须同步保留旧别名兼容
+- 现象:
+  - 本轮 Stage5 downstream scaffold
+    已把 noise branch
+    的 event family
+    从：
+    - `event_probs`
+    改成：
+    - `e_evt`
+  - 但 user-line / decoder probe
+    历史上已有大量 override
+    写法依赖：
+    - `event_probs=reference_mean`
+- 风险:
+  - 如果 semantic 改名后
+    不同步保留 alias，
+    这些旧 override
+    会静默失效：
+    - 命令还能跑
+    - 但实际没有改到目标 family
+  - 最终会制造：
+    - 误以为 probe 结果无效
+    - 或误读成 contract 升级后模型更稳/更差
+- 处理要求:
+  - 每次 branch semantic
+    改名或 family 升级后，
+    都必须审计：
+    - alias 表
+    - target family 映射表
+    - probe summary
+  - 允许旧写法继续命中
+    新 family，
+    直到历史 probe 路线
+    全部迁完

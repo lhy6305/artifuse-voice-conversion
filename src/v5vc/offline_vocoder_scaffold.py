@@ -11,6 +11,7 @@ from torch import nn
 SUPPORTED_TEACHER_VOCODER_SCAFFOLD_VERSIONS = {
     "offline_teacher_vocoder_input_scaffold_v1",
     "offline_teacher_vocoder_input_scaffold_v2",
+    "offline_teacher_vocoder_input_scaffold_v3",
 }
 SUPPORTED_WAVEFORM_DECODER_MODES = {
     "fused_single",
@@ -711,10 +712,17 @@ def prepare_offline_mvp_nores_vocoder_scaffold(
             [
                 "This scaffold is a shape-verified Stage5 code anchor, not a trained vocoder.",
                 "The periodic branch now consumes explicit f0_hz / vuv / E controls from the C-prime v2-core contract.",
-                "The noise branch still omits r_res by construction and should be treated as the no-residual baseline route.",
+                (
+                    "The noise branch now consumes explicit bootstrap e_evt while still omitting r_res by construction, so this remains the no-residual baseline route."
+                    if scaffold_version == "offline_teacher_vocoder_input_scaffold_v3"
+                    else "The noise branch still omits r_res by construction and should be treated as the no-residual baseline route."
+                ),
                 "When source_runtime.frame_length is available, the scaffold also exposes a minimal per-frame waveform decoder head for later waveform/STFT bootstrap experiments.",
             ]
-            if scaffold_version == "offline_teacher_vocoder_input_scaffold_v2"
+            if scaffold_version in {
+                "offline_teacher_vocoder_input_scaffold_v2",
+                "offline_teacher_vocoder_input_scaffold_v3",
+            }
             else [
                 "This scaffold is a shape-verified Stage5 code anchor, not a trained vocoder.",
                 "The periodic branch currently consumes proxy voiced/energy features because explicit f0_hz is still unavailable in the teacher-first path.",

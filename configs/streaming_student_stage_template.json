@@ -39,6 +39,7 @@
   },
   "semantic_supervision": {
     "enabled": true,
+    "event_target_family": "teacher_e_evt_v1",
     "required_contract_version": "target_event_semantic_sidecar_v1",
     "required_timing_contract_version": "target_event_timing_semantic_sidecar_v1",
     "timing_frame_routing_enabled": true,

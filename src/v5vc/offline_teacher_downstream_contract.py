@@ -7,7 +7,10 @@ from pathlib import Path
 import torch
 
 from v5vc.ablation_eval import load_checkpoint
-from v5vc.event_semantics import build_current_runtime_event_semantics_meta
+from v5vc.event_semantics import (
+    build_current_runtime_event_semantics_meta,
+    build_teacher_e_evt_v1_targets,
+)
 from v5vc.offline_teacher_runtime import (
     OfflineMVPTeacherRuntime,
     compare_runtime_outputs,
@@ -24,6 +27,7 @@ from v5vc.train_entry import instantiate_offline_mvp_model
 
 CONTRACT_VERSION_V1 = "offline_teacher_downstream_control_v1"
 CONTRACT_VERSION_V2 = "offline_teacher_downstream_control_v2"
+CONTRACT_VERSION_V3 = "offline_teacher_downstream_control_v3"
 
 
 def export_offline_mvp_teacher_downstream_contract(
@@ -195,9 +199,16 @@ def build_contract_payload(
     energy_log = streaming_outputs["acoustic"][:, 0]
     zero_cross_rate = streaming_outputs["acoustic"][:, 2]
     event_probs = streaming_outputs["event_probs"]
+    teacher_e_evt = build_teacher_e_evt_v1_targets(
+        legacy_event_probs=event_probs,
+        target_event_semantic_sidecar=None,
+        target_event_timing_semantic_sidecar=None,
+        valid_frame_count=frame_count,
+    )
+    e_evt_tensor = teacher_e_evt["tensor"]
     event_semantics_meta = build_current_runtime_event_semantics_meta()
     return {
-        "contract_version": CONTRACT_VERSION_V2,
+        "contract_version": CONTRACT_VERSION_V3,
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "input_audio_path": input_audio_path.resolve().as_posix(),
         "teacher": {
@@ -233,6 +244,10 @@ def build_contract_payload(
             "stats": dict(source_acoustic_state["stats"]),
         },
         "event_semantics": event_semantics_meta,
+        "e_evt_semantics": {
+            "meta": dict(teacher_e_evt["meta"]),
+            "summary": dict(teacher_e_evt["summary"]),
+        },
         "provided_keys": {
             "v2_core": [
                 "frame_start_ms",
@@ -245,6 +260,11 @@ def build_contract_payload(
                 "conditioning.s_spk_target",
                 "conditioning.s_geom_target",
                 "conditioning.alpha",
+            ],
+            "v3_semantic_core": [
+                "e_evt",
+                "e_evt_meta",
+                "e_evt_summary",
             ],
             "v2_optional": [],
             "v2_diagnostic": [
@@ -275,16 +295,17 @@ def build_contract_payload(
             "E": summarize_tensor(energy_control),
             "energy_log": summarize_tensor(energy_log),
             "zero_cross_rate": summarize_tensor(zero_cross_rate),
-            "event_presence_proxy": summarize_tensor(event_probs[:, 0]),
+            "event_presence_proxy": summarize_tensor(e_evt_tensor.amax(dim=-1, keepdim=True)),
             "voiced_proxy": summarize_tensor(vuv),
             "energy_proxy": summarize_tensor(torch.sigmoid((energy_control + 4.0) * 2.0)),
         },
         "verification": verification,
         "notes": [
-            "This contract upgrades the teacher-first downstream packet to the C-prime v2-core baseline for the experimental Stage5 route.",
+            "This contract upgrades the teacher-first downstream packet to the C-prime v2-core baseline plus the first explicit downstream e_evt bridge for the experimental Stage5 route.",
             "f0_hz / vuv / aper / E are produced by a deterministic source acoustic state extraction chain aligned to the teacher runtime frame grid.",
             "aper-v1 is a single scalar per frame in [0, 1], where 0 is more periodic and 1 is more aperiodic; it is intended for the noise branch only.",
-            "Current event_probs still follow the offline_mvp_heuristic_event_target_v1 label space and should not be misread as the final named e_evt semantics from the design doc.",
+            "Current legacy event_probs are still retained as diagnostic compatibility fields and still follow the offline_mvp_heuristic_event_target_v1 label space.",
+            "e_evt is now exported explicitly as a downstream bootstrap bridge; because this runtime packet has no target timing sidecar, the boundary-related e_evt dimensions remain zero-filled diagnostics rather than claimed true boundary supervision.",
             "r_res and final_vocoder_waveform remain intentionally absent because Phase C3 stays on the no-res baseline route.",
         ],
     }
@@ -313,13 +334,20 @@ def build_tensor_payload(
     zero_cross_rate = acoustic[:, 2:3]
     delta_energy = acoustic[:, 3:4]
     event_probs = streaming_outputs["event_probs"].to(torch.float32)
+    teacher_e_evt = build_teacher_e_evt_v1_targets(
+        legacy_event_probs=event_probs,
+        target_event_semantic_sidecar=None,
+        target_event_timing_semantic_sidecar=None,
+        valid_frame_count=int(event_probs.shape[0]),
+    )
+    e_evt_tensor = teacher_e_evt["tensor"].to(torch.float32)
     f0_hz = source_acoustic_state["f0_hz"].to(torch.float32)
     vuv = source_acoustic_state["vuv"].to(torch.float32)
     aper = source_acoustic_state["aper"].to(torch.float32)
     energy_control = source_acoustic_state["E"].to(torch.float32)
     event_semantics_meta = build_current_runtime_event_semantics_meta()
     return {
-        "contract_version": CONTRACT_VERSION_V2,
+        "contract_version": CONTRACT_VERSION_V3,
         "input_audio_path": input_audio_path.resolve().as_posix(),
         "teacher": {
             "experiment_id": str(resolved_source["teacher_anchor"]["experiment_id"]),
@@ -339,6 +367,9 @@ def build_tensor_payload(
         "event_logits": streaming_outputs["event_logits"].to(torch.float32),
         "event_probs": event_probs,
         "event_semantics_meta": event_semantics_meta,
+        "e_evt": e_evt_tensor,
+        "e_evt_meta": dict(teacher_e_evt["meta"]),
+        "e_evt_summary": dict(teacher_e_evt["summary"]),
         "f0_hz": f0_hz,
         "vuv": vuv,
         "aper": aper,
@@ -358,8 +389,8 @@ def build_tensor_payload(
             "energy_proxy": torch.sigmoid((energy_control + 4.0) * 2.0),
             "voiced_proxy": vuv,
             "aperiodicity_proxy": aper,
-            "event_presence_proxy": event_probs[:, 0:1],
-            "energy_change_proxy": event_probs[:, 1:2],
+            "event_presence_proxy": e_evt_tensor.amax(dim=-1, keepdim=True),
+            "energy_change_proxy": torch.maximum(e_evt_tensor[:, 1:2], e_evt_tensor[:, 2:3]),
         },
         "conditioning": {
             "s_spk_target": conditioning["s_spk_target"].to(torch.float32),
@@ -392,6 +423,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- conditioning: {json.dumps(summary['conditioning'], ensure_ascii=False)}",
         f"- source_acoustic_state: {json.dumps(summary.get('source_acoustic_state', {}), ensure_ascii=False)}",
         f"- event_semantics: {json.dumps(summary.get('event_semantics', {}), ensure_ascii=False)}",
+        f"- e_evt_semantics: {json.dumps(summary.get('e_evt_semantics', {}), ensure_ascii=False)}",
         "",
         "## Keys",
         f"- provided_keys: {json.dumps(summary['provided_keys'], ensure_ascii=False)}",

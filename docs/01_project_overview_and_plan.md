@@ -21682,3 +21682,144 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
      event contract
      下游消费
    推进
+## 2026-03-25 继续补充：Stage3 `teacher_e_evt_v1` 已通过第一轮严格可比 A/B，对 `legacy_event_probs` 给出明确净收益
+- 正式报告：
+  - `docs/357_stage3_teacher_eevt_v1_vs_legacy_event_target_ab_short_loop_report.md`
+
+### 当前关键结果
+1. Stage3
+   已新增显式：
+   - `semantic_supervision.event_target_family`
+2. 第一轮 12-step
+   严格可比对照已完成：
+   - 默认：
+     `teacher_e_evt_v1`
+   - override：
+     `legacy_event_probs`
+3. 本轮刻意保持：
+   - `vuv_proxy / aper_proxy`
+     继续固定走
+     `teacher_e_evt`
+   - 所以对照差异
+     只来自：
+     - event 主监督 family
+4. validation step12：
+   - `loss_total: 8.609584 -> 9.866241`
+   - `loss_total_semantic_disabled_reference: 7.276324 -> 8.302927`
+   - `loss_teacher_event: 4.547270 -> 5.525825`
+   - `loss_teacher_event_prior: 5.767968 -> 6.707024`
+   写法是：
+   - `teacher_e_evt_v1`
+     优于
+     `legacy_event_probs`
+
+### 当前阶段判断更新
+1. 现在可以正式把：
+   - `legacy_event_probs`
+   降级为：
+   - 兼容对照口径
+2. Stage3
+   当前默认 event 主监督
+   应继续保持：
+   - `teacher_e_evt_v1`
+3. 但仍需继续保持边界：
+   - 这只是证明：
+     bootstrap
+     `teacher_e_evt_v1`
+     比 legacy 更好
+   - 不是宣布：
+     最终完整
+     design-state `e_evt`
+     已完成
+
+### 更新后的下一步
+1. 以
+   `teacher_e_evt_v1`
+   作为当前正式默认口径
+2. 不再为
+   `legacy_event_probs`
+   继续扫参
+3. 开始把当前已站稳的
+   Stage3 event contract
+   往：
+   - Stage5 `C3`
+     downstream consumption
+   推进
+## 2026-03-25 继续补充：Stage5 `C3` downstream 已新增显式 `e_evt` consumer 入口，legacy `event_probs` 降为兼容诊断字段
+- 正式报告：
+  - `docs/358_stage5_c3_downstream_eevt_contract_and_scaffold_bootstrap_report.md`
+
+### 当前关键结果
+1. teacher downstream contract
+   已升级到：
+   - `offline_teacher_downstream_control_v3`
+2. 当前 contract
+   在保留：
+   - `event_probs`
+   的同时，
+   已新增：
+   - `e_evt`
+   - `e_evt_meta`
+   - `e_evt_summary`
+3. teacher vocoder scaffold
+   已升级到：
+   - `offline_teacher_vocoder_input_scaffold_v3`
+4. 更关键的是：
+   - noise branch
+     已从消费
+     `event_probs`
+     改为优先消费：
+     - `e_evt`
+   - legacy
+     `event_probs`
+     退到：
+     - diagnostic compatibility
+5. 最小 smoke
+   已通过：
+   - downstream contract export
+   - teacher vocoder scaffold build
+   - Stage5 no-res scaffold
+   - Stage5 train-target package build
+   - 1+1 Stage5 dataset package smoke
+
+### 当前阶段判断更新
+1. 现在可以正式说：
+   - Stage5 `C3`
+     downstream consumer
+     已开始真实消费
+     显式
+     `e_evt`
+2. 但仍需继续写死边界：
+   - 当前是
+     source-only runtime
+     downstream bootstrap
+   - 没有 target timing sidecar
+   - 所以后 3 个 boundary 维度
+     当前只是
+     zero-filled diagnostics
+3. 因而这一步的正确结论是：
+   - Stage5 `C3`
+     explicit `e_evt`
+     entry
+     已接通
+   - 不是：
+     完整 boundary-aware
+     `e_evt`
+     已完成
+
+### 更新后的下一步
+1. 保持：
+   - `e_evt`
+     为 Stage5 downstream
+     默认 event family
+   - `event_probs`
+     仅作 legacy compatibility
+2. 开始做：
+   - `source_scaffold_version = offline_teacher_vocoder_input_scaffold_v3`
+     的 package/fullsplit
+     级验证
+3. 继续评估：
+   - downstream route
+     还缺什么 boundary-aware
+     `e_evt`
+     资产

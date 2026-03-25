@@ -39,6 +39,7 @@ DEFAULT_PERIODIC_WAVEFORM_HIGH_BAND_HZ = 4000.0
 SUPPORTED_TEACHER_VOCODER_SCAFFOLD_VERSIONS = {
     "offline_teacher_vocoder_input_scaffold_v1",
     "offline_teacher_vocoder_input_scaffold_v2",
+    "offline_teacher_vocoder_input_scaffold_v3",
 }
 SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
     "offline_mvp_nores_vocoder_train_targets_v1",
@@ -149,7 +150,10 @@ def build_offline_mvp_nores_vocoder_training_package(
     noise_feature_semantics = list(branch_scaffold.get("noise_feature_semantics", []))
     available_controls = dict(payload["available_controls"])
     frame_count = int(payload["frame_count"])
-    has_v2_core = scaffold_version == "offline_teacher_vocoder_input_scaffold_v2"
+    has_v2_core = scaffold_version in {
+        "offline_teacher_vocoder_input_scaffold_v2",
+        "offline_teacher_vocoder_input_scaffold_v3",
+    }
     resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
 
     waveform, actual_sample_rate = load_waveform(target_audio_path)

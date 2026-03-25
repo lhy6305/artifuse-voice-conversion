@@ -1,0 +1,13 @@
+# Offline MVP No-Residual Vocoder Scaffold
+
+- generated_at: 2026-03-25T22:48:56
+- input_scaffold_path: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_teacher_vocoder_input_scaffold_eevt_smoke_round1_1/teacher_vocoder_input_scaffold.pt
+- model: {"name": "no_residual_source_filter_vocoder_scaffold", "hidden_dim": 64, "harmonic_bins": 32, "noise_bins": 32, "decoder_frame_length": 400, "waveform_decoder_mode": "fused_single"}
+- input_contract: {"frame_count": 457, "periodic_input_dim": 36, "noise_input_dim": 36, "missing_periodic_design_keys": [], "missing_noise_design_keys": ["r_res"]}
+- output_shapes: {"periodic_hidden": [457, 64], "noise_hidden": [457, 64], "fused_hidden": [457, 64], "branch_mean_hidden": [457, 64], "decoder_hidden": [457, 64], "periodic_gate": [457, 1], "noise_gate": [457, 1], "harmonic_envelope": [457, 32], "noise_envelope": [457, 32], "waveform_frames": [457, 400]}
+
+## Notes
+- This scaffold is a shape-verified Stage5 code anchor, not a trained vocoder.
+- The periodic branch now consumes explicit f0_hz / vuv / E controls from the C-prime v2-core contract.
+- The noise branch now consumes explicit bootstrap e_evt while still omitting r_res by construction, so this remains the no-residual baseline route.
+- When source_runtime.frame_length is available, the scaffold also exposes a minimal per-frame waveform decoder head for later waveform/STFT bootstrap experiments.

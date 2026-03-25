@@ -13,6 +13,7 @@ from v5vc.event_semantics import build_current_runtime_event_semantics_meta
 SUPPORTED_CONTRACT_VERSIONS = {
     "offline_teacher_downstream_control_v1",
     "offline_teacher_downstream_control_v2",
+    "offline_teacher_downstream_control_v3",
 }
 DEFAULT_STAGE5_F0_FLOOR_HZ = 50.0
 DEFAULT_STAGE5_F0_CEIL_HZ = 550.0
@@ -41,6 +42,11 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
     frame_start_ms = payload["frame_start_ms"].to(torch.float32)
     z_art = payload["z_art"].to(torch.float32)
     event_probs = payload["event_probs"].to(torch.float32)
+    e_evt = payload.get("e_evt")
+    if isinstance(e_evt, torch.Tensor):
+        e_evt = e_evt.to(torch.float32)
+    else:
+        e_evt = None
     acoustic = dict(payload["acoustic"])
     derived = dict(payload["derived_proxies"])
     conditioning = dict(payload["conditioning"])
@@ -49,6 +55,8 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
     event_semantics_meta = dict(payload.get("event_semantics_meta", {}))
     if not event_semantics_meta:
         event_semantics_meta = build_current_runtime_event_semantics_meta()
+    e_evt_meta = dict(payload.get("e_evt_meta", {}))
+    e_evt_summary = dict(payload.get("e_evt_summary", {}))
 
     energy_proxy = derived["energy_proxy"].to(torch.float32)
     voiced_proxy = derived["voiced_proxy"].to(torch.float32)
@@ -60,12 +68,13 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
     aper = payload.get("aper")
     energy_control = payload.get("E")
     has_v2_core = (
-        contract_version == "offline_teacher_downstream_control_v2"
+        contract_version in {"offline_teacher_downstream_control_v2", "offline_teacher_downstream_control_v3"}
         and isinstance(f0_hz, torch.Tensor)
         and isinstance(vuv, torch.Tensor)
         and isinstance(aper, torch.Tensor)
         and isinstance(energy_control, torch.Tensor)
     )
+    has_explicit_e_evt = isinstance(e_evt, torch.Tensor) and int(e_evt.shape[-1]) > 0
     if has_v2_core:
         f0_hz = f0_hz.to(torch.float32)
         vuv = vuv.to(torch.float32)
@@ -101,6 +110,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
     alpha_broadcast = alpha.view(1, 1).expand(frame_count, 1)
     missing_r_res = torch.zeros((frame_count, 0), dtype=torch.float32)
     if has_v2_core:
+        noise_event_features = e_evt if has_explicit_e_evt else event_probs
         periodic_branch_features = torch.cat(
             [
                 z_art,
@@ -115,7 +125,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
         )
         noise_branch_features = torch.cat(
             [
-                event_probs,
+                noise_event_features,
                 aper,
                 vuv,
                 normalized_energy_control,
@@ -135,7 +145,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
             "s_geom_target",
         ]
         noise_feature_semantics = [
-            "event_probs",
+            "e_evt" if has_explicit_e_evt else "event_probs",
             "aper",
             "vuv",
             "E_log_rms_norm",
@@ -162,7 +172,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
         )
         noise_branch_features = torch.cat(
             [
-                event_probs,
+                e_evt if has_explicit_e_evt else event_probs,
                 aperiodicity_proxy,
                 event_presence_proxy,
                 energy_change_proxy,
@@ -181,7 +191,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
             "s_geom_target",
         ]
         noise_feature_semantics = [
-            "event_probs",
+            "e_evt" if has_explicit_e_evt else "event_probs",
             "aperiodicity_proxy",
             "event_presence_proxy",
             "energy_change_proxy",
@@ -198,7 +208,9 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
 
     scaffold_payload = {
         "scaffold_version": (
-            "offline_teacher_vocoder_input_scaffold_v2"
+            "offline_teacher_vocoder_input_scaffold_v3"
+            if has_v2_core and has_explicit_e_evt
+            else "offline_teacher_vocoder_input_scaffold_v2"
             if has_v2_core
             else "offline_teacher_vocoder_input_scaffold_v1"
         ),
@@ -212,6 +224,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
         "available_controls": {
             "z_art": z_art,
             "event_probs": event_probs,
+            **({} if not has_explicit_e_evt else {"e_evt": e_evt}),
             "energy_log": acoustic["energy_log"].to(torch.float32),
             "abs_mean": acoustic["abs_mean"].to(torch.float32),
             "zero_cross_rate": acoustic["zero_cross_rate"].to(torch.float32),
@@ -240,12 +253,15 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
             "alpha": alpha,
         },
         "event_semantics_meta": event_semantics_meta,
+        "e_evt_meta": e_evt_meta,
+        "e_evt_summary": e_evt_summary,
         "stage5_requested_but_missing": stage5_requested_but_missing,
         "branch_scaffold": {
             "periodic_branch_features": periodic_branch_features,
             "noise_branch_features": noise_branch_features,
             "periodic_feature_semantics": periodic_feature_semantics,
             "noise_feature_semantics": noise_feature_semantics,
+            "noise_event_feature_family": "e_evt" if has_explicit_e_evt else "event_probs",
             "missing_periodic_design_keys": missing_periodic_design_keys,
             "missing_noise_design_keys": missing_noise_design_keys,
         },
@@ -263,6 +279,7 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
         "available_controls": {
             "z_art_dim": int(z_art.shape[-1]),
             "event_dim": int(event_probs.shape[-1]),
+            **({} if not has_explicit_e_evt else {"e_evt_dim": int(e_evt.shape[-1])}),
             "speaker_dim": int(speaker_embedding.shape[-1]),
             "geom_dim": int(geom_embedding.shape[-1]),
             **(
@@ -282,6 +299,16 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
             "event_probs_version": str(event_semantics_meta.get("event_probs_version", "unknown")),
             "event_prob_dimensions": list(event_semantics_meta.get("event_prob_dimensions", [])),
             "semantic_status": str(event_semantics_meta.get("semantic_status", "unknown")),
+            **(
+                {}
+                if not has_explicit_e_evt
+                else {
+                    "e_evt_contract_version": str(e_evt_meta.get("event_contract_version", "unknown")),
+                    "e_evt_label_space_version": str(e_evt_meta.get("event_label_space_version", "unknown")),
+                    "e_evt_dimensions": list(e_evt_meta.get("event_dimensions", [])),
+                    "e_evt_timing_sidecar_used": bool(e_evt_summary.get("timing_sidecar_used", False)),
+                }
+            ),
         },
         "missing_design_keys": {
             "periodic_branch": list(missing_periodic_design_keys),
@@ -292,14 +319,26 @@ def build_offline_mvp_teacher_vocoder_input_scaffold(
             [
                 "This scaffold is a consumer-side adapter for the C-prime v2-core contract rather than a final vocoder implementation.",
                 "periodic_branch_features now consume explicit f0_hz / vuv / E semantics through bounded consumer-side normalizations rather than raw Hz/log-RMS magnitudes.",
-                "noise_branch_features now consume aper / vuv / normalized E together with event_probs, while r_res remains intentionally absent on the no-res baseline route.",
-                "Current event_probs still use the offline_mvp_heuristic_event_target_v1 label space and should not be confused with the design-time named e_evt semantics.",
+                (
+                    "noise_branch_features now consume explicit bootstrap e_evt together with aper / vuv / normalized E, while legacy event_probs are retained only as diagnostic compatibility controls."
+                    if has_explicit_e_evt
+                    else "noise_branch_features now consume aper / vuv / normalized E together with event_probs, while r_res remains intentionally absent on the no-res baseline route."
+                ),
+                (
+                    "Because this runtime packet has no target timing sidecar, the downstream e_evt boundary dimensions remain zero-filled diagnostics rather than claimed true boundary supervision."
+                    if has_explicit_e_evt
+                    else "Current event_probs still use the offline_mvp_heuristic_event_target_v1 label space and should not be confused with the design-time named e_evt semantics."
+                ),
             ]
             if has_v2_core
             else [
                 "This scaffold is a consumer-side adapter for the current teacher-first contract, not a real vocoder implementation.",
                 "periodic_branch_features uses voiced_proxy and energy_proxy instead of final f0_hz/vuv/E semantics.",
-                "noise_branch_features uses aperiodicity_proxy and event_probs, but r_res remains unavailable in the current teacher path.",
+                (
+                    "noise_branch_features uses aperiodicity_proxy and explicit bootstrap e_evt, but r_res remains unavailable in the current teacher path."
+                    if has_explicit_e_evt
+                    else "noise_branch_features uses aperiodicity_proxy and event_probs, but r_res remains unavailable in the current teacher path."
+                ),
             ]
         ),
     }

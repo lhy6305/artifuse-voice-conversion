@@ -90,9 +90,12 @@ ELEVATED_RISK_REFERENCE_SHIFT_OUTSIDE_FRACTION = 0.25
 DECODER_PROBE_CONTROL_FAMILY_ALIASES = {
     "z_art": "z_art",
     "zart": "z_art",
-    "event_probs": "event_probs",
-    "event_probs_family": "event_probs",
-    "events": "event_probs",
+    "event_probs": "event_family",
+    "event_probs_family": "event_family",
+    "events": "event_family",
+    "e_evt": "event_family",
+    "teacher_e_evt": "event_family",
+    "event_family": "event_family",
     "f0": "f0_hz_log_norm",
     "f0_hz": "f0_hz_log_norm",
     "f0_hz_log_norm": "f0_hz_log_norm",
@@ -124,7 +127,7 @@ DECODER_PROBE_CONTROL_OVERRIDE_MODE_ALIASES = {
 }
 DECODER_PROBE_CONTROL_FAMILY_TARGETS = {
     "z_art": (("periodic", "z_art"),),
-    "event_probs": (("noise", "event_probs"),),
+    "event_family": (("noise", "e_evt"), ("noise", "event_probs")),
     "f0_hz_log_norm": (("periodic", "f0_hz_log_norm"),),
     "vuv": (("periodic", "vuv"), ("noise", "vuv")),
     "aper": (("noise", "aper"),),
