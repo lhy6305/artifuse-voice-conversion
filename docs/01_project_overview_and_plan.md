@@ -20129,3 +20129,64 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 3. 当前仍不能把这条线写成：
    - source-side semantic
      已补齐
+## 2026-03-25 继续补充：Stage3 semantic weighting 最小人工听审包已整理完成，当前先用极小试听成本决定是否继续放大
+- 正式报告：
+  - `docs/326_stage3_semantic_weighting_minimal_human_audit_bundle_report.md`
+
+### 当前关键结果
+1. 已基于
+   `docs/325_stage3_semantic_weighting_short_loop_compare_and_proxy_audio_report.md`
+   现有导出结果，
+   整理出最小听审目录：
+   - `reports/audio/stage3_semantic_weighting_quick_audit_20260325/`
+2. 当前只保留两个最有价值 case：
+   - `validation`
+   - `special`
+3. 每个 case
+   只保留四条 wav：
+   - `input`
+   - `teacher_proxy`
+   - `student_off`
+   - `student_on`
+4. 当前听审目标已固定为：
+   - `student_on`
+     相比
+     `student_off`
+     是否更接近
+     `teacher_proxy`
+   - 至少确认
+     `on`
+     没有出现明显坏方向
+
+### 当前阶段判断更新
+1. 现在最值得确认的
+   不是再开新 loop，
+   而是：
+   - 这条 semantic weighting
+     的微弱数值改善
+     是否能对应到人工可感知变化
+2. 这一步若不过关，
+   后续不值得继续追加：
+   - semantic warmup
+   - semantic head
+3. 这一步若不过度变坏，
+   才值得进入：
+   - 更大 subset
+   - 或更大 batch
+   的短程放大
+
+### 更新后的下一步
+1. 优先试听：
+   - `reports/audio/stage3_semantic_weighting_quick_audit_20260325/`
+2. 只回答：
+   - `student_on`
+     是否比
+     `student_off`
+     更接近
+     `teacher_proxy`
+   - 是否出现新增毛刺、
+     抖动、
+     塌陷
+3. 听审结果出来后再决定：
+   - 停住 semantic weighting
+   - 或继续放大最小 loop

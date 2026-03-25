@@ -1,0 +1,271 @@
+{
+  "generated_at": "2026-03-25T13:30:50",
+  "dataset_index_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_smoke_round1_1/offline_mvp_nores_vocoder_dataset_index.json",
+  "timing": {
+    "started_at": "2026-03-25T13:30:47",
+    "ended_at": "2026-03-25T13:30:50",
+    "duration_sec": 2.584467
+  },
+  "dataset": {
+    "train_package_count": 1,
+    "validation_package_count": 1
+  },
+  "model": {
+    "name": "no_residual_source_filter_vocoder_scaffold",
+    "hidden_dim": 64,
+    "harmonic_bins": 32,
+    "noise_bins": 32,
+    "decoder_frame_length": 400,
+    "waveform_decoder_mode": "fused_single"
+  },
+  "runtime": {
+    "device": "cpu"
+  },
+  "forward_path": {
+    "decoder_branch_mean_mix_alpha": 0.0,
+    "waveform_decoder_mode": "fused_single",
+    "use_decoder_branch_condition_adapter": false,
+    "use_residual_shape_branch_condition_adapter": false
+  },
+  "training": {
+    "num_steps": 1,
+    "packages_per_step": 1,
+    "validation_interval": 1,
+    "checkpoint_interval": 1,
+    "sampler_mode": "sequential",
+    "seed": 20260325,
+    "deterministic": true,
+    "learning_rate": 0.001,
+    "max_grad_norm": 5.0,
+    "loss_weights": {
+      "harmonic": 1.0,
+      "noise": 1.0,
+      "periodic_gate": 0.2,
+      "noise_gate": 0.2,
+      "activity_gate": 0.2,
+      "waveform": 0.5,
+      "stft": 0.5,
+      "rms_guard": 0.2,
+      "active_template": 0.0,
+      "frame_delta": 0.0,
+      "frame_adjacent_cosine": 0.0,
+      "fused_hidden_template": 0.0,
+      "fused_hidden_delta": 0.0,
+      "fused_hidden_branch_mean": 0.0,
+      "periodic_waveform_frame_delta": 0.0,
+      "periodic_waveform_frame_adjacent_cosine": 0.0,
+      "periodic_waveform_frame_rms_floor": 0.0,
+      "periodic_waveform_stft": 0.0,
+      "periodic_waveform_high_band_excess": 0.0,
+      "use_predicted_activity_gate": true,
+      "reconstruction_frame_gain_apply_mode": "pre_overlap_add"
+    }
+  },
+  "step_history": [
+    {
+      "step": 1,
+      "started_at": "2026-03-25T13:30:48",
+      "ended_at": "2026-03-25T13:30:50",
+      "duration_sec": 1.055747,
+      "packages_per_step": 1,
+      "record_ids": [
+        "paired::parallel_firefly_107_to_target_firefly_107"
+      ],
+      "loss_metrics": {
+        "loss_total": 1.706274,
+        "loss_harmonic_envelope": 0.465102,
+        "loss_noise_envelope": 0.277314,
+        "loss_periodic_gate": 0.749246,
+        "loss_noise_gate": 0.73599,
+        "loss_activity_gate": 0.794557,
+        "loss_waveform": 0.171588,
+        "loss_stft": 0.819168,
+        "loss_rms_guard": 0.062602,
+        "loss_active_frame_template_excess_relu_0p02": 0.711366,
+        "loss_frame_delta_unit_rms_l1": 0.982559,
+        "loss_frame_adjacent_cosine_excess_relu_0p02": 313.088318,
+        "loss_fused_hidden_template_excess_vs_branch": 0.0,
+        "loss_fused_hidden_delta_floor_halfmax": 0.0,
+        "loss_fused_hidden_to_branch_mean_unit_rms_l1": 1.232771,
+        "loss_periodic_waveform_frame_delta_unit_rms_l1": 0.0,
+        "loss_periodic_waveform_frame_adjacent_cosine_excess_relu_0p02": 0.0,
+        "loss_periodic_waveform_frame_log_rms_floor_excess": 0.0,
+        "loss_periodic_waveform_stft": 0.0,
+        "loss_periodic_waveform_high_band_excess": 0.0,
+        "periodic_gate_pred_mean": 0.41566,
+        "noise_gate_pred_mean": 0.348797,
+        "activity_gate_pred_mean": 0.41566,
+        "periodic_gate_target_mean": 0.537757,
+        "noise_gate_target_mean": 0.512111,
+        "activity_gate_target_mean": 0.694778,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.147895,
+        "target_waveform_rms": 0.157449,
+        "periodic_waveform_active_frame_rms_mean": 0.0,
+        "aligned_active_frame_rms_mean": 0.0,
+        "periodic_waveform_high_band_energy_ratio": 0.0,
+        "aligned_waveform_high_band_energy_ratio": 0.0,
+        "decoded_to_target_rms_ratio": 0.939317
+      },
+      "package_metrics": [
+        {
+          "record_id": "paired::parallel_firefly_107_to_target_firefly_107",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_smoke_round1_1/packages/train/paired__parallel_firefly_107_to_target_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 657,
+          "loss_metrics": {
+            "loss_total": 1.706274,
+            "loss_harmonic_envelope": 0.465102,
+            "loss_noise_envelope": 0.277314,
+            "loss_periodic_gate": 0.749246,
+            "loss_noise_gate": 0.73599,
+            "loss_activity_gate": 0.794557,
+            "loss_waveform": 0.171588,
+            "loss_stft": 0.819168,
+            "loss_rms_guard": 0.062602,
+            "loss_active_frame_template_excess_relu_0p02": 0.711366,
+            "loss_frame_delta_unit_rms_l1": 0.982559,
+            "loss_frame_adjacent_cosine_excess_relu_0p02": 313.088318,
+            "loss_fused_hidden_template_excess_vs_branch": 0.0,
+            "loss_fused_hidden_delta_floor_halfmax": 0.0,
+            "loss_fused_hidden_to_branch_mean_unit_rms_l1": 1.232771,
+            "loss_periodic_waveform_frame_delta_unit_rms_l1": 0.0,
+            "loss_periodic_waveform_frame_adjacent_cosine_excess_relu_0p02": 0.0,
+            "loss_periodic_waveform_frame_log_rms_floor_excess": 0.0,
+            "loss_periodic_waveform_stft": 0.0,
+            "loss_periodic_waveform_high_band_excess": 0.0,
+            "periodic_gate_pred_mean": 0.41566,
+            "noise_gate_pred_mean": 0.348797,
+            "activity_gate_pred_mean": 0.41566,
+            "periodic_gate_target_mean": 0.537757,
+            "noise_gate_target_mean": 0.512111,
+            "activity_gate_target_mean": 0.694778,
+            "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+            "decoded_waveform_rms": 0.147895,
+            "target_waveform_rms": 0.157449,
+            "periodic_waveform_active_frame_rms_mean": 0.0,
+            "aligned_active_frame_rms_mean": 0.0,
+            "periodic_waveform_high_band_energy_ratio": 0.0,
+            "aligned_waveform_high_band_energy_ratio": 0.0,
+            "decoded_to_target_rms_ratio": 0.939317
+          }
+        }
+      ],
+      "grad_norm": 1.910862,
+      "status": "step_completed"
+    }
+  ],
+  "validation_history": [
+    {
+      "step": 1,
+      "validation_source": "validation_packages",
+      "package_count": 1,
+      "record_ids": [
+        "paired::parallel_firefly_132_to_target_firefly_132"
+      ],
+      "forward_path": {
+        "decoder_branch_mean_mix_alpha": 0.0
+      },
+      "loss_metrics": {
+        "loss_total": 1.614548,
+        "loss_harmonic_envelope": 0.469637,
+        "loss_noise_envelope": 0.234718,
+        "loss_periodic_gate": 0.724661,
+        "loss_noise_gate": 0.761594,
+        "loss_activity_gate": 0.752231,
+        "loss_waveform": 0.164816,
+        "loss_stft": 0.750814,
+        "loss_rms_guard": 0.023401,
+        "loss_active_frame_template_excess_relu_0p02": 0.675879,
+        "loss_frame_delta_unit_rms_l1": 0.964894,
+        "loss_frame_adjacent_cosine_excess_relu_0p02": 317.261108,
+        "loss_fused_hidden_template_excess_vs_branch": 0.0,
+        "loss_fused_hidden_delta_floor_halfmax": 0.0,
+        "loss_fused_hidden_to_branch_mean_unit_rms_l1": 1.251357,
+        "loss_periodic_waveform_frame_delta_unit_rms_l1": 0.0,
+        "loss_periodic_waveform_frame_adjacent_cosine_excess_relu_0p02": 0.0,
+        "loss_periodic_waveform_frame_log_rms_floor_excess": 0.0,
+        "loss_periodic_waveform_stft": 0.0,
+        "loss_periodic_waveform_high_band_excess": 0.0,
+        "periodic_gate_pred_mean": 0.464337,
+        "noise_gate_pred_mean": 0.360776,
+        "activity_gate_pred_mean": 0.464337,
+        "periodic_gate_target_mean": 0.531803,
+        "noise_gate_target_mean": 0.575831,
+        "activity_gate_target_mean": 0.803228,
+        "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+        "decoded_waveform_rms": 0.150581,
+        "target_waveform_rms": 0.147098,
+        "periodic_waveform_active_frame_rms_mean": 0.0,
+        "aligned_active_frame_rms_mean": 0.0,
+        "periodic_waveform_high_band_energy_ratio": 0.0,
+        "aligned_waveform_high_band_energy_ratio": 0.0,
+        "decoded_to_target_rms_ratio": 1.023677
+      },
+      "package_metrics": [
+        {
+          "record_id": "paired::parallel_firefly_132_to_target_firefly_132",
+          "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_smoke_round1_1/packages/validation/paired__parallel_firefly_132_to_target_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+          "frame_count": 660,
+          "loss_metrics": {
+            "loss_total": 1.614548,
+            "loss_harmonic_envelope": 0.469637,
+            "loss_noise_envelope": 0.234718,
+            "loss_periodic_gate": 0.724661,
+            "loss_noise_gate": 0.761594,
+            "loss_activity_gate": 0.752231,
+            "loss_waveform": 0.164816,
+            "loss_stft": 0.750814,
+            "loss_rms_guard": 0.023401,
+            "loss_active_frame_template_excess_relu_0p02": 0.675879,
+            "loss_frame_delta_unit_rms_l1": 0.964894,
+            "loss_frame_adjacent_cosine_excess_relu_0p02": 317.261108,
+            "loss_fused_hidden_template_excess_vs_branch": 0.0,
+            "loss_fused_hidden_delta_floor_halfmax": 0.0,
+            "loss_fused_hidden_to_branch_mean_unit_rms_l1": 1.251357,
+            "loss_periodic_waveform_frame_delta_unit_rms_l1": 0.0,
+            "loss_periodic_waveform_frame_adjacent_cosine_excess_relu_0p02": 0.0,
+            "loss_periodic_waveform_frame_log_rms_floor_excess": 0.0,
+            "loss_periodic_waveform_stft": 0.0,
+            "loss_periodic_waveform_high_band_excess": 0.0,
+            "periodic_gate_pred_mean": 0.464337,
+            "noise_gate_pred_mean": 0.360776,
+            "activity_gate_pred_mean": 0.464337,
+            "periodic_gate_target_mean": 0.531803,
+            "noise_gate_target_mean": 0.575831,
+            "activity_gate_target_mean": 0.803228,
+            "reconstruction_frame_gain_apply_mode": "pre_overlap_add",
+            "decoded_waveform_rms": 0.150581,
+            "target_waveform_rms": 0.147098,
+            "periodic_waveform_active_frame_rms_mean": 0.0,
+            "aligned_active_frame_rms_mean": 0.0,
+            "periodic_waveform_high_band_energy_ratio": 0.0,
+            "aligned_waveform_high_band_energy_ratio": 0.0,
+            "decoded_to_target_rms_ratio": 1.023677
+          }
+        }
+      ]
+    }
+  ],
+  "artifacts": {
+    "checkpoint_paths": [
+      "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_paired_parallel_smoke_round1_1/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step1.pt"
+    ],
+    "latest_checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_paired_parallel_smoke_round1_1/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step1.pt",
+    "best_checkpoint": {
+      "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+      "step": 1,
+      "loss_total": 1.614548,
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_training_loop_paired_parallel_smoke_round1_1/checkpoints/offline_mvp_nores_vocoder_dataset_loop.step1.pt"
+    }
+  },
+  "notes": [
+    "This loop is the first dataset-level Stage5 path: each step now samples from multiple aligned target packages instead of reusing one package forever.",
+    "Current package batches are still Python-level lists of variable-length packages rather than a packed tensor dataloader.",
+    "Validation reflects the current objective mix, including optional aligned waveform/STFT bootstrap losses when enabled, and should not be confused with final vocoder generalization."
+  ],
+  "next_steps": [
+    "Scale the dataset index from tiny smoke subsets to a larger split-backed package pool once runtime cost is acceptable.",
+    "Decide whether to keep package-level sequential loading or move to a cached/packed dataset for throughput.",
+    "Decide whether the current bootstrap decoder objective should be scaled further or replaced by a stronger multi-resolution/adversarial waveform recipe."
+  ]
+}

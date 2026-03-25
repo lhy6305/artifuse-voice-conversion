@@ -752,6 +752,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
 def build_offline_mvp_nores_vocoder_dataset_packages(
     train_split_path: Path,
     validation_split_path: Path | None,
+    train_pair_spec_path: Path | None,
+    validation_pair_spec_path: Path | None,
     output_dir: Path,
     route_handoff_path: Path | None,
     checkpoint_path: Path | None,
@@ -766,7 +768,6 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     selection_mode: str,
     skip_existing: bool,
 ) -> None:
-    train_split_path = train_split_path.resolve()
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     run_started_at = datetime.now()
@@ -777,19 +778,46 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         f"output_dir={output_dir.as_posix()}"
     )
 
-    train_records = select_dataset_records(
-        records=load_jsonl(train_split_path),
-        max_records=max_train_records,
-        selection_mode=selection_mode,
+    resolved_train_split_path = None if train_split_path is None else train_split_path.resolve()
+    resolved_validation_split_path = None if validation_split_path is None else validation_split_path.resolve()
+    resolved_train_pair_spec_path = None if train_pair_spec_path is None else train_pair_spec_path.resolve()
+    resolved_validation_pair_spec_path = (
+        None if validation_pair_spec_path is None else validation_pair_spec_path.resolve()
     )
-    if validation_split_path is not None:
-        validation_split_path = validation_split_path.resolve()
+
+    if resolved_train_pair_spec_path is not None:
+        effective_train_split_path = None
+        train_records = select_dataset_records(
+            records=load_jsonl(resolved_train_pair_spec_path),
+            max_records=max_train_records,
+            selection_mode=selection_mode,
+        )
+    elif resolved_train_split_path is not None:
+        effective_train_split_path = resolved_train_split_path
+        train_records = select_dataset_records(
+            records=load_jsonl(resolved_train_split_path),
+            max_records=max_train_records,
+            selection_mode=selection_mode,
+        )
+    else:
+        raise ValueError("Either train_split_path or train_pair_spec_path must be provided.")
+
+    if resolved_validation_pair_spec_path is not None:
+        effective_validation_split_path = None
         validation_records = select_dataset_records(
-            records=load_jsonl(validation_split_path),
+            records=load_jsonl(resolved_validation_pair_spec_path),
+            max_records=max_validation_records,
+            selection_mode=selection_mode,
+        )
+    elif resolved_validation_split_path is not None:
+        effective_validation_split_path = resolved_validation_split_path
+        validation_records = select_dataset_records(
+            records=load_jsonl(resolved_validation_split_path),
             max_records=max_validation_records,
             selection_mode=selection_mode,
         )
     else:
+        effective_validation_split_path = None
         validation_records = []
 
     packages_dir = output_dir / "packages"
@@ -833,14 +861,26 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             "duration_sec": round(run_duration_sec, 6),
         },
         "selection_mode": str(selection_mode),
-        "train_split_path": train_split_path.as_posix(),
-        "validation_split_path": None if validation_split_path is None else validation_split_path.as_posix(),
+        "train_split_path": None if effective_train_split_path is None else effective_train_split_path.as_posix(),
+        "validation_split_path": (
+            None if effective_validation_split_path is None else effective_validation_split_path.as_posix()
+        ),
+        "train_pair_spec_path": (
+            None if resolved_train_pair_spec_path is None else resolved_train_pair_spec_path.as_posix()
+        ),
+        "validation_pair_spec_path": (
+            None if resolved_validation_pair_spec_path is None else resolved_validation_pair_spec_path.as_posix()
+        ),
         "train_packages": train_entries,
         "validation_packages": validation_entries,
         "notes": [
             "This dataset index is a Stage5 package-level bridge built on top of the teacher-first contract path.",
             "Each package still contains proxy spectral/gate targets rather than a final waveform decoder objective.",
             "Current package generation may reload the teacher checkpoint per record, so this builder is a functional baseline rather than a throughput-optimized exporter.",
+            (
+                "If train_pair_spec_path / validation_pair_spec_path are set, teacher controls are exported from source_audio_path "
+                "while aligned waveform targets come from target_audio_path."
+            ),
         ],
     }
     index_payload["summary"] = summarize_dataset_package_index(
@@ -1371,6 +1411,51 @@ def select_dataset_records(
     return selected
 
 
+def resolve_dataset_record_duration_sec(record: dict[str, object]) -> float:
+    direct_duration_sec = dict(record.get("audio", {})).get("duration_sec")
+    if direct_duration_sec is not None:
+        return float(direct_duration_sec)
+    target_duration_sec = dict(record.get("target_audio", {})).get("duration_sec")
+    if target_duration_sec is not None:
+        return float(target_duration_sec)
+    source_duration_sec = dict(record.get("source_audio", {})).get("duration_sec")
+    if source_duration_sec is not None:
+        return float(source_duration_sec)
+    return 0.0
+
+
+def resolve_dataset_record_paths(
+    record: dict[str, object],
+) -> dict[str, object]:
+    source_audio_path_value = record.get("source_audio_path")
+    target_audio_path_value = record.get("target_audio_path")
+    if source_audio_path_value is None and target_audio_path_value is None:
+        audio_path_value = record.get("audio_path")
+        if audio_path_value is None:
+            raise ValueError(
+                "Dataset record must provide audio_path or paired source_audio_path/target_audio_path."
+            )
+        audio_path = Path(str(audio_path_value)).resolve()
+        return {
+            "source_audio_path": audio_path,
+            "target_audio_path": audio_path,
+            "source_record_id": record.get("record_id"),
+            "target_record_id": record.get("record_id"),
+            "record_mode": "self_reconstruction",
+        }
+    if source_audio_path_value is None or target_audio_path_value is None:
+        raise ValueError(
+            "Paired dataset record must provide both source_audio_path and target_audio_path."
+        )
+    return {
+        "source_audio_path": Path(str(source_audio_path_value)).resolve(),
+        "target_audio_path": Path(str(target_audio_path_value)).resolve(),
+        "source_record_id": record.get("source_record_id"),
+        "target_record_id": record.get("target_record_id"),
+        "record_mode": "paired_source_to_target",
+    }
+
+
 def build_dataset_packages_for_split(
     records: list[dict[str, object]],
     split_name: str,
@@ -1389,7 +1474,9 @@ def build_dataset_packages_for_split(
     for record in records:
         record_started_perf = perf_counter()
         record_id = str(record["record_id"])
-        audio_path = Path(str(record["audio_path"])).resolve()
+        resolved_paths = resolve_dataset_record_paths(record)
+        source_audio_path = Path(str(resolved_paths["source_audio_path"])).resolve()
+        target_audio_path = Path(str(resolved_paths["target_audio_path"])).resolve()
         record_dir = packages_dir / split_name / safe_record_id(record_id)
         contract_dir = record_dir / "contract"
         scaffold_dir = record_dir / "scaffold"
@@ -1398,7 +1485,7 @@ def build_dataset_packages_for_split(
         package_reused = bool(skip_existing and package_path.exists())
         if not package_reused:
             export_offline_mvp_teacher_downstream_contract(
-                input_audio_path=audio_path,
+                input_audio_path=source_audio_path,
                 output_dir=contract_dir,
                 route_handoff_path=route_handoff_path,
                 checkpoint_path=checkpoint_path,
@@ -1415,7 +1502,7 @@ def build_dataset_packages_for_split(
             )
             build_offline_mvp_nores_vocoder_training_package(
                 scaffold_path=scaffold_dir / "teacher_vocoder_input_scaffold.pt",
-                target_audio_path=audio_path,
+                target_audio_path=target_audio_path,
                 output_dir=targets_dir,
                 harmonic_bins=32,
                 noise_bins=32,
@@ -1429,8 +1516,13 @@ def build_dataset_packages_for_split(
         entries.append(
             {
                 "record_id": record_id,
-                "audio_path": audio_path.as_posix(),
-                "duration_sec": float(dict(record.get("audio", {})).get("duration_sec", 0.0)),
+                "audio_path": target_audio_path.as_posix(),
+                "source_audio_path": source_audio_path.as_posix(),
+                "target_audio_path": target_audio_path.as_posix(),
+                "source_record_id": resolved_paths.get("source_record_id"),
+                "target_record_id": resolved_paths.get("target_record_id"),
+                "record_mode": str(resolved_paths.get("record_mode", "unknown")),
+                "duration_sec": resolve_dataset_record_duration_sec(record),
                 "split_name": split_name,
                 "training_package_path": package_path.as_posix(),
                 "training_package_version": str(package_payload.get("training_package_version", "unknown")),
@@ -1472,6 +1564,7 @@ def summarize_dataset_package_index(
         total_package_build_sec = sum(float(entry.get("package_build_sec", 0.0)) for entry in entries)
         built_now_count = sum(1 for entry in entries if str(entry.get("package_status")) == "built_now")
         reused_existing_count = sum(1 for entry in entries if str(entry.get("package_status")) == "reused_existing")
+        record_modes = sorted({str(entry.get("record_mode", "unknown")) for entry in entries})
         training_package_versions = sorted({str(entry.get("training_package_version", "unknown")) for entry in entries})
         source_scaffold_versions = sorted({str(entry.get("source_scaffold_version", "unknown")) for entry in entries})
         periodic_input_dims = sorted({int(entry.get("periodic_input_dim", 0)) for entry in entries}) if entries else []
@@ -1494,6 +1587,7 @@ def summarize_dataset_package_index(
             ),
             "built_now_count": int(built_now_count),
             "reused_existing_count": int(reused_existing_count),
+            "record_modes": record_modes,
             "training_package_versions": training_package_versions,
             "source_scaffold_versions": source_scaffold_versions,
             "periodic_input_dims": periodic_input_dims,
@@ -2662,6 +2756,8 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         f"- selection_mode: {summary['selection_mode']}",
         f"- train_split_path: {summary['train_split_path']}",
         f"- validation_split_path: {summary['validation_split_path']}",
+        f"- train_pair_spec_path: {summary.get('train_pair_spec_path')}",
+        f"- validation_pair_spec_path: {summary.get('validation_pair_spec_path')}",
         f"- summary: {json.dumps(summary['summary'], ensure_ascii=False)}",
         "",
         "## Train Packages",
@@ -2670,6 +2766,9 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         lines.append(
             f"- record_id={entry['record_id']} frame_count={entry['frame_count']} "
             f"duration_sec={round(float(entry['duration_sec']), 6)} "
+            f"record_mode={entry.get('record_mode', 'unknown')} "
+            f"source_audio_path={entry.get('source_audio_path')} "
+            f"target_audio_path={entry.get('target_audio_path')} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "
@@ -2684,6 +2783,9 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         lines.append(
             f"- record_id={entry['record_id']} frame_count={entry['frame_count']} "
             f"duration_sec={round(float(entry['duration_sec']), 6)} "
+            f"record_mode={entry.get('record_mode', 'unknown')} "
+            f"source_audio_path={entry.get('source_audio_path')} "
+            f"target_audio_path={entry.get('target_audio_path')} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "

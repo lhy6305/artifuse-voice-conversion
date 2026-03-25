@@ -2570,6 +2570,24 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional validation split jsonl used to materialize aligned validation packages.",
     )
     nores_vocoder_dataset_packages_parser.add_argument(
+        "--train-pair-spec",
+        type=Path,
+        default=None,
+        help=(
+            "Optional train pair-spec jsonl override. "
+            "Each row must provide source_audio_path and target_audio_path; when set, it overrides --train-split."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
+        "--validation-pair-spec",
+        type=Path,
+        default=None,
+        help=(
+            "Optional validation pair-spec jsonl override. "
+            "Each row must provide source_audio_path and target_audio_path; when set, it overrides --validation-split."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
         "--output-dir",
         type=Path,
         default=Path("reports/runtime/offline_mvp_nores_vocoder_dataset_packages"),
@@ -4569,6 +4587,8 @@ def main(argv: list[str] | None = None) -> int:
         build_offline_mvp_nores_vocoder_dataset_packages(
             train_split_path=args.train_split,
             validation_split_path=args.validation_split,
+            train_pair_spec_path=args.train_pair_spec,
+            validation_pair_spec_path=args.validation_pair_spec,
             output_dir=args.output_dir,
             route_handoff_path=args.route_handoff,
             checkpoint_path=args.checkpoint,

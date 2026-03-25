@@ -1,0 +1,22 @@
+# Offline MVP No-Residual Vocoder Dataset Index
+
+- generated_at: 2026-03-25T13:30:49
+- timing: {"started_at": "2026-03-25T13:30:47", "ended_at": "2026-03-25T13:30:49", "duration_sec": 1.570499}
+- selection_mode: file_order
+- train_split_path: None
+- validation_split_path: None
+- train_pair_spec_path: F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_smoke/parallel_train_pairs.jsonl
+- validation_pair_spec_path: F:/proj_dev/tmp/workdir4/data_prep/round1_1/stage5_paired_source_to_target_smoke/parallel_validation_pairs.jsonl
+- summary: {"train_package_count": 1, "validation_package_count": 1, "train": {"package_count": 1, "total_audio_duration_sec": 2.62898, "total_frame_count": 657, "total_package_size_bytes": 1564884, "total_package_build_sec": 0.859366, "avg_package_build_sec": 0.859366, "avg_package_size_bytes": 1564884.0, "built_now_count": 1, "reused_existing_count": 0, "record_modes": ["paired_source_to_target"], "training_package_versions": ["offline_mvp_nores_vocoder_train_targets_v2"], "source_scaffold_versions": ["offline_teacher_vocoder_input_scaffold_v2"], "periodic_input_dims": [36], "noise_input_dims": [36], "harmonic_target_dims": [32], "noise_target_dims": [32], "versions_consistent": true, "dims_consistent": true}, "validation": {"package_count": 1, "total_audio_duration_sec": 2.519977, "total_frame_count": 660, "total_package_size_bytes": 1550584, "total_package_build_sec": 0.699182, "avg_package_build_sec": 0.699182, "avg_package_size_bytes": 1550584.0, "built_now_count": 1, "reused_existing_count": 0, "record_modes": ["paired_source_to_target"], "training_package_versions": ["offline_mvp_nores_vocoder_train_targets_v2"], "source_scaffold_versions": ["offline_teacher_vocoder_input_scaffold_v2"], "periodic_input_dims": [36], "noise_input_dims": [36], "harmonic_target_dims": [32], "noise_target_dims": [32], "versions_consistent": true, "dims_consistent": true}, "total_package_count": 2, "total_package_size_bytes": 3115468, "total_package_build_sec": 1.558548, "index_build_duration_sec": 1.570499}
+
+## Train Packages
+- record_id=paired::parallel_firefly_107_to_target_firefly_107 frame_count=657 duration_sec=2.62898 record_mode=paired_source_to_target source_audio_path=F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_107.wav target_audio_path=F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_107.wav training_package_version=offline_mvp_nores_vocoder_train_targets_v2 source_scaffold_version=offline_teacher_vocoder_input_scaffold_v2 periodic_input_dim=36 noise_input_dim=36 package_size_bytes=1564884 package_build_sec=0.859366 package_status=built_now training_package_path=F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_smoke_round1_1/packages/train/paired__parallel_firefly_107_to_target_firefly_107/train_targets/offline_mvp_nores_vocoder_train_targets.pt
+
+## Validation Packages
+- record_id=paired::parallel_firefly_132_to_target_firefly_132 frame_count=660 duration_sec=2.519977 record_mode=paired_source_to_target source_audio_path=F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_parallel_ly65_recordings/chapter3_17_firefly_132.wav target_audio_path=F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_17_firefly_132.wav training_package_version=offline_mvp_nores_vocoder_train_targets_v2 source_scaffold_version=offline_teacher_vocoder_input_scaffold_v2 periodic_input_dim=36 noise_input_dim=36 package_size_bytes=1550584 package_build_sec=0.699182 package_status=built_now training_package_path=F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_paired_parallel_smoke_round1_1/packages/validation/paired__parallel_firefly_132_to_target_firefly_132/train_targets/offline_mvp_nores_vocoder_train_targets.pt
+
+## Notes
+- This dataset index is a Stage5 package-level bridge built on top of the teacher-first contract path.
+- Each package still contains proxy spectral/gate targets rather than a final waveform decoder objective.
+- Current package generation may reload the teacher checkpoint per record, so this builder is a functional baseline rather than a throughput-optimized exporter.
+- If train_pair_spec_path / validation_pair_spec_path are set, teacher controls are exported from source_audio_path while aligned waveform targets come from target_audio_path.
