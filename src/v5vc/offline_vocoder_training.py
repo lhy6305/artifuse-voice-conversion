@@ -13,7 +13,12 @@ import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 
 from v5vc.manifest_builder import load_jsonl
-from v5vc.offline_mvp.data import load_waveform
+from v5vc.offline_mvp.data import (
+    build_record_semantic_overview,
+    infer_target_event_semantic_sidecar_path,
+    load_target_event_semantic_sidecar_map,
+    load_waveform,
+)
 from v5vc.offline_teacher_runtime import resolve_runtime_device
 from v5vc.offline_teacher_downstream_contract import export_offline_mvp_teacher_downstream_contract
 from v5vc.offline_teacher_vocoder_input_scaffold import (
@@ -33,6 +38,7 @@ SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
     "offline_mvp_nores_vocoder_train_targets_v1",
     "offline_mvp_nores_vocoder_train_targets_v2",
 }
+DEFAULT_STAGE5_SEMANTIC_PACKAGE_ALPHA = 0.2
 
 
 def normalize_training_reconstruction_frame_gain_apply_mode(frame_gain_apply_mode: str) -> str:
@@ -51,6 +57,7 @@ def build_offline_mvp_nores_vocoder_training_package(
     sample_rate: int | None,
     frame_length: int | None,
     hop_length: int | None,
+    target_event_semantic_sidecar: dict[str, object] | None = None,
 ) -> None:
     scaffold_path = scaffold_path.resolve()
     target_audio_path = target_audio_path.resolve()
@@ -145,6 +152,15 @@ def build_offline_mvp_nores_vocoder_training_package(
             "periodic_gate_target uses voiced_proxy, and noise_gate_target uses max(aperiodicity_proxy, event_presence_proxy).",
             "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
         ]
+    target_semantic_overview = build_record_semantic_overview(
+        {
+            "target_event_semantic_sidecar": (
+                dict(target_event_semantic_sidecar)
+                if isinstance(target_event_semantic_sidecar, dict)
+                else None
+            )
+        }
+    )
 
     training_payload = {
         "training_package_version": training_package_version,
@@ -152,6 +168,12 @@ def build_offline_mvp_nores_vocoder_training_package(
         "source_scaffold_version": scaffold_version,
         "target_audio_path": target_audio_path.as_posix(),
         "source_audio_path": payload.get("source_audio_path"),
+        "target_event_semantic_sidecar": (
+            None
+            if not isinstance(target_event_semantic_sidecar, dict)
+            else dict(target_event_semantic_sidecar)
+        ),
+        "target_semantic_overview": target_semantic_overview,
         "frame_count": frame_count,
         "runtime": {
             "sample_rate": int(resolved_sample_rate),
@@ -180,6 +202,8 @@ def build_offline_mvp_nores_vocoder_training_package(
         "source_scaffold_version": scaffold_version,
         "target_audio_path": target_audio_path.as_posix(),
         "source_audio_path": payload.get("source_audio_path"),
+        "target_event_semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+        "target_semantic_overview": target_semantic_overview,
         "runtime": training_payload["runtime"],
         "frame_count": frame_count,
         "aligned_waveform_samples": int(aligned_waveform.shape[0]),
@@ -768,6 +792,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     max_validation_records: int | None,
     selection_mode: str,
     skip_existing: bool,
+    target_event_semantic_sidecar_path: Path | None = None,
 ) -> None:
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -785,6 +810,21 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     resolved_validation_pair_spec_path = (
         None if validation_pair_spec_path is None else validation_pair_spec_path.resolve()
     )
+    resolved_target_event_semantic_sidecar_path = resolve_target_event_semantic_sidecar_path_for_stage5(
+        target_event_semantic_sidecar_path=target_event_semantic_sidecar_path,
+        train_split_path=resolved_train_split_path,
+        validation_split_path=resolved_validation_split_path,
+    )
+    semantic_sidecar_map = None
+    if resolved_target_event_semantic_sidecar_path is not None:
+        if not resolved_target_event_semantic_sidecar_path.exists():
+            raise ValueError(
+                "target_event_semantic_sidecar_path not found: "
+                f"{resolved_target_event_semantic_sidecar_path}"
+            )
+        semantic_sidecar_map = load_target_event_semantic_sidecar_map(
+            resolved_target_event_semantic_sidecar_path
+        )
 
     if resolved_train_pair_spec_path is not None:
         effective_train_split_path = None
@@ -826,6 +866,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         records=train_records,
         split_name="train",
         packages_dir=packages_dir,
+        semantic_sidecar_map=semantic_sidecar_map,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -840,6 +881,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         records=validation_records,
         split_name="validation",
         packages_dir=packages_dir,
+        semantic_sidecar_map=semantic_sidecar_map,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -872,6 +914,11 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         "validation_pair_spec_path": (
             None if resolved_validation_pair_spec_path is None else resolved_validation_pair_spec_path.as_posix()
         ),
+        "target_event_semantic_sidecar_path": (
+            None
+            if resolved_target_event_semantic_sidecar_path is None
+            else resolved_target_event_semantic_sidecar_path.as_posix()
+        ),
         "train_packages": train_entries,
         "validation_packages": validation_entries,
         "notes": [
@@ -882,6 +929,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
                 "If train_pair_spec_path / validation_pair_spec_path are set, teacher controls are exported from source_audio_path "
                 "while aligned waveform targets come from target_audio_path."
             ),
+            "When available, target_event_semantic_sidecar is attached by target_record_id and summarized in package/index metadata.",
         ],
     }
     index_payload["summary"] = summarize_dataset_package_index(
@@ -950,6 +998,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    semantic_supervision_enabled: bool = False,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -987,6 +1036,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     if not train_packages:
         raise ValueError("Dataset index does not contain any train_packages.")
 
+    semantic_supervision = resolve_stage5_semantic_supervision_config(
+        {"enabled": bool(semantic_supervision_enabled)}
+    )
     initial_payload = load_training_package_payload(Path(train_packages[0]["training_package_path"]))
     initial_runtime = extract_training_runtime(initial_payload)
     initial_batch = move_batch_to_device(
@@ -1084,13 +1136,36 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                 multires_stft_short_weight=multires_stft_short_weight,
             )
-            accumulated_loss = total_loss if accumulated_loss is None else accumulated_loss + total_loss
+            semantic_weighting = build_stage5_package_semantic_weighting(
+                target_event_semantic_sidecar=payload.get("target_event_semantic_sidecar"),
+                semantic_supervision=semantic_supervision,
+            )
+            weighted_total_loss = total_loss * float(semantic_weighting["semantic_package_multiplier"])
+            package_loss_metrics = dict(loss_metrics)
+            package_loss_metrics["loss_total_semantic_weighted"] = round(
+                float(weighted_total_loss.detach().cpu().item()),
+                6,
+            )
+            package_loss_metrics["semantic_sidecar_present"] = 1.0 if bool(
+                semantic_weighting["semantic_sidecar_present"]
+            ) else 0.0
+            package_loss_metrics["semantic_weight_applied"] = 1.0 if bool(
+                semantic_weighting["semantic_weight_applied"]
+            ) else 0.0
+            package_loss_metrics["semantic_base_multiplier"] = float(
+                semantic_weighting["semantic_base_multiplier"]
+            )
+            package_loss_metrics["semantic_package_multiplier"] = float(
+                semantic_weighting["semantic_package_multiplier"]
+            )
+            accumulated_loss = weighted_total_loss if accumulated_loss is None else accumulated_loss + weighted_total_loss
             package_metrics.append(
                 {
                     "record_id": entry["record_id"],
                     "training_package_path": entry["training_package_path"],
                     "frame_count": int(payload["frame_count"]),
-                    "loss_metrics": loss_metrics,
+                    "loss_metrics": package_loss_metrics,
+                    "semantic_weighting": semantic_weighting,
                 }
             )
         if accumulated_loss is None:
@@ -1111,6 +1186,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "packages_per_step": len(selected_entries),
             "record_ids": [entry["record_id"] for entry in selected_entries],
             "loss_metrics": average_loss_metrics([item["loss_metrics"] for item in package_metrics]),
+            "semantic_weighting_summary": summarize_stage5_semantic_weighting(package_metrics),
             "package_metrics": package_metrics,
             "grad_norm": round(grad_norm, 6),
             "status": "step_completed",
@@ -1157,6 +1233,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                     periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                     multires_stft_short_weight=multires_stft_short_weight,
+                    semantic_supervision=semantic_supervision,
                     validation_source="validation_packages",
                 )
             else:
@@ -1188,6 +1265,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                     periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                     multires_stft_short_weight=multires_stft_short_weight,
+                    semantic_supervision=semantic_supervision,
                     validation_source="train_packages_reused",
                 )
             validation_history.append(validation_payload_summary)
@@ -1273,6 +1351,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
+            "semantic_supervision": semantic_supervision,
         },
         "step_history": step_history,
         "validation_history": validation_history,
@@ -1288,11 +1367,12 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "This loop is the first dataset-level Stage5 path: each step now samples from multiple aligned target packages instead of reusing one package forever.",
             "Current package batches are still Python-level lists of variable-length packages rather than a packed tensor dataloader.",
             "Validation reflects the current objective mix, including optional aligned waveform/STFT bootstrap losses when enabled, and should not be confused with final vocoder generalization.",
+            "When semantic_supervision.enabled=true, optimization uses a conservative package-level weighting derived from target_event_semantic_sidecar; raw loss_total remains logged alongside loss_total_semantic_weighted.",
         ],
         "next_steps": [
             "Scale the dataset index from tiny smoke subsets to a larger split-backed package pool once runtime cost is acceptable.",
             "Decide whether to keep package-level sequential loading or move to a cached/packed dataset for throughput.",
-            "Decide whether the current bootstrap decoder objective should be scaled further or replaced by a stronger multi-resolution/adversarial waveform recipe.",
+            "Decide whether target-side semantic weighting should stay as a bootstrap objective bias or later move into a more explicit design-state e_evt consumer path.",
         ],
     }
 
@@ -1401,6 +1481,210 @@ def set_training_seed(
     }
 
 
+def build_default_stage5_semantic_supervision_config() -> dict[str, object]:
+    return {
+        "enabled": False,
+        "required_contract_version": "target_event_semantic_sidecar_v1",
+        "clean_text_bonus": 0.08,
+        "multi_clause_bonus": 0.08,
+        "multi_terminal_bonus": 0.10,
+        "clause_ge4_bonus": 0.08,
+        "pause_multi_bonus": 0.05,
+        "terminal_present_bonus": 0.05,
+        "nonverbal_penalty": 0.20,
+        "min_multiplier": 0.75,
+        "max_multiplier": 1.45,
+        "package_alpha": DEFAULT_STAGE5_SEMANTIC_PACKAGE_ALPHA,
+    }
+
+
+def resolve_stage5_semantic_supervision_config(
+    config: dict[str, object] | None = None,
+) -> dict[str, object]:
+    effective = build_default_stage5_semantic_supervision_config()
+    if config is None:
+        return effective
+    unknown_keys = sorted({str(key) for key in config.keys()} - set(effective.keys()))
+    if unknown_keys:
+        raise ValueError(f"Unknown Stage5 semantic supervision keys: {unknown_keys}")
+    for key, value in config.items():
+        normalized_key = str(key)
+        if normalized_key == "enabled":
+            effective[normalized_key] = bool(value)
+        elif normalized_key == "required_contract_version":
+            effective[normalized_key] = None if value in {None, ""} else str(value)
+        else:
+            effective[normalized_key] = float(value)
+    if float(effective["min_multiplier"]) <= 0.0:
+        raise ValueError("Stage5 semantic supervision min_multiplier must be > 0.")
+    if float(effective["max_multiplier"]) < float(effective["min_multiplier"]):
+        raise ValueError("Stage5 semantic supervision max_multiplier must be >= min_multiplier.")
+    if float(effective["package_alpha"]) < 0.0:
+        raise ValueError("Stage5 semantic supervision package_alpha must be >= 0.")
+    return effective
+
+
+def resolve_target_event_semantic_sidecar_path_for_stage5(
+    target_event_semantic_sidecar_path: Path | None,
+    train_split_path: Path | None,
+    validation_split_path: Path | None,
+) -> Path | None:
+    if target_event_semantic_sidecar_path is not None:
+        return target_event_semantic_sidecar_path.resolve()
+    for split_path in (train_split_path, validation_split_path):
+        if split_path is None:
+            continue
+        inferred = infer_target_event_semantic_sidecar_path(split_path.resolve().parent)
+        if inferred is not None and inferred.exists():
+            return inferred.resolve()
+    return None
+
+
+def build_stage5_package_semantic_weighting(
+    target_event_semantic_sidecar: dict[str, object] | None,
+    semantic_supervision: dict[str, object],
+) -> dict[str, object]:
+    enabled = bool(semantic_supervision.get("enabled", False))
+    required_contract_version = semantic_supervision.get("required_contract_version")
+    required_contract_version = None if required_contract_version in {None, ""} else str(required_contract_version)
+    payload: dict[str, object] = {
+        "semantic_supervision_enabled": enabled,
+        "semantic_sidecar_present": False,
+        "semantic_weight_applied": False,
+        "semantic_contract_version": None,
+        "semantic_structure_type": "unknown",
+        "semantic_nonverbal_only": False,
+        "semantic_clean_text_available": False,
+        "semantic_base_multiplier": 1.0,
+        "semantic_package_multiplier": 1.0,
+    }
+    if not isinstance(target_event_semantic_sidecar, dict):
+        return payload
+
+    payload["semantic_sidecar_present"] = True
+    payload["semantic_contract_version"] = str(target_event_semantic_sidecar.get("semantic_contract_version", "")) or None
+    if (
+        required_contract_version is not None
+        and str(payload["semantic_contract_version"] or "") != required_contract_version
+    ):
+        return payload
+
+    semantic_scope = (
+        dict(target_event_semantic_sidecar.get("semantic_scope", {}))
+        if isinstance(target_event_semantic_sidecar.get("semantic_scope"), dict)
+        else {}
+    )
+    text_semantics = (
+        dict(target_event_semantic_sidecar.get("text_semantics", {}))
+        if isinstance(target_event_semantic_sidecar.get("text_semantics"), dict)
+        else {}
+    )
+    boundary_semantics = (
+        dict(target_event_semantic_sidecar.get("boundary_semantics", {}))
+        if isinstance(target_event_semantic_sidecar.get("boundary_semantics"), dict)
+        else {}
+    )
+    utterance_semantics = (
+        dict(target_event_semantic_sidecar.get("utterance_structure_semantics", {}))
+        if isinstance(target_event_semantic_sidecar.get("utterance_structure_semantics"), dict)
+        else {}
+    )
+    clean_text_available = bool(semantic_scope.get("clean_text_available", False))
+    nonverbal_only = bool(text_semantics.get("nonverbal_only", False))
+    structure_type = str(utterance_semantics.get("utterance_structure_type", "unknown"))
+    payload["semantic_structure_type"] = structure_type
+    payload["semantic_nonverbal_only"] = nonverbal_only
+    payload["semantic_clean_text_available"] = clean_text_available
+
+    multiplier = 1.0
+    if clean_text_available and not nonverbal_only:
+        multiplier += float(semantic_supervision["clean_text_bonus"])
+    if nonverbal_only:
+        multiplier -= float(semantic_supervision["nonverbal_penalty"])
+    if structure_type == "multi_clause_single_terminal":
+        multiplier += float(semantic_supervision["multi_clause_bonus"])
+    if structure_type == "multi_terminal":
+        multiplier += float(semantic_supervision["multi_terminal_bonus"])
+    if int(utterance_semantics.get("clause_count", 0)) >= 4:
+        multiplier += float(semantic_supervision["clause_ge4_bonus"])
+    if int(boundary_semantics.get("pause_boundary_count", 0)) >= 2:
+        multiplier += float(semantic_supervision["pause_multi_bonus"])
+    if int(boundary_semantics.get("terminal_boundary_count", 0)) >= 1:
+        multiplier += float(semantic_supervision["terminal_present_bonus"])
+    resolved_base_multiplier = max(
+        float(semantic_supervision["min_multiplier"]),
+        min(float(semantic_supervision["max_multiplier"]), multiplier),
+    )
+    payload["semantic_base_multiplier"] = round(float(resolved_base_multiplier), 6)
+    if enabled:
+        payload["semantic_weight_applied"] = True
+        payload["semantic_package_multiplier"] = round(
+            1.0
+            + (float(resolved_base_multiplier) - 1.0) * float(semantic_supervision["package_alpha"]),
+            6,
+        )
+    return payload
+
+
+def summarize_stage5_package_semantics(entries: list[dict[str, object]]) -> dict[str, object]:
+    present_count = 0
+    contract_counts: dict[str, int] = {}
+    structure_counts: dict[str, int] = {}
+    label_status_counts: dict[str, int] = {}
+    for entry in entries:
+        semantic_overview = entry.get("target_semantic_overview")
+        if not isinstance(semantic_overview, dict):
+            continue
+        if str(semantic_overview.get("semantic_source", "missing")) == "missing":
+            continue
+        present_count += 1
+        contract_key = str(semantic_overview.get("semantic_contract_version", "unknown"))
+        structure_key = str(semantic_overview.get("semantic_utterance_structure_type", "unknown"))
+        label_key = str(semantic_overview.get("semantic_label_status", "unknown"))
+        contract_counts[contract_key] = contract_counts.get(contract_key, 0) + 1
+        structure_counts[structure_key] = structure_counts.get(structure_key, 0) + 1
+        label_status_counts[label_key] = label_status_counts.get(label_key, 0) + 1
+    return {
+        "present_count": int(present_count),
+        "missing_count": max(0, len(entries) - present_count),
+        "semantic_contract_version_counts": dict(sorted(contract_counts.items())),
+        "semantic_utterance_structure_type_counts": dict(sorted(structure_counts.items())),
+        "semantic_label_status_counts": dict(sorted(label_status_counts.items())),
+    }
+
+
+def summarize_stage5_semantic_weighting(package_metrics: list[dict[str, object]]) -> dict[str, object]:
+    if not package_metrics:
+        return {
+            "semantic_sidecar_present_ratio": 0.0,
+            "semantic_weight_applied_ratio": 0.0,
+            "semantic_clean_text_sample_ratio": 0.0,
+            "semantic_nonverbal_sample_ratio": 0.0,
+            "semantic_base_multiplier_mean": 1.0,
+            "semantic_package_multiplier_mean": 1.0,
+        }
+    semantic_payloads = [dict(item.get("semantic_weighting", {})) for item in package_metrics]
+    count = max(1, len(semantic_payloads))
+    present_count = sum(1 for item in semantic_payloads if bool(item.get("semantic_sidecar_present", False)))
+    applied_count = sum(1 for item in semantic_payloads if bool(item.get("semantic_weight_applied", False)))
+    clean_text_count = sum(1 for item in semantic_payloads if bool(item.get("semantic_clean_text_available", False)))
+    nonverbal_count = sum(1 for item in semantic_payloads if bool(item.get("semantic_nonverbal_only", False)))
+    return {
+        "semantic_sidecar_present_ratio": round(present_count / count, 6),
+        "semantic_weight_applied_ratio": round(applied_count / count, 6),
+        "semantic_clean_text_sample_ratio": round(clean_text_count / count, 6),
+        "semantic_nonverbal_sample_ratio": round(nonverbal_count / count, 6),
+        "semantic_base_multiplier_mean": round(
+            sum(float(item.get("semantic_base_multiplier", 1.0)) for item in semantic_payloads) / count,
+            6,
+        ),
+        "semantic_package_multiplier_mean": round(
+            sum(float(item.get("semantic_package_multiplier", 1.0)) for item in semantic_payloads) / count,
+            6,
+        ),
+    }
+
+
 def select_dataset_records(
     records: list[dict[str, object]],
     max_records: int | None,
@@ -1466,6 +1750,7 @@ def build_dataset_packages_for_split(
     records: list[dict[str, object]],
     split_name: str,
     packages_dir: Path,
+    semantic_sidecar_map: dict[str, dict[str, object]] | None,
     route_handoff_path: Path | None,
     checkpoint_path: Path | None,
     calibration_asset_path: Path | None,
@@ -1488,7 +1773,18 @@ def build_dataset_packages_for_split(
         scaffold_dir = record_dir / "scaffold"
         targets_dir = record_dir / "train_targets"
         package_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.pt"
+        target_record_id = str(resolved_paths.get("target_record_id") or record_id)
+        target_event_semantic_sidecar = None
+        if semantic_sidecar_map is not None:
+            target_event_semantic_sidecar = semantic_sidecar_map.get(target_record_id)
         package_reused = bool(skip_existing and package_path.exists())
+        if package_reused:
+            existing_payload = load_training_package_payload(package_path)
+            if (
+                isinstance(target_event_semantic_sidecar, dict)
+                and not isinstance(existing_payload.get("target_event_semantic_sidecar"), dict)
+            ):
+                package_reused = False
         if not package_reused:
             export_offline_mvp_teacher_downstream_contract(
                 input_audio_path=source_audio_path,
@@ -1515,6 +1811,7 @@ def build_dataset_packages_for_split(
                 sample_rate=None,
                 frame_length=None,
                 hop_length=None,
+                target_event_semantic_sidecar=target_event_semantic_sidecar,
             )
         package_payload = load_training_package_payload(package_path)
         package_build_sec = perf_counter() - record_started_perf
@@ -1526,13 +1823,17 @@ def build_dataset_packages_for_split(
                 "source_audio_path": source_audio_path.as_posix(),
                 "target_audio_path": target_audio_path.as_posix(),
                 "source_record_id": resolved_paths.get("source_record_id"),
-                "target_record_id": resolved_paths.get("target_record_id"),
+                "target_record_id": target_record_id,
                 "record_mode": str(resolved_paths.get("record_mode", "unknown")),
                 "duration_sec": resolve_dataset_record_duration_sec(record),
                 "split_name": split_name,
                 "training_package_path": package_path.as_posix(),
                 "training_package_version": str(package_payload.get("training_package_version", "unknown")),
                 "source_scaffold_version": str(package_payload.get("source_scaffold_version", "unknown")),
+                "target_event_semantic_sidecar_present": bool(
+                    isinstance(package_payload.get("target_event_semantic_sidecar"), dict)
+                ),
+                "target_semantic_overview": dict(package_payload.get("target_semantic_overview", {})),
                 "frame_count": int(package_payload["frame_count"]),
                 "periodic_input_dim": int(package_payload["inputs"]["periodic_branch_features"].shape[-1]),
                 "noise_input_dim": int(package_payload["inputs"]["noise_branch_features"].shape[-1]),
@@ -1607,6 +1908,7 @@ def summarize_dataset_package_index(
                 and len(harmonic_target_dims) <= 1
                 and len(noise_target_dims) <= 1
             ),
+            "semantic_sidecar_summary": summarize_stage5_package_semantics(entries),
         }
 
     train_summary = summarize_split(train_packages)
@@ -2580,8 +2882,10 @@ def run_nores_vocoder_dataset_validation_pass(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    semantic_supervision: dict[str, object] | None = None,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
+    resolved_semantic_supervision = resolve_stage5_semantic_supervision_config(semantic_supervision)
     model.eval()
     with torch.no_grad():
         for entry in package_entries:
@@ -2629,12 +2933,34 @@ def run_nores_vocoder_dataset_validation_pass(
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                 multires_stft_short_weight=multires_stft_short_weight,
             )
+            semantic_weighting = build_stage5_package_semantic_weighting(
+                target_event_semantic_sidecar=payload.get("target_event_semantic_sidecar"),
+                semantic_supervision=resolved_semantic_supervision,
+            )
+            package_loss_metrics = dict(loss_metrics)
+            package_loss_metrics["loss_total_semantic_weighted"] = round(
+                float(loss_metrics["loss_total"]) * float(semantic_weighting["semantic_package_multiplier"]),
+                6,
+            )
+            package_loss_metrics["semantic_sidecar_present"] = 1.0 if bool(
+                semantic_weighting["semantic_sidecar_present"]
+            ) else 0.0
+            package_loss_metrics["semantic_weight_applied"] = 1.0 if bool(
+                semantic_weighting["semantic_weight_applied"]
+            ) else 0.0
+            package_loss_metrics["semantic_base_multiplier"] = float(
+                semantic_weighting["semantic_base_multiplier"]
+            )
+            package_loss_metrics["semantic_package_multiplier"] = float(
+                semantic_weighting["semantic_package_multiplier"]
+            )
             package_metrics.append(
                 {
                     "record_id": entry["record_id"],
                     "training_package_path": entry["training_package_path"],
                     "frame_count": int(payload["frame_count"]),
-                    "loss_metrics": loss_metrics,
+                    "loss_metrics": package_loss_metrics,
+                    "semantic_weighting": semantic_weighting,
                 }
             )
     return {
@@ -2646,6 +2972,7 @@ def run_nores_vocoder_dataset_validation_pass(
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
         },
         "loss_metrics": average_loss_metrics([item["loss_metrics"] for item in package_metrics]),
+        "semantic_weighting_summary": summarize_stage5_semantic_weighting(package_metrics),
         "package_metrics": package_metrics,
     }
 
@@ -2694,11 +3021,18 @@ def select_best_nores_vocoder_checkpoint(
         checkpoint_path = checkpoint_by_step.get(step)
         if checkpoint_path is None:
             continue
-        loss_total = float(validation_payload.get("loss_metrics", {}).get("loss_total", float("inf")))
+        loss_metrics = dict(validation_payload.get("loss_metrics", {}))
+        selection_metric = (
+            "loss_total_semantic_weighted"
+            if "loss_total_semantic_weighted" in loss_metrics
+            else "loss_total"
+        )
+        loss_total = float(loss_metrics.get(selection_metric, float("inf")))
         candidate = {
-            "selection_rule": "min_validation_loss_total_over_recorded_checkpoints",
+            "selection_rule": f"min_validation_{selection_metric}_over_recorded_checkpoints",
             "step": step,
             "loss_total": round(loss_total, 6),
+            "selection_metric": selection_metric,
             "checkpoint_path": checkpoint_path,
         }
         if best_payload is None or float(candidate["loss_total"]) < float(best_payload["loss_total"]):
@@ -2715,6 +3049,8 @@ def build_training_package_markdown(summary: dict[str, object]) -> str:
         f"- source_scaffold_path: {summary['source_scaffold_path']}",
         f"- target_audio_path: {summary['target_audio_path']}",
         f"- source_audio_path: {summary['source_audio_path']}",
+        f"- target_event_semantic_sidecar_present: {summary.get('target_event_semantic_sidecar_present', False)}",
+        f"- target_semantic_overview: {json.dumps(summary.get('target_semantic_overview', {}), ensure_ascii=False)}",
         f"- runtime: {json.dumps(summary['runtime'], ensure_ascii=False)}",
         f"- frame_count: {summary['frame_count']}",
         f"- aligned_waveform_samples: {summary['aligned_waveform_samples']}",
@@ -2806,6 +3142,7 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         f"- validation_split_path: {summary['validation_split_path']}",
         f"- train_pair_spec_path: {summary.get('train_pair_spec_path')}",
         f"- validation_pair_spec_path: {summary.get('validation_pair_spec_path')}",
+        f"- target_event_semantic_sidecar_path: {summary.get('target_event_semantic_sidecar_path')}",
         f"- summary: {json.dumps(summary['summary'], ensure_ascii=False)}",
         "",
         "## Train Packages",
@@ -2817,6 +3154,8 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
             f"record_mode={entry.get('record_mode', 'unknown')} "
             f"source_audio_path={entry.get('source_audio_path')} "
             f"target_audio_path={entry.get('target_audio_path')} "
+            f"target_event_semantic_sidecar_present={entry.get('target_event_semantic_sidecar_present', False)} "
+            f"target_semantic_overview={json.dumps(entry.get('target_semantic_overview', {}), ensure_ascii=False)} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "
@@ -2834,6 +3173,8 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
             f"record_mode={entry.get('record_mode', 'unknown')} "
             f"source_audio_path={entry.get('source_audio_path')} "
             f"target_audio_path={entry.get('target_audio_path')} "
+            f"target_event_semantic_sidecar_present={entry.get('target_event_semantic_sidecar_present', False)} "
+            f"target_semantic_overview={json.dumps(entry.get('target_semantic_overview', {}), ensure_ascii=False)} "
             f"training_package_version={entry.get('training_package_version', 'unknown')} "
             f"source_scaffold_version={entry.get('source_scaffold_version', 'unknown')} "
             f"periodic_input_dim={entry.get('periodic_input_dim', 'unknown')} "
@@ -2865,6 +3206,7 @@ def build_dataset_training_loop_markdown(summary: dict[str, object]) -> str:
     for step_payload in list(summary.get("step_history", [])):
         lines.append(
             f"- step={step_payload['step']} loss_total={step_payload['loss_metrics']['loss_total']} "
+            f"loss_total_semantic_weighted={step_payload['loss_metrics'].get('loss_total_semantic_weighted', step_payload['loss_metrics']['loss_total'])} "
             f"packages_per_step={step_payload['packages_per_step']} "
             f"record_ids={step_payload['record_ids']}"
         )
@@ -2873,7 +3215,8 @@ def build_dataset_training_loop_markdown(summary: dict[str, object]) -> str:
         lines.append(
             f"- step={validation_payload['step']} validation_source={validation_payload['validation_source']} "
             f"package_count={validation_payload['package_count']} "
-            f"loss_total={validation_payload['loss_metrics']['loss_total']}"
+            f"loss_total={validation_payload['loss_metrics']['loss_total']} "
+            f"loss_total_semantic_weighted={validation_payload['loss_metrics'].get('loss_total_semantic_weighted', validation_payload['loss_metrics']['loss_total'])}"
         )
     lines.extend(
         [

@@ -2612,6 +2612,15 @@ def build_parser() -> argparse.ArgumentParser:
         help="Calibration asset providing s_spk_target, s_geom_target, and alpha.",
     )
     nores_vocoder_dataset_packages_parser.add_argument(
+        "--target-event-semantic-sidecar",
+        type=Path,
+        default=None,
+        help=(
+            "Optional target_event_semantic_sidecar jsonl. When omitted, Stage5 will infer the standard "
+            "round1_1 sidecar from the split directory when available."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
         "--chunk-samples",
         type=int,
         default=None,
@@ -2894,6 +2903,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for short-window MRSTFT reconstruction using frame lengths 256, 512, and the runtime frame length.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--semantic-supervision-enabled",
+        action="store_true",
+        help="Enable conservative package-level weighting derived from target_event_semantic_sidecar metadata.",
     )
     nores_vocoder_review_parser = subparsers.add_parser(
         "review-offline-mvp-nores-vocoder-checkpoints",
@@ -4610,6 +4624,7 @@ def main(argv: list[str] | None = None) -> int:
             max_validation_records=args.max_validation_records,
             selection_mode=args.selection_mode,
             skip_existing=bool(args.skip_existing),
+            target_event_semantic_sidecar_path=args.target_event_semantic_sidecar,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-dataset-training-loop":
@@ -4653,6 +4668,7 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
             multires_stft_short_weight=args.multires_stft_short_weight,
+            semantic_supervision_enabled=bool(args.semantic_supervision_enabled),
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":

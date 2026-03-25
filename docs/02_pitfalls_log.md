@@ -13236,3 +13236,153 @@
     才能把
     “当前候选是否有净收益”
     写成正式判断
+### 422. 对新增 loss 做低权重 sweep 时，应优先找“共享指标最温和的折中点”，而不是机械追求把新 loss 本身压到最低
+- 现象:
+  - 这次
+    short-window MRSTFT
+    在
+    `0.05 / 0.1 / 0.2`
+    下都能把
+    `loss_mrstft_short_256_512_1024`
+    压低
+  - 但权重越大，
+    并不代表共享指标越平衡
+- 风险:
+  - 若只看：
+    - 新 loss
+      自身是否更低
+    - 或共享
+      `loss_stft`
+      是否继续下降
+  - 很容易把权重推到
+    `0.1 / 0.2`
+    这类更激进位置，
+    却忽视了：
+    - `loss_waveform`
+    - 稳定性轴
+    已开始变坏
+- 处理要求:
+  - 对这类新增 sidecar/objective，
+    低权重 sweep
+    的第一目标应是：
+    - 找到共享指标最温和的折中点
+  - 只有在折中点已经存在后，
+    才值得继续问：
+    - 更高权重是否还能换来额外收益
+### 423. 当量化 sweep 已经把新增 loss 缩到单一最小候选后，下一步应尽快补最小听审包，而不是继续在数值上做更细碎的小步长搜索
+- 现象:
+  - 这次
+    short-window MRSTFT
+    已经通过
+    `0.05 / 0.1 / 0.2`
+    缩到：
+    - 只有
+      `0.05`
+      还值得保留
+- 风险:
+  - 若在此之后继续做：
+    - `0.03`
+    - `0.04`
+    - `0.06`
+    这类更细 sweep，
+    很容易在没有听感反馈前，
+    持续放大“数值微差”
+- 处理要求:
+  - 一旦低权重 sweep
+    已缩到单一候选，
+    下一步优先补：
+    - baseline vs 候选
+      的最小 training-sync 对照包
+  - 先让人工回答：
+    - 听感是否真的更好
+  - 再决定是否值得做更细权重搜索
+### 424. 当多轮局部 waveform / objective 微调在人工听审中仍然只有 pure buzz 时，应停止整条微调线并上收回 contract / semantics 主干，而不是再试下一个 loss
+- 现象:
+  - 这次
+    short-window MRSTFT
+    已完成：
+    - plumbing 修复
+    - 严格可比 baseline
+    - 低权重 sweep
+    - 最小听审包
+  - 其中
+    `0.05`
+    已是最温和候选，
+    但人工听审仍是：
+    - 单声调 pure buzz
+    - 无人声结构
+- 风险:
+  - 若在这种状态下继续做：
+    - 更细权重 sweep
+    - 再叠一个 spectral loss
+    - 再试一个 decoder 小改
+  - 本质上是在错误层级上继续消耗时间，
+    把真正的主干缺口
+    误当成局部 loss
+    没调好
+- 处理要求:
+  - 一旦出现：
+    - 局部 objective
+      已充分验证
+    - 但听感仍无 speech emergence
+  - 就应正式停止这条微调线，
+    把下一步上收到：
+    - contract
+    - semantic
+    - representation
+    主干缺口排查
+  - 对当前
+    Stage5
+    而言，
+    就是优先推进：
+    - `contractv2_normfix`
+      底座上的
+      target-side semantic /
+      设计态
+      `e_evt`
+      升级
+### 425. 当新的 target-side semantic sidecar 首次接入 Stage5 时，第一步应先做“metadata 可见 + 保守 package-level weighting + strict paired overfit A/B”，不要一上来就扩成新 head 或新复杂 loss
+- 现象:
+  - 这次
+    `target_event_semantic_sidecar`
+    刚接回
+    Stage5
+    时，
+    我们先做的是：
+    - package payload / dataset index
+      可见性
+    - 保守的
+      package-level semantic weighting
+    - paired overfit24
+      strict comparable
+      baseline vs semantic
+      A/B
+- 风险:
+  - 如果一开始就直接做：
+    - 新 semantic head
+    - 更复杂的 frame-level consumer
+    - 额外 waveform / auxiliary loss
+  - 会把“接线是否真的生效”、
+    “语义是否有任何基础价值”、
+    “新结构是否本身引入副作用”
+    三件事混在一起，
+    让实验不可解释
+- 处理要求:
+  - 对这类新 sidecar，
+    第一轮必须先证明：
+    - metadata
+      已经沿
+      package -> index -> consumer
+      真实到位
+    - optimization
+      确实受其影响
+    - paired overfit
+      上至少存在可比基线
+  - 只有这三件事成立后，
+    才值得继续推进：
+    - 更明确的
+      design-state
+      `e_evt`
+      consumer
+    - 或更复杂的 semantic
+      训练结构

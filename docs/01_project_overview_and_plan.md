@@ -20522,3 +20522,250 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
    暂时收口为：
    - 已验证可用，
      但暂不默认启用
+## 2026-03-25 继续补充：short-window MRSTFT 低权重 sweep 显示 `0.05` 是当前唯一值得保留的最小候选
+- 正式报告：
+  - `docs/335_stage5_mrstft_short_low_weight_sweep_report.md`
+
+### 当前关键结果
+1. 已补跑与 baseline
+   同口径的
+   `multires_stft_short_weight`
+   低权重 sweep：
+   - `0.05`
+   - `0.1`
+2. 本轮主排序不再看
+   `loss_total`，
+   而是看共享指标：
+   - `loss_stft`
+   - `loss_waveform`
+   - `loss_rms_guard`
+   - `decoded_to_target_rms_ratio`
+3. step24 validation
+   结果表明：
+   - `0.05`
+     相比 baseline
+     - `loss_stft`
+       由
+       `0.364725`
+       降到
+       `0.350943`
+     - `loss_waveform`
+       由
+       `0.159988`
+       微降到
+       `0.159745`
+   - `0.1`
+     虽也压低
+     `loss_stft`，
+     但
+     `loss_waveform`
+     升到
+     `0.162687`
+   - `0.2`
+     仍是
+     STFT
+     轴最好，
+     但
+     `loss_waveform`
+     不如
+     `0.05`
+4. 因此当前最合理的保留态是：
+   - 不保留
+     `0.1`
+     或
+     `0.2`
+   - 只把
+     `0.05`
+     记作最小候选
+
+### 当前阶段判断更新
+1. short-window MRSTFT
+   这条线现在不应再表述为：
+   - “当前权重全部无价值”
+2. 更准确的是：
+   - `0.05`
+     在共享指标上出现了
+     最温和且相对可接受的折中
+   - 但仍不足以直接升为默认
+
+### 更新后的下一步
+1. 若继续这条线，
+   只对
+   `0.05`
+   做下一步：
+   - 最小 training-sync audio
+     导出
+   - 或 tiny human audit
+2. 若主线优先级更高，
+   则先把 MRSTFT
+   收口到：
+   - plumbing 已补齐
+   - `0.05`
+     作为候选备忘
+   - 暂不默认启用
+## 2026-03-25 继续补充：baseline `0.00` vs MRSTFT `0.05` 的 validation training-sync 对照包已就绪
+- 正式报告：
+  - `docs/336_stage5_mrstft005_validation_export_and_quick_audit_bundle_report.md`
+
+### 当前关键结果
+1. 已完成两边 step24 checkpoint 的 validation training-sync export：
+   - baseline `0.00`
+   - MRSTFT `0.05`
+2. 已整理最小对照包到：
+   - `reports/audio/stage5_paired_parallel_overfit24_mrstft005_compare_quick_audit_20260325/`
+3. 每个 case
+   只保留：
+   - `source`
+   - `target_aligned`
+   - `baseline_decoded`
+   - `mrstft005_decoded`
+
+### 当前阶段判断更新
+1. MRSTFT
+   这条线现在已经不再缺：
+   - plumbing
+   - quant baseline
+   - 最小听审材料
+2. 若还要继续问这条线，
+   下一问已经非常明确：
+   - `0.05`
+     在听感上
+     到底有没有超过 baseline
+
+### 更新后的下一步
+1. 若继续 MRSTFT
+   线，
+   优先听：
+   - `reports/audio/stage5_paired_parallel_overfit24_mrstft005_compare_quick_audit_20260325/`
+2. 若主线切回更高层，
+   则把这份 bundle
+   作为随时可回来的听审入口
+## 2026-03-25 继续补充：`mrstft005` 人工听审失败，Stage5 局部 objective 微调线正式停止
+- 正式报告：
+  - `docs/337_stage5_mrstft005_human_audit_fail_and_contract_semantic_upgrade_assessment.md`
+
+### 当前关键结果
+1. 用户已完成
+   baseline `0.00`
+   vs
+   MRSTFT `0.05`
+   bundle
+   听审
+2. 明确结论是：
+   - `mrstft005`
+     仍是单声调 pure buzz
+   - 没有人声结构
+3. 因此：
+   - short-window MRSTFT
+     不再继续
+   - 更广义的
+     Stage5
+     局部 waveform / objective
+     微调线，
+     也一并停止
+
+### 当前阶段判断更新
+1. 当前最有价值的调整，
+   不再是：
+   - 再试一个 loss
+   - 再做更细权重 sweep
+   - 再叠一个 decoder 小改
+2. 应正式切回：
+   - `C-prime / v2-core`
+     已拍板主线
+   - 以
+     `contractv2_normfix`
+     为底座
+   - 继续补齐
+     target-side semantic /
+     设计态
+     `e_evt`
+     contract
+3. 当前对瓶颈的解释更新为：
+   - acoustic-state
+     侧
+     `f0_hz / vuv / aper / E`
+     已接回
+   - 但 semantic
+     主干仍未真正升级到
+     design-state
+     `e_evt`
+   - 所以现阶段继续投入
+     waveform objective
+     微调，
+     性价比过低
+
+### 更新后的下一步
+1. 下一条正式主线任务：
+   - 把
+     `target_event_semantic_sidecar`
+     并入
+     Stage5
+     package / contract / no-res baseline
+2. 下一轮训练边界保持：
+   - no-res only
+   - 不开
+     `r_res`
+   - 不加 GAN
+   - 不再叠新的 waveform sidecar loss
+## 2026-03-25 继续补充：Stage5 `target_event_semantic_sidecar` 已接通到 package/index/training，并完成 overfit24 A/B 与最小听审包
+- 正式报告：
+  - `docs/338_stage5_target_event_semantic_sidecar_plumbing_and_overfit24_compare_bundle_report.md`
+
+### 当前关键结果
+1. 先做了代码路径自检，
+   当前新改动中未发现：
+   - `workdir3`
+   - 临时路径
+   - 旧绝对路径残留
+2. `target_event_semantic_sidecar`
+   已并入：
+   - Stage5 package payload
+   - dataset index
+   - dataset loop
+     semantic weighting
+3. paired overfit24
+   严格可比
+   baseline vs semantic-weight
+   已跑完：
+   - baseline
+     `loss_total = 0.856916`
+   - semantic
+     `loss_total = 0.854944`
+   - 但
+     `loss_total_semantic_weighted = 0.883594`
+     仍未显示出明确胜出
+4. 两边 step24
+   validation training-sync export
+   已完成，
+   最小听审包在：
+   - `reports/audio/stage5_paired_parallel_overfit24_semanticweight_compare_quick_audit_20260325/`
+
+### 当前阶段判断更新
+1. 这条 semantic
+   bootstrap
+   线现在已经不再缺：
+   - plumbing
+   - strict A/B
+   - 最小听审入口
+2. 量化层面它已证明：
+   - semantic metadata
+     真的进入了优化路径
+   - 对
+     RMS guard /
+     loudness match
+     有正向影响
+3. 但它尚未证明：
+   - 能带来真正的可听 speech emergence
+   - 或明确优于 baseline
+
+### 更新后的下一步
+1. 优先听：
+   - `reports/audio/stage5_paired_parallel_overfit24_semanticweight_compare_quick_audit_20260325/`
+2. 若听感仍是 pure buzz，
+   就继续推进：
+   - 更明确的
+     design-state
+     `e_evt`
+     consumer
+   而不是微调当前 package-level weighting
