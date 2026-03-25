@@ -13012,3 +13012,119 @@
     “至少不更坏”
     之前，
     不默认继续放大实验规模
+### 415. paired tiny overfit 若人工反馈为“包络更贴输入，但音调仍基本不变的 buzz”，必须把它判成错误解收敛，而不是接近人声
+- 现象:
+  - 在
+    paired overfit72 baseline
+    上，
+    用户主观反馈不是：
+    - 完全没变化
+  - 而是：
+    - 音量变化 /
+      能量包络
+      更贴输入
+    - 但仍然没有人声，
+      仍是定调 buzz
+- 风险:
+  - 若把这种结果误写成：
+    - “已经快出声了”
+    - “再多跑几步可能自然转正”
+  - 很容易继续在同一错误解附近堆步数
+    或堆轻量 loss
+- 处理要求:
+  - 对这类反馈，
+    正确解释应是：
+    - 模型学到了 envelope-following
+    - 但仍被困在 template-buzz
+  - 下一步应优先做：
+    - baseline vs objective candidate
+      的同 case 直接对比听审
+  - 而不是先继续扩大步数
+
+### 416. 当 objective 组成变化后，`loss_total` 的绝对值不再可跨实验直接比较；必须退回共享指标和人工听感
+- 现象:
+  - baseline overfit72
+    与
+    `active_template + frame_delta`
+    候选
+    的 `loss_total`
+    量级差异很大
+  - 但这是因为
+    `loss_total`
+    已包含了新的 objective 项
+- 风险:
+  - 若仍把：
+    - `0.803014`
+      对
+      `6.654291`
+    直接读成
+    “候选明显更差 / 更好”，
+    会做出错误方向判断
+- 处理要求:
+  - objective 改变后，
+    跨实验只比较：
+    - 共享轴
+      例如
+      `loss_waveform`
+      `loss_stft`
+      `decoded_to_target_rms_ratio`
+    - 新增目标本身
+      是否被压低
+    - 最终人工听感
+  - 不再把
+    `loss_total`
+    当作跨 objective
+    的唯一排序依据
+### 417. 当 `acttmpl005_delta6` 这类 decode-side objective 候选在 paired overfit 听感上与 baseline 完全无差异时，必须停止继续围绕同类 objective 微调
+- 现象:
+  - `acttmpl005_delta6`
+    在数值上：
+    - 压低了
+      `loss_active_frame_template_excess_relu_0p02`
+  - 但用户人工听审结果是：
+    - 与 baseline overfit72
+      没有可感知差异
+    - 仍无人声结构
+    - 仍是贴能量包络的单声调 buzz
+- 风险:
+  - 若此时继续围绕：
+    - `active_template`
+    - `frame_delta`
+    - 相邻同类 decode-side loss
+    做更多小调参，
+    很容易只是重复证明
+    “数值不等于人声”
+- 处理要求:
+  - 一旦出现这种
+    “数值改善但听感零差异”
+    的 paired overfit 结果，
+    应立即把主线切到：
+    - `fusion-side`
+    - `decoder family`
+    - 或更高层 waveform target
+      级别
+
+### 418. paired overfit 路线一旦同时排掉 baseline 与 decode-side objective，小步快跑的下一发必须是“真正不同的结构候选”，而不是再换一组同类 loss 配比
+- 现象:
+  - 当前 paired overfit
+    已连续排掉：
+    - baseline
+    - `acttmpl005_delta6`
+- 风险:
+  - 若下一发仍只是：
+    - 同类 objective
+      换另一组权重
+    那么实验名会变化，
+    但信息增量很低
+- 处理要求:
+  - 此时下一发必须满足至少一条：
+    - 改
+      `waveform_decoder_mode`
+    - 引入
+      `recurrent / temporal`
+      结构
+    - 引入
+      `fusion-side branch_mean`
+      这类更上游约束
+  - 目标是让新实验真正回答：
+    - “结构改线是否比 loss 微调更接近 speech emergence”

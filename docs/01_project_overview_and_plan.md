@@ -20190,3 +20190,142 @@ checkpoint / special series 也没有给出“只是 final 选坏了”的借口
 3. 听审结果出来后再决定：
    - 停住 semantic weighting
    - 或继续放大最小 loop
+## 2026-03-25 继续补充：Stage5 paired overfit72 baseline 已人工确认失败，`acttmpl005_delta6` 候选对比听审包已就绪
+- 正式报告：
+  - `docs/330_stage5_paired_parallel_overfit72_baseline_fail_and_acttmpl005_delta6_compare_bundle_report.md`
+
+### 当前关键结果
+1. 用户已完成
+   `docs/329_stage5_paired_parallel_baseline8_human_audit_fail_and_overfit72_bundle_report.md`
+   中
+   `overfit72 baseline`
+   听审，
+   主观结论更新为：
+   - 仍无人声
+   - 仍是音调基本不变的 buzz
+   - 但能量包络更贴输入
+2. 这说明当前 paired tiny overfit
+   已经学会部分：
+   - 包络
+   - 振幅匹配
+   但仍没有出现
+   speech emergence
+3. 基于
+   `docs/293_stage5_contractv2_normfix_waveform_objective_recheck_report.md`
+   的建议，
+   已跑完
+   `active_template_weight = 0.05`
+   +
+   `frame_delta_weight = 6.0`
+   的 overfit72 候选，
+   并完成：
+   - checkpoint selection
+   - training-sync export
+4. 最小对比听审包已整理到：
+   - `reports/audio/stage5_paired_parallel_overfit72_acttmpl005_delta6_compare_quick_audit_20260325/`
+   每个 case
+   只保留：
+   - `source`
+   - `target`
+   - `baseline decoded`
+   - `candidate decoded`
+
+### 当前阶段判断更新
+1. 当前主线已不再是：
+   - “paired route
+      能不能跑起来”
+   这个问题已经回答过
+2. 当前真正待判的是：
+   - 打击 template collapse
+     后，
+     是否第一次出现
+     可感知的人声雏形
+3. 在这份对比包听完前，
+   不应继续把时间投入到：
+   - 再加步数
+   - 再堆同类小权重 objective
+
+### 更新后的下一步
+1. 优先试听：
+   - `reports/audio/stage5_paired_parallel_overfit72_acttmpl005_delta6_compare_quick_audit_20260325/`
+2. 只回答：
+   - `04`
+     相比
+     `03`
+     是否摆脱了定调 buzz
+   - `08`
+     相比
+     `07`
+     是否出现任何人声雏形，
+     或至少没有更坏
+3. 若答案仍是否定，
+   下一主线应升级到：
+   - waveform head / decoder family
+     层面的改线
+## 2026-03-25 继续补充：`acttmpl005_delta6` 人工听审失败，已切到 recurrent + fusion-side 候选并整理新听包
+- 正式报告：
+  - `docs/331_stage5_acttmpl005_delta6_human_audit_fail_and_recurrent_fusedbranch020_bundle_report.md`
+
+### 当前关键结果
+1. 用户已完成
+   `docs/330_stage5_paired_parallel_overfit72_baseline_fail_and_acttmpl005_delta6_compare_bundle_report.md`
+   对比听审，
+   结论是：
+   - `acttmpl005_delta6`
+     与 baseline overfit72
+     没有可感知差异
+   - 仍无人声结构
+   - 仍是贴能量包络的单声调 buzz
+2. 这把当前 Stage5 paired 路线的判断进一步写硬为：
+   - `decode-side objective`
+     继续围绕
+     `active_template / frame_delta`
+     微调，
+     已经不是高价值方向
+3. 因而当前已正式切到：
+   - `recurrent decoder + periodic temporal + periodic rms_floor + fusion-side branch_mean`
+   这类真正不同的候选
+4. 已在 paired overfit72
+   上跑完：
+   - `waveform_decoder_mode = periodic_plus_noise_residual_shape_recurrent`
+   - `fused_hidden_branch_mean_weight = 0.2`
+   - `periodic_waveform_frame_delta_weight = 0.25`
+   - `periodic_waveform_frame_adjacent_cosine_weight = 0.01`
+   - `periodic_waveform_frame_rms_floor_weight = 0.65`
+   - `stft_weight = 0.55`
+5. 最小对比听审包已整理到：
+   - `reports/audio/stage5_paired_parallel_overfit72_recurrent_fusedbranch020_compare_quick_audit_20260325/`
+
+### 当前阶段判断更新
+1. 当前 paired tiny overfit
+   已经回答清楚：
+   - baseline 不行
+   - 同类 decode-side objective
+     也不行
+2. 现在唯一还值得继续问的，
+   是：
+   - 换到
+     `fusion-side / decoder family`
+     后，
+     有没有第一次出现人声结构
+3. 在这份新听包返回前，
+   不再继续做：
+   - 同类 objective 小调参
+
+### 更新后的下一步
+1. 优先试听：
+   - `reports/audio/stage5_paired_parallel_overfit72_recurrent_fusedbranch020_compare_quick_audit_20260325/`
+2. 只回答：
+   - `04`
+     相比
+     `03`
+     是否第一次出现人声结构
+   - `08`
+     相比
+     `07`
+     是否有同类改善，
+     或仍是纯 buzz
+3. 若答案仍是否定，
+   下一步应把 Stage5 主线再上移到：
+   - 更强 waveform target family
+   - 或真正不同的 vocoder head
