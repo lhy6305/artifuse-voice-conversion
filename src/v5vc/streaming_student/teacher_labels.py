@@ -41,6 +41,7 @@ from v5vc.offline_mvp.data import (
 )
 from v5vc.offline_mvp.losses import build_frame_targets
 from v5vc.proxy_audio_export import sanitize_filename
+from v5vc.source_acoustic_state_extraction import extract_source_acoustic_state
 from v5vc.train_entry import instantiate_offline_mvp_model
 
 
@@ -164,6 +165,10 @@ def build_streaming_student_teacher_labels(
             "event_logits": int(checkpoint_config["model"]["event_dim"]),
             "e_evt": int(checkpoint_config["model"]["event_dim"]),
             "acoustic": int(checkpoint_config["model"]["acoustic_dim"]),
+            "target_f0_hz": 1,
+            "target_vuv": 1,
+            "target_aper": 1,
+            "target_energy": 1,
             "confidence": 1,
         },
         "slices": summary_slices,
@@ -171,6 +176,7 @@ def build_streaming_student_teacher_labels(
             "Teacher labels are pseudo labels exported from the formal offline_mvp route anchor, not physical ground truth.",
             "frame_confidence uses heuristic bootstrap_v1 and is meant for later weighting/filtering, not as a final confidence design.",
             "This export now materializes a bootstrap teacher_e_evt target so Stage3 can stop treating legacy heuristic event_probs as the final event contract.",
+            "This export now also materializes deterministic target acoustic state tensors so Stage3 and downstream packet audits can reuse one named target-state contract instead of recomputing from waveform ad hoc.",
             "Stage3 may reuse these labels as assets, but should still keep its own training entry and loss contract separate from offline_mvp.",
             f"teacher_e_evt bridge mode for this export = {bridge_mode}.",
             f"teacher_e_evt target shaping mode for this export = {shaping_mode}.",
@@ -453,6 +459,7 @@ def export_split_teacher_labels(
         for sample_index, record in enumerate(batch_records):
             export_row = export_single_record(
                 record=record,
+                example=examples[sample_index],
                 split_name=split_name,
                 sample_index=sample_index,
                 outputs=outputs,
@@ -461,6 +468,8 @@ def export_split_teacher_labels(
                 records_dir=records_dir,
                 teacher_anchor=teacher_anchor,
                 threshold=LOW_CONFIDENCE_THRESHOLD,
+                frame_length=frame_length,
+                hop_length=hop_length,
                 teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
                 teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
             )
@@ -513,6 +522,7 @@ def export_split_teacher_labels(
 
 def export_single_record(
     record: dict[str, object],
+    example: object,
     split_name: str,
     sample_index: int,
     outputs: dict[str, torch.Tensor],
@@ -521,6 +531,8 @@ def export_single_record(
     records_dir: Path,
     teacher_anchor: dict[str, object],
     threshold: float,
+    frame_length: int,
+    hop_length: int,
     teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
 ) -> dict[str, object]:
@@ -540,6 +552,13 @@ def export_single_record(
         teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
+    frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
+    target_acoustic_state = extract_source_acoustic_state(
+        waveform=example.waveform,
+        sample_rate=int(example.sample_rate),
+        frame_start_samples=frame_start_samples,
+        frame_length=int(frame_length),
+    )
     tensor_payload = {
         "record_id": record_id,
         "split_name": split_name,
@@ -557,6 +576,15 @@ def export_single_record(
         "e_evt_meta": dict(teacher_e_evt["meta"]),
         "e_evt_summary": dict(teacher_e_evt["summary"]),
         "acoustic": trim_tensor(outputs["acoustic"][sample_index], valid_frame_count),
+        "target_f0_hz": trim_tensor(target_acoustic_state["f0_hz"], valid_frame_count),
+        "target_vuv": trim_tensor(target_acoustic_state["vuv"], valid_frame_count),
+        "target_aper": trim_tensor(target_acoustic_state["aper"], valid_frame_count),
+        "target_energy": trim_tensor(target_acoustic_state["E"], valid_frame_count),
+        "target_acoustic_state_meta": {
+            "version": str(target_acoustic_state["version"]),
+            "aper_version": str(target_acoustic_state["aper_version"]),
+            "stats": dict(target_acoustic_state["stats"]),
+        },
         "frame_confidence": trim_tensor(frame_confidence[sample_index], valid_frame_count),
     }
     relative_tensor_path = Path("records") / f"{sanitize_filename(record_id)}.pt"
@@ -596,6 +624,12 @@ def export_single_record(
         "teacher_event_label_space_version": str(teacher_e_evt["meta"]["event_label_space_version"]),
         "teacher_event_bridge_mode": str(teacher_e_evt["meta"]["teacher_e_evt_bridge_mode"]),
         "teacher_event_target_shaping_mode": str(teacher_e_evt["meta"]["teacher_e_evt_target_shaping_mode"]),
+        "target_acoustic_state_version": str(target_acoustic_state["version"]),
+        "target_acoustic_state_aper_version": str(target_acoustic_state["aper_version"]),
+        "target_acoustic_state_voiced_ratio": round(
+            float(target_acoustic_state["stats"].get("voiced_ratio", 0.0)),
+            6,
+        ),
         "timing_source": str(timing_overview["timing_source"]),
         "timing_contract_version": timing_overview["timing_contract_version"],
         "timing_label_space_version": timing_overview["timing_label_space_version"],

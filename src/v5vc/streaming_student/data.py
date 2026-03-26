@@ -435,22 +435,37 @@ def load_streaming_student_target_examples_from_records(
         target_aper = None
         target_energy = None
         if include_target_acoustic_state:
-            if frame_length is None or hop_length is None:
-                raise ValueError(
-                    "include_target_acoustic_state=True requires frame_length and hop_length."
+            cached_target_f0_hz = teacher_payload.get("target_f0_hz")
+            cached_target_vuv = teacher_payload.get("target_vuv")
+            cached_target_aper = teacher_payload.get("target_aper")
+            cached_target_energy = teacher_payload.get("target_energy")
+            if (
+                isinstance(cached_target_f0_hz, torch.Tensor)
+                and isinstance(cached_target_vuv, torch.Tensor)
+                and isinstance(cached_target_aper, torch.Tensor)
+                and isinstance(cached_target_energy, torch.Tensor)
+            ):
+                target_f0_hz = cached_target_f0_hz.to(torch.float32)
+                target_vuv = cached_target_vuv.to(torch.float32)
+                target_aper = cached_target_aper.to(torch.float32)
+                target_energy = cached_target_energy.to(torch.float32)
+            else:
+                if frame_length is None or hop_length is None:
+                    raise ValueError(
+                        "include_target_acoustic_state=True requires frame_length and hop_length."
+                    )
+                valid_frame_count = int(teacher_payload["frame_mask"].to(torch.bool).sum().item())
+                frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
+                target_state = extract_source_acoustic_state(
+                    waveform=waveform,
+                    sample_rate=int(sample_rate),
+                    frame_start_samples=frame_start_samples,
+                    frame_length=int(frame_length),
                 )
-            valid_frame_count = int(teacher_payload["frame_mask"].to(torch.bool).sum().item())
-            frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
-            target_state = extract_source_acoustic_state(
-                waveform=waveform,
-                sample_rate=int(sample_rate),
-                frame_start_samples=frame_start_samples,
-                frame_length=int(frame_length),
-            )
-            target_f0_hz = target_state["f0_hz"].to(torch.float32)
-            target_vuv = target_state["vuv"].to(torch.float32)
-            target_aper = target_state["aper"].to(torch.float32)
-            target_energy = target_state["E"].to(torch.float32)
+                target_f0_hz = target_state["f0_hz"].to(torch.float32)
+                target_vuv = target_state["vuv"].to(torch.float32)
+                target_aper = target_state["aper"].to(torch.float32)
+                target_energy = target_state["E"].to(torch.float32)
         examples.append(
             StreamingStudentTargetExample(
                 record_id=record_id,

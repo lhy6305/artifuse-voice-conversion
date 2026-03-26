@@ -142,13 +142,19 @@
      - `e_evt / z_art` 可保留
      - `F0 / vuv / aper / E` 仍全部 auto-reject
      - 因此当前仍不允许开启新的 Stage5 handoff route
-10. 在新的 handoff family 通过更强 cheap screen 前，不再新增：
+10. `teacher_labels` 现在也已完成 `target-state` 合同补齐：
+   - `docs/375_stage3_teacher_label_target_state_contract_completion_report.md`
+   - 当前新的 teacher asset 基线是：
+     - `teacher_labels_eevt_directional_targetstate_round1_1`
+   - Stage3 batch 现已优先读取 teacher payload 内置 `target_f0_hz / target_vuv / target_aper / target_energy`
+11. 在新的 handoff family 通过更强 cheap screen 前，不再新增：
   - Stage5 同层 decode 小实验
   - Stage5 同层 semantic/timing consumer 小实验
   - 同类 objective / weight 微扫
-11. 当前新的默认下一步改为：
+12. 当前新的默认下一步改为：
   - 不继续做 naive direct state loss injection
-  - 转回更结构化的 `target-state generation / contract completion`
+  - 基于新的 `teacher_labels_eevt_directional_targetstate_round1_1`
+    继续做更结构化的 `target-state generation / contract completion`
   - 并以 `named-control readiness negative gate` 作为新的下游前置门禁
   - 尤其避免把“packet 可导出”或“local state MAE 下降”误判成“已经值得开新 Stage5 route”
 
@@ -166,6 +172,7 @@
 - `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
 - `docs/373_stage3_explicit_target_acoustic_state_supervision_ab_fail_report.md`
 - `docs/374_stage3_student_control_packet_readiness_gate_report.md`
+- `docs/375_stage3_teacher_label_target_state_contract_completion_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。

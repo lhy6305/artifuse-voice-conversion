@@ -241,3 +241,16 @@
     - `e_evt / z_art` 可保留
     - `F0 / vuv / aper / E` 仍全部未就绪
   - 所以在 gate 放行前，不开新的 Stage5 adapter/scaffold
+
+### 21. 不应继续让 Stage3 在训练时各处临时重算 target-state
+- 现象：
+  - 之前 deterministic target acoustic state 虽已可用，
+    但主要还是在 Stage3 batch 里临时从 waveform 提取
+- 风险：
+  - teacher asset、batch contract、packet audit 不同源
+  - 后续 generation-side 升级与 handoff 审计容易各用一套 target-state
+- 正确处理：
+  - 以 teacher asset 内置的
+    `target_f0_hz / target_vuv / target_aper / target_energy`
+    作为默认来源
+  - 仅在旧资产缺字段时才回退重算
