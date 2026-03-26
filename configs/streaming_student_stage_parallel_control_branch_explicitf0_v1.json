@@ -32,15 +32,15 @@
     "aper_correction_enabled": true,
     "detach_frontend_named_controls_for_student": false,
     "detach_shared_hidden_for_student": false,
-    "named_control_branch_mode": "shared_hidden_v1",
+    "named_control_branch_mode": "parallel_control_encoder_v1",
     "named_control_branch_layers": 2,
-    "f0_parameterization_mode": "unbounded_log_v1",
+    "f0_parameterization_mode": "bounded_log2_hz_v1",
     "f0_floor_hz": 50.0,
     "f0_ceil_hz": 550.0,
-    "f0_control_branch_mode": "shared_student_v1",
+    "f0_control_branch_mode": "explicit_state_branch_v1",
     "f0_control_branch_layers": 2,
-    "f0_correction_parameterization_mode": "linear_unbounded_v1",
-    "f0_correction_limit_log2": 0.5
+    "f0_correction_parameterization_mode": "bounded_tanh_log2_delta_v1",
+    "f0_correction_limit_log2": 0.35
   },
   "training": {
     "mode": "streaming_student_stage",

@@ -289,3 +289,91 @@
     - proxy target family
     - 轻量梯度 stop
     这些同层小变体上消耗预算
+
+### 24. `frontend/control branch split v1` 的 Stage3 正向，也不能直接外推成 handoff 已成立
+- 现象：
+  - `parallel_control_encoder_v1`
+    能继续改善 Stage3 的 `loss_total / event_prior / z_art`
+- 风险：
+  - 很容易因为“终于做了明确 branch split，而且总 loss 更好”，
+    就误判它已经接近可下游消费
+- 正确处理：
+  - 这版 packet 仍然：
+    - `all_records_auto_reject = true`
+    - `f0_ready_count = 0`
+    - `vuv_ready_count = 0`
+    - `aper_ready_count = 0`
+    - `energy_ready_count = 0`
+  - 更关键的是：
+    - `F0` raw proxy correlation 出现稳定反号
+  - 所以 branch split v1 只能算“有信息量的失败”，
+    不能直接进入新的 Stage5 route
+
+### 25. `F0` 落进物理范围，不等于 `F0` handoff 已经方向正确
+- 现象：
+  - `bounded_log2_hz_v1`
+    能把 `f0_log_proxy_mean` 收进合理的 `log2(Hz)` 区间
+- 风险：
+  - 很容易因为“数值终于像真的 F0 了”，
+    就误判 handoff 已接近可用
+- 正确处理：
+  - 必须继续看：
+    - `f0_proxy_reference_corr`
+    - `f0_calibrated_log2_mae`
+    - readiness gate
+  - 当前事实是：
+    - raw correlation 仍稳定为负
+    - gate 完全不开
+  - 所以 `bounded F0` 只能算量纲修饰，不是当前问题的解法
+
+### 26. 单独再加一层 `explicit F0 branch`，也不等于已经触到 named-control handoff 的主病因
+- 现象：
+  - `explicit_state_branch_v1`
+    相对 `bounded F0` 基本打平
+  - `teacher_f0_state` 没有改善
+  - `loss_log_f0_correction_l1` 却明显抬升
+- 风险：
+  - 很容易因为“已经给了 F0 独立支路”，
+    就继续在这条单支路上扫层数、delta 上界、小 warmup 权重
+- 正确处理：
+  - 当前事实是：
+    - readiness gate 仍完全不开
+    - `F0` raw proxy correlation 仍稳定为负
+  - 所以单独 `F0 branch` 不是当前层级的解法
+  - 若继续，必须上到更完整的
+    `control-specific head family / explicit control-state branch`
+
+### 27. 即使把 `F0 / vuv / aper / energy` 一起放进 control-specific family，也不代表 handoff 病灶就在 student-side correction 层
+- 现象：
+  - `explicit_named_control_family_v1`
+    能继续改善 Stage3 `loss_total`
+  - 但 readiness gate 仍完全不开
+- 风险：
+  - 很容易因为 Stage3 数字继续变好，
+    就继续在 student-side correction family 上加层数、加容量、加小限制
+- 正确处理：
+  - 必须先看更细的相关性诊断
+  - 当前已确认：
+    - `log_f0_correction` 本身是正相关补偿项
+    - 真正负相关的是更上游的 `coarse_log_f0`
+  - 所以下一步应转去：
+    - `coarse F0 target contract / sign-stable supervision`
+  - 而不是继续在 correction family 上追加小修
+
+### 28. `F0 proxy` 从负相关翻正，不等于 handoff 已经打开
+- 现象：
+  - `coarse_f0_state` 直监督后，
+    `F0 proxy` 已从全负翻到全正
+- 风险：
+  - 很容易因此过早判断
+    “F0 已经解决，下一步可以开新 Stage5 route”
+- 正确处理：
+  - 现在只能说：
+    - `sign repair` 方向终于打中了
+  - 还不能说：
+    - `F0` 已经 ready
+  - 因为当前仍同时成立：
+    - `coarse_log_f0` 本体仍未翻正
+    - `f0_proxy_reference_corr` 还没到 gate 阈值
+    - `calibrated_log2_mae` 仍偏高
+    - 其它 named controls 也还没一起过门

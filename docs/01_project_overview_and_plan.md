@@ -177,6 +177,52 @@
     - `detach_shared_hidden_for_student`
   - 所以下一步不再扫这些轻量开关，而是上到更明确的
     `frontend/control branch split`
+15. `frontend/control branch split v1` 也已做过 fail-fast：
+  - `docs/378_stage3_parallel_control_branch_fail_fast_report.md`
+  - 当前结论是：
+    - Stage3 主指标可以继续改善
+    - 但 packet readiness 仍不开
+    - `F0` 甚至出现 raw proxy correlation 反号
+  - 因此这条线不能直接升格为新的 reference
+  - 如果继续，只能上到更强的
+    `control-specific head family / bounded F0 parameterization`
+16. `bounded F0 parameterization` 也已做过同层 fail-fast：
+  - `docs/379_stage3_parallel_control_branch_bounded_f0_fail_report.md`
+  - 当前结论是：
+    - 它能把 `F0` 数值收进物理边界
+    - 但不能修掉 raw proxy correlation 反号
+    - readiness gate 依然完全不开
+  - 所以下一步不再扫 `bounded/unbounded` 小变体，
+    而只能上到更强的 `control-specific head family / explicit F0 control-state branch`
+17. `explicit F0 control-state branch` 也已完成 fail-fast：
+  - `docs/380_stage3_explicit_f0_control_state_branch_fail_report.md`
+  - 当前结论是：
+    - 相对 `bounded F0` 基本打平
+    - `teacher_f0_state` 没有变好
+    - `loss_log_f0_correction_l1` 明显变差
+    - packet readiness 仍完全不开
+    - `F0` raw proxy correlation 继续稳定为负
+  - 所以下一步不再扫单独 `F0 branch` 的层数、delta 上界或小权重，
+    而只能上到更完整的 `control-specific head family / explicit control-state branch`
+18. 更完整的 `control-specific head family` 也已完成 fail-fast：
+  - `docs/381_stage3_control_specific_head_family_fail_and_coarse_f0_sign_diagnosis_report.md`
+  - 当前结论是：
+    - Stage3 主指标继续改善
+    - 但 packet readiness 仍完全不开
+    - `vuv / energy` 有局部改善，`aper / F0` 仍拖后腿
+    - 更关键的是：`F0` 反号病灶不在 correction head，
+      而在更上游的 `coarse_log_f0`
+  - 所以下一步不再继续 student-side correction family 微调，
+    而要转去 `coarse F0 target contract / sign-stable supervision`
+19. `coarse_log_f0` 直监督已给出第一条有效恢复信号：
+  - `docs/382_stage3_coarse_f0_state_supervision_partial_recovery_report.md`
+  - 当前结论是：
+    - Stage3 主指标略差，不能升格为新 reference
+    - 但 `F0 proxy` 已首次从稳定负相关翻到正相关
+    - gate 仍不开，说明这只是部分恢复
+  - 因此下一步应继续留在
+    `coarse_log_f0 sign-stable supervision / parameterization`
+    这一层，而不是回到 student-side correction family
 
 ## 关键参考报告
 - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
@@ -195,6 +241,11 @@
 - `docs/375_stage3_teacher_label_target_state_contract_completion_report.md`
 - `docs/376_stage3_teacher_eevt_directional_targetstate_bridge_ab_and_readiness_report.md`
 - `docs/377_stage3_named_control_handoff_ablation_fail_report.md`
+- `docs/378_stage3_parallel_control_branch_fail_fast_report.md`
+- `docs/379_stage3_parallel_control_branch_bounded_f0_fail_report.md`
+- `docs/380_stage3_explicit_f0_control_state_branch_fail_report.md`
+- `docs/381_stage3_control_specific_head_family_fail_and_coarse_f0_sign_diagnosis_report.md`
+- `docs/382_stage3_coarse_f0_state_supervision_partial_recovery_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。

@@ -269,6 +269,31 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
         detach_shared_hidden_for_student=bool(
             model_config.get("detach_shared_hidden_for_student", False)
         ),
+        named_control_branch_mode=str(
+            model_config.get("named_control_branch_mode", "shared_hidden_v1")
+        ),
+        named_control_branch_layers=(
+            None
+            if model_config.get("named_control_branch_layers") in {None, ""}
+            else int(model_config.get("named_control_branch_layers"))
+        ),
+        f0_parameterization_mode=str(
+            model_config.get("f0_parameterization_mode", "unbounded_log_v1")
+        ),
+        f0_floor_hz=float(model_config.get("f0_floor_hz", 50.0)),
+        f0_ceil_hz=float(model_config.get("f0_ceil_hz", 550.0)),
+        f0_control_branch_mode=str(
+            model_config.get("f0_control_branch_mode", "shared_student_v1")
+        ),
+        f0_control_branch_layers=(
+            None
+            if model_config.get("f0_control_branch_layers") in {None, ""}
+            else int(model_config.get("f0_control_branch_layers"))
+        ),
+        f0_correction_parameterization_mode=str(
+            model_config.get("f0_correction_parameterization_mode", "linear_unbounded_v1")
+        ),
+        f0_correction_limit_log2=float(model_config.get("f0_correction_limit_log2", 0.5)),
     )
 
 
@@ -276,10 +301,38 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
     return {
         "frontend_outputs": {
             "shared_hidden": {"feature_dim": int(model_config["shared_dim"])},
+            "control_hidden": {
+                "feature_dim": int(model_config["shared_dim"]),
+                "branch_mode": str(model_config.get("named_control_branch_mode", "shared_hidden_v1")),
+                "branch_layers": (
+                    int(model_config.get("named_control_branch_layers", model_config["frontend_layers"]))
+                    if str(model_config.get("named_control_branch_mode", "shared_hidden_v1")).strip().lower()
+                    == "parallel_control_encoder_v1"
+                    else 0
+                ),
+            },
             "teacher_hidden_projection": {
                 "feature_dim": int(model_config.get("teacher_hidden_projection_dim", 64))
             },
             "coarse_log_f0": {"feature_dim": 1},
+            "f0_parameterization": {
+                "mode": str(model_config.get("f0_parameterization_mode", "unbounded_log_v1")),
+                "f0_floor_hz": float(model_config.get("f0_floor_hz", 50.0)),
+                "f0_ceil_hz": float(model_config.get("f0_ceil_hz", 550.0)),
+            },
+            "f0_control_branch": {
+                "mode": str(model_config.get("f0_control_branch_mode", "shared_student_v1")),
+                "branch_layers": (
+                    int(model_config.get("f0_control_branch_layers", model_config["student_layers"]))
+                    if str(model_config.get("f0_control_branch_mode", "shared_student_v1")).strip().lower()
+                    in {"explicit_state_branch_v1", "explicit_named_control_family_v1"}
+                    else 0
+                ),
+                "correction_parameterization_mode": str(
+                    model_config.get("f0_correction_parameterization_mode", "linear_unbounded_v1")
+                ),
+                "correction_limit_log2": float(model_config.get("f0_correction_limit_log2", 0.5)),
+            },
             "vuv_logits": {"feature_dim": 1},
             "aperiodicity": {"feature_dim": 1},
             "energy": {"feature_dim": 1},

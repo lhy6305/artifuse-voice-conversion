@@ -1,0 +1,12 @@
+{
+  "loss_weights": {
+    "teacher_f0_state": 0.02
+  },
+  "loss_weight_schedule": {
+    "teacher_f0_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    }
+  }
+}

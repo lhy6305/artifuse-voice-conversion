@@ -3,10 +3,26 @@ from __future__ import annotations
 import torch
 
 
+def _resolve_predicted_named_controls(outputs: dict[str, torch.Tensor]) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    energy_log = (
+        outputs["energy"].to(torch.float32)
+        + outputs.get("energy_correction", torch.zeros_like(outputs["energy"])).to(torch.float32)
+    )
+    voiced_logits = (
+        outputs["vuv_logits"].to(torch.float32)
+        + outputs.get("vuv_logit_correction", torch.zeros_like(outputs["vuv_logits"])).to(torch.float32)
+    )
+    aper_logits = (
+        outputs["aperiodicity"].to(torch.float32)
+        + outputs.get("aper_correction", torch.zeros_like(outputs["aperiodicity"])).to(torch.float32)
+    )
+    return energy_log, voiced_logits, aper_logits
+
+
 def build_streaming_student_proxy_acoustic(outputs: dict[str, torch.Tensor]) -> torch.Tensor:
-    energy_log = outputs["energy"].to(torch.float32)
-    voiced_prob = torch.sigmoid(outputs["vuv_logits"].to(torch.float32))
-    aper_proxy = torch.sigmoid(outputs["aperiodicity"].to(torch.float32))
+    energy_log, voiced_logits, aper_logits = _resolve_predicted_named_controls(outputs)
+    voiced_prob = torch.sigmoid(voiced_logits)
+    aper_proxy = torch.sigmoid(aper_logits)
     event_presence = outputs["event_probs"].to(torch.float32).amax(dim=-1, keepdim=True)
 
     rms_like = torch.sqrt(torch.pow(10.0, energy_log).clamp_min(1.0e-8))
@@ -19,9 +35,9 @@ def build_streaming_student_proxy_acoustic(outputs: dict[str, torch.Tensor]) -> 
 
 
 def build_streaming_student_proxy_acoustic_for_export(outputs: dict[str, torch.Tensor]) -> torch.Tensor:
-    energy_log = outputs["energy"].to(torch.float32)
-    voiced_prob = torch.sigmoid(outputs["vuv_logits"].to(torch.float32))
-    aper_proxy = torch.sigmoid(outputs["aperiodicity"].to(torch.float32))
+    energy_log, voiced_logits, aper_logits = _resolve_predicted_named_controls(outputs)
+    voiced_prob = torch.sigmoid(voiced_logits)
+    aper_proxy = torch.sigmoid(aper_logits)
 
     rms_like = torch.sqrt(torch.pow(10.0, energy_log).clamp_min(1.0e-8))
     # Export-side proxy audio should stay quiet in silence; unlike the training-side helper,

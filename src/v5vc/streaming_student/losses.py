@@ -34,6 +34,8 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_energy_proxy": 0.25,
         "teacher_vuv_proxy": 0.15,
         "teacher_aper_proxy": 0.1,
+        "teacher_coarse_f0_state": 0.0,
+        "teacher_coarse_f0_correlation": 0.0,
         "teacher_f0_state": 0.0,
         "teacher_vuv_state": 0.0,
         "teacher_aper_state": 0.0,
@@ -455,6 +457,14 @@ def compute_streaming_student_teacher_supervision_loss(
         & (teacher_target_f0_hz > 0.0)
     ).to(frame_weight.dtype)
     predicted_log_f0 = outputs["coarse_log_f0"] + outputs["log_f0_correction"]
+    predicted_vuv_logits = outputs["vuv_logits"] + outputs.get(
+        "vuv_logit_correction",
+        torch.zeros_like(outputs["vuv_logits"]),
+    )
+    predicted_energy = outputs["energy"] + outputs.get(
+        "energy_correction",
+        torch.zeros_like(outputs["energy"]),
+    )
     target_log_f0 = torch.log2(teacher_target_f0_hz.clamp_min(1.0))
     predicted_aper_state = torch.sigmoid(outputs["aperiodicity"] + outputs["aper_correction"])
 
@@ -497,12 +507,12 @@ def compute_streaming_student_teacher_supervision_loss(
         frame_weight=frame_weight,
     )
     energy_proxy_loss_per_sample = masked_mse_per_sample(
-        prediction=outputs["energy"],
+        prediction=predicted_energy,
         target=teacher_acoustic[..., 0:1],
         frame_weight=frame_weight,
     )
     vuv_proxy_loss_per_sample = masked_bce_with_logits_per_sample(
-        logits=outputs["vuv_logits"],
+        logits=predicted_vuv_logits,
         target=vuv_proxy_target,
         frame_weight=frame_weight,
     )
@@ -516,8 +526,18 @@ def compute_streaming_student_teacher_supervision_loss(
         target=target_log_f0,
         frame_weight=frame_weight * voiced_target_mask,
     )
+    coarse_f0_state_loss_per_sample = masked_mse_per_sample(
+        prediction=outputs["coarse_log_f0"],
+        target=target_log_f0,
+        frame_weight=frame_weight * voiced_target_mask,
+    )
+    coarse_f0_correlation_loss_per_sample = masked_correlation_alignment_loss_per_sample(
+        prediction=outputs["coarse_log_f0"],
+        target=target_log_f0,
+        frame_weight=frame_weight * voiced_target_mask,
+    )
     vuv_state_loss_per_sample = masked_bce_with_logits_per_sample(
-        logits=outputs["vuv_logits"],
+        logits=predicted_vuv_logits,
         target=teacher_target_vuv.clamp(0.0, 1.0),
         frame_weight=frame_weight,
     )
@@ -527,7 +547,7 @@ def compute_streaming_student_teacher_supervision_loss(
         frame_weight=frame_weight,
     )
     energy_state_loss_per_sample = masked_mse_per_sample(
-        prediction=outputs["energy"],
+        prediction=predicted_energy,
         target=teacher_target_energy,
         frame_weight=frame_weight,
     )
@@ -577,6 +597,8 @@ def compute_streaming_student_teacher_supervision_loss(
     energy_proxy_loss = reduce_weighted_sample_loss(energy_proxy_loss_per_sample)
     vuv_proxy_loss = reduce_weighted_sample_loss(vuv_proxy_loss_per_sample)
     aper_proxy_loss = reduce_weighted_sample_loss(aper_proxy_loss_per_sample)
+    coarse_f0_state_loss = reduce_weighted_sample_loss(coarse_f0_state_loss_per_sample)
+    coarse_f0_correlation_loss = reduce_weighted_sample_loss(coarse_f0_correlation_loss_per_sample)
     f0_state_loss = reduce_weighted_sample_loss(f0_state_loss_per_sample)
     vuv_state_loss = reduce_weighted_sample_loss(vuv_state_loss_per_sample)
     aper_state_loss = reduce_weighted_sample_loss(aper_state_loss_per_sample)
@@ -601,6 +623,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
+        + coarse_f0_state_loss * effective_weights["teacher_coarse_f0_state"]
+        + coarse_f0_correlation_loss * effective_weights["teacher_coarse_f0_correlation"]
         + f0_state_loss * effective_weights["teacher_f0_state"]
         + vuv_state_loss * effective_weights["teacher_vuv_state"]
         + aper_state_loss * effective_weights["teacher_aper_state"]
@@ -622,6 +646,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * default_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * default_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * default_weights["teacher_aper_proxy"]
+        + coarse_f0_state_loss * default_weights["teacher_coarse_f0_state"]
+        + coarse_f0_correlation_loss * default_weights["teacher_coarse_f0_correlation"]
         + f0_state_loss * default_weights["teacher_f0_state"]
         + vuv_state_loss * default_weights["teacher_vuv_state"]
         + aper_state_loss * default_weights["teacher_aper_state"]
@@ -643,6 +669,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
+        + coarse_f0_state_loss * effective_weights["teacher_coarse_f0_state"]
+        + coarse_f0_correlation_loss * effective_weights["teacher_coarse_f0_correlation"]
         + f0_state_loss * effective_weights["teacher_f0_state"]
         + vuv_state_loss * effective_weights["teacher_vuv_state"]
         + aper_state_loss * effective_weights["teacher_aper_state"]
@@ -673,6 +701,11 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_teacher_energy_proxy": round(float(energy_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_vuv_proxy": round(float(vuv_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_aper_proxy": round(float(aper_proxy_loss.detach().cpu().item()), 6),
+        "loss_teacher_coarse_f0_state": round(float(coarse_f0_state_loss.detach().cpu().item()), 6),
+        "loss_teacher_coarse_f0_correlation": round(
+            float(coarse_f0_correlation_loss.detach().cpu().item()),
+            6,
+        ),
         "loss_teacher_f0_state": round(float(f0_state_loss.detach().cpu().item()), 6),
         "loss_teacher_vuv_state": round(float(vuv_state_loss.detach().cpu().item()), 6),
         "loss_teacher_aper_state": round(float(aper_state_loss.detach().cpu().item()), 6),
@@ -1205,6 +1238,33 @@ def masked_l1_per_sample(
     numerator = (prediction.abs() * frame_weight).sum(dim=tuple(range(1, prediction.ndim)))
     denominator = frame_weight.sum(dim=tuple(range(1, frame_weight.ndim))).clamp_min(1.0)
     return numerator / denominator
+
+
+def masked_correlation_alignment_loss_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+) -> torch.Tensor:
+    prediction = prediction.to(torch.float32)
+    target = target.to(torch.float32)
+    frame_weight = frame_weight.to(torch.float32)
+    batch_size = prediction.shape[0]
+    flat_prediction = prediction.reshape(batch_size, -1)
+    flat_target = target.reshape(batch_size, -1)
+    flat_weight = frame_weight.reshape(batch_size, -1)
+    weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
+    mean_prediction = (flat_prediction * flat_weight).sum(dim=1) / weight_sum
+    mean_target = (flat_target * flat_weight).sum(dim=1) / weight_sum
+    centered_prediction = (flat_prediction - mean_prediction.unsqueeze(1)) * flat_weight
+    centered_target = (flat_target - mean_target.unsqueeze(1)) * flat_weight
+    numerator = (centered_prediction * centered_target).sum(dim=1)
+    denominator = torch.sqrt(
+        centered_prediction.pow(2).sum(dim=1).clamp_min(1.0e-8)
+        * centered_target.pow(2).sum(dim=1).clamp_min(1.0e-8)
+    ).clamp_min(1.0e-8)
+    correlation = numerator / denominator
+    valid = (flat_weight.sum(dim=1) >= 8.0).to(torch.float32)
+    return (1.0 - correlation.clamp(-1.0, 1.0)) * valid
 
 
 def masked_bce_with_logits(

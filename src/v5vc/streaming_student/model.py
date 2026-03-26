@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import math
 import torch
 from torch import nn
 
 from v5vc.offline_mvp.model import frame_waveform
+
+
+DEFAULT_STREAMING_STUDENT_F0_FLOOR_HZ = 50.0
+DEFAULT_STREAMING_STUDENT_F0_CEIL_HZ = 550.0
 
 
 class UnifiedStreamingFrontend(nn.Module):
@@ -17,11 +22,32 @@ class UnifiedStreamingFrontend(nn.Module):
         event_prior_dim: int,
         teacher_hidden_projection_dim: int,
         timing_aux_enabled: bool = False,
+        named_control_branch_mode: str = "shared_hidden_v1",
+        named_control_branch_layers: int | None = None,
+        f0_parameterization_mode: str = "unbounded_log_v1",
+        f0_floor_hz: float = DEFAULT_STREAMING_STUDENT_F0_FLOOR_HZ,
+        f0_ceil_hz: float = DEFAULT_STREAMING_STUDENT_F0_CEIL_HZ,
     ) -> None:
         super().__init__()
         self.frame_length = frame_length
         self.hop_length = hop_length
         self.timing_aux_enabled = bool(timing_aux_enabled)
+        self.named_control_branch_mode = str(named_control_branch_mode).strip().lower()
+        if self.named_control_branch_mode not in {"shared_hidden_v1", "parallel_control_encoder_v1"}:
+            raise ValueError(
+                "named_control_branch_mode must be one of: "
+                "shared_hidden_v1, parallel_control_encoder_v1."
+            )
+        self.f0_parameterization_mode = str(f0_parameterization_mode).strip().lower()
+        if self.f0_parameterization_mode not in {"unbounded_log_v1", "bounded_log2_hz_v1"}:
+            raise ValueError(
+                "f0_parameterization_mode must be one of: "
+                "unbounded_log_v1, bounded_log2_hz_v1."
+            )
+        self.f0_floor_hz = max(float(f0_floor_hz), 1.0)
+        self.f0_ceil_hz = max(float(f0_ceil_hz), self.f0_floor_hz + 1.0)
+        self.f0_log2_floor = math.log2(self.f0_floor_hz)
+        self.f0_log2_ceil = math.log2(self.f0_ceil_hz)
         self.input_proj = nn.Linear(2, frontend_dim)
         self.input_norm = nn.LayerNorm(frontend_dim)
         self.encoder = build_mlp(
@@ -29,6 +55,21 @@ class UnifiedStreamingFrontend(nn.Module):
             hidden_dim=frontend_dim,
             output_dim=shared_dim,
             num_layers=frontend_layers,
+        )
+        resolved_named_control_branch_layers = (
+            frontend_layers
+            if named_control_branch_layers is None
+            else max(1, int(named_control_branch_layers))
+        )
+        self.control_encoder = (
+            build_mlp(
+                input_dim=frontend_dim,
+                hidden_dim=frontend_dim,
+                output_dim=shared_dim,
+                num_layers=resolved_named_control_branch_layers,
+            )
+            if self.named_control_branch_mode == "parallel_control_encoder_v1"
+            else None
         )
         self.log_f0_head = nn.Linear(shared_dim, 1)
         self.vuv_head = nn.Linear(shared_dim, 1)
@@ -59,14 +100,29 @@ class UnifiedStreamingFrontend(nn.Module):
         )
         hidden = self.input_norm(self.input_proj(frames))
         shared_hidden = self.encoder(hidden)
+        control_hidden = (
+            self.control_encoder(hidden)
+            if self.control_encoder is not None
+            else shared_hidden
+        )
+        raw_coarse_log_f0 = self.log_f0_head(control_hidden)
+        if self.f0_parameterization_mode == "bounded_log2_hz_v1":
+            coarse_log_f0 = (
+                self.f0_log2_floor
+                + torch.sigmoid(raw_coarse_log_f0) * (self.f0_log2_ceil - self.f0_log2_floor)
+            )
+        else:
+            coarse_log_f0 = raw_coarse_log_f0
         outputs = {
             "frame_mask": frame_mask,
             "frame_features": frames,
             "shared_hidden": shared_hidden,
-            "coarse_log_f0": self.log_f0_head(shared_hidden),
-            "vuv_logits": self.vuv_head(shared_hidden),
-            "aperiodicity": self.aper_head(shared_hidden),
-            "energy": self.energy_head(shared_hidden),
+            "control_hidden": control_hidden,
+            "coarse_log_f0": coarse_log_f0,
+            "raw_coarse_log_f0": raw_coarse_log_f0,
+            "vuv_logits": self.vuv_head(control_hidden),
+            "aperiodicity": self.aper_head(control_hidden),
+            "energy": self.energy_head(control_hidden),
             "event_prior_logits": self.event_prior_head(shared_hidden),
             "teacher_hidden_projection": self.teacher_hidden_projection_head(shared_hidden),
         }
@@ -101,6 +157,10 @@ class StudentControlHeads(nn.Module):
         aper_correction_enabled: bool,
         detach_frontend_named_controls_for_student: bool,
         detach_shared_hidden_for_student: bool,
+        f0_control_branch_mode: str,
+        f0_control_branch_layers: int | None,
+        f0_correction_parameterization_mode: str,
+        f0_correction_limit_log2: float,
     ) -> None:
         super().__init__()
         self.r_res_enabled = r_res_enabled
@@ -110,6 +170,28 @@ class StudentControlHeads(nn.Module):
             detach_frontend_named_controls_for_student
         )
         self.detach_shared_hidden_for_student = bool(detach_shared_hidden_for_student)
+        self.f0_control_branch_mode = str(f0_control_branch_mode).strip().lower()
+        if self.f0_control_branch_mode not in {
+            "shared_student_v1",
+            "explicit_state_branch_v1",
+            "explicit_named_control_family_v1",
+        }:
+            raise ValueError(
+                "f0_control_branch_mode must be one of: "
+                "shared_student_v1, explicit_state_branch_v1, explicit_named_control_family_v1."
+            )
+        self.f0_correction_parameterization_mode = str(
+            f0_correction_parameterization_mode
+        ).strip().lower()
+        if self.f0_correction_parameterization_mode not in {
+            "linear_unbounded_v1",
+            "bounded_tanh_log2_delta_v1",
+        }:
+            raise ValueError(
+                "f0_correction_parameterization_mode must be one of: "
+                "linear_unbounded_v1, bounded_tanh_log2_delta_v1."
+            )
+        self.f0_correction_limit_log2 = max(float(f0_correction_limit_log2), 1.0e-3)
         self.condition_proj = nn.Sequential(
             nn.Linear(speaker_embed_dim + geom_embed_dim, conditioning_dim),
             nn.GELU(),
@@ -131,7 +213,63 @@ class StudentControlHeads(nn.Module):
         self.z_art_head = nn.Linear(student_dim, z_art_dim)
         self.event_head = nn.Linear(student_dim, event_dim)
         self.r_res_head = nn.Linear(student_dim, r_res_dim) if r_res_enabled else None
-        self.f0_delta_head = nn.Linear(student_dim, 1) if f0_correction_enabled else None
+        self.f0_delta_head = (
+            nn.Linear(student_dim, 1)
+            if f0_correction_enabled and self.f0_control_branch_mode == "shared_student_v1"
+            else None
+        )
+        resolved_f0_control_branch_layers = (
+            student_layers
+            if f0_control_branch_layers is None
+            else max(1, int(f0_control_branch_layers))
+        )
+        f0_branch_input_dim = shared_dim + conditioning_dim + event_prior_dim + 3
+        self.f0_branch_input_proj = (
+            nn.Linear(f0_branch_input_dim, student_dim)
+            if self.f0_control_branch_mode
+            in {"explicit_state_branch_v1", "explicit_named_control_family_v1"}
+            else None
+        )
+        self.f0_branch_norm = (
+            nn.LayerNorm(student_dim)
+            if self.f0_control_branch_mode
+            in {"explicit_state_branch_v1", "explicit_named_control_family_v1"}
+            else None
+        )
+        self.f0_branch_encoder = (
+            build_mlp(
+                input_dim=student_dim,
+                hidden_dim=student_dim,
+                output_dim=student_dim,
+                num_layers=resolved_f0_control_branch_layers,
+            )
+            if self.f0_control_branch_mode
+            in {"explicit_state_branch_v1", "explicit_named_control_family_v1"}
+            else None
+        )
+        self.f0_branch_delta_head = (
+            nn.Linear(student_dim, 1)
+            if f0_correction_enabled
+            and self.f0_control_branch_mode
+            in {"explicit_state_branch_v1", "explicit_named_control_family_v1"}
+            else None
+        )
+        self.vuv_branch_delta_head = (
+            nn.Linear(student_dim, 1)
+            if self.f0_control_branch_mode == "explicit_named_control_family_v1"
+            else None
+        )
+        self.aper_branch_delta_head = (
+            nn.Linear(student_dim, 1)
+            if aper_correction_enabled
+            and self.f0_control_branch_mode == "explicit_named_control_family_v1"
+            else None
+        )
+        self.energy_branch_delta_head = (
+            nn.Linear(student_dim, 1)
+            if self.f0_control_branch_mode == "explicit_named_control_family_v1"
+            else None
+        )
         self.aper_delta_head = nn.Linear(student_dim, 1) if aper_correction_enabled else None
 
     def forward(
@@ -180,14 +318,68 @@ class StudentControlHeads(nn.Module):
             outputs["r_res"] = student_hidden.new_zeros((batch_size, frame_count, 0))
         else:
             outputs["r_res"] = self.r_res_head(student_hidden)
-        if self.f0_delta_head is None:
-            outputs["log_f0_correction"] = student_hidden.new_zeros((batch_size, frame_count, 1))
+        if self.f0_control_branch_mode in {
+            "explicit_state_branch_v1",
+            "explicit_named_control_family_v1",
+        }:
+            f0_branch_input = torch.cat(
+                [
+                    frontend_outputs["control_hidden"],
+                    conditioning,
+                    frontend_outputs["coarse_log_f0"],
+                    torch.sigmoid(frontend_outputs["vuv_logits"]),
+                    frontend_outputs["energy"],
+                    torch.sigmoid(frontend_outputs["event_prior_logits"]),
+                ],
+                dim=-1,
+            )
+            f0_branch_hidden = self.f0_branch_encoder(
+                self.f0_branch_norm(self.f0_branch_input_proj(f0_branch_input))
+            )
+            outputs["f0_branch_hidden"] = f0_branch_hidden
+            if self.f0_branch_delta_head is None:
+                f0_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+            else:
+                f0_delta = self.f0_branch_delta_head(f0_branch_hidden)
+            if self.vuv_branch_delta_head is None:
+                vuv_logit_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+            else:
+                vuv_logit_delta = torch.tanh(self.vuv_branch_delta_head(f0_branch_hidden)) * 2.0
+            if self.aper_branch_delta_head is None:
+                aper_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+            else:
+                aper_delta = torch.tanh(self.aper_branch_delta_head(f0_branch_hidden)) * 0.75
+            if self.energy_branch_delta_head is None:
+                energy_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+            else:
+                energy_delta = torch.tanh(self.energy_branch_delta_head(f0_branch_hidden)) * 0.5
         else:
-            outputs["log_f0_correction"] = self.f0_delta_head(student_hidden)
-        if self.aper_delta_head is None:
+            outputs["f0_branch_hidden"] = student_hidden.new_zeros((batch_size, frame_count, 0))
+            if self.f0_delta_head is None:
+                f0_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+            else:
+                f0_delta = self.f0_delta_head(student_hidden)
+            vuv_logit_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+            aper_delta = (
+                student_hidden.new_zeros((batch_size, frame_count, 1))
+                if self.aper_delta_head is not None
+                else student_hidden.new_zeros((batch_size, frame_count, 1))
+            )
+            energy_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+        if self.f0_correction_parameterization_mode == "bounded_tanh_log2_delta_v1":
+            outputs["log_f0_correction"] = torch.tanh(f0_delta) * self.f0_correction_limit_log2
+        else:
+            outputs["log_f0_correction"] = f0_delta
+        outputs["vuv_logit_correction"] = vuv_logit_delta
+        if self.f0_control_branch_mode == "explicit_named_control_family_v1":
+            outputs["aper_correction"] = aper_delta
+            outputs["energy_correction"] = energy_delta
+        elif self.aper_delta_head is None:
             outputs["aper_correction"] = student_hidden.new_zeros((batch_size, frame_count, 1))
+            outputs["energy_correction"] = student_hidden.new_zeros((batch_size, frame_count, 1))
         else:
             outputs["aper_correction"] = self.aper_delta_head(student_hidden)
+            outputs["energy_correction"] = student_hidden.new_zeros((batch_size, frame_count, 1))
         return outputs
 
 
@@ -216,6 +408,15 @@ class StreamingStudentScaffold(nn.Module):
         timing_aux_enabled: bool = False,
         detach_frontend_named_controls_for_student: bool = False,
         detach_shared_hidden_for_student: bool = False,
+        named_control_branch_mode: str = "shared_hidden_v1",
+        named_control_branch_layers: int | None = None,
+        f0_parameterization_mode: str = "unbounded_log_v1",
+        f0_floor_hz: float = DEFAULT_STREAMING_STUDENT_F0_FLOOR_HZ,
+        f0_ceil_hz: float = DEFAULT_STREAMING_STUDENT_F0_CEIL_HZ,
+        f0_control_branch_mode: str = "shared_student_v1",
+        f0_control_branch_layers: int | None = None,
+        f0_correction_parameterization_mode: str = "linear_unbounded_v1",
+        f0_correction_limit_log2: float = 0.5,
     ) -> None:
         super().__init__()
         self.frontend = UnifiedStreamingFrontend(
@@ -227,6 +428,11 @@ class StreamingStudentScaffold(nn.Module):
             event_prior_dim=event_prior_dim,
             teacher_hidden_projection_dim=teacher_hidden_projection_dim,
             timing_aux_enabled=timing_aux_enabled,
+            named_control_branch_mode=named_control_branch_mode,
+            named_control_branch_layers=named_control_branch_layers,
+            f0_parameterization_mode=f0_parameterization_mode,
+            f0_floor_hz=f0_floor_hz,
+            f0_ceil_hz=f0_ceil_hz,
         )
         self.student = StudentControlHeads(
             shared_dim=shared_dim,
@@ -245,6 +451,10 @@ class StreamingStudentScaffold(nn.Module):
             aper_correction_enabled=aper_correction_enabled,
             detach_frontend_named_controls_for_student=detach_frontend_named_controls_for_student,
             detach_shared_hidden_for_student=detach_shared_hidden_for_student,
+            f0_control_branch_mode=f0_control_branch_mode,
+            f0_control_branch_layers=f0_control_branch_layers,
+            f0_correction_parameterization_mode=f0_correction_parameterization_mode,
+            f0_correction_limit_log2=f0_correction_limit_log2,
         )
 
     def forward(

@@ -140,14 +140,25 @@ def export_streaming_student_downstream_control_packet(
             coarse_log_f0 = outputs["coarse_log_f0"][0, :frame_count].to(torch.float32).cpu()
             log_f0_correction = outputs["log_f0_correction"][0, :frame_count].to(torch.float32).cpu()
             f0_log_proxy = coarse_log_f0 + log_f0_correction
-            vuv_prob = torch.sigmoid(outputs["vuv_logits"][0, :frame_count].to(torch.float32)).cpu()
+            vuv_logits = (
+                outputs["vuv_logits"][0, :frame_count].to(torch.float32)
+                + outputs.get("vuv_logit_correction", torch.zeros_like(outputs["vuv_logits"]))[
+                    0, :frame_count
+                ].to(torch.float32)
+            )
+            vuv_prob = torch.sigmoid(vuv_logits).cpu()
             aper_prob = torch.sigmoid(
                 (
                     outputs["aperiodicity"][0, :frame_count].to(torch.float32)
                     + outputs["aper_correction"][0, :frame_count].to(torch.float32)
                 )
             ).cpu()
-            energy_log = outputs["energy"][0, :frame_count].to(torch.float32).cpu()
+            energy_log = (
+                outputs["energy"][0, :frame_count].to(torch.float32)
+                + outputs.get("energy_correction", torch.zeros_like(outputs["energy"]))[
+                    0, :frame_count
+                ].to(torch.float32)
+            ).cpu()
             energy_norm = torch.sigmoid((energy_log + 4.0) * 2.0)
             energy_stage5_norm = normalize_energy_log_rms_for_stage5(energy_log)
             reference_f0_hz = reference_state["f0_hz"][:frame_count].to(torch.float32).cpu()
