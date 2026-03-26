@@ -543,6 +543,13 @@ def export_single_record(
         raise ValueError(f"Teacher export encountered zero valid frames for {record_id}.")
     semantic_overview = build_record_semantic_overview(record)
     timing_overview = build_record_timing_semantic_overview(record)
+    frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
+    target_acoustic_state = extract_source_acoustic_state(
+        waveform=example.waveform,
+        sample_rate=int(example.sample_rate),
+        frame_start_samples=frame_start_samples,
+        frame_length=int(frame_length),
+    )
     teacher_e_evt = build_teacher_e_evt_v1_targets(
         legacy_event_probs=outputs["event_probs"][sample_index],
         teacher_acoustic_target=frame_targets["acoustic_target"][sample_index],
@@ -555,13 +562,6 @@ def export_single_record(
         valid_frame_count=valid_frame_count,
         teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
-    )
-    frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
-    target_acoustic_state = extract_source_acoustic_state(
-        waveform=example.waveform,
-        sample_rate=int(example.sample_rate),
-        frame_start_samples=frame_start_samples,
-        frame_length=int(frame_length),
     )
     tensor_payload = {
         "record_id": record_id,
