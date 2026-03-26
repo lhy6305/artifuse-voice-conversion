@@ -59,6 +59,9 @@ def build_streaming_student_stage5_dataset_packages(
         record_started = perf_counter()
         record_id = str(record["record_id"])
         packet_path = Path(str(record["packet_path"])).resolve()
+        packet_payload = torch.load(packet_path, map_location="cpu", weights_only=False)
+        if not isinstance(packet_payload, dict):
+            raise TypeError(f"Unsupported streaming student packet payload type: {type(packet_payload)!r}")
         target_audio_path = Path(str(record["audio_path"])).resolve()
         record_dir = packages_dir / str(split_name) / safe_record_id(record_id)
         scaffold_dir = record_dir / "scaffold"
@@ -96,7 +99,7 @@ def build_streaming_student_stage5_dataset_packages(
                 "source_record_id": record_id,
                 "target_record_id": record_id,
                 "record_mode": "stage3_student_target_self_decode",
-                "duration_sec": resolve_duration_sec(record),
+                "duration_sec": resolve_duration_sec(packet_payload),
                 "split_name": str(split_name),
                 "packet_path": packet_path.as_posix(),
                 "training_package_path": package_path.as_posix(),
@@ -373,9 +376,19 @@ def select_packet_export_records(
     return list(records[: int(sample_count)])
 
 
-def resolve_duration_sec(record: dict[str, object]) -> float:
-    frame_count = int(record.get("frame_count", 0))
-    return round(frame_count * 0.01, 6)
+def resolve_duration_sec(packet_payload: dict[str, object]) -> float:
+    frame_count = int(packet_payload.get("frame_count", 0))
+    hop_length = int(packet_payload.get("hop_length", 0))
+    sample_rate = int(packet_payload.get("sample_rate", 0))
+    if frame_count < 0:
+        raise ValueError(f"frame_count must be non-negative, got {frame_count}.")
+    if frame_count == 0:
+        return 0.0
+    if hop_length <= 0 or sample_rate <= 0:
+        raise ValueError(
+            "streaming_student packet payload is missing valid hop_length/sample_rate for duration computation."
+        )
+    return round(frame_count * hop_length / sample_rate, 6)
 
 
 def build_scaffold_markdown(summary: dict[str, object]) -> str:

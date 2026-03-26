@@ -311,6 +311,64 @@
     - “少监督一点 F0 帧”这类 mask 微变体
   - 而要继续回到更上层的
     `F0 handoff representation / contract`
+26. `teacher-student` 蒸馏现阶段已暂停，主问题先切回 native teacher 的真实 buzz：
+  - `docs/391_stage5_native_teacher_buzz_recheck_and_physiology_data_assessment.md`
+  - 新复核已确认：
+    - 当前 best native `Stage5` checkpoint 在 validation `3-sample` 上
+      `decoded.wav` 的旧 export 结论指向 `3/3 auto_reject_obvious_buzz`
+    - 因此当前 buzz 不是 student 才引入的问题
+    - 当前第一主故障是 native teacher route 本身
+  - 但需注意：
+    - `391` 已完成按修正后 export 语义的最小回补重跑
+    - 统一修正口径见：
+      `docs/393_stage5_export_semantics_correction_scope_and_rerun_requirements.md`
+    - 回补确认见：
+      `docs/394_stage5_export_semantics_rerun_confirmation_report.md`
+27. 对“是否需要真实发音的生理传感器数据”的当前正式判断已固定为：
+  - `不需要`
+  - 原因是：
+    - native teacher 当前控制链自己都还没脱离 obvious buzz
+    - 当前主病灶仍在现有 `Stage5` 承接层 / waveform decode / template-collapse 假解
+    - 不是“缺 articulatory ground truth”这一层
+28. 因此当前主线再次收紧为：
+  - 暂停 `teacher-student` 蒸馏
+  - 不引入新生理数据模态
+  - 优先修 `Stage5 native teacher buzz`
+  - 后续最小候选应围绕：
+    - waveform decoder structure
+    - template-collapse 假解
+    - 现有 objective / decode semantics
+    而不是继续扩上游变量数
+29. 当前新增一条硬门禁：
+  - 若 `teacher` 线的真实输出质量仍未让用户满意，
+    禁止尝试 `student` 线蒸馏
+  - 只有在 native teacher 路线已经稳定摆脱明显 buzz、
+    且用户确认其主观质量达到可接受区间后，
+    才允许重新讨论 student 蒸馏是否值得恢复
+30. native teacher 的第一条最小修复候选 `acttmpl005_delta6` 已完成 fail-fast：
+  - `docs/392_stage5_native_teacher_acttmpl005_delta6_fail_fast_report.md`
+  - 当前结论是：
+    - 旧 export 结论指向：
+      `decoded.wav` 仍然 `3/3 auto_reject_obvious_buzz`
+    - 且旧 export 对照里相对当前 native baseline 明显更差，
+      `spectral_centroid_gap_hz` 与 `high_band_energy_ratio_gap`
+      都接近翻倍恶化
+  - 因此这条 objective 组合不继续扩 horizon，
+    当前 native teacher buzz 修复应改走别的更保守候选
+  - 但同样需注意：
+    - `392` 已完成按修正后 export 语义的最小回补重跑
+    - 其相对恶化结论现已恢复为正式可用
+    - 回补确认见：
+      `docs/394_stage5_export_semantics_rerun_confirmation_report.md`
+
+31. 当前主线进入新实验前，必须先完成 export/probe 语义修正后的最小回补：
+  - `docs/393_stage5_export_semantics_correction_scope_and_rerun_requirements.md`
+  - 当前这组最小回补已完成，确认报告见：
+    - `docs/394_stage5_export_semantics_rerun_confirmation_report.md`
+  - 当前正式口径是：
+    - `391` 与 `392` 已恢复为当前可直接引用结论
+    - `389/390` 中依赖旧 export 的部分仍只按临时结论使用，
+      除非后续主线再次需要 student 对照时再补跑
 
 ## 关键参考报告
 - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
@@ -340,6 +398,12 @@
 - `docs/386_stage3_vuv_completion_loss_route_fail_report.md`
 - `docs/387_stage3_vuv_balanced_gate_contract_positive_ab_report.md`
 - `docs/388_stage3_f0_strong_voiced_mask_minimal_ab_and_proxy_export_report.md`
+- `docs/389_stage3_student_packet_minimal_stage5_adapter_and_decoded_smoke_fail_report.md`
+- `docs/390_stage5_adapter_contract_mismatch_diagnosis_and_next_route_report.md`
+- `docs/391_stage5_native_teacher_buzz_recheck_and_physiology_data_assessment.md`
+- `docs/392_stage5_native_teacher_acttmpl005_delta6_fail_fast_report.md`
+- `docs/393_stage5_export_semantics_correction_scope_and_rerun_requirements.md`
+- `docs/394_stage5_export_semantics_rerun_confirmation_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。

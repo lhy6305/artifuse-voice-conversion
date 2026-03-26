@@ -115,6 +115,30 @@ from v5vc.target_format_recovery import recover_round1_target_formats
 from v5vc.train_entry import prepare_offline_mvp_training
 
 
+STUDENT_ROUTE_CLI_GUARD_MESSAGE = (
+    "Student-line command is blocked by default because native teacher decoded output is still not user-acceptable. "
+    "Do not resume student distillation/eval/handoff until the teacher route has first cleared the buzz gate and user review. "
+    "If you intentionally need this command anyway, re-run it with --allow-student-line-while-teacher-unsatisfied."
+)
+
+
+def add_student_route_guard_argument(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--allow-student-line-while-teacher-unsatisfied",
+        action="store_true",
+        help=(
+            "Explicitly acknowledge that native teacher quality is still not accepted, and still force this "
+            "student-line command to run. Use only for exceptional diagnostics."
+        ),
+    )
+
+
+def require_student_route_explicit_ack(command: str, allowed: bool) -> None:
+    if bool(allowed):
+        return
+    raise RuntimeError(f"{command}: {STUDENT_ROUTE_CLI_GUARD_MESSAGE}")
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Project management entrypoint for the V5.1 voice conversion workspace."
@@ -398,6 +422,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="streaming_student_stage_scaffold",
         help="Experiment id used for plan artifact names and optional metrics updates.",
     )
+    add_student_route_guard_argument(streaming_student_parser)
 
     streaming_student_calibration_parser = subparsers.add_parser(
         "build-streaming-student-calibration-assets",
@@ -439,6 +464,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=12,
         help="Maximum number of target records to keep in the calibration subset.",
     )
+    add_student_route_guard_argument(streaming_student_calibration_parser)
 
     streaming_student_bridge_parser = subparsers.add_parser(
         "build-streaming-student-eval-bridge",
@@ -480,6 +506,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional cap on target_validation and target_special_eval records for quick bridge checks.",
     )
+    add_student_route_guard_argument(streaming_student_bridge_parser)
 
     streaming_student_estimate_parser = subparsers.add_parser(
         "estimate-streaming-student-calibration",
@@ -515,6 +542,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=Path("reports/data/streaming_student_calibration_estimate"),
         help="Directory for calibration estimation summaries.",
     )
+    add_student_route_guard_argument(streaming_student_estimate_parser)
 
     streaming_student_teacher_parser = subparsers.add_parser(
         "build-streaming-student-teacher-labels",
@@ -586,6 +614,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Examples: hard_box_v1, center_weighted_boundary_progressive_final_clause_v1."
         ),
     )
+    add_student_route_guard_argument(streaming_student_teacher_parser)
 
     streaming_student_training_data_parser = subparsers.add_parser(
         "prepare-streaming-student-training-data",
@@ -627,6 +656,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=4,
         help="Dry-run batch size used per target slice.",
     )
+    add_student_route_guard_argument(streaming_student_training_data_parser)
 
     streaming_student_paired_training_data_parser = subparsers.add_parser(
         "prepare-streaming-student-paired-training-data",
@@ -674,6 +704,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=4,
         help="Dry-run batch size used per paired slice.",
     )
+    add_student_route_guard_argument(streaming_student_paired_training_data_parser)
 
     streaming_student_supervision_parser = subparsers.add_parser(
         "prepare-streaming-student-supervision",
@@ -715,6 +746,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=4,
         help="Dry-run batch size used per target slice.",
     )
+    add_student_route_guard_argument(streaming_student_supervision_parser)
     streaming_student_supervision_parser.add_argument(
         "--disable-teacher-confidence",
         action="store_true",
@@ -795,6 +827,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional JSON file that overrides part of the default Stage3 loss weight table.",
     )
+    add_student_route_guard_argument(streaming_student_train_step_parser)
 
     streaming_student_train_loop_parser = subparsers.add_parser(
         "run-streaming-student-training-loop",
@@ -900,6 +933,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional JSON file that overrides part of the default Stage3 loss weight table.",
     )
+    add_student_route_guard_argument(streaming_student_train_loop_parser)
 
     streaming_student_checkpoint_eval_parser = subparsers.add_parser(
         "evaluate-streaming-student-checkpoint",
@@ -946,6 +980,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Evaluate target_validation only.",
     )
+    add_student_route_guard_argument(streaming_student_checkpoint_eval_parser)
 
     streaming_student_checkpoint_select_parser = subparsers.add_parser(
         "select-streaming-student-best-checkpoint",
@@ -988,6 +1023,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=6,
         help="Batch size used for fuller checkpoint comparison.",
     )
+    add_student_route_guard_argument(streaming_student_checkpoint_select_parser)
     streaming_student_proxy_audio_parser = subparsers.add_parser(
         "export-streaming-student-proxy-audio",
         help="Export Stage3 input, teacher proxy, and student proxy audio for structural listening audits.",
@@ -1051,6 +1087,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional max duration for each exported audio item.",
     )
+    add_student_route_guard_argument(streaming_student_proxy_audio_parser)
     streaming_student_downstream_control_parser = subparsers.add_parser(
         "export-streaming-student-downstream-control-packet",
         help="Export Stage3 named-control packet candidates for downstream handoff screening.",
@@ -1114,6 +1151,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional max duration for each exported audio item.",
     )
+    add_student_route_guard_argument(streaming_student_downstream_control_parser)
     audio_audit_gui_parser = subparsers.add_parser(
         "launch-audio-audit-gui",
         help="Launch the proxy-audio audit GUI for manual listening review.",
@@ -3288,6 +3326,7 @@ def build_parser() -> argparse.ArgumentParser:
         action="store_true",
         help="Reuse existing scaffold/package artifacts when the synthetic package already exists.",
     )
+    add_student_route_guard_argument(student_stage5_dataset_parser)
     nores_vocoder_audio_export_parser.add_argument(
         "--split-name",
         default="validation",
@@ -3342,25 +3381,42 @@ def build_parser() -> argparse.ArgumentParser:
     nores_vocoder_audio_export_parser.add_argument(
         "--activity-gate-weight",
         type=float,
-        default=0.0,
-        help="Optional activity-gate loss weight used when recomputing export metrics for newer Stage5 checkpoints.",
+        default=None,
+        help=(
+            "Optional activity-gate loss weight override used when recomputing export metrics. "
+            "When omitted, inherit the checkpoint training summary value when available."
+        ),
     )
     nores_vocoder_audio_export_parser.add_argument(
         "--active-template-weight",
         type=float,
-        default=0.0,
-        help="Optional active-template loss weight used when recomputing export metrics for newer Stage5 checkpoints.",
+        default=None,
+        help=(
+            "Optional active-template loss weight override used when recomputing export metrics. "
+            "When omitted, inherit the checkpoint training summary value when available."
+        ),
     )
     nores_vocoder_audio_export_parser.add_argument(
         "--frame-delta-weight",
         type=float,
-        default=0.0,
-        help="Optional frame-delta loss weight used when recomputing export metrics for newer Stage5 checkpoints.",
+        default=None,
+        help=(
+            "Optional frame-delta loss weight override used when recomputing export metrics. "
+            "When omitted, inherit the checkpoint training summary value when available."
+        ),
     )
+    nores_vocoder_audio_export_parser.set_defaults(use_predicted_activity_gate=None)
     nores_vocoder_audio_export_parser.add_argument(
         "--use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
         action="store_true",
-        help="Apply predicted frame activity during export-side waveform reconstruction for newer Stage5 checkpoints.",
+        help="Apply predicted frame activity during export-side waveform reconstruction.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
+        "--disable-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_false",
+        help="Disable predicted frame activity during export-side waveform reconstruction.",
     )
     nores_vocoder_audio_export_parser.add_argument(
         "--predicted-activity-gate-floor",
@@ -3446,10 +3502,18 @@ def build_parser() -> argparse.ArgumentParser:
         default="cpu",
         help="Torch device used for the probe, for example cpu or cuda:0.",
     )
+    stage5_speech_emergence_probe_parser.set_defaults(use_predicted_activity_gate=True)
     stage5_speech_emergence_probe_parser.add_argument(
         "--use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
         action="store_true",
         help="Apply predicted frame activity during waveform reconstruction to match the heard Stage5 route.",
+    )
+    stage5_speech_emergence_probe_parser.add_argument(
+        "--disable-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_false",
+        help="Disable predicted frame activity during waveform reconstruction.",
     )
     stage5_speech_emergence_probe_parser.add_argument(
         "--predicted-activity-gate-floor",
@@ -3523,10 +3587,18 @@ def build_parser() -> argparse.ArgumentParser:
         default="cpu",
         help="Torch device used for the probe, for example cpu or cuda:0.",
     )
+    stage5_waveform_decoder_structure_parser.set_defaults(use_predicted_activity_gate=True)
     stage5_waveform_decoder_structure_parser.add_argument(
         "--use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
         action="store_true",
         help="Apply predicted frame activity during waveform reconstruction to match the heard Stage5 route.",
+    )
+    stage5_waveform_decoder_structure_parser.add_argument(
+        "--disable-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_false",
+        help="Disable predicted frame activity during waveform reconstruction.",
     )
     stage5_waveform_decoder_structure_parser.add_argument(
         "--predicted-activity-gate-floor",
@@ -3600,10 +3672,18 @@ def build_parser() -> argparse.ArgumentParser:
         default="cpu",
         help="Torch device used to decode the baseline route, for example cpu or cuda:0.",
     )
+    stage5_waveform_objective_collapse_parser.set_defaults(use_predicted_activity_gate=True)
     stage5_waveform_objective_collapse_parser.add_argument(
         "--use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
         action="store_true",
         help="Apply predicted frame activity during baseline waveform reconstruction to match the heard Stage5 route.",
+    )
+    stage5_waveform_objective_collapse_parser.add_argument(
+        "--disable-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_false",
+        help="Disable predicted frame activity during baseline waveform reconstruction.",
     )
     stage5_waveform_objective_collapse_parser.add_argument(
         "--predicted-activity-gate-floor",
@@ -4490,6 +4570,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "prepare-streaming-student-stage":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         prepare_streaming_student_stage(
             config_path=args.config,
             output_dir=args.output_dir,
@@ -4497,6 +4581,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "build-streaming-student-calibration-assets":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         build_streaming_student_calibration_assets(
             config_path=args.config,
             data_output_dir=args.data_output_dir,
@@ -4507,6 +4595,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "build-streaming-student-eval-bridge":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         build_streaming_student_eval_bridge(
             config_path=args.config,
             output_dir=args.output_dir,
@@ -4517,6 +4609,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "estimate-streaming-student-calibration":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         estimate_streaming_student_calibration(
             config_path=args.config,
             calibration_records_path=args.calibration_records,
@@ -4526,6 +4622,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "build-streaming-student-teacher-labels":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         build_streaming_student_teacher_labels(
             data_output_dir=args.data_output_dir,
             report_output_dir=args.report_output_dir,
@@ -4540,6 +4640,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "prepare-streaming-student-training-data":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         prepare_streaming_student_training_data(
             config_path=args.config,
             output_dir=args.output_dir,
@@ -4550,6 +4654,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "prepare-streaming-student-paired-training-data":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         prepare_streaming_student_paired_training_data(
             config_path=args.config,
             output_dir=args.output_dir,
@@ -4561,6 +4669,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "prepare-streaming-student-supervision":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         prepare_streaming_student_supervision(
             config_path=args.config,
             output_dir=args.output_dir,
@@ -4573,6 +4685,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "run-streaming-student-training-step":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         run_streaming_student_training_step(
             config_path=args.config,
             output_dir=args.output_dir,
@@ -4588,6 +4704,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "run-streaming-student-training-loop":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         run_streaming_student_training_loop(
             config_path=args.config,
             output_dir=args.output_dir,
@@ -4609,6 +4729,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "evaluate-streaming-student-checkpoint":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         evaluate_streaming_student_checkpoint(
             checkpoint_path=args.checkpoint,
             output_dir=args.output_dir,
@@ -4620,6 +4744,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "select-streaming-student-best-checkpoint":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         select_streaming_student_best_checkpoint(
             checkpoint_paths=args.checkpoints,
             output_dir=args.output_dir,
@@ -4631,6 +4759,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "export-streaming-student-proxy-audio":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         export_streaming_student_proxy_audio(
             checkpoint_path=args.checkpoint,
             output_dir=args.output_dir,
@@ -4645,6 +4777,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "export-streaming-student-downstream-control-packet":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         export_streaming_student_downstream_control_packet(
             checkpoint_path=args.checkpoint,
             output_dir=args.output_dir,
@@ -5115,6 +5251,10 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 0
     if args.command == "build-streaming-student-stage5-dataset-packages":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
         build_streaming_student_stage5_dataset_packages(
             packet_export_path=args.packet_export,
             output_dir=args.output_dir,
@@ -5172,7 +5312,7 @@ def main(argv: list[str] | None = None) -> int:
             sample_count=args.sample_count,
             target_record_ids=args.target_record_ids,
             device=args.device,
-            use_predicted_activity_gate=bool(args.use_predicted_activity_gate),
+            use_predicted_activity_gate=args.use_predicted_activity_gate,
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,

@@ -1,5 +1,18 @@
 # 389. Stage3 student packet 最小 Stage5 adapter 与真实 decoded smoke 失败报告
 
+## 修正说明（2026-03-26）
+- 本报告中的 `decoded.wav / auto_reject_obvious_buzz / loss_metrics` 结论写于旧版 `export-offline-mvp-nores-vocoder-audio` 语义下。
+- 该命令现已修正：
+  - export decode 默认值
+  - training-metric 继承逻辑
+  - `loss_metrics` 与 `decoded.wav` 的语义标注
+- 因此本报告当前只保留这些确定事实：
+  - `student_control_packet -> Stage5` 最小 adapter 已接通
+  - 真实 `decoded.wav` 导出链已建立
+- 其余依赖旧 export 的 fail-fast 数值与 buzz gate 结论，应以：
+  - `docs/393_stage5_export_semantics_correction_scope_and_rerun_requirements.md`
+  为准，后续如仍需 student 对照，再按修正后的 export 语义回补重跑确认。
+
 ## 结论
 - `Stage3 student_control_packet -> Stage5 no-res` 的最小 adapter 已真实接通，不再停留在 proxy 音频。
 - 当前 best packet 线路 `vuvbalancedgate48` 已成功导出真实 `decoded.wav`，但第一条 smoke 样本就被机器门禁直接判成 `auto_reject_obvious_buzz`。

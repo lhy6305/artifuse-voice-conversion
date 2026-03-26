@@ -251,6 +251,8 @@ def export_streaming_student_downstream_control_packet(
                     "event_projection_mode": event_projection_mode,
                     "packet_ready_for_named_e_evt_handoff": packet_ready,
                     "e_evt_meta": e_evt_meta,
+                    "e_evt_status": "analysis_only_exported" if packet_ready else "auto_reject_not_ready",
+                    "z_art_status": "analysis_only_exported",
                     "f0_status": "analysis_only_affine_calibrated_to_target_reference",
                     "aper_status": "analysis_only_affine_calibrated_to_target_reference",
                     "energy_status": "analysis_only_affine_calibrated_to_target_reference",
@@ -354,6 +356,7 @@ def export_streaming_student_downstream_control_packet(
             "Current e_evt is exported only when checkpoint semantic_supervision.event_target_family=teacher_e_evt_v1.",
             "F0 now also exports an analysis-only affine-calibrated Hz view against target-reference acoustic state; this is an audit aid, not yet a deployment-ready control contract.",
             "aper and energy now also export analysis-only affine-calibrated audit views against target reference; this is an audit aid, not yet a deployment-ready control contract.",
+            "packet_ready_for_named_e_evt_handoff only means the named e_evt tensor/metadata contract is exportable; it is not a numeric readiness claim.",
             "named_control_readiness is a negative gate only: it can auto-reject clearly incomplete packets, but it does not prove a successful downstream handoff.",
             "r_res remains intentionally absent on this route.",
         ],
@@ -479,8 +482,8 @@ def assess_named_control_readiness(
         "gate_version": CONTROL_READINESS_GATE_VERSION,
         "negative_gate_only": True,
         "packet_ready_for_named_e_evt_handoff": bool(packet_ready_for_named_e_evt_handoff),
-        "e_evt_status": "review_required" if bool(packet_ready_for_named_e_evt_handoff) else "auto_reject_not_ready",
-        "z_art_status": "review_required",
+        "e_evt_status": "analysis_only_exported" if bool(packet_ready_for_named_e_evt_handoff) else "auto_reject_not_ready",
+        "z_art_status": "analysis_only_exported",
         "f0_status": f0_status,
         "vuv_status": vuv_status,
         "aper_status": aper_status,
@@ -502,7 +505,7 @@ def summarize_named_control_readiness(
         "gate_version": CONTROL_READINESS_GATE_VERSION,
         "negative_gate_only": True,
         "record_count": len(records),
-        "e_evt_ready_count": 0,
+        "e_evt_exported_count": 0,
         "f0_ready_count": 0,
         "vuv_ready_count": 0,
         "aper_ready_count": 0,
@@ -515,8 +518,8 @@ def summarize_named_control_readiness(
         readiness = record.get("named_control_readiness")
         if not isinstance(readiness, dict):
             continue
-        if readiness.get("e_evt_status") == "review_required":
-            summary["e_evt_ready_count"] += 1
+        if readiness.get("e_evt_status") == "analysis_only_exported":
+            summary["e_evt_exported_count"] += 1
         if readiness.get("f0_status") == "review_required":
             summary["f0_ready_count"] += 1
         if readiness.get("vuv_status") == "review_required":

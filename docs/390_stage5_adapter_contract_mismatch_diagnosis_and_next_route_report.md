@@ -1,5 +1,18 @@
 # 390. Stage5 adapter 合同错位诊断与下一步路线报告
 
+## 修正说明（2026-03-26）
+- 本报告中的两类内容应区别对待：
+  - 仍可直接保留：
+    - scaffold family / contract family 核对
+    - `e_evt == legacy_event_probs` 的张量一致性核对
+    - noise first-8 为主病灶的合同层诊断
+  - 需回补确认：
+    - 基于旧版 `export-offline-mvp-nores-vocoder-audio` 的 decoded compare
+    - `auto_reject_obvious_buzz`
+    - `centroid/high-band/loss_total` 这些直接依赖旧 export 的数值
+- 统一修正口径见：
+  - `docs/393_stage5_export_semantics_correction_scope_and_rerun_requirements.md`
+
 ## 结论
 - 上一轮 `student_control_packet -> Stage5 decoded.wav` 的 fail-fast 结论仍成立，但这次把失败层级进一步定准了。
 - 当前用于真实 decoded smoke 的 best Stage5 checkpoint，本质上是旧 `contractv2_normfix` 路线：

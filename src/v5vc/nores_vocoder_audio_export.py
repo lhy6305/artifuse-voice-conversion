@@ -52,10 +52,10 @@ def export_offline_mvp_nores_vocoder_audio(
     pitch_match_fmin_hz: float,
     pitch_match_fmax_hz: float,
     pitch_match_max_semitones: float,
-    activity_gate_weight: float,
-    active_template_weight: float,
-    frame_delta_weight: float,
-    use_predicted_activity_gate: bool,
+    activity_gate_weight: float | None,
+    active_template_weight: float | None,
+    frame_delta_weight: float | None,
+    use_predicted_activity_gate: bool | None,
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
@@ -74,6 +74,9 @@ def export_offline_mvp_nores_vocoder_audio(
     resolved_predicted_activity_gate_apply_mode = normalize_predicted_activity_gate_apply_mode(
         predicted_activity_gate_apply_mode
     )
+    resolved_export_use_predicted_activity_gate = (
+        True if use_predicted_activity_gate is None else bool(use_predicted_activity_gate)
+    )
 
     resolved_checkpoint_path, selection_summary = resolve_checkpoint_path_from_inputs(
         checkpoint_path=checkpoint_path,
@@ -81,6 +84,16 @@ def export_offline_mvp_nores_vocoder_audio(
         selection_target=selection_target,
     )
     checkpoint_payload = torch.load(resolved_checkpoint_path, map_location="cpu", weights_only=False)
+    training_summary = resolve_nores_vocoder_training_summary(
+        checkpoint_path=resolved_checkpoint_path,
+        checkpoint_selection_path=checkpoint_selection_path,
+    )
+    training_loss_weights = resolve_nores_vocoder_export_metric_defaults(
+        training_summary=training_summary,
+        activity_gate_weight=activity_gate_weight,
+        active_template_weight=active_template_weight,
+        frame_delta_weight=frame_delta_weight,
+    )
     if dataset_index_path is None:
         dataset_index_path = Path(str(checkpoint_payload["dataset_index_path"])).resolve()
     else:
@@ -108,13 +121,24 @@ def export_offline_mvp_nores_vocoder_audio(
         checkpoint_path=resolved_checkpoint_path,
         selection_summary=selection_summary,
         selection_target=selection_target,
-        use_predicted_activity_gate=bool(use_predicted_activity_gate),
+        use_predicted_activity_gate=bool(resolved_export_use_predicted_activity_gate),
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
         predicted_activity_gate_apply_mode=resolved_predicted_activity_gate_apply_mode,
         decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
         use_decoder_branch_condition_adapter=bool(model.use_decoder_branch_condition_adapter),
         use_residual_shape_branch_condition_adapter=bool(model.use_residual_shape_branch_condition_adapter),
+    )
+    loss_metrics_exactly_match_decoded_audio = bool(
+        (not bool(resolved_export_use_predicted_activity_gate) and not bool(training_loss_weights["use_predicted_activity_gate"]))
+        or (
+            bool(resolved_export_use_predicted_activity_gate)
+            == bool(training_loss_weights["use_predicted_activity_gate"])
+            and str(training_loss_weights["reconstruction_frame_gain_apply_mode"])
+            == resolved_predicted_activity_gate_apply_mode
+            and float(predicted_activity_gate_floor) == 0.0
+            and int(predicted_activity_gate_smoothing_frames) == 0
+        )
     )
 
     exported_records: list[dict[str, object]] = []
@@ -143,21 +167,23 @@ def export_offline_mvp_nores_vocoder_audio(
                 noise_weight=1.0,
                 periodic_gate_weight=0.2,
                 noise_gate_weight=0.2,
-                activity_gate_weight=float(activity_gate_weight),
+                activity_gate_weight=float(training_loss_weights["activity_gate"]),
                 waveform_weight=0.5,
                 stft_weight=0.5,
                 rms_guard_weight=0.2,
-                active_template_weight=float(active_template_weight),
-                frame_delta_weight=float(frame_delta_weight),
-                use_predicted_activity_gate=bool(use_predicted_activity_gate),
-                reconstruction_frame_gain_apply_mode=DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
+                active_template_weight=float(training_loss_weights["active_template"]),
+                frame_delta_weight=float(training_loss_weights["frame_delta"]),
+                use_predicted_activity_gate=bool(training_loss_weights["use_predicted_activity_gate"]),
+                reconstruction_frame_gain_apply_mode=str(
+                    training_loss_weights["reconstruction_frame_gain_apply_mode"]
+                ),
             )
             predicted_activity = torch.maximum(outputs["periodic_gate"], outputs["noise_gate"])
             decoded_waveform = reconstruct_waveform_from_frames(
                 waveform_frames=outputs["waveform_frames"],
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
-                frame_gains=predicted_activity if bool(use_predicted_activity_gate) else None,
+                frame_gains=predicted_activity if bool(resolved_export_use_predicted_activity_gate) else None,
                 frame_gain_floor=float(predicted_activity_gate_floor),
                 frame_gain_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
                 frame_gain_apply_mode=resolved_predicted_activity_gate_apply_mode,
@@ -228,6 +254,19 @@ def export_offline_mvp_nores_vocoder_audio(
                     "proxy_audio_path": listening_audio_path.as_posix(),
                     "pitch_match_metrics": pitch_match_metrics,
                     "loss_metrics": loss_metrics,
+                    "loss_metrics_semantics": {
+                        "source": "checkpoint_forward_objective_metrics",
+                        "use_predicted_activity_gate": bool(training_loss_weights["use_predicted_activity_gate"]),
+                        "reconstruction_frame_gain_apply_mode": str(
+                            training_loss_weights["reconstruction_frame_gain_apply_mode"]
+                        ),
+                        "predicted_activity_gate_floor": None,
+                        "predicted_activity_gate_smoothing_frames": None,
+                        "activity_gate_weight": float(training_loss_weights["activity_gate"]),
+                        "active_template_weight": float(training_loss_weights["active_template"]),
+                        "frame_delta_weight": float(training_loss_weights["frame_delta"]),
+                        "exactly_matches_decoded_audio": loss_metrics_exactly_match_decoded_audio,
+                    },
                     "buzz_reject_assessment": buzz_reject_assessment,
                 }
             )
@@ -248,10 +287,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "max_semitones": float(pitch_match_max_semitones),
         },
         "waveform_decode": {
-            "use_predicted_activity_gate": bool(use_predicted_activity_gate),
-            "activity_gate_weight_for_metrics": float(activity_gate_weight),
-            "active_template_weight_for_metrics": float(active_template_weight),
-            "frame_delta_weight_for_metrics": float(frame_delta_weight),
+            "use_predicted_activity_gate": bool(resolved_export_use_predicted_activity_gate),
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_predicted_activity_gate_apply_mode,
@@ -264,7 +300,24 @@ def export_offline_mvp_nores_vocoder_audio(
         "checkpoint_selection_path": None if selection_summary is None else checkpoint_selection_path.resolve().as_posix(),
         "selection_target": None if selection_summary is None else str(selection_target),
         "selected_checkpoint_summary": selection_summary,
-        "dataset_index_path": dataset_index_path.as_posix(),
+        "loss_metrics_semantics": {
+            "source": "checkpoint_forward_objective_metrics",
+            "training_summary_path": (
+                None
+                if not isinstance(training_summary, dict)
+                else training_summary.get("_resolved_summary_path")
+            ),
+            "use_predicted_activity_gate": bool(training_loss_weights["use_predicted_activity_gate"]),
+            "reconstruction_frame_gain_apply_mode": str(
+                training_loss_weights["reconstruction_frame_gain_apply_mode"]
+            ),
+            "predicted_activity_gate_floor": None,
+            "predicted_activity_gate_smoothing_frames": None,
+            "activity_gate_weight": float(training_loss_weights["activity_gate"]),
+            "active_template_weight": float(training_loss_weights["active_template"]),
+            "frame_delta_weight": float(training_loss_weights["frame_delta"]),
+            "exactly_matches_decoded_audio": loss_metrics_exactly_match_decoded_audio,
+        },
         "split_name": str(split_name),
         "sample_count": len(exported_records),
         "buzz_reject_summary": summarize_stage5_buzz_reject_assessments(exported_records),
@@ -272,7 +325,8 @@ def export_offline_mvp_nores_vocoder_audio(
         "notes": [
             "aligned_target.wav is the frame-aligned target waveform used by the current Stage5 bootstrap objective.",
             "decoded.wav is reconstructed from the checkpoint's waveform_frames head via overlap-add with the current export-side gate settings.",
-            "When use_predicted_activity_gate is enabled, predicted_activity_gate_floor, predicted_activity_gate_smoothing_frames, and predicted_activity_gate_apply_mode define export-side gate softening only; they do not rewrite the saved checkpoint.",
+            "When use_predicted_activity_gate is enabled, predicted_activity_gate_floor, predicted_activity_gate_smoothing_frames, and predicted_activity_gate_apply_mode define export-side gate softening only; they do not rewrite checkpoint weights.",
+            "Unless explicitly overridden, checkpoint_forward_objective_metrics inherit activity/template/delta/gating defaults from the resolved Stage5 training summary, while decoded.wav follows the export-side decode settings.",
             "decoded_pitch_matched.wav is an optional listening-only variant that globally pitch-shifts decoded.wav toward the aligned target's median voiced F0 while preserving duration.",
             "audit_proxy.wav is a low-frequency audit render derived from decoded.wav and gated by aligned_target activity so current GUI listening is less fatiguing and target silence remains silent.",
             f"proxy_audio_path in the GUI-compatible manifest points to {resolved_listening_audio_source}.wav for primary listening; the non-primary audio is retained for technical inspection.",
@@ -331,6 +385,78 @@ def resolve_checkpoint_path_from_inputs(
     if matched_path is None:
         raise ValueError(f"Unable to resolve checkpoint path for selected step {selected_step}.")
     return matched_path, dict(selected)
+
+
+def resolve_nores_vocoder_training_summary(
+    checkpoint_path: Path,
+    checkpoint_selection_path: Path | None,
+) -> dict[str, object] | None:
+    candidate_paths: list[Path] = []
+    if checkpoint_selection_path is not None:
+        selection_payload = json.loads(checkpoint_selection_path.resolve().read_text(encoding="utf-8"))
+        summary_path_raw = selection_payload.get("summary_path")
+        if summary_path_raw:
+            candidate_paths.append(Path(str(summary_path_raw)).resolve())
+    checkpoint_path = checkpoint_path.resolve()
+    candidate_paths.extend(
+        [
+            checkpoint_path.parent.parent / "logs" / "offline_mvp_nores_vocoder_dataset_loop.summary.json",
+            checkpoint_path.parent.parent / "offline_mvp_nores_vocoder_dataset_loop.summary.json",
+            checkpoint_path.parent.parent / "offline_mvp_nores_vocoder_loop.summary.json",
+        ]
+    )
+    for candidate_path in candidate_paths:
+        if not candidate_path.exists():
+            continue
+        summary = json.loads(candidate_path.read_text(encoding="utf-8"))
+        if not isinstance(summary, dict):
+            continue
+        summary["_resolved_summary_path"] = candidate_path.as_posix()
+        return summary
+    return None
+
+
+def resolve_nores_vocoder_export_metric_defaults(
+    *,
+    training_summary: dict[str, object] | None,
+    activity_gate_weight: float | None,
+    active_template_weight: float | None,
+    frame_delta_weight: float | None,
+) -> dict[str, object]:
+    training_payload = (
+        dict(training_summary.get("training", {}))
+        if isinstance(training_summary, dict) and isinstance(training_summary.get("training"), dict)
+        else {}
+    )
+    loss_weights = (
+        dict(training_payload.get("loss_weights", {}))
+        if isinstance(training_payload.get("loss_weights"), dict)
+        else {}
+    )
+    return {
+        "activity_gate": (
+            float(activity_gate_weight)
+            if activity_gate_weight is not None
+            else float(loss_weights.get("activity_gate", 0.0))
+        ),
+        "active_template": (
+            float(active_template_weight)
+            if active_template_weight is not None
+            else float(loss_weights.get("active_template", 0.0))
+        ),
+        "frame_delta": (
+            float(frame_delta_weight)
+            if frame_delta_weight is not None
+            else float(loss_weights.get("frame_delta", 0.0))
+        ),
+        "use_predicted_activity_gate": bool(loss_weights.get("use_predicted_activity_gate", False)),
+        "reconstruction_frame_gain_apply_mode": str(
+            loss_weights.get(
+                "reconstruction_frame_gain_apply_mode",
+                DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
+            )
+        ),
+    }
 
 
 def normalize_selection_target(selection_target: str) -> str:
@@ -938,6 +1064,7 @@ def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, ob
                 "proxy_audio_path": record["proxy_audio_path"],
                 "pitch_match_metrics": record.get("pitch_match_metrics"),
                 "loss_metrics": record["loss_metrics"],
+                "loss_metrics_semantics": record.get("loss_metrics_semantics"),
                 "buzz_reject_assessment": record.get("buzz_reject_assessment"),
             }
         )
@@ -953,6 +1080,7 @@ def build_proxy_audio_export_summary(summary: dict[str, object]) -> dict[str, ob
         "listening_audio_source": summary.get("listening_audio_source"),
         "pitch_match": summary.get("pitch_match"),
         "waveform_decode": summary.get("waveform_decode"),
+        "loss_metrics_semantics": summary.get("loss_metrics_semantics"),
         "dataset_index_path": summary["dataset_index_path"],
         "split_name": summary["split_name"],
         "sample_count": summary["sample_count"],
@@ -975,6 +1103,7 @@ def build_proxy_audio_export_markdown(summary: dict[str, object]) -> str:
         f"- listening_audio_source: {summary.get('listening_audio_source')}",
         f"- pitch_match: {json.dumps(summary.get('pitch_match'), ensure_ascii=False)}",
         f"- waveform_decode: {json.dumps(summary.get('waveform_decode'), ensure_ascii=False)}",
+        f"- loss_metrics_semantics: {json.dumps(summary.get('loss_metrics_semantics'), ensure_ascii=False)}",
         f"- sample_count: {summary['sample_count']}",
         f"- buzz_reject_summary: {json.dumps(summary.get('buzz_reject_summary'), ensure_ascii=False)}",
         "",
@@ -987,6 +1116,7 @@ def build_proxy_audio_export_markdown(summary: dict[str, object]) -> str:
             f"listening_audio_path={record.get('listening_audio_path')} "
             f"decoded_pitch_matched_audio_path={record.get('decoded_pitch_matched_audio_path')} "
             f"proxy_audio_path={record['proxy_audio_path']} "
+            f"loss_metrics_semantics={json.dumps(record.get('loss_metrics_semantics'), ensure_ascii=False)} "
             f"buzz_reject_status={dict(record.get('buzz_reject_assessment', {})).get('status')}"
         )
     lines.extend(["", "## Notes"])
@@ -1008,6 +1138,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- listening_audio_source: {summary.get('listening_audio_source')}",
         f"- pitch_match: {json.dumps(summary.get('pitch_match'), ensure_ascii=False)}",
         f"- waveform_decode: {json.dumps(summary.get('waveform_decode'), ensure_ascii=False)}",
+        f"- loss_metrics_semantics: {json.dumps(summary.get('loss_metrics_semantics'), ensure_ascii=False)}",
         f"- dataset_index_path: {summary['dataset_index_path']}",
         f"- split_name: {summary['split_name']}",
         f"- sample_count: {summary['sample_count']}",

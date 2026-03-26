@@ -547,3 +547,103 @@
     - `f0_calibrated_log2_mae`
     没有同步改善，
     就应判定为“只是监督覆盖变窄”，而不是 handoff readiness 真改善
+
+### 40. 当 native teacher route 自己已经在真实 `decoded.wav` 上 `3/3 obvious buzz` 时，不能继续把主故障写成 student 偏差或蒸馏问题
+- 现象：
+  - 当前 best native `Stage5` checkpoint 在 validation `3-sample` 复核里：
+    - `auto_reject_count = 3`
+    - `all_records_auto_reject = true`
+- 风险：
+  - 很容易继续把主要时间花在：
+    - `teacher-student` 蒸馏
+    - student packet 分布校准
+    - adapter 兼容小修
+  - 但这些都不是当前第一主故障
+- 正确处理：
+  - 现阶段先把 native teacher route 的 buzz 当主故障处理
+  - student 路线暂停，不再作为默认主线推进
+
+### 41. 在 native teacher 仍明显 buzz 时，引入真实发音的生理传感器数据只会扩大变量数，不会优先解决主问题
+- 现象：
+  - 当前已存在更低层、证据更硬的故障：
+    - `Stage5` 承接层 / waveform decode / template-collapse 假解
+- 风险：
+  - 容易把“没有 articulatory ground truth”想象成当前核心瓶颈，
+    进而过早引入：
+    - 采集成本
+    - 新对齐问题
+    - 新合同设计
+    - 新训练变量
+- 正确处理：
+  - 在现有 acoustic / event / control 链还没稳定产出非 buzz decoded 前，
+    不引入生理传感器数据
+  - 先把 native teacher route 自身修到至少出现可听人声结构，
+    再讨论新模态是否值得
+
+### 42. 只要 teacher 线还没有达到用户可接受质量，就禁止切去 student 蒸馏
+- 现象：
+  - student 线很容易制造“也许换个 packet / 蒸馏目标就能更好”的错觉
+  - 但当前 native teacher route 自己都还在真实 `decoded.wav` 上明显 buzz
+- 风险：
+  - 若 teacher 线未过关就重开 student，
+    会把：
+    - teacher 主故障
+    - student 继发偏差
+    - handoff / adapter 偏差
+    混在一起，继续放大变量数
+- 正确处理：
+  - 把这条规则写成硬门禁：
+    - `teacher` 线输出未让用户满意前，
+      不允许把 student 蒸馏当作默认下一步
+  - 只有在 native teacher 已稳定进入“非明显 buzz、主观可接受”区间后，
+    才允许重新评估 student 是否值得恢复
+
+### 43. paired tiny-overfit 上看起来有道理的 objective 组合，不能直接外推到 native teacher fullsplit
+- 现象：
+  - `active_template_weight = 0.05 + frame_delta_weight = 6.0`
+    曾在 paired tiny-overfit 诊断里显得最值得试
+  - 但放到 native teacher fullsplit `24-step` 后，
+    真实 `decoded.wav` 仍是 `3/3 obvious buzz`
+    且频谱亮度明显比 native baseline 更糟
+- 风险：
+  - 很容易因为它“理论上更针对 template-collapse”，
+    就继续扩：
+    - 更长 horizon
+    - 邻近小权重 sweep
+    - 同族 objective 变体
+- 正确处理：
+  - 这类候选一旦在 native teacher 真 decoded 上明显恶化，
+    就应直接停线
+  - 不允许把 paired tiny-overfit 的直觉当成 native fullsplit 的默认先验
+
+### 44. 旧版 Stage5 export / probe 默认值若与当前主口径不一致，会直接污染 `decoded.wav / buzz gate / loss_metrics` 结论
+- 现象：
+  - `export-offline-mvp-nores-vocoder-audio`
+    和三条 Stage5 probe CLI
+    之前都存在默认 decode 语义与当前主口径不完全一致的问题
+  - 同时 export 里的 `loss_metrics`
+    也可能没有正确继承 checkpoint 训练时的 gate / objective 语义
+- 风险：
+  - 很容易把：
+    - 旧 decode 默认值下导出的 `decoded.wav`
+    - 旧 metric 语义下的 `loss_metrics`
+    - 旧 probe 默认值下的诊断
+    混成同一条硬结论
+  - 进一步污染：
+    - `auto_reject_obvious_buzz`
+    - baseline/candidate 相对优劣
+    - native teacher 是否已被确认 `3/3 obvious buzz`
+- 正确处理：
+  - 代码修复后，必须先做最小回补重跑，再恢复新实验
+  - 当前 active 范围内至少要回补：
+    - `391` native teacher baseline validation3 export
+    - `392` `acttmpl005_delta6` candidate validation3 export
+  - 在此之前：
+    - `389~392` 里所有直接依赖旧 export 的
+      `decoded.wav / buzz gate / loss_metrics`
+      结论都只能按临时结论使用
+  - 当前状态更新：
+    - `391 -> 392` 的最小回补已完成
+    - `391/392` 的主结论已恢复为正式可用
+    - 但 `389/390` 里依赖旧 export 的 student 对照部分仍保持临时结论口径，
+      除非后续主线重新需要它们
