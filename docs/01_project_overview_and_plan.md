@@ -877,3 +877,96 @@
     直接处理剩余的
     `envelope-following`
     根因。
+57. `residual_shape_branch_condition_mode = shape_only_unit_rms_v1`
+  也已完成更便宜的
+  inference-only route-level probe：
+  - `docs/419_stage5_native_teacher_residualshape_unitrms_decode_probe_report.md`
+  - 当前结论是：
+    - 这条 mode
+      在稳定的
+      `raw_additive_v1 scale=0.25`
+      step24 checkpoint 上，
+      仅改 decode 语义后，
+      并没有减轻
+      `envelope-following`
+    - 相反：
+      - `decoded_frame_template_cosine_mean`
+        从
+        `0.975636`
+        恶化到
+        `0.977393`
+      - `decoded_frame_rms_to_aligned_frame_rms_corr`
+        从
+        `0.891069`
+        恶化到
+        `0.904674`
+      - `spectral_centroid_gap_hz`
+        从
+        `4036.778076`
+        恶化到
+        `4302.939941`
+      - `spectral_high_band_energy_ratio_gap`
+        从
+        `0.333024`
+        恶化到
+        `0.353297`
+    - 同时这条 mode
+      从随机初始化训练时，
+      在最小 smoke 上
+      第一步 update 后
+      就暴露出明显数值不稳
+  - 因而当前 Stage5 主线应进一步写死为：
+    - 保留
+      `raw_additive_v1 residualshapecond`
+    - 暂停
+      `unit_rms / shape_only`
+      同族归一化假设
+    - 继续在
+      `scale = 0.25 ~ 0.5`
+      这段已成立的 operating region 内，
+      直接打
+      `envelope-following`
+      根因
+58. `residualshapecond`
+  的 decode-time additive delta
+  也已完成直接 ablation probe：
+  - `docs/420_stage5_native_teacher_residualshape_decode_ablation_probe_report.md`
+  - 当前结论是：
+    - 固定同一个
+      `scale=0.25 raw_additive_v1`
+      step24 checkpoint，
+      仅把 decode-time
+      `residual_shape_branch_condition_scale`
+      改成
+      `0.0`
+      之后，
+      route 仍保持：
+      - `3/3 review_required`
+    - brightness / template-collapse
+      还出现了非常轻微的改善：
+      - `decoded_frame_template_cosine_mean`
+        `0.97723 -> 0.977191`
+      - `spectral_centroid_gap_hz`
+        `4228.900391 -> 4194.120605`
+      - `spectral_high_band_energy_ratio_gap`
+        `0.347793 -> 0.344906`
+    - 但
+      `decoded_frame_rms_to_aligned_frame_rms_corr`
+      没有改善：
+      - `0.904841 -> 0.904918`
+  - 因而当前更准确的主线解释应是：
+    - `residualshapecond`
+      的收益更像
+      training-time handoff shaping
+    - 而不是 inference-time
+      additive delta
+      还在单独扛住当前 route
+  - 下一步不应继续：
+    - 围绕 decode-time
+      `residual_shape_branch_condition_scale`
+      做微扫
+  - 而应转到：
+    - 为什么训练期这条 handoff
+      能压低 brightness / collapse，
+      却仍留下
+      `envelope-following`

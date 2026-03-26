@@ -1025,7 +1025,9 @@ def resolve_residual_shape_branch_condition_delta(*, delta: torch.Tensor, mode: 
     if resolved_mode == "raw_additive_v1":
         return delta
     if resolved_mode == "shape_only_unit_rms_v1":
-        return normalize_frames_unit_rms_local(delta)
+        centered = delta.to(torch.float32) - delta.to(torch.float32).mean(dim=-1, keepdim=True)
+        frame_rms = centered.pow(2).mean(dim=-1, keepdim=True).sqrt().clamp_min(0.25)
+        return torch.tanh(centered / frame_rms)
     raise RuntimeError(f"Unsupported residual_shape_branch_condition_mode at runtime: {resolved_mode!r}")
 
 

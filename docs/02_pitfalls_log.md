@@ -1296,3 +1296,103 @@
   - 而应直接处理：
     - 两档都没动到的
       `envelope-following`
+
+### 65. 不能把“把 residual-shape 分支做成 shape-only / unit-rms 归一化”当作当前 route 下天然正确的 envelope-following 修法
+- 现象：
+  - 当前稳定主线是：
+    - `branch_mean_contrast_residual_v1`
+    - `raw_additive_v1 residualshapecond`
+    - `scale = 0.25 ~ 0.5`
+  - 新增的
+    `residual_shape_branch_condition_mode = shape_only_unit_rms_v1`
+    在 inference-only decode probe 上表现为：
+    - `decoded_frame_template_cosine_mean`
+      `0.975636 -> 0.977393`
+    - `decoded_frame_rms_to_aligned_frame_rms_corr`
+      `0.891069 -> 0.904674`
+    - `spectral_centroid_gap_hz`
+      `4036.778076 -> 4302.939941`
+    - `spectral_high_band_energy_ratio_gap`
+      `0.333024 -> 0.353297`
+  - 同时它从随机初始化训练时，
+    在最小 smoke 上
+    第一步 update 后
+    就出现：
+    - `binary_cross_entropy`
+      输入越界
+- 风险：
+  - 很容易因为这个假设在直觉上“更去振幅、更像 shape-only”，
+    就把它当成：
+    - 当前 residual-shape route
+      的天然下一步
+    - 或者值得先投入训练稳定化预算的方向
+- 正确处理：
+  - 当前事实已经足够说明：
+    - 这条 unit-rms 归一化
+      没有方向性收益
+    - 它不但没减轻
+      `envelope-following`，
+      还把 collapse / brightness
+      一起推差了
+  - 因而下一步不应：
+    - 围绕
+      `shape_only / unit_rms / 归一化 residual-shape`
+      同族假设做微扫
+    - 也不应先为它投入数值稳定化
+  - 当前更合理的口径仍是：
+    - 保留
+      `raw_additive_v1`
+    - 在
+      `scale = 0.25 ~ 0.5`
+      这段已成立的 route 上
+      继续定位
+      `envelope-following`
+
+### 66. 不能把当前 `residualshapecond` route 的收益误判成主要由 decode-time additive delta 本身在持续支撑
+- 现象：
+  - 对同一个
+    `scale=0.25 raw_additive_v1`
+    step24 checkpoint，
+    仅把 decode-time
+    `residual_shape_branch_condition_scale`
+    改成
+    `0.0`
+    之后，
+    route 仍保持：
+    - `3/3 review_required`
+  - speech-emergence probe 里：
+    - `decoded_frame_template_cosine_mean`
+      `0.97723 -> 0.977191`
+    - `spectral_centroid_gap_hz`
+      `4228.900391 -> 4194.120605`
+    - `spectral_high_band_energy_ratio_gap`
+      `0.347793 -> 0.344906`
+    - 但
+      `decoded_frame_rms_to_aligned_frame_rms_corr`
+      `0.904841 -> 0.904918`
+- 风险：
+  - 很容易把当前 route
+    首次脱离 `auto_reject`
+    的收益，
+    继续归因给：
+    - decode-time residual-shape 增量
+    - inference-time gain 本身
+  - 进而继续围绕：
+    - `scale`
+    - additive delta 大小
+    做更多微扫
+- 正确处理：
+  - 当前更准确的解释应是：
+    - 这条 route 的主要收益，
+      更像已经被训练过程
+      写进了 backbone / decoder operating region
+    - 当前 decode-time 那点 additive delta，
+      不是主要承载项
+  - 因而下一步不应：
+    - 继续围绕 decode-time scale
+      做微调
+  - 而应转到：
+    - 为什么 training-time residual-shape handoff
+      能压低 brightness / collapse，
+      却仍保留
+      `envelope-following`
