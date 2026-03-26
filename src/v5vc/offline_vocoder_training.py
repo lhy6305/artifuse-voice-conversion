@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
 import json
 import math
@@ -1029,6 +1030,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     max_validation_records: int | None,
     selection_mode: str,
     skip_existing: bool,
+    worker_processes: int = 1,
     target_event_semantic_sidecar_path: Path | None = None,
     target_event_timing_semantic_sidecar_path: Path | None = None,
     source_semantic_parity_sidecar_path: Path | None = None,
@@ -1042,10 +1044,12 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     output_dir.mkdir(parents=True, exist_ok=True)
     run_started_at = datetime.now()
     run_started_perf = perf_counter()
+    resolved_worker_processes = max(1, int(worker_processes))
     print(
         "[stage5] nores_vocoder_dataset_packages_started "
         f"started_at={run_started_at.isoformat(timespec='seconds')} "
-        f"output_dir={output_dir.as_posix()}"
+        f"output_dir={output_dir.as_posix()} "
+        f"worker_processes={resolved_worker_processes}"
     )
 
     resolved_train_split_path = None if train_split_path is None else train_split_path.resolve()
@@ -1160,6 +1164,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         skip_existing=skip_existing,
         teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
+        worker_processes=resolved_worker_processes,
     )
     validation_entries = build_dataset_packages_for_split(
         records=validation_records,
@@ -1182,6 +1187,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         skip_existing=skip_existing,
         teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
         teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
+        worker_processes=resolved_worker_processes,
     )
     run_ended_at = datetime.now()
     run_duration_sec = perf_counter() - run_started_perf
@@ -1195,6 +1201,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             "duration_sec": round(run_duration_sec, 6),
         },
         "selection_mode": str(selection_mode),
+        "worker_processes": resolved_worker_processes,
         "train_split_path": None if effective_train_split_path is None else effective_train_split_path.as_posix(),
         "validation_split_path": (
             None if effective_validation_split_path is None else effective_validation_split_path.as_posix()
@@ -1243,6 +1250,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             "spectral_target_mode controls whether harmonic/noise spectral targets stay as a raw half-split STFT proxy or are additionally masked by the selected gate targets.",
             "teacher_e_evt_bridge_mode controls how the first 5 explicit e_evt acoustic dims are bridged before entering the Stage5 downstream/scaffold route.",
             "teacher_e_evt_target_shaping_mode controls how explicit e_evt boundary/final-clause labels are rasterized before entering the Stage5 downstream/scaffold route.",
+            "worker_processes=1 keeps the original serial split builder; worker_processes>1 switches split package export to ProcessPoolExecutor and logs progress from the main process by future completion count.",
         ],
     }
     index_payload["summary"] = summarize_dataset_package_index(
@@ -1267,7 +1275,8 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         "[stage5] nores_vocoder_dataset_packages_completed "
         f"ended_at={run_ended_at.isoformat(timespec='seconds')} "
         f"duration_sec={round(run_duration_sec, 6)} "
-        f"train_packages={len(train_entries)} validation_packages={len(validation_entries)}"
+        f"train_packages={len(train_entries)} validation_packages={len(validation_entries)} "
+        f"worker_processes={resolved_worker_processes}"
     )
 
 
@@ -2658,23 +2667,14 @@ def build_dataset_packages_for_split(
     skip_existing: bool,
     teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
+    worker_processes: int = 1,
 ) -> list[dict[str, object]]:
-    entries: list[dict[str, object]] = []
     split_started_perf = perf_counter()
     total_records = len(records)
-    built_now_count = 0
-    reused_existing_count = 0
+    tasks: list[dict[str, object]] = []
     for record_index, record in enumerate(records, start=1):
-        record_started_perf = perf_counter()
         record_id = str(record["record_id"])
         resolved_paths = resolve_dataset_record_paths(record)
-        source_audio_path = Path(str(resolved_paths["source_audio_path"])).resolve()
-        target_audio_path = Path(str(resolved_paths["target_audio_path"])).resolve()
-        record_dir = packages_dir / split_name / safe_record_id(record_id)
-        contract_dir = record_dir / "contract"
-        scaffold_dir = record_dir / "scaffold"
-        targets_dir = record_dir / "train_targets"
-        package_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.pt"
         target_record_id = str(resolved_paths.get("target_record_id") or record_id)
         source_record_id = str(resolved_paths.get("source_record_id") or record_id)
         target_event_semantic_sidecar = None
@@ -2686,178 +2686,331 @@ def build_dataset_packages_for_split(
             target_event_timing_semantic_sidecar = timing_semantic_sidecar_map.get(target_record_id)
         if source_semantic_parity_sidecar_map is not None:
             source_semantic_parity_sidecar = source_semantic_parity_sidecar_map.get(source_record_id)
-        package_reused = bool(skip_existing and package_path.exists())
-        if package_reused:
-            existing_payload = load_training_package_payload(package_path)
-            if (
-                isinstance(target_event_semantic_sidecar, dict)
-                and not isinstance(existing_payload.get("target_event_semantic_sidecar"), dict)
-            ):
-                package_reused = False
-            if (
-                isinstance(target_event_timing_semantic_sidecar, dict)
-                and not isinstance(existing_payload.get("target_event_timing_semantic_sidecar"), dict)
-            ):
-                package_reused = False
-            if (
-                isinstance(source_semantic_parity_sidecar, dict)
-                and not isinstance(existing_payload.get("source_semantic_parity_sidecar"), dict)
-            ):
-                package_reused = False
-            existing_semantic_consumer = dict(existing_payload.get("semantic_consumer", {}))
-            if str(existing_semantic_consumer.get("semantic_consumer_mode", "none")) != str(semantic_consumer_mode):
-                package_reused = False
-            existing_target_contract = dict(existing_payload.get("target_contract", {}))
-            if (
-                str(
-                    existing_target_contract.get(
-                        "target_contract_mode",
-                        DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
-                    )
-                )
-                != str(target_contract_mode)
-            ):
-                package_reused = False
-            existing_spectral_target_contract = dict(existing_payload.get("spectral_target_contract", {}))
-            if (
-                str(
-                    existing_spectral_target_contract.get(
-                        "spectral_target_mode",
-                        DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
-                    )
-                )
-                != str(spectral_target_mode)
-            ):
-                package_reused = False
-            if (
-                str(
-                    existing_target_contract.get(
-                        "teacher_e_evt_bridge_mode",
-                        TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
-                    )
-                )
-                != str(teacher_e_evt_bridge_mode)
-            ):
-                package_reused = False
-            if (
-                str(
-                    existing_target_contract.get(
-                        "teacher_e_evt_target_shaping_mode",
-                        TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
-                    )
-                )
-                != str(teacher_e_evt_target_shaping_mode)
-            ):
-                package_reused = False
-        if not package_reused:
-            export_offline_mvp_teacher_downstream_contract(
-                input_audio_path=source_audio_path,
-                output_dir=contract_dir,
-                route_handoff_path=route_handoff_path,
-                checkpoint_path=checkpoint_path,
-                calibration_asset_path=calibration_asset_path,
-                chunk_samples=chunk_samples,
-                chunk_ms=chunk_ms,
-                device=device,
-                max_audio_sec=max_audio_sec,
-                verify_against_full_pass=verify_against_full_pass,
-                target_event_semantic_sidecar=target_event_semantic_sidecar,
-                target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
-                source_semantic_parity_sidecar=source_semantic_parity_sidecar,
-                teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
-                teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
-            )
-            build_offline_mvp_teacher_vocoder_input_scaffold(
-                contract_path=contract_dir / "teacher_downstream_control_contract.pt",
-                output_dir=scaffold_dir,
-            )
-            build_offline_mvp_nores_vocoder_training_package(
-                scaffold_path=scaffold_dir / "teacher_vocoder_input_scaffold.pt",
-                target_audio_path=target_audio_path,
-                output_dir=targets_dir,
-                harmonic_bins=32,
-                noise_bins=32,
-                sample_rate=None,
-                frame_length=None,
-                hop_length=None,
-                target_event_semantic_sidecar=target_event_semantic_sidecar,
-                target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
-                source_semantic_parity_sidecar=source_semantic_parity_sidecar,
-                semantic_consumer_mode=semantic_consumer_mode,
-                target_contract_mode=target_contract_mode,
-                spectral_target_mode=spectral_target_mode,
-            )
-            built_now_count += 1
-        else:
-            reused_existing_count += 1
-        package_payload = load_training_package_payload(package_path)
-        package_build_sec = perf_counter() - record_started_perf
-        package_size_bytes = compute_path_size_bytes(record_dir)
-        entries.append(
+        tasks.append(
             {
-                "record_id": record_id,
-                "audio_path": target_audio_path.as_posix(),
-                "source_audio_path": source_audio_path.as_posix(),
-                "target_audio_path": target_audio_path.as_posix(),
-                "source_record_id": resolved_paths.get("source_record_id"),
-                "target_record_id": target_record_id,
-                "record_mode": str(resolved_paths.get("record_mode", "unknown")),
-                "duration_sec": resolve_dataset_record_duration_sec(record),
+                "record_index": record_index,
+                "record": record,
                 "split_name": split_name,
-                "training_package_path": package_path.as_posix(),
-                "training_package_version": str(package_payload.get("training_package_version", "unknown")),
-                "source_scaffold_version": str(package_payload.get("source_scaffold_version", "unknown")),
-                "target_event_semantic_sidecar_present": bool(
-                    isinstance(package_payload.get("target_event_semantic_sidecar"), dict)
+                "packages_dir": packages_dir.as_posix(),
+                "route_handoff_path": None if route_handoff_path is None else route_handoff_path.as_posix(),
+                "checkpoint_path": None if checkpoint_path is None else checkpoint_path.as_posix(),
+                "calibration_asset_path": (
+                    None if calibration_asset_path is None else calibration_asset_path.as_posix()
                 ),
-                "target_semantic_overview": dict(package_payload.get("target_semantic_overview", {})),
-                "target_event_timing_semantic_sidecar_present": bool(
-                    isinstance(package_payload.get("target_event_timing_semantic_sidecar"), dict)
-                ),
-                "target_timing_semantic_overview": dict(
-                    package_payload.get("target_timing_semantic_overview", {})
-                ),
-                "source_semantic_parity_sidecar_present": bool(
-                    isinstance(package_payload.get("source_semantic_parity_sidecar"), dict)
-                ),
-                "source_semantic_parity_overview": dict(
-                    package_payload.get("source_semantic_parity_overview", {})
-                ),
-                "semantic_consumer": dict(package_payload.get("semantic_consumer", {})),
-                "target_contract": dict(package_payload.get("target_contract", {})),
-                "spectral_target_contract": dict(package_payload.get("spectral_target_contract", {})),
-                "frame_count": int(package_payload["frame_count"]),
-                "periodic_input_dim": int(package_payload["inputs"]["periodic_branch_features"].shape[-1]),
-                "noise_input_dim": int(package_payload["inputs"]["noise_branch_features"].shape[-1]),
-                "harmonic_target_dim": int(package_payload["targets"]["harmonic_envelope_target"].shape[-1]),
-                "noise_target_dim": int(package_payload["targets"]["noise_envelope_target"].shape[-1]),
-                "package_size_bytes": int(package_size_bytes),
-                "package_build_sec": round(package_build_sec, 6),
-                "package_status": "reused_existing" if package_reused else "built_now",
+                "chunk_samples": chunk_samples,
+                "chunk_ms": chunk_ms,
+                "device": device,
+                "max_audio_sec": max_audio_sec,
+                "verify_against_full_pass": verify_against_full_pass,
+                "skip_existing": skip_existing,
+                "semantic_consumer_mode": semantic_consumer_mode,
+                "target_contract_mode": target_contract_mode,
+                "spectral_target_mode": spectral_target_mode,
+                "teacher_e_evt_bridge_mode": teacher_e_evt_bridge_mode,
+                "teacher_e_evt_target_shaping_mode": teacher_e_evt_target_shaping_mode,
+                "target_event_semantic_sidecar": target_event_semantic_sidecar,
+                "target_event_timing_semantic_sidecar": target_event_timing_semantic_sidecar,
+                "source_semantic_parity_sidecar": source_semantic_parity_sidecar,
             }
         )
-        should_log_progress = (
-            record_index == 1
-            or record_index == total_records
-            or (record_index % 25) == 0
-        )
-        if should_log_progress:
-            elapsed_sec = perf_counter() - split_started_perf
-            avg_sec = elapsed_sec / float(record_index)
-            remaining_count = total_records - record_index
-            eta_sec = avg_sec * float(remaining_count)
-            print(
-                "[stage5] dataset_packages_progress "
-                f"split={split_name} "
-                f"completed={record_index}/{total_records} "
-                f"built_now={built_now_count} "
-                f"reused_existing={reused_existing_count} "
-                f"last_record_id={record_id} "
-                f"last_status={'reused_existing' if package_reused else 'built_now'} "
-                f"elapsed_sec={elapsed_sec:.2f} "
-                f"eta_sec={eta_sec:.2f}"
+    return build_dataset_packages_from_tasks(
+        tasks=tasks,
+        split_name=split_name,
+        total_records=total_records,
+        split_started_perf=split_started_perf,
+        worker_processes=worker_processes,
+    )
+
+
+def build_dataset_packages_from_tasks(
+    *,
+    tasks: list[dict[str, object]],
+    split_name: str,
+    total_records: int,
+    split_started_perf: float,
+    worker_processes: int,
+) -> list[dict[str, object]]:
+    entries_by_index: dict[int, dict[str, object]] = {}
+    built_now_count = 0
+    reused_existing_count = 0
+    effective_worker_processes = max(1, int(worker_processes))
+    log_interval = 10 if effective_worker_processes > 1 else 25
+    if effective_worker_processes == 1:
+        for task in tasks:
+            result = build_dataset_package_for_record(task)
+            completed_count = int(result["record_index"])
+            entry = dict(result["entry"])
+            entries_by_index[completed_count] = entry
+            if str(entry.get("package_status")) == "built_now":
+                built_now_count += 1
+            else:
+                reused_existing_count += 1
+            log_stage5_dataset_package_progress(
+                split_name=split_name,
+                completed_count=completed_count,
+                total_records=total_records,
+                built_now_count=built_now_count,
+                reused_existing_count=reused_existing_count,
+                last_record_id=str(entry["record_id"]),
+                last_status=str(entry["package_status"]),
+                split_started_perf=split_started_perf,
+                log_interval=log_interval,
             )
-    return entries
+    else:
+        completed_count = 0
+        with ProcessPoolExecutor(max_workers=effective_worker_processes) as executor:
+            future_to_record_id = {
+                executor.submit(build_dataset_package_for_record, task): str(dict(task["record"]).get("record_id", "unknown"))
+                for task in tasks
+            }
+            for future in as_completed(future_to_record_id):
+                record_id = future_to_record_id[future]
+                try:
+                    result = future.result()
+                except Exception as exc:
+                    raise RuntimeError(
+                        f"Stage5 dataset package build failed for split={split_name} record_id={record_id}"
+                    ) from exc
+                completed_count += 1
+                entry = dict(result["entry"])
+                entries_by_index[int(result["record_index"])] = entry
+                if str(entry.get("package_status")) == "built_now":
+                    built_now_count += 1
+                else:
+                    reused_existing_count += 1
+                log_stage5_dataset_package_progress(
+                    split_name=split_name,
+                    completed_count=completed_count,
+                    total_records=total_records,
+                    built_now_count=built_now_count,
+                    reused_existing_count=reused_existing_count,
+                    last_record_id=str(entry["record_id"]),
+                    last_status=str(entry["package_status"]),
+                    split_started_perf=split_started_perf,
+                    log_interval=log_interval,
+                )
+    return [entries_by_index[index] for index in sorted(entries_by_index)]
+
+
+def log_stage5_dataset_package_progress(
+    *,
+    split_name: str,
+    completed_count: int,
+    total_records: int,
+    built_now_count: int,
+    reused_existing_count: int,
+    last_record_id: str,
+    last_status: str,
+    split_started_perf: float,
+    log_interval: int,
+) -> None:
+    should_log_progress = (
+        completed_count == 1
+        or completed_count == total_records
+        or (completed_count % max(1, log_interval)) == 0
+    )
+    if not should_log_progress:
+        return
+    elapsed_sec = perf_counter() - split_started_perf
+    avg_sec = elapsed_sec / float(max(1, completed_count))
+    remaining_count = total_records - completed_count
+    eta_sec = avg_sec * float(max(0, remaining_count))
+    print(
+        "[stage5] dataset_packages_progress "
+        f"split={split_name} "
+        f"completed={completed_count}/{total_records} "
+        f"built_now={built_now_count} "
+        f"reused_existing={reused_existing_count} "
+        f"last_record_id={last_record_id} "
+        f"last_status={last_status} "
+        f"elapsed_sec={elapsed_sec:.2f} "
+        f"eta_sec={eta_sec:.2f}",
+        flush=True,
+    )
+
+
+def should_reuse_existing_stage5_training_package(
+    *,
+    package_path: Path,
+    skip_existing: bool,
+    target_event_semantic_sidecar: dict[str, object] | None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    source_semantic_parity_sidecar: dict[str, object] | None,
+    semantic_consumer_mode: str,
+    target_contract_mode: str,
+    spectral_target_mode: str,
+    teacher_e_evt_bridge_mode: str,
+    teacher_e_evt_target_shaping_mode: str,
+) -> bool:
+    package_reused = bool(skip_existing and package_path.exists())
+    if not package_reused:
+        return False
+    existing_payload = load_training_package_payload(package_path)
+    if (
+        isinstance(target_event_semantic_sidecar, dict)
+        and not isinstance(existing_payload.get("target_event_semantic_sidecar"), dict)
+    ):
+        return False
+    if (
+        isinstance(target_event_timing_semantic_sidecar, dict)
+        and not isinstance(existing_payload.get("target_event_timing_semantic_sidecar"), dict)
+    ):
+        return False
+    if (
+        isinstance(source_semantic_parity_sidecar, dict)
+        and not isinstance(existing_payload.get("source_semantic_parity_sidecar"), dict)
+    ):
+        return False
+    existing_semantic_consumer = dict(existing_payload.get("semantic_consumer", {}))
+    if str(existing_semantic_consumer.get("semantic_consumer_mode", "none")) != str(semantic_consumer_mode):
+        return False
+    existing_target_contract = dict(existing_payload.get("target_contract", {}))
+    if (
+        str(existing_target_contract.get("target_contract_mode", DEFAULT_STAGE5_TARGET_CONTRACT_MODE))
+        != str(target_contract_mode)
+    ):
+        return False
+    existing_spectral_target_contract = dict(existing_payload.get("spectral_target_contract", {}))
+    if (
+        str(existing_spectral_target_contract.get("spectral_target_mode", DEFAULT_STAGE5_SPECTRAL_TARGET_MODE))
+        != str(spectral_target_mode)
+    ):
+        return False
+    if (
+        str(
+            existing_target_contract.get(
+                "teacher_e_evt_bridge_mode",
+                TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+            )
+        )
+        != str(teacher_e_evt_bridge_mode)
+    ):
+        return False
+    if (
+        str(
+            existing_target_contract.get(
+                "teacher_e_evt_target_shaping_mode",
+                TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+            )
+        )
+        != str(teacher_e_evt_target_shaping_mode)
+    ):
+        return False
+    return True
+
+
+def build_dataset_package_for_record(task: dict[str, object]) -> dict[str, object]:
+    record_started_perf = perf_counter()
+    record = dict(task["record"])
+    split_name = str(task["split_name"])
+    packages_dir = Path(str(task["packages_dir"])).resolve()
+    route_handoff_path = task.get("route_handoff_path")
+    checkpoint_path = task.get("checkpoint_path")
+    calibration_asset_path = task.get("calibration_asset_path")
+    record_id = str(record["record_id"])
+    resolved_paths = resolve_dataset_record_paths(record)
+    source_audio_path = Path(str(resolved_paths["source_audio_path"])).resolve()
+    target_audio_path = Path(str(resolved_paths["target_audio_path"])).resolve()
+    record_dir = packages_dir / split_name / safe_record_id(record_id)
+    contract_dir = record_dir / "contract"
+    scaffold_dir = record_dir / "scaffold"
+    targets_dir = record_dir / "train_targets"
+    package_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.pt"
+    package_reused = should_reuse_existing_stage5_training_package(
+        package_path=package_path,
+        skip_existing=bool(task["skip_existing"]),
+        target_event_semantic_sidecar=task.get("target_event_semantic_sidecar"),
+        target_event_timing_semantic_sidecar=task.get("target_event_timing_semantic_sidecar"),
+        source_semantic_parity_sidecar=task.get("source_semantic_parity_sidecar"),
+        semantic_consumer_mode=str(task["semantic_consumer_mode"]),
+        target_contract_mode=str(task["target_contract_mode"]),
+        spectral_target_mode=str(task["spectral_target_mode"]),
+        teacher_e_evt_bridge_mode=str(task["teacher_e_evt_bridge_mode"]),
+        teacher_e_evt_target_shaping_mode=str(task["teacher_e_evt_target_shaping_mode"]),
+    )
+    if not package_reused:
+        export_offline_mvp_teacher_downstream_contract(
+            input_audio_path=source_audio_path,
+            output_dir=contract_dir,
+            route_handoff_path=None if route_handoff_path is None else Path(str(route_handoff_path)),
+            checkpoint_path=None if checkpoint_path is None else Path(str(checkpoint_path)),
+            calibration_asset_path=(
+                None if calibration_asset_path is None else Path(str(calibration_asset_path))
+            ),
+            chunk_samples=task.get("chunk_samples"),
+            chunk_ms=task.get("chunk_ms"),
+            device=str(task["device"]),
+            max_audio_sec=task.get("max_audio_sec"),
+            verify_against_full_pass=bool(task["verify_against_full_pass"]),
+            target_event_semantic_sidecar=task.get("target_event_semantic_sidecar"),
+            target_event_timing_semantic_sidecar=task.get("target_event_timing_semantic_sidecar"),
+            source_semantic_parity_sidecar=task.get("source_semantic_parity_sidecar"),
+            teacher_e_evt_bridge_mode=str(task["teacher_e_evt_bridge_mode"]),
+            teacher_e_evt_target_shaping_mode=str(task["teacher_e_evt_target_shaping_mode"]),
+        )
+        build_offline_mvp_teacher_vocoder_input_scaffold(
+            contract_path=contract_dir / "teacher_downstream_control_contract.pt",
+            output_dir=scaffold_dir,
+        )
+        build_offline_mvp_nores_vocoder_training_package(
+            scaffold_path=scaffold_dir / "teacher_vocoder_input_scaffold.pt",
+            target_audio_path=target_audio_path,
+            output_dir=targets_dir,
+            harmonic_bins=32,
+            noise_bins=32,
+            sample_rate=None,
+            frame_length=None,
+            hop_length=None,
+            target_event_semantic_sidecar=task.get("target_event_semantic_sidecar"),
+            target_event_timing_semantic_sidecar=task.get("target_event_timing_semantic_sidecar"),
+            source_semantic_parity_sidecar=task.get("source_semantic_parity_sidecar"),
+            semantic_consumer_mode=str(task["semantic_consumer_mode"]),
+            target_contract_mode=str(task["target_contract_mode"]),
+            spectral_target_mode=str(task["spectral_target_mode"]),
+        )
+    package_payload = load_training_package_payload(package_path)
+    package_build_sec = perf_counter() - record_started_perf
+    package_size_bytes = compute_path_size_bytes(record_dir)
+    return {
+        "record_index": int(task["record_index"]),
+        "entry": {
+            "record_id": record_id,
+            "audio_path": target_audio_path.as_posix(),
+            "source_audio_path": source_audio_path.as_posix(),
+            "target_audio_path": target_audio_path.as_posix(),
+            "source_record_id": resolved_paths.get("source_record_id"),
+            "target_record_id": resolved_paths.get("target_record_id") or record_id,
+            "record_mode": str(resolved_paths.get("record_mode", "unknown")),
+            "duration_sec": resolve_dataset_record_duration_sec(record),
+            "split_name": split_name,
+            "training_package_path": package_path.as_posix(),
+            "training_package_version": str(package_payload.get("training_package_version", "unknown")),
+            "source_scaffold_version": str(package_payload.get("source_scaffold_version", "unknown")),
+            "target_event_semantic_sidecar_present": bool(
+                isinstance(package_payload.get("target_event_semantic_sidecar"), dict)
+            ),
+            "target_semantic_overview": dict(package_payload.get("target_semantic_overview", {})),
+            "target_event_timing_semantic_sidecar_present": bool(
+                isinstance(package_payload.get("target_event_timing_semantic_sidecar"), dict)
+            ),
+            "target_timing_semantic_overview": dict(package_payload.get("target_timing_semantic_overview", {})),
+            "source_semantic_parity_sidecar_present": bool(
+                isinstance(package_payload.get("source_semantic_parity_sidecar"), dict)
+            ),
+            "source_semantic_parity_overview": dict(package_payload.get("source_semantic_parity_overview", {})),
+            "semantic_consumer": dict(package_payload.get("semantic_consumer", {})),
+            "target_contract": dict(package_payload.get("target_contract", {})),
+            "spectral_target_contract": dict(package_payload.get("spectral_target_contract", {})),
+            "frame_count": int(package_payload["frame_count"]),
+            "periodic_input_dim": int(package_payload["inputs"]["periodic_branch_features"].shape[-1]),
+            "noise_input_dim": int(package_payload["inputs"]["noise_branch_features"].shape[-1]),
+            "harmonic_target_dim": int(package_payload["targets"]["harmonic_envelope_target"].shape[-1]),
+            "noise_target_dim": int(package_payload["targets"]["noise_envelope_target"].shape[-1]),
+            "package_size_bytes": int(package_size_bytes),
+            "package_build_sec": round(package_build_sec, 6),
+            "package_status": "reused_existing" if package_reused else "built_now",
+        },
+    }
 
 
 def compute_path_size_bytes(path: Path) -> int:
@@ -4258,6 +4411,7 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         f"- generated_at: {summary['generated_at']}",
         f"- timing: {json.dumps(summary.get('timing', {}), ensure_ascii=False)}",
         f"- selection_mode: {summary['selection_mode']}",
+        f"- worker_processes: {summary.get('worker_processes')}",
         f"- train_split_path: {summary['train_split_path']}",
         f"- validation_split_path: {summary['validation_split_path']}",
         f"- train_pair_spec_path: {summary.get('train_pair_spec_path')}",
@@ -4267,6 +4421,7 @@ def build_dataset_index_markdown(summary: dict[str, object]) -> str:
         f"- source_semantic_parity_sidecar_path: {summary.get('source_semantic_parity_sidecar_path')}",
         f"- semantic_consumer_mode: {summary.get('semantic_consumer_mode')}",
         f"- target_contract_mode: {summary.get('target_contract_mode')}",
+        f"- spectral_target_mode: {summary.get('spectral_target_mode')}",
         f"- summary: {json.dumps(summary['summary'], ensure_ascii=False)}",
         "",
         "## Train Packages",

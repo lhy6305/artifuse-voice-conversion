@@ -462,9 +462,10 @@
 - `docs/398_stage5_native_teacher_branchmix025_fail_fast_report.md`
  - `docs/399_stage5_native_teacher_branchcondadapter_fail_fast_report.md`
  - `docs/400_stage5_native_teacher_dualbranchmix_fail_fast_report.md`
- - `docs/401_stage5_native_teacher_nonrecurrent_residual_decoder_family_fail_fast_report.md`
- - `docs/402_stage5_native_teacher_gatemasked_spectral_target_fail_fast_report.md`
- - `docs/403_stage5_native_teacher_activitygate00_nogatedrecon_fail_fast_report.md`
+- `docs/401_stage5_native_teacher_nonrecurrent_residual_decoder_family_fail_fast_report.md`
+- `docs/402_stage5_native_teacher_gatemasked_spectral_target_fail_fast_report.md`
+- `docs/403_stage5_native_teacher_activitygate00_nogatedrecon_fail_fast_report.md`
+- `docs/404_stage5_dataset_split_builder_processpool_takeover_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。
@@ -541,3 +542,17 @@
     - noise/periodic target family
     - target contract semantics
     - objective meaning
+43. Stage5 dataset package export 的工程入口已补齐并行 split builder：
+  - `docs/404_stage5_dataset_split_builder_processpool_takeover_report.md`
+  - 当前结论是：
+    - `--worker-processes`
+      已真实透传到底层 split builder
+    - `worker_processes == 1`
+      保留原串行路径
+    - `worker_processes > 1`
+      已切到 `ProcessPoolExecutor`
+    - 进度现在统一由主进程按 future 完成数打点
+    - dataset index 也已回写 `worker_processes`
+  - 但当前只完成了 `1 train + 1 validation`
+    的最小真 smoke，
+    尚未完成 full-split 吞吐实测

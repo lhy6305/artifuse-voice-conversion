@@ -816,3 +816,30 @@
   - 应转去更根本的：
     - noise/periodic target semantics
     - objective meaning
+
+### 51. `worker_processes` 这种导出参数，不能只加到 CLI 和顶层函数签名就当作已经生效
+- 现象：
+  - 本轮 Stage5 dataset package builder
+    一开始已经有：
+    - CLI `--worker-processes`
+    - 顶层 `build_offline_mvp_nores_vocoder_dataset_packages(..., worker_processes=...)`
+  - 但核心 `build_dataset_packages_for_split(...)`
+    的真实调用链还没收到这个参数，
+    实际行为仍是串行。
+- 风险：
+  - 很容易把“参数入口已接好”
+    误判成“并行导出已经成立”。
+  - 也容易在并行改造后继续让子进程各自打印日志，
+    导致进度信息乱序、不可解释。
+- 正确处理：
+  - 必须继续核对：
+    - 顶层调用是否把参数真正传入核心 split builder
+    - `worker_processes == 1`
+      是否保留原串行语义
+    - `worker_processes > 1`
+      是否真实走 `ProcessPoolExecutor`
+    - 进度是否由主进程按 future 完成数统一打点
+    - dataset index / summary
+      是否写回 `worker_processes`
+  - 在产物里看到这些证据之前，
+    不能把它写成“并行路径已完成”。

@@ -2922,6 +2922,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Runtime device. Use auto, cpu, cuda, or cuda:0.",
     )
     nores_vocoder_dataset_packages_parser.add_argument(
+        "--worker-processes",
+        type=int,
+        default=1,
+        help="How many record-level worker processes to use during package export.",
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
         "--max-audio-sec",
         type=float,
         default=None,
@@ -5192,6 +5198,7 @@ def main(argv: list[str] | None = None) -> int:
             max_validation_records=args.max_validation_records,
             selection_mode=args.selection_mode,
             skip_existing=bool(args.skip_existing),
+            worker_processes=args.worker_processes,
             target_event_semantic_sidecar_path=args.target_event_semantic_sidecar,
             target_event_timing_semantic_sidecar_path=args.target_event_timing_semantic_sidecar,
             source_semantic_parity_sidecar_path=args.source_semantic_parity_sidecar,
