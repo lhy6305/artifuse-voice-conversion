@@ -980,3 +980,210 @@
     - 先停止 Stage5 package target/contract family 微扫
     - 再在 corrected baseline 主线上做
       objective meaning / collapse 诱因定位
+
+### 56. 不能把 gate-on 的旧 objective probe 结果，直接当成当前 corrected baseline 听审主路由的口径
+- 现象：
+  - 旧 `docs/293_stage5_contractv2_normfix_waveform_objective_recheck_report.md`
+    用的是：
+    - predicted gate `on`
+    - `post_ola_envelope`
+  - 但当前 corrected baseline 的真实听审主路由
+    已经是 gate-off
+  - 本轮 gate-off 复核后，
+    baseline 的
+    `mean_weighted_wave_objective = 0.293871`
+    明显差于旧 gate-on probe 的
+    `0.149037`
+- 风险：
+  - 很容易继续把：
+    - `acttmpl005_delta6`
+    - 旧 `frame_delta flip threshold`
+    - 旧 `active_template + delta`
+      排名
+    直接拿来当当前默认训练候选
+- 正确处理：
+  - 当前 objective-side 判断
+    必须优先参考
+    gate-off 复核结果
+  - 不再把 gate-on probe
+    当作当前主听审路由的最终口径
+
+### 57. 不能把“gate-off 听起来更差”误判成主病灶已经转到 export gate 开关本身
+- 现象：
+  - gate-off 听审路由下的 corrected baseline
+    objective probe 确实更差
+  - 但同语义 decoder-structure probe
+    仍给出：
+    - `collapse_not_localized_to_waveform_decoder`
+    - 主坍缩点仍在
+      `fusion -> fused_hidden`
+- 风险：
+  - 很容易把问题写成：
+    - “主要是 export gate 开关选错了”
+    - “只要回到 gate-on 就是主修复方向”
+- 正确处理：
+  - gate-on / gate-off
+    现在更适合作为症状显影方式，
+    不是主病灶本身
+  - 当前主线仍应优先定位：
+    - `fusion -> fused_hidden`
+      为什么先塌
+    - 以及它如何和 decode semantics
+      一起放大当前 buzz
+
+### 58. 不能把 smoke 上“第一个碰到 fusion 有效层级”的候选，误判成理应继续做 full sweep 的主线
+- 现象：
+  - `fused_hidden_branch_mean_weight = 0.25`
+    在最小 smoke 上曾出现：
+    - `loss_fused_hidden_to_branch_mean_unit_rms_l1`
+      明显下降
+    - `loss_active_template`
+      同时下降
+    - `waveform / rms_guard`
+      没有明显恶化
+  - 但 corrected native-teacher fullsplit24
+    真实 `decoded.wav`
+    结果仍是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 且相对 corrected baseline，
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      全面更差
+- 风险：
+  - 很容易因为它是第一条 smoke 上“看起来真正碰到了 fusion 层”的候选，
+    就继续围绕：
+    - `branch_mean_weight = 0.1 / 0.25 / 0.4`
+    - 其它 fusion-side `loss`
+      小权重
+    做 sweep
+  - 把“局部层命中感”误判成“已经足够接近真实解”
+- 正确处理：
+  - smoke 只能说明：
+    - 这条候选在诊断层面有信息量
+  - 不能说明：
+    - 它值得自动升级成 fullsplit sweep 主线
+  - 一旦真实 fullsplit24 decoded
+    已把这条线判成更差的同类 buzz，
+    就应把整个现有 fusion-side `loss`
+    家族一起降级
+  - 后续若继续推进
+    `fusion -> fused_hidden`
+    主线，
+    应直接转向更强的
+    `forward-path structural / fusion manifold`
+    改路，
+    而不是继续叠 penalty
+
+### 59. 不能把“比多数旧候选更接近 baseline”误写成“当前 fusion 结构已经转正”
+- 现象：
+  - `fusion_mode = branch_mean_residual_v1`
+    是当前第一条在真实 fullsplit24 上，
+    明显比多数旧候选更接近 corrected baseline 的
+    fusion-path structural 候选
+  - 但真实 `validation3 decoded.wav`
+    结果仍然是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline，
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      仍全部更差
+- 风险：
+  - 很容易因为这次恶化幅度终于没有那么大，
+    就把它误写成：
+    - “结构方向已经对了”
+    - “只差再跑长一点或做小 sweep”
+  - 进而过早围绕：
+    - `branch_mean_residual_v1`
+      horizon
+    - 同族小变体
+    做扩展
+- 正确处理：
+  - 当前只能说：
+    - 这条线比多数旧候选更有信息量
+    - 说明主线继续留在
+      `fusion -> fused_hidden`
+      结构改路
+      是合理的
+  - 不能说：
+    - 这一个具体结构已经值得扩 sweep
+  - 下一步应继续做更强的
+    `fusion manifold / handoff-shape`
+    候选，
+    而不是直接围绕
+    `branch_mean_residual_v1`
+    做延长或邻域微扫
+
+### 60. 不能把 bypass 里“`periodic_hidden` 去模板化更强”直接外推成“periodic 主骨架会是更好的 fusion handoff”
+- 现象：
+  - gate-off decoder-structure probe 里，
+    `fused_hidden_from_periodic_hidden`
+    的确比 `branch_mean`
+    展现出更强的去模板化响应
+  - 但真实 fullsplit24 候选
+    `fusion_mode = periodic_residual_v1`
+    在 `validation3 decoded.wav` 上：
+    - 仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline 更差
+    - 相对 `branch_mean_residual_v1` 也更差
+- 风险：
+  - 很容易把 probe 里的 bypass 响应，
+    误判成：
+    - “应该继续让 periodic branch 当 fusion 主骨架”
+    - “只差 periodic residual 再调小一点”
+  - 进而继续往
+    periodic-dominant handoff
+    这条更亮、更尖的方向扩展
+- 正确处理：
+  - bypass probe
+    只能说明：
+    - 该隐藏态里有可用动态
+  - 不能说明：
+    - 把它直接升格为 fusion 主骨架
+      就会自然变好
+  - 当前真实 fail-fast 已证明：
+    - periodic-dominant fusion
+      会重新拉高 harsh buzz
+  - 下一步应留在
+    `branch_mean`
+    一侧继续做 fusion manifold 改路，
+    而不是继续增强 periodic dominance
+
+### 61. 不能把“brightness 明显变好、selector 也稳定了”误写成 Stage5 native teacher 已经接近可用
+- 现象：
+  - `fusion_mode = branch_mean_contrast_residual_v1`
+    是当前第一条真正把
+    `spectral_centroid_gap_hz`
+    从约 `5.0k`
+    压到约 `1.0k`
+    的 fusion structural 候选
+  - `spectral_high_band_energy_ratio_gap`
+    也被压到约
+    `0.01 ~ 0.07`
+  - selector 还第一次给出了
+    `selected_stable_late_stop = step24`
+- 风险：
+  - 很容易因此把当前口径写成：
+    - “只差一点点了”
+    - “brightness 修好了就说明主问题已经解决”
+  - 进而继续围绕：
+    - brightness restraint
+    - high-band penalty
+    - periodic dominance
+    这些已经降级的方向消耗预算
+- 正确处理：
+  - 当前仍必须优先看：
+    - `auto_reject_obvious_buzz`
+    - `decoded_frame_template_cosine_mean`
+    - `decoded_frame_rms_to_aligned_frame_rms_corr`
+  - 当前事实是：
+    - 三条样本仍 `3/3 auto_reject_obvious_buzz`
+    - `decoded_frame_template_cosine_mean`
+      仍在 `0.99` 左右
+    - `decoded_frame_rms_to_aligned_frame_rms_corr`
+      仍稳定在 `0.89 ~ 0.91`
+  - 因而这条线只能说明：
+    - brightness 症状被压下来了
+    - 剩余主病灶已收缩成
+      `template-collapse + envelope-following`
+  - 下一步应直接打：
+    - decoder-side template projector
+    - branch dynamics 到 waveform handoff 的保真
+  - 不应再把“亮度明显变好”误判成已经值得回到同层 brightness 微扫

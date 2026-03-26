@@ -643,3 +643,151 @@
     - template-collapse 的更根本诱因定位
     - 以及为什么 fixed-template counterexample
       仍能稳定压过 baseline objective
+48. corrected baseline 主线上的 objective / structure 诊断，
+  现在也已对齐到当前真实 gate-off 听审路由：
+  - `docs/409_stage5_contractv2_normfix_gateoff_waveform_objective_recheck_report.md`
+  - `docs/410_stage5_contractv2_normfix_gateoff_waveform_decoder_structure_recheck_report.md`
+  - 当前新结论是：
+    - 旧 `293`
+      的 gate-on objective probe
+      不应再当作当前主听审路由口径
+    - 当前 gate-off baseline 的
+      `mean_weighted_wave_objective = 0.293871`
+      比 gate-on 版更差，
+      fixed-template oracle
+      仍显著更低
+    - 同时 gate-off decoder-structure probe
+      仍给出：
+      `collapse_not_localized_to_waveform_decoder`
+  - 因而当前默认下一步应进一步收紧到：
+    - 不再直接重启旧 `acttmpl / delta`
+      objective 候选
+    - 不再把问题简化成 export gate 开关
+    - 直接转向
+      `fusion -> fused_hidden`
+      与当前 decode semantics 的根因定位
+49. 曾在 smoke 上最像“碰到了正确层级”的
+  `fused_hidden_branch_mean_weight = 0.25`
+  也已在 corrected native-teacher fullsplit24 主线上正式封口：
+  - `docs/411_stage5_native_teacher_fusedhidden_branchmean025_fail_fast_report.md`
+  - 当前结论是：
+    - fullsplit24 training、checkpoint selection、validation3 real decoded
+      都已跑通
+    - 真实 `decoded.wav`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline，
+      三条样本的
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      仍全面更差
+  - 因而当前不再继续：
+    - `fused_hidden_branch_mean_weight`
+      同层 sweep
+    - fusion-side `loss`
+      家族扩展
+  - 当前主线应再收紧一层到：
+    - 更强的 `fusion-path structural`
+      改路
+    - 而不是继续叠
+      `fused_hidden`
+      penalty
+50. 下一条更强的 fusion-path 结构候选已经完成实现与最小真 smoke：
+  - `docs/412_stage5_fusion_branchmean_residual_v1_bootstrap_and_smoke_report.md`
+  - 当前新候选是：
+    - `fusion_mode = branch_mean_residual_v1`
+  - 它的语义不是继续叠 loss，
+    而是把
+    `branch_mean_hidden`
+    变成显式主通路，
+    fusion 只学习 residual
+  - 当前已确认：
+    - CLI 入口已接通
+    - training summary / export manifest
+      都会写回 `fusion_mode`
+    - checkpoint state_dict
+      可被导出 / probe 端自动反推回正确结构
+  - 因而当前默认下一步已进一步具体化为：
+    - 直接拿
+      `fusion_mode = branch_mean_residual_v1`
+      跑 corrected native-teacher fullsplit24 fail-fast
+51. `fusion_mode = branch_mean_residual_v1`
+  也已完成 corrected native-teacher fullsplit24 fail-fast：
+  - `docs/413_stage5_native_teacher_fusion_branchmean_residual_fail_fast_report.md`
+  - 当前结论是：
+    - `validation3`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline，
+      三条样本的
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      仍全部更差
+    - 但恶化幅度明显小于多数前序候选，
+      当前是第一条在真实 fullsplit24 上
+      明显更接近 baseline 的 fusion-path structural 候选
+  - 因而当前口径不应写成：
+    - `fusion-path structural`
+      也已整体封口
+  - 更准确的下一步应是：
+    - 保持在
+      `fusion -> fused_hidden`
+      结构改路主线
+    - 但不继续扩
+      `branch_mean_residual_v1`
+      本身，
+      而要继续做更强的
+      `fusion manifold / handoff-shape`
+      候选
+52. 更偏 `periodic_hidden` 主骨架的
+  `fusion_mode = periodic_residual_v1`
+  也已完成 corrected native-teacher fullsplit24 fail-fast：
+  - `docs/414_stage5_native_teacher_fusion_periodic_residual_fail_fast_report.md`
+  - 当前结论是：
+    - `validation3`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline，
+      三条样本的
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      仍全部更差
+    - 而且它也明显差于
+      `branch_mean_residual_v1`
+  - 因而当前可以更明确地排除：
+    - `periodic-dominant fusion backbone`
+      这一侧 handoff-shape
+  - 下一步应进一步收紧到：
+    - 留在
+      `branch_mean`
+      一侧的 fusion manifold
+    - 重点处理
+      `envelope-following`
+      为什么仍被保留
+53. 更保守的
+  `fusion_mode = branch_mean_contrast_residual_v1`
+  也已完成 corrected native-teacher fullsplit24 fail-fast：
+  - `docs/415_stage5_native_teacher_fusion_branchmean_contrast_residual_fail_fast_report.md`
+  - 当前结论是：
+    - `validation3`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 但它是当前第一条真正把
+      `spectral_centroid_gap_hz`
+      从约 `5.0k`
+      压到约 `1.0k`
+      的 fusion structural 候选
+    - `spectral_high_band_energy_ratio_gap`
+      也从约 `0.29 ~ 0.34`
+      压到约 `0.01 ~ 0.07`
+    - 同时 selector 首次给出了
+      `selected_stable_late_stop = step24`
+    - 但三条样本的
+      `decoded_frame_rms_to_aligned_frame_rms_corr`
+      仍稳定在
+      `0.89 ~ 0.91`
+      一档，
+      说明剩余主故障已经收缩成：
+      `template-collapse + envelope-following`
+  - 因而当前口径应进一步改成：
+    - 不再把主线写成“继续修 brightness”
+    - 而是：
+      在保留
+      `branch_mean_contrast`
+      这条 backbone 的前提下，
+      直接改
+      decoder interaction / handoff-shape，
+      去打掉 decoder-side template projector

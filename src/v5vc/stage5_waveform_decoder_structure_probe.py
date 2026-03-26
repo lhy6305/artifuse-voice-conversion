@@ -197,6 +197,8 @@ def analyze_stage5_nores_waveform_decoder_structure(
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_apply_mode,
+            "fusion_mode": str(model.fusion_mode),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "probe_variants": [
             {
@@ -265,7 +267,11 @@ def run_structure_probe_variant(
         stage_name="noise_hidden",
         transform_notes=transform_notes,
     )
-    fused_hidden = model.fusion(torch.cat([periodic_hidden, noise_hidden], dim=-1))
+    fused_hidden = compute_fused_hidden_for_probe(
+        model=model,
+        periodic_hidden=periodic_hidden,
+        noise_hidden=noise_hidden,
+    )
     fused_hidden = apply_structure_transform(
         tensor=fused_hidden,
         transforms=transforms,
@@ -303,6 +309,80 @@ def run_structure_probe_variant(
     )
     scalar_metrics = flatten_stage_metrics(stage_metrics)
     return scalar_metrics, stage_metrics, decoded_waveform, transform_notes
+
+
+def compute_fused_hidden_for_probe(
+    *,
+    model: torch.nn.Module,
+    periodic_hidden: torch.Tensor,
+    noise_hidden: torch.Tensor,
+) -> torch.Tensor:
+    fusion_mode = str(getattr(model, "fusion_mode", "plain"))
+    branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
+    branch_difference_hidden = periodic_hidden - noise_hidden
+    if fusion_mode == "plain":
+        if getattr(model, "fusion", None) is None:
+            raise RuntimeError("model.fusion is not initialized for plain fusion mode.")
+        return model.fusion(torch.cat([periodic_hidden, noise_hidden], dim=-1))
+    if fusion_mode == "branch_mean_residual_v1":
+        fusion_branch_mean_residual = getattr(model, "fusion_branch_mean_residual", None)
+        if fusion_branch_mean_residual is None:
+            raise RuntimeError("fusion_branch_mean_residual is not initialized for branch_mean_residual_v1.")
+        fusion_residual_hidden = fusion_branch_mean_residual(
+            torch.cat(
+                [
+                    periodic_hidden,
+                    noise_hidden,
+                    branch_difference_hidden,
+                ],
+                dim=-1,
+            )
+        )
+        return branch_mean_hidden + fusion_residual_hidden
+    if fusion_mode == "periodic_residual_v1":
+        fusion_periodic_residual_adapter = getattr(model, "fusion_periodic_residual_adapter", None)
+        fusion_periodic_residual_gate = getattr(model, "fusion_periodic_residual_gate", None)
+        fusion_periodic_residual_proj = getattr(model, "fusion_periodic_residual_proj", None)
+        if (
+            fusion_periodic_residual_adapter is None
+            or fusion_periodic_residual_gate is None
+            or fusion_periodic_residual_proj is None
+        ):
+            raise RuntimeError("fusion_periodic_residual modules are not initialized for periodic_residual_v1.")
+        fusion_residual_context = fusion_periodic_residual_adapter(
+            torch.cat(
+                [
+                    periodic_hidden,
+                    noise_hidden,
+                    branch_difference_hidden,
+                ],
+                dim=-1,
+            )
+        )
+        fusion_residual_gate = torch.sigmoid(fusion_periodic_residual_gate(fusion_residual_context))
+        fusion_residual_hidden = fusion_residual_gate * torch.tanh(
+            fusion_periodic_residual_proj(fusion_residual_context)
+        )
+        return periodic_hidden + fusion_residual_hidden
+    if fusion_mode == "branch_mean_contrast_residual_v1":
+        fusion_branch_mean_contrast_norm = getattr(model, "fusion_branch_mean_contrast_norm", None)
+        fusion_branch_mean_contrast_gate = getattr(model, "fusion_branch_mean_contrast_gate", None)
+        fusion_branch_mean_contrast_proj = getattr(model, "fusion_branch_mean_contrast_proj", None)
+        if (
+            fusion_branch_mean_contrast_norm is None
+            or fusion_branch_mean_contrast_gate is None
+            or fusion_branch_mean_contrast_proj is None
+        ):
+            raise RuntimeError(
+                "fusion_branch_mean_contrast modules are not initialized for branch_mean_contrast_residual_v1."
+            )
+        contrast_hidden = fusion_branch_mean_contrast_norm(branch_difference_hidden)
+        fusion_residual_gate = torch.sigmoid(fusion_branch_mean_contrast_gate(contrast_hidden))
+        fusion_residual_hidden = fusion_residual_gate * torch.tanh(
+            fusion_branch_mean_contrast_proj(contrast_hidden)
+        )
+        return branch_mean_hidden + fusion_residual_hidden
+    raise ValueError(f"Unsupported fusion_mode in structure probe: {fusion_mode!r}")
 
 
 def apply_structure_transform(

@@ -2515,6 +2515,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional forward-path mix coefficient that blends fused_hidden with the equal-weight branch mean before the waveform decoder.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--fusion-mode",
+        default="plain",
+        help="Fusion structure before waveform decoding: plain, branch_mean_residual_v1, periodic_residual_v1, or branch_mean_contrast_residual_v1.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--waveform-decoder-mode",
         default="fused_single",
         help="Waveform decoder structure: fused_single, dual_branch_mix, periodic_plus_noise_residual, periodic_plus_noise_residual_shape, periodic_plus_noise_factorized_residual, periodic_plus_noise_residual_shape_temporal, or periodic_plus_noise_residual_shape_recurrent.",
@@ -2724,6 +2729,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional forward-path mix coefficient that blends fused_hidden with the equal-weight branch mean before the waveform decoder.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--fusion-mode",
+        default="plain",
+        help="Fusion structure before waveform decoding: plain, branch_mean_residual_v1, periodic_residual_v1, or branch_mean_contrast_residual_v1.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--waveform-decoder-mode",
@@ -3148,6 +3158,11 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional forward-path mix coefficient that blends fused_hidden with the equal-weight branch mean before the waveform decoder.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--fusion-mode",
+        default="plain",
+        help="Fusion structure before waveform decoding: plain, branch_mean_residual_v1, periodic_residual_v1, or branch_mean_contrast_residual_v1.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--waveform-decoder-mode",
@@ -5129,6 +5144,7 @@ def main(argv: list[str] | None = None) -> int:
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            fusion_mode=args.fusion_mode,
             waveform_decoder_mode=args.waveform_decoder_mode,
             use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
@@ -5168,6 +5184,7 @@ def main(argv: list[str] | None = None) -> int:
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            fusion_mode=args.fusion_mode,
             waveform_decoder_mode=args.waveform_decoder_mode,
             use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
@@ -5242,6 +5259,7 @@ def main(argv: list[str] | None = None) -> int:
             fused_hidden_delta_weight=args.fused_hidden_delta_weight,
             fused_hidden_branch_mean_weight=args.fused_hidden_branch_mean_weight,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            fusion_mode=args.fusion_mode,
             waveform_decoder_mode=args.waveform_decoder_mode,
             use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),

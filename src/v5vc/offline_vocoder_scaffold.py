@@ -23,6 +23,12 @@ SUPPORTED_WAVEFORM_DECODER_MODES = {
     "periodic_plus_noise_residual_shape_temporal",
     "periodic_plus_noise_residual_shape_recurrent",
 }
+SUPPORTED_FUSION_MODES = {
+    "plain",
+    "branch_mean_residual_v1",
+    "periodic_residual_v1",
+    "branch_mean_contrast_residual_v1",
+}
 
 
 class NoResidualSourceFilterVocoderScaffold(nn.Module):
@@ -34,12 +40,14 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         harmonic_bins: int,
         noise_bins: int,
         frame_length: int | None = None,
+        fusion_mode: str = "plain",
         waveform_decoder_mode: str = "fused_single",
         use_decoder_branch_condition_adapter: bool = False,
         use_residual_shape_branch_condition_adapter: bool = False,
     ) -> None:
         super().__init__()
         self.frame_length = int(frame_length) if frame_length is not None and int(frame_length) > 0 else None
+        self.fusion_mode = normalize_fusion_mode(fusion_mode)
         self.waveform_decoder_mode = normalize_waveform_decoder_mode(waveform_decoder_mode)
         self.use_decoder_branch_condition_adapter = bool(use_decoder_branch_condition_adapter)
         self.use_residual_shape_branch_condition_adapter = bool(use_residual_shape_branch_condition_adapter)
@@ -49,12 +57,52 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.noise_gate = nn.Linear(hidden_dim, 1)
         self.harmonic_envelope = nn.Linear(hidden_dim, harmonic_bins)
         self.noise_envelope = nn.Linear(hidden_dim, noise_bins)
-        self.fusion = nn.Sequential(
-            nn.Linear(hidden_dim * 2, hidden_dim),
-            nn.GELU(),
-            nn.LayerNorm(hidden_dim),
-            nn.Linear(hidden_dim, hidden_dim),
-        )
+        self.fusion = None
+        self.fusion_branch_mean_residual = None
+        self.fusion_periodic_residual_adapter = None
+        self.fusion_periodic_residual_gate = None
+        self.fusion_periodic_residual_proj = None
+        self.fusion_branch_mean_contrast_norm = None
+        self.fusion_branch_mean_contrast_gate = None
+        self.fusion_branch_mean_contrast_proj = None
+        if self.fusion_mode == "plain":
+            self.fusion = nn.Sequential(
+                nn.Linear(hidden_dim * 2, hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(hidden_dim),
+                nn.Linear(hidden_dim, hidden_dim),
+            )
+        elif self.fusion_mode == "branch_mean_residual_v1":
+            self.fusion_branch_mean_residual = nn.Sequential(
+                nn.Linear(hidden_dim * 3, hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(hidden_dim),
+                nn.Linear(hidden_dim, hidden_dim),
+            )
+            nn.init.zeros_(self.fusion_branch_mean_residual[-1].weight)
+            nn.init.zeros_(self.fusion_branch_mean_residual[-1].bias)
+        elif self.fusion_mode == "periodic_residual_v1":
+            self.fusion_periodic_residual_adapter = nn.Sequential(
+                nn.Linear(hidden_dim * 3, hidden_dim),
+                nn.GELU(),
+                nn.LayerNorm(hidden_dim),
+            )
+            self.fusion_periodic_residual_gate = nn.Linear(hidden_dim, 1)
+            self.fusion_periodic_residual_proj = nn.Linear(hidden_dim, hidden_dim)
+            nn.init.zeros_(self.fusion_periodic_residual_gate.weight)
+            nn.init.constant_(self.fusion_periodic_residual_gate.bias, -2.0)
+            nn.init.zeros_(self.fusion_periodic_residual_proj.weight)
+            nn.init.zeros_(self.fusion_periodic_residual_proj.bias)
+        elif self.fusion_mode == "branch_mean_contrast_residual_v1":
+            self.fusion_branch_mean_contrast_norm = nn.LayerNorm(hidden_dim)
+            self.fusion_branch_mean_contrast_gate = nn.Linear(hidden_dim, 1)
+            self.fusion_branch_mean_contrast_proj = nn.Linear(hidden_dim, hidden_dim)
+            nn.init.zeros_(self.fusion_branch_mean_contrast_gate.weight)
+            nn.init.constant_(self.fusion_branch_mean_contrast_gate.bias, -2.0)
+            nn.init.zeros_(self.fusion_branch_mean_contrast_proj.weight)
+            nn.init.zeros_(self.fusion_branch_mean_contrast_proj.bias)
+        else:
+            raise ValueError(f"Unsupported fusion_mode for no-residual vocoder scaffold: {self.fusion_mode!r}")
         self.waveform_decoder = None
         self.periodic_waveform_decoder = None
         self.noise_waveform_decoder = None
@@ -270,8 +318,67 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             raise ValueError("decoder_branch_mean_mix_alpha must be within [0.0, 1.0].")
         periodic_hidden = self.periodic_encoder(periodic_branch_features)
         noise_hidden = self.noise_encoder(noise_branch_features)
-        fused_hidden = self.fusion(torch.cat([periodic_hidden, noise_hidden], dim=-1))
         branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
+        branch_difference_hidden = periodic_hidden - noise_hidden
+        fusion_residual_hidden = None
+        fusion_residual_gate = None
+        if self.fusion_mode == "plain":
+            if self.fusion is None:
+                raise RuntimeError("fusion is not initialized for plain fusion mode.")
+            fused_hidden = self.fusion(torch.cat([periodic_hidden, noise_hidden], dim=-1))
+        elif self.fusion_mode == "branch_mean_residual_v1":
+            if self.fusion_branch_mean_residual is None:
+                raise RuntimeError("fusion_branch_mean_residual is not initialized for branch_mean_residual_v1.")
+            fusion_residual_hidden = self.fusion_branch_mean_residual(
+                torch.cat(
+                    [
+                        periodic_hidden,
+                        noise_hidden,
+                        branch_difference_hidden,
+                    ],
+                    dim=-1,
+                )
+            )
+            fused_hidden = branch_mean_hidden + fusion_residual_hidden
+        elif self.fusion_mode == "periodic_residual_v1":
+            if (
+                self.fusion_periodic_residual_adapter is None
+                or self.fusion_periodic_residual_gate is None
+                or self.fusion_periodic_residual_proj is None
+            ):
+                raise RuntimeError("fusion_periodic_residual modules are not initialized for periodic_residual_v1.")
+            fusion_residual_context = self.fusion_periodic_residual_adapter(
+                torch.cat(
+                    [
+                        periodic_hidden,
+                        noise_hidden,
+                        branch_difference_hidden,
+                    ],
+                    dim=-1,
+                )
+            )
+            fusion_residual_gate = torch.sigmoid(self.fusion_periodic_residual_gate(fusion_residual_context))
+            fusion_residual_hidden = fusion_residual_gate * torch.tanh(
+                self.fusion_periodic_residual_proj(fusion_residual_context)
+            )
+            fused_hidden = periodic_hidden + fusion_residual_hidden
+        elif self.fusion_mode == "branch_mean_contrast_residual_v1":
+            if (
+                self.fusion_branch_mean_contrast_norm is None
+                or self.fusion_branch_mean_contrast_gate is None
+                or self.fusion_branch_mean_contrast_proj is None
+            ):
+                raise RuntimeError(
+                    "fusion_branch_mean_contrast modules are not initialized for branch_mean_contrast_residual_v1."
+                )
+            contrast_hidden = self.fusion_branch_mean_contrast_norm(branch_difference_hidden)
+            fusion_residual_gate = torch.sigmoid(self.fusion_branch_mean_contrast_gate(contrast_hidden))
+            fusion_residual_hidden = fusion_residual_gate * torch.tanh(
+                self.fusion_branch_mean_contrast_proj(contrast_hidden)
+            )
+            fused_hidden = branch_mean_hidden + fusion_residual_hidden
+        else:
+            raise RuntimeError(f"Unsupported fusion_mode at forward dispatch: {self.fusion_mode!r}")
         decoder_hidden = (
             fused_hidden
             if resolved_decoder_branch_mean_mix_alpha <= 0.0
@@ -342,6 +449,10 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             "harmonic_envelope": self.harmonic_envelope(periodic_hidden),
             "noise_envelope": self.noise_envelope(noise_hidden),
         }
+        if fusion_residual_hidden is not None:
+            outputs["fusion_residual_hidden"] = fusion_residual_hidden
+        if fusion_residual_gate is not None:
+            outputs["fusion_residual_gate"] = fusion_residual_gate
         if branch_condition_gate is not None:
             outputs["decoder_branch_condition_gate"] = branch_condition_gate
             outputs["decoder_fused_condition"] = fused_condition
@@ -696,6 +807,7 @@ def prepare_offline_mvp_nores_vocoder_scaffold(
             "harmonic_bins": int(harmonic_bins),
             "noise_bins": int(noise_bins),
             "decoder_frame_length": decoder_frame_length,
+            "fusion_mode": model.fusion_mode,
             "waveform_decoder_mode": model.waveform_decoder_mode,
         },
         "input_contract": {
@@ -786,6 +898,16 @@ def infer_waveform_decoder_mode_from_state_dict(state_dict: dict[str, torch.Tens
     return "fused_single"
 
 
+def infer_fusion_mode_from_state_dict(state_dict: dict[str, torch.Tensor]) -> str:
+    if "fusion_branch_mean_contrast_norm.weight" in state_dict:
+        return "branch_mean_contrast_residual_v1"
+    if "fusion_periodic_residual_adapter.0.weight" in state_dict:
+        return "periodic_residual_v1"
+    if "fusion_branch_mean_residual.0.weight" in state_dict:
+        return "branch_mean_residual_v1"
+    return "plain"
+
+
 def infer_decoder_branch_condition_adapter_from_state_dict(state_dict: dict[str, torch.Tensor]) -> bool:
     return "decoder_branch_condition_adapter.0.weight" in state_dict
 
@@ -811,6 +933,7 @@ def build_nores_vocoder_scaffold_from_state_dict(
         harmonic_bins=harmonic_bins,
         noise_bins=noise_bins,
         frame_length=int(frame_length),
+        fusion_mode=infer_fusion_mode_from_state_dict(state_dict),
         waveform_decoder_mode=infer_waveform_decoder_mode_from_state_dict(state_dict),
         use_decoder_branch_condition_adapter=infer_decoder_branch_condition_adapter_from_state_dict(state_dict),
         use_residual_shape_branch_condition_adapter=infer_residual_shape_branch_condition_adapter_from_state_dict(
@@ -835,6 +958,16 @@ def normalize_waveform_decoder_mode(waveform_decoder_mode: str) -> str:
         raise ValueError(
             "Unsupported waveform_decoder_mode for no-residual vocoder scaffold: "
             f"{waveform_decoder_mode!r}"
+        )
+    return resolved
+
+
+def normalize_fusion_mode(fusion_mode: str) -> str:
+    resolved = str(fusion_mode).strip().lower()
+    if resolved not in SUPPORTED_FUSION_MODES:
+        raise ValueError(
+            "Unsupported fusion_mode for no-residual vocoder scaffold: "
+            f"{fusion_mode!r}"
         )
     return resolved
 

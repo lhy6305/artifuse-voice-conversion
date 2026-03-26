@@ -288,6 +288,8 @@ def analyze_stage5_nores_waveform_objective_collapse(
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_apply_mode,
+            "fusion_mode": str(model.fusion_mode),
+            "waveform_decoder_mode": str(model.waveform_decoder_mode),
         },
         "probe_variants": [
             {

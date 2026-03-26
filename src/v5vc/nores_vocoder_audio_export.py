@@ -292,6 +292,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_predicted_activity_gate_apply_mode,
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
+            "fusion_mode": str(model.fusion_mode),
             "use_decoder_branch_condition_adapter": bool(model.use_decoder_branch_condition_adapter),
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
         },
