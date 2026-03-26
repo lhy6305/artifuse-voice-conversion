@@ -99,11 +99,15 @@ class StudentControlHeads(nn.Module):
         r_res_enabled: bool,
         f0_correction_enabled: bool,
         aper_correction_enabled: bool,
+        detach_frontend_named_controls_for_student: bool,
     ) -> None:
         super().__init__()
         self.r_res_enabled = r_res_enabled
         self.f0_correction_enabled = f0_correction_enabled
         self.aper_correction_enabled = aper_correction_enabled
+        self.detach_frontend_named_controls_for_student = bool(
+            detach_frontend_named_controls_for_student
+        )
         self.condition_proj = nn.Sequential(
             nn.Linear(speaker_embed_dim + geom_embed_dim, conditioning_dim),
             nn.GELU(),
@@ -138,12 +142,20 @@ class StudentControlHeads(nn.Module):
         batch_size, frame_count, _ = shared_hidden.shape
         conditioning = self.condition_proj(torch.cat([speaker_embedding, geom_embedding], dim=-1))
         conditioning = conditioning.unsqueeze(1).expand(batch_size, frame_count, conditioning.shape[-1])
-        frontend_controls = torch.cat(
+        frontend_named_controls = torch.cat(
             [
                 frontend_outputs["coarse_log_f0"],
                 torch.sigmoid(frontend_outputs["vuv_logits"]),
                 frontend_outputs["aperiodicity"],
                 frontend_outputs["energy"],
+            ],
+            dim=-1,
+        )
+        if self.detach_frontend_named_controls_for_student:
+            frontend_named_controls = frontend_named_controls.detach()
+        frontend_controls = torch.cat(
+            [
+                frontend_named_controls,
                 torch.sigmoid(frontend_outputs["event_prior_logits"]),
             ],
             dim=-1,
@@ -197,6 +209,7 @@ class StreamingStudentScaffold(nn.Module):
         f0_correction_enabled: bool,
         aper_correction_enabled: bool,
         timing_aux_enabled: bool = False,
+        detach_frontend_named_controls_for_student: bool = False,
     ) -> None:
         super().__init__()
         self.frontend = UnifiedStreamingFrontend(
@@ -224,6 +237,7 @@ class StreamingStudentScaffold(nn.Module):
             r_res_enabled=r_res_enabled,
             f0_correction_enabled=f0_correction_enabled,
             aper_correction_enabled=aper_correction_enabled,
+            detach_frontend_named_controls_for_student=detach_frontend_named_controls_for_student,
         )
 
     def forward(

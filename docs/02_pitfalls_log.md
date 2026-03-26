@@ -254,3 +254,21 @@
     `target_f0_hz / target_vuv / target_aper / target_energy`
     作为默认来源
   - 仅在旧资产缺字段时才回退重算
+
+### 22. teacher-label generation-side 再次正向，不等于 `student_control_packet` readiness 已同步打开
+- 现象：
+  - `acoustic_directional_targetstate_bridge_v1`
+    在 Stage3 `12-step / 24-step full-validation`
+    都继续优于上一版 target-state baseline
+- 风险：
+  - 很容易因为 Stage3 `loss_total / teacher_event / event_prior` 继续变好，
+    就误判 handoff 已经开始成立
+- 正确处理：
+  - Stage3 正向和 handoff readiness 必须拆开判断
+  - 当前 `student_control_packet` 结果仍是：
+    - `e_evt_ready = yes`
+    - `energy_ready = yes`
+    - `F0 / vuv / aper = no`
+    - `all_records_auto_reject = true`
+  - 因此不能因为新的 generation-side bridge 成功，
+    就提前开新的 Stage5 route

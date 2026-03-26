@@ -263,6 +263,9 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
         f0_correction_enabled=bool(model_config.get("f0_correction_enabled", True)),
         aper_correction_enabled=bool(model_config.get("aper_correction_enabled", True)),
         timing_aux_enabled=bool(model_config.get("timing_aux_enabled", False)),
+        detach_frontend_named_controls_for_student=bool(
+            model_config.get("detach_frontend_named_controls_for_student", False)
+        ),
     )
 
 
@@ -278,6 +281,9 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
             "aperiodicity": {"feature_dim": 1},
             "energy": {"feature_dim": 1},
             "event_prior_logits": {"feature_dim": int(model_config["event_prior_dim"])},
+            "detach_frontend_named_controls_for_student": bool(
+                model_config.get("detach_frontend_named_controls_for_student", False)
+            ),
             "timing_pause_boundary_logits": {
                 "feature_dim": 1 if bool(model_config.get("timing_aux_enabled", False)) else 0
             },

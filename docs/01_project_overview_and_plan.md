@@ -44,19 +44,21 @@
 
 ### 1. 上游 `Stage3 / teacher-label / target-state` 仍在产出真实正向信息
 - 当前最新、最强的 generation-side reference 是：
-  - `teacher_e_evt_bridge_mode = acoustic_directional_transition_bridge_v1`
+  - `teacher_e_evt_bridge_mode = acoustic_directional_targetstate_bridge_v1`
   - `teacher_e_evt_target_shaping_mode = center_weighted_boundary_progressive_final_clause_v1`
 - 依据：
-  - `docs/368_stage3_teacher_eevt_directional_transition_bridge_ab_report.md`
+  - `docs/376_stage3_teacher_eevt_directional_targetstate_bridge_ab_and_readiness_report.md`
 - 关键结果：
   - full-validation step12：
-    - `loss_total = 1.65222 -> 1.635463`
-    - `loss_total_semantic_disabled_reference = 1.54467 -> 1.529686`
+    - `loss_total = 1.732503 -> 1.648929`
+    - `loss_total_semantic_disabled_reference = 1.57394 -> 1.501041`
+    - `loss_teacher_event = 0.504001 -> 0.449996`
+    - `loss_teacher_event_prior = 0.728577 -> 0.695983`
   - full-validation step24：
-    - `loss_total = 0.975202 -> 0.947703`
-    - `loss_total_semantic_disabled_reference = 0.891887 -> 0.867661`
-    - `loss_teacher_event = 0.417446 -> 0.399819`
-    - `loss_teacher_event_prior = 0.505388 -> 0.486579`
+    - `loss_total = 1.157747 -> 1.044122`
+    - `loss_total_semantic_disabled_reference = 1.037303 -> 0.939578`
+    - `loss_teacher_event = 0.417492 -> 0.332711`
+    - `loss_teacher_event_prior = 0.548517 -> 0.489258`
 
 ### 2. 当前旧 `Stage5 no-res downstream` 不是有效承接层
 - 这不是猜测，而是多轮 fail-fast 结论：
@@ -85,7 +87,7 @@
 
 ### 主线 A：继续强化上游 teacher-label / target-state 资产
 - 当前参考点：
-  - `acoustic_directional_transition_bridge_v1`
+  - `acoustic_directional_targetstate_bridge_v1`
 - 当前优先动作：
   - 继续做 generation-side bridge / target-state 结构升级
   - 不回头扫旧 `acoustic_contextual` 小 patch
@@ -114,13 +116,17 @@
     - stop rule
 
 ## 当前推荐下一步
-1. 以 `acoustic_directional_transition_bridge_v1` 作为新的 Stage3 reference 固定口径。
+1. 以 `acoustic_directional_targetstate_bridge_v1` 作为新的 Stage3 reference 固定口径。
 2. 不再继续重跑当前旧 `Stage5 no-res downstream` 作为默认承接层。
 3. 当前新的默认实施顺序是：
    - 先用已实现的 `Stage3 student-control packet v1`
    - 再做 `proxy-acoustic / proxy-audio` cheap screen
-   - 当前 screen 只给出“non-regressing but not enough”
-   - 因此下一步先补 `F0 / aper / E` control calibration，而不是直接进入新的 Stage5 adapter/scaffold smoke
+   - 然后用 `named-control readiness negative gate` 卡住尚未完成的 named controls
+   - 当前 screen 与 gate 的合并结论仍是：
+     - Stage3 内部监督继续正向
+     - 但 `F0 / vuv / aper` 仍未到 handoff-ready
+   - 因此下一步继续补 `target-state / named-control generation-side completion`
+     而不是直接进入新的 Stage5 adapter/scaffold smoke
 4. 当前候选清单报告：
    - `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
 5. 当前实现与 smoke：
@@ -138,7 +144,7 @@
      - 因此不继续扫 `teacher_f0_state / teacher_vuv_state / teacher_aper_state / teacher_energy_state`
 9. `student_control_packet` 现在新增了 named-control negative gate：
    - `docs/374_stage3_student_control_packet_readiness_gate_report.md`
-   - 当前 directional best checkpoint 的结论是：
+   - 当前最新 target-state bridge checkpoint 的结论是：
      - `e_evt / z_art` 可保留
      - `F0 / vuv / aper / E` 仍全部 auto-reject
      - 因此当前仍不允许开启新的 Stage5 handoff route
@@ -147,14 +153,20 @@
    - 当前新的 teacher asset 基线是：
      - `teacher_labels_eevt_directional_targetstate_round1_1`
    - Stage3 batch 现已优先读取 teacher payload 内置 `target_f0_hz / target_vuv / target_aper / target_energy`
-11. 在新的 handoff family 通过更强 cheap screen 前，不再新增：
+11. 在这套 target-state-complete teacher asset 之上，当前 generation-side 最新 reference 已升级为：
+   - `docs/376_stage3_teacher_eevt_directional_targetstate_bridge_ab_and_readiness_report.md`
+   - 当前结论是：
+     - Stage3 `12-step / 24-step full-validation` 都继续正向
+     - 但 `student_control_packet` 的 readiness gate 仍然不给放行
+     - 所以这版收益暂时仍停留在 Stage3 内部监督层
+12. 在新的 handoff family 通过更强 cheap screen 前，不再新增：
   - Stage5 同层 decode 小实验
   - Stage5 同层 semantic/timing consumer 小实验
   - 同类 objective / weight 微扫
-12. 当前新的默认下一步改为：
+13. 当前新的默认下一步改为：
   - 不继续做 naive direct state loss injection
-  - 基于新的 `teacher_labels_eevt_directional_targetstate_round1_1`
-    继续做更结构化的 `target-state generation / contract completion`
+  - 基于新的 `teacher_labels_eevt_directionaltargetstatebridge_round1_1`
+    继续做更结构化的 `target-state / named-control generation-side completion`
   - 并以 `named-control readiness negative gate` 作为新的下游前置门禁
   - 尤其避免把“packet 可导出”或“local state MAE 下降”误判成“已经值得开新 Stage5 route”
 
@@ -173,6 +185,7 @@
 - `docs/373_stage3_explicit_target_acoustic_state_supervision_ab_fail_report.md`
 - `docs/374_stage3_student_control_packet_readiness_gate_report.md`
 - `docs/375_stage3_teacher_label_target_state_contract_completion_report.md`
+- `docs/376_stage3_teacher_eevt_directional_targetstate_bridge_ab_and_readiness_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。

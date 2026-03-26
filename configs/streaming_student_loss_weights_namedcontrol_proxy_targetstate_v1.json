@@ -1,0 +1,5 @@
+{
+  "semantic_supervision": {
+    "named_control_proxy_target_family": "deterministic_target_state_v1"
+  }
+}
