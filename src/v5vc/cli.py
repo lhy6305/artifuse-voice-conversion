@@ -2488,6 +2488,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for unit-RMS adjacent-frame delta matching on reconstructed waveform frames.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--frame-spectral-flux-zero-target-jitter-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing decoded frame spectral-flux jitter when the aligned target transition is near zero.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
@@ -2551,6 +2557,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for suppressing periodic-only reconstructed waveform high-band energy ratio above the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--multires-stft-short-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for short-window MRSTFT supervision on decoded waveform.",
     )
     nores_vocoder_train_loop_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-training-loop",
@@ -2687,6 +2699,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for unit-RMS adjacent-frame delta matching on reconstructed waveform frames.",
     )
     nores_vocoder_train_loop_parser.add_argument(
+        "--frame-spectral-flux-zero-target-jitter-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing decoded frame spectral-flux jitter when the aligned target transition is near zero.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
         "--use-predicted-activity-gate",
         action="store_true",
         help="Apply predicted frame activity as a gate on waveform-frame reconstruction during loss computation.",
@@ -2750,6 +2768,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for suppressing periodic-only reconstructed waveform high-band energy ratio above the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--multires-stft-short-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for short-window MRSTFT supervision on decoded waveform.",
     )
     nores_vocoder_dataset_packages_parser = subparsers.add_parser(
         "build-offline-mvp-nores-vocoder-dataset-packages",
@@ -3065,6 +3089,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for suppressing decoded adjacent-frame cosine similarity above the aligned target on active transitions.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--frame-spectral-flux-zero-target-jitter-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing decoded frame spectral-flux jitter when the aligned target transition is near zero.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--fused-hidden-template-weight",
@@ -5080,6 +5110,7 @@ def main(argv: list[str] | None = None) -> int:
             rms_guard_weight=args.rms_guard_weight,
             active_template_weight=args.active_template_weight,
             frame_delta_weight=args.frame_delta_weight,
+            frame_spectral_flux_zero_target_jitter_weight=args.frame_spectral_flux_zero_target_jitter_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
@@ -5118,6 +5149,7 @@ def main(argv: list[str] | None = None) -> int:
             rms_guard_weight=args.rms_guard_weight,
             active_template_weight=args.active_template_weight,
             frame_delta_weight=args.frame_delta_weight,
+            frame_spectral_flux_zero_target_jitter_weight=args.frame_spectral_flux_zero_target_jitter_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
@@ -5186,6 +5218,7 @@ def main(argv: list[str] | None = None) -> int:
             active_template_weight=args.active_template_weight,
             frame_delta_weight=args.frame_delta_weight,
             frame_adjacent_cosine_weight=args.frame_adjacent_cosine_weight,
+            frame_spectral_flux_zero_target_jitter_weight=args.frame_spectral_flux_zero_target_jitter_weight,
             use_predicted_activity_gate=args.use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=args.reconstruction_frame_gain_apply_mode,
             fused_hidden_template_weight=args.fused_hidden_template_weight,

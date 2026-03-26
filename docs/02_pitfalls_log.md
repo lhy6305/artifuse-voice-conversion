@@ -647,3 +647,33 @@
     - `391/392` 的主结论已恢复为正式可用
     - 但 `389/390` 里依赖旧 export 的 student 对照部分仍保持临时结论口径，
       除非后续主线重新需要它们
+
+### 45. 历史 smoke 上“最接近有效信号”的 `recurrent + temporal`，放到当前 native teacher fullsplit 真 decoded 上也可能直接变成更亮、更尖的坏 buzz
+- 现象：
+  - 历史 `smoke` 曾表明：
+    - `recurrent + explicit temporal loss`
+      是第一条能继续压
+      `adjacent cosine`
+      的路线
+  - 但当前 fullsplit24 native teacher 候选
+    `recurrent + temporal + periodic_rms_floor=0.05`
+    在真实 `decoded.wav` 上：
+    - `3/3 auto_reject_obvious_buzz`
+    - 相对当前 baseline，
+      `spectral_centroid_gap_hz`
+      与 `spectral_high_band_energy_ratio_gap`
+      都显著恶化
+- 风险：
+  - 很容易把 smoke 上的局部结构信号外推成：
+    - “只要再补一点 RMS floor / high-band restraint 就会成”
+  - 进而继续在同一 recurrent 分支上烧：
+    - horizon
+    - local RMS floor
+    - high-band restraint
+    - 同族小权重 sweep
+- 正确处理：
+  - 一旦当前 fullsplit native teacher 的真实 `decoded.wav`
+    已把这类 recurrent 分支判成更糟的 harsh buzz，
+    就应直接停整条同分支小修线
+  - 后续先回到修正后的 baseline probe，
+    再选更保守、且不重复历史死线的 teacher-side 候选

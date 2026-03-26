@@ -460,6 +460,7 @@ def run_offline_mvp_nores_vocoder_training_step(
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     frame_adjacent_cosine_weight: float = 0.0,
+    frame_spectral_flux_zero_target_jitter_weight: float = 0.0,
     decoder_branch_mean_mix_alpha: float = 0.0,
     waveform_decoder_mode: str = "fused_single",
     use_decoder_branch_condition_adapter: bool = False,
@@ -469,6 +470,7 @@ def run_offline_mvp_nores_vocoder_training_step(
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
+    multires_stft_short_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -544,6 +546,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         active_template_weight=active_template_weight,
         frame_delta_weight=frame_delta_weight,
         frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+        frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
         use_predicted_activity_gate=use_predicted_activity_gate,
         reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
         periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
@@ -551,6 +554,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
         periodic_waveform_stft_weight=periodic_waveform_stft_weight,
         periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+        multires_stft_short_weight=multires_stft_short_weight,
     )
     optimizer.zero_grad(set_to_none=True)
     total_loss.backward()
@@ -597,11 +601,13 @@ def run_offline_mvp_nores_vocoder_training_step(
             "active_template": float(active_template_weight),
             "frame_delta": float(frame_delta_weight),
             "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
+            "frame_spectral_flux_zero_target_jitter": float(frame_spectral_flux_zero_target_jitter_weight),
             "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
             "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
             "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
             "periodic_waveform_stft": float(periodic_waveform_stft_weight),
             "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
+            "multires_stft_short": float(multires_stft_short_weight),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
@@ -678,6 +684,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     frame_adjacent_cosine_weight: float = 0.0,
+    frame_spectral_flux_zero_target_jitter_weight: float = 0.0,
     decoder_branch_mean_mix_alpha: float = 0.0,
     waveform_decoder_mode: str = "fused_single",
     use_decoder_branch_condition_adapter: bool = False,
@@ -687,6 +694,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
+    multires_stft_short_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -783,6 +791,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
             active_template_weight=active_template_weight,
             frame_delta_weight=frame_delta_weight,
             frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+            frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
             periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
@@ -790,6 +799,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
             periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
             periodic_waveform_stft_weight=periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+            multires_stft_short_weight=multires_stft_short_weight,
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
@@ -836,6 +846,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 active_template_weight=active_template_weight,
                 frame_delta_weight=frame_delta_weight,
                 frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+                frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                 sample_rate=int(validation_runtime["sample_rate"]),
@@ -847,6 +858,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 periodic_waveform_frame_rms_floor_weight=periodic_waveform_frame_rms_floor_weight,
                 periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
+                multires_stft_short_weight=multires_stft_short_weight,
                 validation_source=(
                     "separate_validation_package"
                     if resolved_validation_package_path is not None
@@ -927,6 +939,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "active_template": float(active_template_weight),
                 "frame_delta": float(frame_delta_weight),
                 "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
+                "frame_spectral_flux_zero_target_jitter": float(frame_spectral_flux_zero_target_jitter_weight),
                 "periodic_waveform_frame_delta": float(periodic_waveform_frame_delta_weight),
                 "periodic_waveform_frame_adjacent_cosine": float(periodic_waveform_frame_adjacent_cosine_weight),
                 "periodic_waveform_frame_rms_floor": float(periodic_waveform_frame_rms_floor_weight),
@@ -1262,6 +1275,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     frame_adjacent_cosine_weight: float = 0.0,
+    frame_spectral_flux_zero_target_jitter_weight: float = 0.0,
     fused_hidden_template_weight: float = 0.0,
     fused_hidden_delta_weight: float = 0.0,
     fused_hidden_branch_mean_weight: float = 0.0,
@@ -1401,6 +1415,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 active_template_weight=active_template_weight,
                 frame_delta_weight=frame_delta_weight,
                 frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+                frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                 fused_hidden_template_weight=fused_hidden_template_weight,
@@ -1498,6 +1513,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     active_template_weight=active_template_weight,
                     frame_delta_weight=frame_delta_weight,
                     frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+                    frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     fused_hidden_template_weight=fused_hidden_template_weight,
@@ -1530,6 +1546,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     active_template_weight=active_template_weight,
                     frame_delta_weight=frame_delta_weight,
                     frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+                    frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
                     use_predicted_activity_gate=use_predicted_activity_gate,
                     reconstruction_frame_gain_apply_mode=resolved_reconstruction_frame_gain_apply_mode,
                     fused_hidden_template_weight=fused_hidden_template_weight,
@@ -1616,6 +1633,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "active_template": float(active_template_weight),
                 "frame_delta": float(frame_delta_weight),
                 "frame_adjacent_cosine": float(frame_adjacent_cosine_weight),
+                "frame_spectral_flux_zero_target_jitter": float(frame_spectral_flux_zero_target_jitter_weight),
                 "fused_hidden_template": float(fused_hidden_template_weight),
                 "fused_hidden_delta": float(fused_hidden_delta_weight),
                 "fused_hidden_branch_mean": float(fused_hidden_branch_mean_weight),
@@ -3165,6 +3183,15 @@ def compute_adjacent_deltas(sequence: torch.Tensor) -> torch.Tensor:
     return sequence_tensor[1:] - sequence_tensor[:-1]
 
 
+def compute_frame_logspec(frames: torch.Tensor) -> torch.Tensor:
+    frames_tensor = frames.to(torch.float32)
+    if int(frames_tensor.shape[0]) == 0:
+        feature_dim = max(1, int(frames_tensor.shape[-1] // 2 + 1)) if frames_tensor.ndim >= 2 else 1
+        return frames_tensor.new_zeros((0, feature_dim))
+    spectrum = torch.fft.rfft(frames_tensor, dim=1)
+    return torch.log1p(spectrum.abs())
+
+
 def compute_frame_cosine_to_reference(*, frames: torch.Tensor, reference_index: int) -> torch.Tensor:
     frames_tensor = frames.to(torch.float32)
     if int(frames_tensor.shape[0]) == 0:
@@ -3183,7 +3210,7 @@ def compute_active_template_and_frame_delta_losses(
     frame_length: int,
     hop_length: int,
     active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     decoded_analysis_frames = frame_waveform_sequence(
         waveform=decoded_waveform,
         frame_length=int(frame_length),
@@ -3206,8 +3233,9 @@ def compute_frame_structure_losses_against_aligned_target(
     frame_length: int,
     hop_length: int,
     active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
+    zero_target_flux_threshold: float = 0.05,
     zero_like: torch.Tensor | None = None,
-) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     aligned_analysis_frames = frame_waveform_sequence(
         waveform=aligned_waveform,
         frame_length=int(frame_length),
@@ -3219,12 +3247,22 @@ def compute_frame_structure_losses_against_aligned_target(
     predicted_frame_deltas = compute_adjacent_deltas(predicted_normalized_frames)
     aligned_frame_deltas = compute_adjacent_deltas(aligned_normalized_frames)
     frame_delta_loss = F.l1_loss(predicted_frame_deltas, aligned_frame_deltas)
+    predicted_frame_logspec = compute_frame_logspec(predicted_normalized_frames)
+    aligned_frame_logspec = compute_frame_logspec(aligned_normalized_frames)
+    predicted_spectral_flux = compute_adjacent_deltas(predicted_frame_logspec)
+    aligned_spectral_flux = compute_adjacent_deltas(aligned_frame_logspec)
     predicted_adjacent_cosine = (predicted_normalized_frames[:-1] * predicted_normalized_frames[1:]).sum(dim=1)
     aligned_adjacent_cosine = (aligned_normalized_frames[:-1] * aligned_normalized_frames[1:]).sum(dim=1)
     active_transition_mask = (
         (aligned_frame_rms[:-1] >= float(active_frame_rms_threshold))
         | (aligned_frame_rms[1:] >= float(active_frame_rms_threshold))
     ) if int(aligned_frame_rms.shape[0]) > 1 else aligned_frame_rms.new_zeros((0,), dtype=torch.bool)
+    aligned_flux_magnitude = (
+        aligned_spectral_flux.abs().mean(dim=1)
+        if int(aligned_spectral_flux.shape[0]) > 0
+        else aligned_frame_rms.new_zeros((0,))
+    )
+    zero_target_flux_mask = aligned_flux_magnitude < float(zero_target_flux_threshold)
 
     active_mask = aligned_frame_rms >= float(active_frame_rms_threshold)
     if bool(active_mask.any()):
@@ -3252,7 +3290,12 @@ def compute_frame_structure_losses_against_aligned_target(
     else:
         adjacent_zero_like = predicted_frames if zero_like is None else zero_like
         adjacent_cosine_loss = adjacent_zero_like.new_zeros(())
-    return active_template_loss, frame_delta_loss, adjacent_cosine_loss
+    if bool(zero_target_flux_mask.any()):
+        zero_target_flux_jitter_loss = predicted_spectral_flux[zero_target_flux_mask].abs().mean()
+    else:
+        flux_zero_like = predicted_frames if zero_like is None else zero_like
+        zero_target_flux_jitter_loss = flux_zero_like.new_zeros(())
+    return active_template_loss, frame_delta_loss, adjacent_cosine_loss, zero_target_flux_jitter_loss
 
 
 def compute_fused_hidden_anti_collapse_losses(
@@ -3365,6 +3408,7 @@ def compute_nores_vocoder_losses(
     use_predicted_activity_gate: bool,
     reconstruction_frame_gain_apply_mode: str,
     frame_adjacent_cosine_weight: float = 0.0,
+    frame_spectral_flux_zero_target_jitter_weight: float = 0.0,
     fused_hidden_template_weight: float = 0.0,
     fused_hidden_delta_weight: float = 0.0,
     fused_hidden_branch_mean_weight: float = 0.0,
@@ -3408,6 +3452,7 @@ def compute_nores_vocoder_losses(
     active_template_loss = harmonic_loss.new_zeros(())
     frame_delta_loss = harmonic_loss.new_zeros(())
     frame_adjacent_cosine_loss = harmonic_loss.new_zeros(())
+    frame_spectral_flux_zero_target_jitter_loss = harmonic_loss.new_zeros(())
     fused_hidden_template_loss = harmonic_loss.new_zeros(())
     fused_hidden_delta_loss = harmonic_loss.new_zeros(())
     fused_hidden_branch_mean_loss = harmonic_loss.new_zeros(())
@@ -3444,6 +3489,7 @@ def compute_nores_vocoder_losses(
         or float(active_template_weight) > 0.0
         or float(frame_delta_weight) > 0.0
         or float(frame_adjacent_cosine_weight) > 0.0
+        or float(frame_spectral_flux_zero_target_jitter_weight) > 0.0
         or float(periodic_waveform_frame_delta_weight) > 0.0
         or float(periodic_waveform_frame_adjacent_cosine_weight) > 0.0
         or float(periodic_waveform_frame_rms_floor_weight) > 0.0
@@ -3483,7 +3529,12 @@ def compute_nores_vocoder_losses(
             predicted_waveform=decoded_waveform,
             target_waveform=target_waveform,
         )
-        active_template_loss, frame_delta_loss, frame_adjacent_cosine_loss = compute_active_template_and_frame_delta_losses(
+        (
+            active_template_loss,
+            frame_delta_loss,
+            frame_adjacent_cosine_loss,
+            frame_spectral_flux_zero_target_jitter_loss,
+        ) = compute_active_template_and_frame_delta_losses(
             decoded_waveform=decoded_waveform,
             aligned_waveform=target_waveform,
             frame_length=int(frame_length),
@@ -3582,6 +3633,7 @@ def compute_nores_vocoder_losses(
         + active_template_loss * float(active_template_weight)
         + frame_delta_loss * float(frame_delta_weight)
         + frame_adjacent_cosine_loss * float(frame_adjacent_cosine_weight)
+        + frame_spectral_flux_zero_target_jitter_loss * float(frame_spectral_flux_zero_target_jitter_weight)
         + fused_hidden_template_loss * float(fused_hidden_template_weight)
         + fused_hidden_delta_loss * float(fused_hidden_delta_weight)
         + fused_hidden_branch_mean_loss * float(fused_hidden_branch_mean_weight)
@@ -3605,6 +3657,10 @@ def compute_nores_vocoder_losses(
         "loss_active_frame_template_excess_relu_0p02": round(float(active_template_loss.detach().cpu().item()), 6),
         "loss_frame_delta_unit_rms_l1": round(float(frame_delta_loss.detach().cpu().item()), 6),
         "loss_frame_adjacent_cosine_excess_relu_0p02": round(float(frame_adjacent_cosine_loss.detach().cpu().item()), 6),
+        "loss_frame_spectral_flux_zero_target_jitter_0p05": round(
+            float(frame_spectral_flux_zero_target_jitter_loss.detach().cpu().item()),
+            6,
+        ),
         "loss_fused_hidden_template_excess_vs_branch": round(
             float(fused_hidden_template_loss.detach().cpu().item()),
             6,
@@ -3683,6 +3739,7 @@ def run_nores_vocoder_validation_pass(
     hop_length: int,
     validation_source: str,
     frame_adjacent_cosine_weight: float = 0.0,
+    frame_spectral_flux_zero_target_jitter_weight: float = 0.0,
     decoder_branch_mean_mix_alpha: float = 0.0,
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
@@ -3719,6 +3776,7 @@ def run_nores_vocoder_validation_pass(
             active_template_weight=active_template_weight,
             frame_delta_weight=frame_delta_weight,
             frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+            frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
             use_predicted_activity_gate=use_predicted_activity_gate,
             reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
             periodic_waveform_frame_delta_weight=periodic_waveform_frame_delta_weight,
@@ -3782,6 +3840,7 @@ def run_nores_vocoder_dataset_validation_pass(
     reconstruction_frame_gain_apply_mode: str,
     validation_source: str,
     frame_adjacent_cosine_weight: float = 0.0,
+    frame_spectral_flux_zero_target_jitter_weight: float = 0.0,
     fused_hidden_template_weight: float = 0.0,
     fused_hidden_delta_weight: float = 0.0,
     fused_hidden_branch_mean_weight: float = 0.0,
@@ -3831,6 +3890,7 @@ def run_nores_vocoder_dataset_validation_pass(
                 active_template_weight=active_template_weight,
                 frame_delta_weight=frame_delta_weight,
                 frame_adjacent_cosine_weight=frame_adjacent_cosine_weight,
+                frame_spectral_flux_zero_target_jitter_weight=frame_spectral_flux_zero_target_jitter_weight,
                 use_predicted_activity_gate=use_predicted_activity_gate,
                 reconstruction_frame_gain_apply_mode=reconstruction_frame_gain_apply_mode,
                 fused_hidden_template_weight=fused_hidden_template_weight,

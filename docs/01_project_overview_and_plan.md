@@ -369,6 +369,21 @@
     - `391` 与 `392` 已恢复为当前可直接引用结论
     - `389/390` 中依赖旧 export 的部分仍只按临时结论使用，
       除非后续主线再次需要 student 对照时再补跑
+32. native teacher 新补的一条 `recurrent + temporal + periodic_rms_floor=0.05`
+    fullsplit24 候选也已完成 fail-fast：
+  - `docs/395_stage5_native_teacher_recurrent_temporal_periodicrmsfloor005_fail_fast_report.md`
+  - 当前结论是：
+    - 训练 summary 虽显示这条线在动，
+      但真实 `decoded.wav` 仍然 `3/3 auto_reject_obvious_buzz`
+    - 而且相对当前 native baseline，
+      `spectral_centroid_gap_hz`
+      和 `spectral_high_band_energy_ratio_gap`
+      都显著恶化
+  - 因此当前不再继续：
+    - `recurrent + temporal`
+      同分支上的 local RMS floor / high-band / 小权重补丁
+  - 下一步应先回到修正后的 native teacher baseline probes，
+    再选择更保守的 teacher-side 候选
 
 ## 关键参考报告
 - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
@@ -404,6 +419,7 @@
 - `docs/392_stage5_native_teacher_acttmpl005_delta6_fail_fast_report.md`
 - `docs/393_stage5_export_semantics_correction_scope_and_rerun_requirements.md`
 - `docs/394_stage5_export_semantics_rerun_confirmation_report.md`
+- `docs/395_stage5_native_teacher_recurrent_temporal_periodicrmsfloor005_fail_fast_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。
