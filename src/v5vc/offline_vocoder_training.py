@@ -51,6 +51,7 @@ SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
 DEFAULT_STAGE5_SEMANTIC_PACKAGE_ALPHA = 0.2
 DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE = "none"
 DEFAULT_STAGE5_TARGET_CONTRACT_MODE = "legacy_proxy"
+DEFAULT_STAGE5_SPECTRAL_TARGET_MODE = "legacy_halfsplit"
 SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
     "none",
     "target_sidecar_broadcast_v1",
@@ -59,7 +60,12 @@ SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
 }
 SUPPORTED_STAGE5_TARGET_CONTRACT_MODES = {
     "legacy_proxy",
+    "v2core_aper_energy_only_v1",
     "teacher_e_evt_gate_targets_v1",
+}
+SUPPORTED_STAGE5_SPECTRAL_TARGET_MODES = {
+    DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
+    "gate_masked_halfsplit_v1",
 }
 STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES = [
     "clean_text_available",
@@ -119,6 +125,7 @@ def build_offline_mvp_nores_vocoder_training_package(
     source_semantic_parity_sidecar: dict[str, object] | None = None,
     semantic_consumer_mode: str = DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
     target_contract_mode: str = DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+    spectral_target_mode: str = DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
 ) -> None:
     scaffold_path = scaffold_path.resolve()
     target_audio_path = target_audio_path.resolve()
@@ -166,6 +173,7 @@ def build_offline_mvp_nores_vocoder_training_package(
     }
     resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
     resolved_target_contract_mode = normalize_stage5_target_contract_mode(target_contract_mode)
+    resolved_spectral_target_mode = normalize_stage5_spectral_target_mode(spectral_target_mode)
 
     waveform, actual_sample_rate = load_waveform(target_audio_path)
     if int(actual_sample_rate) != int(resolved_sample_rate):
@@ -250,9 +258,9 @@ def build_offline_mvp_nores_vocoder_training_package(
             "This package provides a minimal Stage5 spectral reconstruction target set for the no-residual baseline route.",
             "Targets are frame-aligned to the teacher runtime semantics and remain a proxy objective, not the final waveform/GAN training contract from the design doc.",
             (
-                "periodic_gate_target / noise_gate_target are built from the selected target_contract_mode. "
-                "legacy_proxy keeps the existing v2 gate targets, while teacher_e_evt_gate_targets_v1 swaps "
-                "noise gating over to explicit e_evt sub-dimensions instead of generic event_presence_proxy."
+                "periodic_gate_target / noise_gate_target are built from the selected target_contract_mode; "
+                "inspect target_contract.periodic_gate_formula and target_contract.noise_gate_formula in this summary "
+                "for the exact supervision semantics used by this package."
             ),
             "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
         ]
@@ -287,6 +295,13 @@ def build_offline_mvp_nores_vocoder_training_package(
             "periodic_gate_target / noise_gate_target follow the selected target_contract_mode; legacy_proxy is the only supported route on v1 scaffold payloads.",
             "aligned_waveform is retained so later decoder/waveform-STFT bootstrap runs can reuse the same package contract.",
         ]
+    harmonic_target, noise_target, spectral_target_summary = apply_stage5_spectral_target_mode(
+        harmonic_target=harmonic_target,
+        noise_target=noise_target,
+        periodic_gate_target=periodic_gate_target,
+        noise_gate_target=noise_gate_target,
+        spectral_target_mode=resolved_spectral_target_mode,
+    )
     target_semantic_overview = build_record_semantic_overview(
         {
             "target_event_semantic_sidecar": (
@@ -371,6 +386,7 @@ def build_offline_mvp_nores_vocoder_training_package(
         "source_semantic_parity_overview": source_semantic_parity_overview,
         "semantic_consumer": dict(semantic_consumer["summary"]),
         "target_contract": dict(target_contract_summary),
+        "spectral_target_contract": dict(spectral_target_summary),
         "frame_count": frame_count,
         "runtime": {
             "sample_rate": int(resolved_sample_rate),
@@ -411,6 +427,7 @@ def build_offline_mvp_nores_vocoder_training_package(
         "source_semantic_parity_overview": source_semantic_parity_overview,
         "semantic_consumer": dict(semantic_consumer["summary"]),
         "target_contract": dict(target_contract_summary),
+        "spectral_target_contract": dict(spectral_target_summary),
         "runtime": training_payload["runtime"],
         "frame_count": frame_count,
         "aligned_waveform_samples": int(aligned_waveform.shape[0]),
@@ -1017,6 +1034,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     source_semantic_parity_sidecar_path: Path | None = None,
     semantic_consumer_mode: str = DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
     target_contract_mode: str = DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+    spectral_target_mode: str = DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
     teacher_e_evt_bridge_mode: str = TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> None:
@@ -1053,6 +1071,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
     )
     resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
     resolved_target_contract_mode = normalize_stage5_target_contract_mode(target_contract_mode)
+    resolved_spectral_target_mode = normalize_stage5_spectral_target_mode(spectral_target_mode)
     semantic_sidecar_map = None
     timing_semantic_sidecar_map = None
     source_semantic_parity_sidecar_map = None
@@ -1129,6 +1148,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         source_semantic_parity_sidecar_map=source_semantic_parity_sidecar_map,
         semantic_consumer_mode=resolved_semantic_consumer_mode,
         target_contract_mode=resolved_target_contract_mode,
+        spectral_target_mode=resolved_spectral_target_mode,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -1150,6 +1170,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         source_semantic_parity_sidecar_map=source_semantic_parity_sidecar_map,
         semantic_consumer_mode=resolved_semantic_consumer_mode,
         target_contract_mode=resolved_target_contract_mode,
+        spectral_target_mode=resolved_spectral_target_mode,
         route_handoff_path=route_handoff_path,
         checkpoint_path=checkpoint_path,
         calibration_asset_path=calibration_asset_path,
@@ -1201,6 +1222,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
         ),
         "semantic_consumer_mode": resolved_semantic_consumer_mode,
         "target_contract_mode": resolved_target_contract_mode,
+        "spectral_target_mode": resolved_spectral_target_mode,
         "teacher_e_evt_bridge_mode": str(teacher_e_evt_bridge_mode),
         "teacher_e_evt_target_shaping_mode": str(teacher_e_evt_target_shaping_mode),
         "train_packages": train_entries,
@@ -1218,6 +1240,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             "When available, paired_parallel_source_semantic_parity_sidecar is attached by source_record_id and summarized in package/index metadata.",
             "semantic_consumer_mode controls whether target-side semantic sidecar remains metadata only or is broadcast into Stage5 branch features as a forward-path consumer.",
             "target_contract_mode controls how Stage5 periodic_gate_target / noise_gate_target are built inside each package; this is the supervision-side contract, not another input-side semantic consumer.",
+            "spectral_target_mode controls whether harmonic/noise spectral targets stay as a raw half-split STFT proxy or are additionally masked by the selected gate targets.",
             "teacher_e_evt_bridge_mode controls how the first 5 explicit e_evt acoustic dims are bridged before entering the Stage5 downstream/scaffold route.",
             "teacher_e_evt_target_shaping_mode controls how explicit e_evt boundary/final-clause labels are rasterized before entering the Stage5 downstream/scaffold route.",
         ],
@@ -1839,6 +1862,16 @@ def normalize_stage5_target_contract_mode(mode: str) -> str:
     return normalized
 
 
+def normalize_stage5_spectral_target_mode(mode: str) -> str:
+    normalized = str(mode).strip().lower()
+    if normalized not in SUPPORTED_STAGE5_SPECTRAL_TARGET_MODES:
+        raise ValueError(
+            f"Unsupported Stage5 spectral_target_mode: {mode!r}. "
+            f"Expected one of {sorted(SUPPORTED_STAGE5_SPECTRAL_TARGET_MODES)}."
+        )
+    return normalized
+
+
 def build_stage5_gate_targets(
     *,
     available_controls: dict[str, torch.Tensor],
@@ -1876,6 +1909,29 @@ def build_stage5_gate_targets(
     aper = available_controls["aper"].to(torch.float32)
     if normalized_energy_control is None:
         raise ValueError("Stage5 v2-core gate target build requires normalized_energy_control.")
+    if resolved_target_contract_mode == "v2core_aper_energy_only_v1":
+        return (
+            vuv.clamp(0.0, 1.0),
+            (aper * normalized_energy_control).clamp(0.0, 1.0),
+            {
+                "target_contract_mode": resolved_target_contract_mode,
+                "contract_family": "v2core_aper_energy_only_v1",
+                "has_v2_core": True,
+                "uses_explicit_e_evt": False,
+                "e_evt_boundary_source": str(e_evt_summary.get("boundary_source", "none")),
+                "periodic_gate_formula": "vuv",
+                "noise_gate_formula": "aper * E_log_rms_norm",
+                "excluded_e_evt_dimensions": [
+                    "p_frication",
+                    "p_stop_closure",
+                    "p_burst",
+                    "p_voicing",
+                    "p_pause_boundary",
+                    "p_terminal_boundary",
+                    "p_final_clause_boundary",
+                ],
+            },
+        )
     if resolved_target_contract_mode == DEFAULT_STAGE5_TARGET_CONTRACT_MODE:
         return (
             vuv.clamp(0.0, 1.0),
@@ -2590,6 +2646,7 @@ def build_dataset_packages_for_split(
     source_semantic_parity_sidecar_map: dict[str, dict[str, object]] | None,
     semantic_consumer_mode: str,
     target_contract_mode: str,
+    spectral_target_mode: str,
     route_handoff_path: Path | None,
     checkpoint_path: Path | None,
     calibration_asset_path: Path | None,
@@ -2603,7 +2660,11 @@ def build_dataset_packages_for_split(
     teacher_e_evt_target_shaping_mode: str,
 ) -> list[dict[str, object]]:
     entries: list[dict[str, object]] = []
-    for record in records:
+    split_started_perf = perf_counter()
+    total_records = len(records)
+    built_now_count = 0
+    reused_existing_count = 0
+    for record_index, record in enumerate(records, start=1):
         record_started_perf = perf_counter()
         record_id = str(record["record_id"])
         resolved_paths = resolve_dataset_record_paths(record)
@@ -2655,6 +2716,17 @@ def build_dataset_packages_for_split(
                     )
                 )
                 != str(target_contract_mode)
+            ):
+                package_reused = False
+            existing_spectral_target_contract = dict(existing_payload.get("spectral_target_contract", {}))
+            if (
+                str(
+                    existing_spectral_target_contract.get(
+                        "spectral_target_mode",
+                        DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
+                    )
+                )
+                != str(spectral_target_mode)
             ):
                 package_reused = False
             if (
@@ -2713,7 +2785,11 @@ def build_dataset_packages_for_split(
                 source_semantic_parity_sidecar=source_semantic_parity_sidecar,
                 semantic_consumer_mode=semantic_consumer_mode,
                 target_contract_mode=target_contract_mode,
+                spectral_target_mode=spectral_target_mode,
             )
+            built_now_count += 1
+        else:
+            reused_existing_count += 1
         package_payload = load_training_package_payload(package_path)
         package_build_sec = perf_counter() - record_started_perf
         package_size_bytes = compute_path_size_bytes(record_dir)
@@ -2749,6 +2825,7 @@ def build_dataset_packages_for_split(
                 ),
                 "semantic_consumer": dict(package_payload.get("semantic_consumer", {})),
                 "target_contract": dict(package_payload.get("target_contract", {})),
+                "spectral_target_contract": dict(package_payload.get("spectral_target_contract", {})),
                 "frame_count": int(package_payload["frame_count"]),
                 "periodic_input_dim": int(package_payload["inputs"]["periodic_branch_features"].shape[-1]),
                 "noise_input_dim": int(package_payload["inputs"]["noise_branch_features"].shape[-1]),
@@ -2759,6 +2836,27 @@ def build_dataset_packages_for_split(
                 "package_status": "reused_existing" if package_reused else "built_now",
             }
         )
+        should_log_progress = (
+            record_index == 1
+            or record_index == total_records
+            or (record_index % 25) == 0
+        )
+        if should_log_progress:
+            elapsed_sec = perf_counter() - split_started_perf
+            avg_sec = elapsed_sec / float(record_index)
+            remaining_count = total_records - record_index
+            eta_sec = avg_sec * float(remaining_count)
+            print(
+                "[stage5] dataset_packages_progress "
+                f"split={split_name} "
+                f"completed={record_index}/{total_records} "
+                f"built_now={built_now_count} "
+                f"reused_existing={reused_existing_count} "
+                f"last_record_id={record_id} "
+                f"last_status={'reused_existing' if package_reused else 'built_now'} "
+                f"elapsed_sec={elapsed_sec:.2f} "
+                f"eta_sec={eta_sec:.2f}"
+            )
     return entries
 
 
@@ -2795,6 +2893,12 @@ def summarize_dataset_package_index(
                 for entry in entries
             }
         )
+        spectral_target_modes = sorted(
+            {
+                str(dict(entry.get("spectral_target_contract", {})).get("spectral_target_mode", "unknown"))
+                for entry in entries
+            }
+        )
         periodic_input_dims = sorted({int(entry.get("periodic_input_dim", 0)) for entry in entries}) if entries else []
         noise_input_dims = sorted({int(entry.get("noise_input_dim", 0)) for entry in entries}) if entries else []
         harmonic_target_dims = sorted({int(entry.get("harmonic_target_dim", 0)) for entry in entries}) if entries else []
@@ -2819,6 +2923,7 @@ def summarize_dataset_package_index(
             "training_package_versions": training_package_versions,
             "source_scaffold_versions": source_scaffold_versions,
             "target_contract_modes": target_contract_modes,
+            "spectral_target_modes": spectral_target_modes,
             "periodic_input_dims": periodic_input_dims,
             "noise_input_dims": noise_input_dims,
             "harmonic_target_dims": harmonic_target_dims,
@@ -2827,6 +2932,7 @@ def summarize_dataset_package_index(
                 len(training_package_versions) <= 1
                 and len(source_scaffold_versions) <= 1
                 and len(target_contract_modes) <= 1
+                and len(spectral_target_modes) <= 1
             ),
             "dims_consistent": (
                 len(periodic_input_dims) <= 1
@@ -2915,6 +3021,44 @@ def build_branch_spectral_targets(
         "noise_target_mean": round(float(noise_target.mean().item()), 6),
     }
     return harmonic_target, noise_target, stats
+
+
+def apply_stage5_spectral_target_mode(
+    *,
+    harmonic_target: torch.Tensor,
+    noise_target: torch.Tensor,
+    periodic_gate_target: torch.Tensor,
+    noise_gate_target: torch.Tensor,
+    spectral_target_mode: str,
+) -> tuple[torch.Tensor, torch.Tensor, dict[str, object]]:
+    resolved_mode = normalize_stage5_spectral_target_mode(spectral_target_mode)
+    if resolved_mode == DEFAULT_STAGE5_SPECTRAL_TARGET_MODE:
+        return (
+            harmonic_target,
+            noise_target,
+            {
+                "spectral_target_mode": resolved_mode,
+                "contract_family": "legacy_halfsplit",
+                "uses_gate_masking": False,
+                "harmonic_mask_formula": "none",
+                "noise_mask_formula": "none",
+            },
+        )
+    masked_harmonic_target = harmonic_target * periodic_gate_target.clamp(0.0, 1.0)
+    masked_noise_target = noise_target * noise_gate_target.clamp(0.0, 1.0)
+    return (
+        masked_harmonic_target,
+        masked_noise_target,
+        {
+            "spectral_target_mode": resolved_mode,
+            "contract_family": "gate_masked_halfsplit_v1",
+            "uses_gate_masking": True,
+            "harmonic_mask_formula": "harmonic_target * periodic_gate_target",
+            "noise_mask_formula": "noise_target * noise_gate_target",
+            "harmonic_mask_mean": round(float(periodic_gate_target.mean().item()), 6),
+            "noise_mask_mean": round(float(noise_gate_target.mean().item()), 6),
+        },
+    )
 
 
 def reconstruct_waveform_from_frames(

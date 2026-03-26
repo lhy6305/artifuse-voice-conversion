@@ -460,6 +460,11 @@
 - `docs/396_stage5_native_teacher_acttmpl005_zerojitter4_fail_fast_report.md`
 - `docs/397_stage5_native_teacher_fusedhidden_t005_d2_fail_fast_report.md`
 - `docs/398_stage5_native_teacher_branchmix025_fail_fast_report.md`
+ - `docs/399_stage5_native_teacher_branchcondadapter_fail_fast_report.md`
+ - `docs/400_stage5_native_teacher_dualbranchmix_fail_fast_report.md`
+ - `docs/401_stage5_native_teacher_nonrecurrent_residual_decoder_family_fail_fast_report.md`
+ - `docs/402_stage5_native_teacher_gatemasked_spectral_target_fail_fast_report.md`
+ - `docs/403_stage5_native_teacher_activitygate00_nogatedrecon_fail_fast_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。
@@ -469,3 +474,70 @@
   - 下一步策略改变
   - 文档口径需要统一修正
 - 若后续再次出现超长追记，应继续归档，不回到单文件堆历史的做法。
+33. native teacher 的 `fused_single + use_decoder_branch_condition_adapter`
+    也已完成真实 `validation3 decoded.wav` fail-fast：
+  - `docs/399_stage5_native_teacher_branchcondadapter_fail_fast_report.md`
+  - 当前结论是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline 三条样本都更差
+    - 因此这条 `branchcondadapter` 结构候选也应正式停线
+34. 当前 native teacher buzz 主线已连续否掉的同层弱修复包括：
+  - `active_template + frame_delta`
+  - `active_template + zero_target_flux_jitter`
+  - `fused_hidden_template + fused_hidden_delta`
+  - `decoder_branch_mean_mix_alpha`
+  - `fused_single + decoder_branch_condition_adapter`
+  - 因此下一步不再做同层小 penalty / 小 mix / 小 adapter 叠加
+35. 当前更合理的下一条 native teacher 结构候选应是：
+  - 直接改变 `waveform_decoder_mode`
+  - 优先 `dual_branch_mix`
+  - 并继续保持“24-step -> checkpoint selection -> validation3 real decoded.wav” 的 fail-fast 顺序
+36. `waveform_decoder_mode = dual_branch_mix` 也已完成真实 `validation3 decoded.wav` fail-fast：
+  - `docs/400_stage5_native_teacher_dualbranchmix_fail_fast_report.md`
+  - 当前结论是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline 三条样本都更差
+    - 高频亮度恶化更明显
+37. 因此当前 native teacher buzz 主线继续收紧为：
+  - 不再做 `fused_single` 同层 patch
+  - 不再做 `dual_branch_mix` 同层扩展
+  - 下一条更合理的结构候选改为更保守的 `periodic_plus_noise_residual`
+38. 更保守的非 recurrent residual decoder family 也已整族 fail-fast：
+  - `docs/401_stage5_native_teacher_nonrecurrent_residual_decoder_family_fail_fast_report.md`
+  - 覆盖：
+    - `periodic_plus_noise_residual`
+    - `periodic_plus_noise_residual_shape`
+    - `periodic_plus_noise_factorized_residual`
+  - 当前结论是：
+    - 三条都 `3/3 auto_reject_obvious_buzz`
+    - 三条都比 corrected baseline 更差
+    - 因而当前 native teacher 主故障不只是“缺一个更保守的 residual decoder”
+39. 因此下一步不再继续试当前这组 non-recurrent decoder mode 变体，而应回到：
+  - native teacher objective / target / contract 语义
+  - 尤其是 noise/periodic 解码含义本身
+40. 更上游的 `spectral target` 乘 gate 也已经被证伪：
+  - `docs/402_stage5_native_teacher_gatemasked_spectral_target_fail_fast_report.md`
+  - `spectral_target_mode = gate_masked_halfsplit_v1`
+    虽然真实接通了 package / training / export 全链路，
+    但真实 `decoded.wav` 仍是 `3/3 auto_reject_obvious_buzz`，
+    且比 corrected baseline 明显更差
+  - 因此当前不再继续：
+    - `spectral_target_mode` 同族 gate-masking 变体
+    - `harmonic/noise target * gate_target`
+      这种简单乘法式 target 收窄
+41. “activity gate 自身是主 bug” 这条解释也已被最小否证：
+  - `docs/403_stage5_native_teacher_activitygate00_nogatedrecon_fail_fast_report.md`
+  - `activity_gate_weight = 0.0`
+    且训练期 `use_predicted_activity_gate = false`
+    仍然没有把 native teacher 拉出 buzz
+  - 当前可以更明确地说：
+    - 不是单纯关掉 activity-gate 监督或 gated reconstruction，
+      就能摆脱当前 template-collapse 假解
+42. 因此当前 native teacher 主线再次收紧为：
+  - 不再扫 decoder mode family
+  - 不再扫简单 gate-masked spectral target
+  - 不再扫 `activity_gate` 同层微调
+  - 下一步只值得继续做更上游的：
+    - noise/periodic target family
+    - target contract semantics
+    - objective meaning

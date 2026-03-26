@@ -534,6 +534,43 @@
   - `strong_voiced_gate_v1`
     会明显压低：
     - `loss_teacher_coarse_f0_state`
+### 40. `fused_single` 上的轻量 decoder 结构修补，已经连续证明不够强
+- 现象：
+  - 当前已做过：
+    - `decoder_branch_mean_mix_alpha`
+    - `use_decoder_branch_condition_adapter`
+    - 以及更早的弱 `fused_hidden` penalty
+- 风险：
+  - 很容易因为它们都“更靠近 decoder 结构”，就继续在 `fused_single` 上堆更多同级 patch
+- 正确处理：
+  - 这些路线现在应统一视为同层弱修复
+  - 不再继续叠加
+  - 下一步直接上更强的 `waveform_decoder_mode` 结构变化
+### 41. `dual_branch_mix` 在当前 native teacher contract 下会把输出推向更亮、更尖的 harsh buzz
+- 现象：
+  - `waveform_decoder_mode = dual_branch_mix`
+    已完成真实 `validation3 decoded.wav` fail-fast
+  - `3/3 auto_reject_obvious_buzz`
+  - `spectral_centroid_gap_hz / high_band_energy_ratio_gap` 相对 baseline 明显抬升
+- 风险：
+  - 很容易把“更强的结构变化”继续理解成“还值得在 branch mixing 这一档细修”
+- 正确处理：
+  - `dual_branch_mix` 这条线应正式停掉
+  - 下一步转去更保守的 residual 型 decoder，而不是继续做 mixing family
+### 42. 非 recurrent residual decoder family 在当前 native teacher contract 下也整体不通
+- 现象：
+  - 当前已做过：
+    - `periodic_plus_noise_residual`
+    - `periodic_plus_noise_residual_shape`
+    - `periodic_plus_noise_factorized_residual`
+  - 三条都完成了真实 `validation3 decoded.wav`
+  - 三条都 `3/3 auto_reject_obvious_buzz`
+- 风险：
+  - 很容易继续在 residual family 内做局部 envelope/gain/shape 细修，误以为只是约束还不够
+- 正确处理：
+  - 当前应把这整个 non-recurrent residual decoder family 一起判停
+  - 下一步不再从 decoder mode 这一层继续横向扫
+  - 而应回到 native teacher 的 objective / target / contract 语义层
     - `loss_teacher_f0_state`
   - 同时 `loss_total` 也可能略优
 - 风险：
@@ -737,3 +774,45 @@
   - 下一步应继续升级到更强的
     `fusion / branch-conditioned decoder`
     结构候选
+
+### 49. 不能把“给 spectral target 乘上 gate”想当然地当作 native teacher 的更正确 contract
+- 现象：
+  - `spectral_target_mode = gate_masked_halfsplit_v1`
+    已真实接通 package / training / export 全链路
+  - 但真实 `decoded.wav` 结果是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline 明显更差
+- 风险：
+  - 很容易因为它“更像显式 contract”，就继续扫：
+    - `harmonic_target * periodic_gate_target`
+    - `noise_target * noise_gate_target`
+    的同族 target 变体
+- 正确处理：
+  - 当前应把这条线视为已证伪：
+    - 简单乘法式 gate-masked spectral target
+      不会修好 native teacher buzz
+  - 下一步应改查：
+    - noise/periodic target family 的语义本身
+    - 而不是再给现有 target 叠 mask
+
+### 50. 不能把“关掉 training-side activity gate”误当作当前 native teacher buzz 的主解法
+- 现象：
+  - `activity_gate_weight = 0.0 + use_predicted_activity_gate = false`
+    的 fullsplit24 候选已经完成真实 `decoded.wav` fail-fast
+  - 结果仍是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 且相对 corrected baseline 更差
+- 风险：
+  - 很容易继续围绕：
+    - `activity_gate_weight`
+    - training-side gated reconstruction
+    - 同层 gate 开关
+    做微扫
+- 正确处理：
+  - 当前应把“activity gate 自身就是主 bug”这条解释降级
+  - 后续不再继续：
+    - `activity_gate_weight` 同层 sweep
+    - `use_predicted_activity_gate` 的 training-side 微变体
+  - 应转去更根本的：
+    - noise/periodic target semantics
+    - objective meaning

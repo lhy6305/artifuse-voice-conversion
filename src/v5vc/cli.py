@@ -62,6 +62,7 @@ from v5vc.teacher_first_vc_demo import (
 )
 from v5vc.offline_vocoder_scaffold import prepare_offline_mvp_nores_vocoder_scaffold
 from v5vc.offline_vocoder_training import (
+    DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
     DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
     DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
     build_offline_mvp_nores_vocoder_dataset_packages,
@@ -2374,7 +2375,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
         help=(
             "How Stage5 periodic_gate_target / noise_gate_target are built inside the package: "
-            "legacy_proxy or teacher_e_evt_gate_targets_v1."
+            "legacy_proxy, v2core_aper_energy_only_v1, or teacher_e_evt_gate_targets_v1."
         ),
     )
     nores_vocoder_train_step_parser = subparsers.add_parser(
@@ -2874,7 +2875,15 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
         help=(
             "How Stage5 periodic_gate_target / noise_gate_target are built inside each package: "
-            "legacy_proxy or teacher_e_evt_gate_targets_v1."
+            "legacy_proxy, v2core_aper_energy_only_v1, or teacher_e_evt_gate_targets_v1."
+        ),
+    )
+    nores_vocoder_dataset_packages_parser.add_argument(
+        "--spectral-target-mode",
+        default=DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
+        help=(
+            "How Stage5 harmonic/noise spectral targets are built inside each package: "
+            "legacy_halfsplit or gate_masked_halfsplit_v1."
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(
@@ -5188,6 +5197,7 @@ def main(argv: list[str] | None = None) -> int:
             source_semantic_parity_sidecar_path=args.source_semantic_parity_sidecar,
             semantic_consumer_mode=args.semantic_consumer_mode,
             target_contract_mode=args.target_contract_mode,
+            spectral_target_mode=args.spectral_target_mode,
             teacher_e_evt_bridge_mode=args.teacher_eevt_bridge_mode,
             teacher_e_evt_target_shaping_mode=args.teacher_eevt_target_shaping_mode,
         )
