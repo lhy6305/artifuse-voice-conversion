@@ -92,6 +92,7 @@ from v5vc.stage5_low_activity_probe import (
 from v5vc.stage5_low_activity_governance_report import materialize_stage5_low_activity_governance_report
 from v5vc.stage5_speech_emergence_probe import analyze_stage5_nores_speech_emergence
 from v5vc.stage5_waveform_decoder_structure_probe import analyze_stage5_nores_waveform_decoder_structure
+from v5vc.stage5_waveform_handoff_probe import analyze_stage5_nores_waveform_handoff
 from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_waveform_objective_collapse
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
@@ -3710,6 +3711,73 @@ def build_parser() -> argparse.ArgumentParser:
         default="post_ola_envelope",
         help="How predicted activity gains are applied during waveform reconstruction: pre_overlap_add or post_ola_envelope.",
     )
+    stage5_waveform_handoff_parser = subparsers.add_parser(
+        "analyze-stage5-nores-waveform-handoff",
+        help="Decompose Stage5 waveform handoff into decoder_hidden, logits, frames, and multiple OLA/gate routes.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 waveform handoff probe outputs.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path. When omitted, --checkpoint-selection must be provided.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used to resolve the probe checkpoint.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to probe from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Torch device used for the probe, for example cpu or cuda:0.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Minimum frame gain used on gated handoff routes.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help="Moving-average radius for predicted activity gate smoothing across neighboring frames.",
+    )
     stage5_waveform_objective_collapse_parser = subparsers.add_parser(
         "analyze-stage5-nores-waveform-objective-collapse",
         help="Probe whether fixed-template counterexamples can still land at low Stage5 waveform objective on selected packages.",
@@ -5406,6 +5474,21 @@ def main(argv: list[str] | None = None) -> int:
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-waveform-handoff":
+        analyze_stage5_nores_waveform_handoff(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            device=args.device,
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
         )
         return 0
     if args.command == "analyze-stage5-nores-waveform-objective-collapse":

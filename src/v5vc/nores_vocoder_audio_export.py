@@ -27,7 +27,7 @@ from v5vc.stage5_low_activity_probe import compute_waveform_spectral_summary
 from v5vc.target_format_recovery import write_waveform_int16
 
 DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES = 3
-DEFAULT_STAGE5_BUZZ_REJECT_HEURISTIC_VERSION = "stage5_buzz_reject_v1"
+DEFAULT_STAGE5_BUZZ_REJECT_HEURISTIC_VERSION = "stage5_buzz_reject_v2"
 AUTO_REJECT_TEMPLATE_COSINE_MEAN = 0.985
 AUTO_REJECT_ADJACENT_COSINE_MEAN = 0.97
 AUTO_REJECT_TEMPLATE_GAP_VS_ALIGNED = 0.75
@@ -35,6 +35,12 @@ AUTO_REJECT_ACTIVITY_CORR = 0.75
 AUTO_REJECT_HIGH_BAND_ENERGY_RATIO = 0.45
 AUTO_REJECT_HIGH_BAND_GAP = 0.2
 AUTO_REJECT_CENTROID_GAP_HZ = 2500.0
+AUTO_REJECT_TEMPLATE_COSINE_MEAN_ENVELOPE_BUZZ = 0.97
+AUTO_REJECT_ADJACENT_COSINE_MEAN_ENVELOPE_BUZZ = 0.99
+AUTO_REJECT_TEMPLATE_GAP_VS_ALIGNED_ENVELOPE_BUZZ = 0.9
+AUTO_REJECT_ACTIVITY_CORR_ENVELOPE_BUZZ = 0.88
+AUTO_REJECT_HIGH_BAND_GAP_ENVELOPE_BUZZ = 0.3
+AUTO_REJECT_CENTROID_GAP_HZ_ENVELOPE_BUZZ = 3500.0
 
 
 def export_offline_mvp_nores_vocoder_audio(
@@ -673,6 +679,19 @@ def assess_stage5_decoded_buzz_reject(
         and float(metrics["spectral_high_band_energy_ratio_gap"]) >= AUTO_REJECT_HIGH_BAND_GAP
         and float(metrics["spectral_centroid_gap_hz"]) >= AUTO_REJECT_CENTROID_GAP_HZ
     )
+    envelope_template_buzz = (
+        float(metrics["decoded_frame_template_cosine_mean"]) >= AUTO_REJECT_TEMPLATE_COSINE_MEAN_ENVELOPE_BUZZ
+        and float(metrics["decoded_frame_adjacent_cosine_mean"]) >= AUTO_REJECT_ADJACENT_COSINE_MEAN_ENVELOPE_BUZZ
+        and float(metrics["decoded_frame_template_cosine_gap_vs_aligned"])
+        >= AUTO_REJECT_TEMPLATE_GAP_VS_ALIGNED_ENVELOPE_BUZZ
+        and max(
+            float(metrics["decoded_frame_rms_to_aligned_frame_rms_corr"]),
+            float(metrics["predicted_activity_to_aligned_frame_rms_corr"]),
+        )
+        >= AUTO_REJECT_ACTIVITY_CORR_ENVELOPE_BUZZ
+        and float(metrics["spectral_high_band_energy_ratio_gap"]) >= AUTO_REJECT_HIGH_BAND_GAP_ENVELOPE_BUZZ
+        and float(metrics["spectral_centroid_gap_hz"]) >= AUTO_REJECT_CENTROID_GAP_HZ_ENVELOPE_BUZZ
+    )
     if template_collapse:
         signals.append(
             "decoded short-time frames remain highly template-collapsed relative to aligned target diversity"
@@ -685,11 +704,15 @@ def assess_stage5_decoded_buzz_reject(
         signals.append(
             "decoded spectral brightness remains far above aligned target and matches the historical harsh-buzz pattern"
         )
-    auto_reject = bool((template_collapse and envelope_following) or extreme_high_band)
+    if envelope_template_buzz:
+        signals.append(
+            "decoded route matches the human-confirmed envelope-following buzz family even without the older extreme high-band signature"
+        )
+    auto_reject = bool((template_collapse and envelope_following) or extreme_high_band or envelope_template_buzz)
     if auto_reject:
         status = "auto_reject_obvious_buzz"
         summary = (
-            "Decoded waveform matches the conservative Stage5 negative pattern for obvious buzz/template-collapse failure."
+            "Decoded waveform matches the Stage5 negative pattern for obvious buzz/template-collapse failure."
         )
     else:
         status = "review_required"
