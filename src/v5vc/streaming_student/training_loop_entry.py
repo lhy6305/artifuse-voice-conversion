@@ -110,7 +110,12 @@ def run_streaming_student_training_loop(
             batch_size=batch_size,
             batch_index=step_index,
         )
-        train_examples = load_streaming_student_target_examples_from_records(train_records)
+        train_examples = load_streaming_student_target_examples_from_records(
+            train_records,
+            frame_length=int(config["model"]["frame_length"]),
+            hop_length=int(config["model"]["hop_length"]),
+            include_target_acoustic_state=True,
+        )
         train_batch = collate_streaming_student_batch(
             examples=train_examples,
             conditioning_asset=conditioning_asset,
@@ -161,7 +166,6 @@ def run_streaming_student_training_loop(
                 indent=2,
             ),
             encoding="utf-8",
-            newline="\n",
         )
         print(
             "[stage3] training_loop_step_completed "
@@ -178,6 +182,8 @@ def run_streaming_student_training_loop(
                 semantic_supervision=semantic_supervision,
                 loss_weight_schedule=loss_weight_schedule,
                 use_teacher_confidence=use_teacher_confidence,
+                frame_length=int(config["model"]["frame_length"]),
+                hop_length=int(config["model"]["hop_length"]),
                 batch_size=validation_batch_size,
                 validation_batches=effective_validation_batches,
                 validation_mode=effective_validation_mode,
@@ -293,12 +299,10 @@ def run_streaming_student_training_loop(
     summary_json_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
-        newline="\n",
     )
     summary_md_path.write_text(
         build_markdown(summary),
         encoding="utf-8",
-        newline="\n",
     )
     print(
         "[stage3] training_loop_completed "
@@ -315,6 +319,8 @@ def run_validation_pass(
     semantic_supervision: dict[str, object],
     loss_weight_schedule: dict[str, dict[str, float | str | int]],
     use_teacher_confidence: bool,
+    frame_length: int,
+    hop_length: int,
     batch_size: int,
     validation_batches: int,
     validation_mode: str,
@@ -346,7 +352,12 @@ def run_validation_pass(
             batch_records = batch_selector(validation_batch_index)
             if not batch_records:
                 continue
-            examples = load_streaming_student_target_examples_from_records(batch_records)
+            examples = load_streaming_student_target_examples_from_records(
+                batch_records,
+                frame_length=int(frame_length),
+                hop_length=int(hop_length),
+                include_target_acoustic_state=True,
+            )
             batch = collate_streaming_student_batch(
                 examples=examples,
                 conditioning_asset=conditioning_asset,

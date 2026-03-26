@@ -12,6 +12,7 @@ from v5vc.event_semantics import (
     DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
     DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
 )
+from v5vc.source_acoustic_state_extraction import DEFAULT_VUV_VOICED_FRAME_THRESHOLD
 from v5vc.streaming_student.proxy_acoustic import build_streaming_student_proxy_acoustic
 
 
@@ -33,6 +34,10 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_energy_proxy": 0.25,
         "teacher_vuv_proxy": 0.15,
         "teacher_aper_proxy": 0.1,
+        "teacher_f0_state": 0.0,
+        "teacher_vuv_state": 0.0,
+        "teacher_aper_state": 0.0,
+        "teacher_energy_state": 0.0,
         "teacher_hidden_projection": 0.0,
         "teacher_fused_hidden_projection": 0.0,
         "teacher_proxy_acoustic": 0.0,
@@ -364,11 +369,37 @@ def compute_streaming_student_teacher_supervision_loss(
     if not isinstance(event_channel_weight, torch.Tensor):
         raise ValueError("Resolved Stage3 event_channel_weight must be a torch Tensor.")
     teacher_acoustic = batch["teacher_acoustic"]
+    teacher_target_f0_hz = batch["teacher_target_f0_hz"]
+    teacher_target_vuv = batch["teacher_target_vuv"]
+    teacher_target_aper = batch["teacher_target_aper"]
+    teacher_target_energy = batch["teacher_target_energy"]
     teacher_hidden = batch["teacher_hidden"]
     teacher_fused_hidden = batch["teacher_fused_hidden"]
     student_hidden_projection = outputs["teacher_hidden_projection"]
     student_fused_hidden_projection = outputs["teacher_fused_hidden_projection"]
     student_proxy_acoustic = build_streaming_student_proxy_acoustic(outputs)
+    if not isinstance(teacher_acoustic, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_acoustic.")
+    if not isinstance(teacher_target_f0_hz, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_target_f0_hz.")
+    if not isinstance(teacher_target_vuv, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_target_vuv.")
+    if not isinstance(teacher_target_aper, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_target_aper.")
+    if not isinstance(teacher_target_energy, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_target_energy.")
+    if not isinstance(teacher_hidden, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_hidden.")
+    if not isinstance(teacher_fused_hidden, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_fused_hidden.")
+
+    voiced_target_mask = (
+        (teacher_target_vuv >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD))
+        & (teacher_target_f0_hz > 0.0)
+    ).to(frame_weight.dtype)
+    predicted_log_f0 = outputs["coarse_log_f0"] + outputs["log_f0_correction"]
+    target_log_f0 = torch.log2(teacher_target_f0_hz.clamp_min(1.0))
+    predicted_aper_state = torch.sigmoid(outputs["aperiodicity"] + outputs["aper_correction"])
 
     z_art_loss_per_sample = masked_mse_per_sample(
         prediction=outputs["z_art"],
@@ -423,6 +454,26 @@ def compute_streaming_student_teacher_supervision_loss(
         target=teacher_proxy_target[..., 4:5],
         frame_weight=frame_weight,
     )
+    f0_state_loss_per_sample = masked_mse_per_sample(
+        prediction=predicted_log_f0,
+        target=target_log_f0,
+        frame_weight=frame_weight * voiced_target_mask,
+    )
+    vuv_state_loss_per_sample = masked_bce_with_logits_per_sample(
+        logits=outputs["vuv_logits"],
+        target=teacher_target_vuv.clamp(0.0, 1.0),
+        frame_weight=frame_weight,
+    )
+    aper_state_loss_per_sample = masked_mse_per_sample(
+        prediction=predicted_aper_state,
+        target=teacher_target_aper.clamp(0.0, 1.0),
+        frame_weight=frame_weight,
+    )
+    energy_state_loss_per_sample = masked_mse_per_sample(
+        prediction=outputs["energy"],
+        target=teacher_target_energy,
+        frame_weight=frame_weight,
+    )
     hidden_projection_loss_per_sample = masked_mse_per_sample(
         prediction=student_hidden_projection,
         target=teacher_hidden,
@@ -469,6 +520,10 @@ def compute_streaming_student_teacher_supervision_loss(
     energy_proxy_loss = reduce_weighted_sample_loss(energy_proxy_loss_per_sample)
     vuv_proxy_loss = reduce_weighted_sample_loss(vuv_proxy_loss_per_sample)
     aper_proxy_loss = reduce_weighted_sample_loss(aper_proxy_loss_per_sample)
+    f0_state_loss = reduce_weighted_sample_loss(f0_state_loss_per_sample)
+    vuv_state_loss = reduce_weighted_sample_loss(vuv_state_loss_per_sample)
+    aper_state_loss = reduce_weighted_sample_loss(aper_state_loss_per_sample)
+    energy_state_loss = reduce_weighted_sample_loss(energy_state_loss_per_sample)
     hidden_projection_loss = reduce_weighted_sample_loss(hidden_projection_loss_per_sample)
     fused_hidden_projection_loss = reduce_weighted_sample_loss(fused_hidden_projection_loss_per_sample)
     proxy_acoustic_loss = reduce_weighted_sample_loss(proxy_acoustic_loss_per_sample)
@@ -489,6 +544,10 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
+        + f0_state_loss * effective_weights["teacher_f0_state"]
+        + vuv_state_loss * effective_weights["teacher_vuv_state"]
+        + aper_state_loss * effective_weights["teacher_aper_state"]
+        + energy_state_loss * effective_weights["teacher_energy_state"]
         + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
@@ -506,6 +565,10 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * default_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * default_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * default_weights["teacher_aper_proxy"]
+        + f0_state_loss * default_weights["teacher_f0_state"]
+        + vuv_state_loss * default_weights["teacher_vuv_state"]
+        + aper_state_loss * default_weights["teacher_aper_state"]
+        + energy_state_loss * default_weights["teacher_energy_state"]
         + hidden_projection_loss * default_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * default_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * default_weights["teacher_proxy_acoustic"]
@@ -523,6 +586,10 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_proxy_loss * effective_weights["teacher_energy_proxy"]
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
+        + f0_state_loss * effective_weights["teacher_f0_state"]
+        + vuv_state_loss * effective_weights["teacher_vuv_state"]
+        + aper_state_loss * effective_weights["teacher_aper_state"]
+        + energy_state_loss * effective_weights["teacher_energy_state"]
         + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
@@ -549,6 +616,10 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_teacher_energy_proxy": round(float(energy_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_vuv_proxy": round(float(vuv_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_aper_proxy": round(float(aper_proxy_loss.detach().cpu().item()), 6),
+        "loss_teacher_f0_state": round(float(f0_state_loss.detach().cpu().item()), 6),
+        "loss_teacher_vuv_state": round(float(vuv_state_loss.detach().cpu().item()), 6),
+        "loss_teacher_aper_state": round(float(aper_state_loss.detach().cpu().item()), 6),
+        "loss_teacher_energy_state": round(float(energy_state_loss.detach().cpu().item()), 6),
         "loss_teacher_hidden_projection": round(float(hidden_projection_loss.detach().cpu().item()), 6),
         "loss_teacher_fused_hidden_projection": round(
             float(fused_hidden_projection_loss.detach().cpu().item()),
@@ -560,6 +631,7 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_aper_correction_l1": round(float(aper_correction_l1.detach().cpu().item()), 6),
         "teacher_confidence_weighted": bool(use_teacher_confidence),
         "effective_weight_sum": round(float(frame_weight.sum().detach().cpu().item()), 6),
+        "teacher_f0_state_voiced_frame_ratio": round(float(voiced_target_mask.mean().detach().cpu().item()), 6),
         "teacher_event_target_family": str(event_target_bundle["event_target_family"]),
         "teacher_event_projection_mode": str(event_target_bundle["event_projection_mode"]),
         "teacher_event_contract_version": str(event_target_bundle["event_contract_version"]),

@@ -28,6 +28,13 @@ from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaf
 
 
 DOWNSTREAM_CONTROL_PACKET_VERSION = "streaming_student_downstream_control_v1"
+CONTROL_READINESS_GATE_VERSION = "stage3_student_control_readiness_gate_v1"
+MIN_F0_REFERENCE_VOICED_FRAMES = 32
+MIN_F0_PROXY_REFERENCE_CORR = 0.75
+MAX_F0_CALIBRATED_LOG2_MAE = 0.2
+MAX_VUV_REFERENCE_MAE = 0.18
+MAX_APER_REFERENCE_MAE = 0.3
+MAX_ENERGY_STAGE5_NORM_REFERENCE_MAE = 0.15
 
 
 def export_streaming_student_downstream_control_packet(
@@ -226,6 +233,15 @@ def export_streaming_student_downstream_control_packet(
             tensor_relative_path = Path("records") / f"{sanitize_filename(example.record_id)}.pt"
             tensor_path = output_dir / tensor_relative_path
             torch.save(tensor_payload, tensor_path)
+            readiness = assess_named_control_readiness(
+                packet_ready_for_named_e_evt_handoff=packet_ready,
+                f0_calibration_summary=dict(f0_calibration["summary"]),
+                vuv_reference_mae=float((vuv_prob - reference_vuv).abs().mean().item()),
+                aper_reference_mae=float((aper_prob - reference_aper).abs().mean().item()),
+                energy_stage5_norm_reference_mae=float(
+                    (energy_stage5_norm - reference_energy_stage5_norm).abs().mean().item()
+                ),
+            )
 
             exported_records.append(
                 {
@@ -267,9 +283,11 @@ def export_streaming_student_downstream_control_packet(
                         float((energy_stage5_norm - reference_energy_stage5_norm).abs().mean().item()),
                         6,
                     ),
+                    "named_control_readiness": readiness,
                 }
             )
 
+    readiness_summary = summarize_named_control_readiness(exported_records)
     summary = {
         "packet_version": DOWNSTREAM_CONTROL_PACKET_VERSION,
         "checkpoint_path": checkpoint_path.as_posix(),
@@ -294,24 +312,24 @@ def export_streaming_student_downstream_control_packet(
             "energy_status": "log_proxy_with_stage5_norm_and_target_reference_audit",
         },
         "packet_ready_count": packet_ready_count,
+        "named_control_readiness_summary": readiness_summary,
         "records": exported_records,
         "notes": [
             "This export is the first student-side downstream packet candidate, not a Stage5 training result.",
             "Current e_evt is exported only when checkpoint semantic_supervision.event_target_family=teacher_e_evt_v1.",
             "F0 now also exports an analysis-only affine-calibrated Hz view against target-reference acoustic state; this is an audit aid, not yet a deployment-ready control contract.",
             "aper and energy now export target-reference audit views so packet usefulness can be judged before any new Stage5 adapter is opened.",
+            "named_control_readiness is a negative gate only: it can auto-reject clearly incomplete packets, but it does not prove a successful downstream handoff.",
             "r_res remains intentionally absent on this route.",
         ],
     }
     (output_dir / "streaming_student_downstream_control_packet.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
-        newline="\n",
     )
     (output_dir / "streaming_student_downstream_control_packet.md").write_text(
         build_markdown(summary),
         encoding="utf-8",
-        newline="\n",
     )
     return summary
 
@@ -369,6 +387,107 @@ def sanitize_filename(value: str) -> str:
         else:
             safe.append("_")
     return "".join(safe).strip("_") or "record"
+
+
+def assess_named_control_readiness(
+    *,
+    packet_ready_for_named_e_evt_handoff: bool,
+    f0_calibration_summary: dict[str, object],
+    vuv_reference_mae: float,
+    aper_reference_mae: float,
+    energy_stage5_norm_reference_mae: float,
+) -> dict[str, object]:
+    f0_status = "auto_reject_not_ready"
+    if bool(packet_ready_for_named_e_evt_handoff):
+        f0_ready = (
+            str(f0_calibration_summary.get("status")) == "ok"
+            and int(f0_calibration_summary.get("reference_voiced_frame_count", 0)) >= MIN_F0_REFERENCE_VOICED_FRAMES
+            and float(f0_calibration_summary.get("proxy_reference_corr") or 0.0) >= MIN_F0_PROXY_REFERENCE_CORR
+            and float(f0_calibration_summary.get("calibrated_log2_mae") or 999.0) <= MAX_F0_CALIBRATED_LOG2_MAE
+        )
+        if f0_ready:
+            f0_status = "review_required"
+    vuv_status = (
+        "review_required"
+        if bool(packet_ready_for_named_e_evt_handoff) and float(vuv_reference_mae) <= MAX_VUV_REFERENCE_MAE
+        else "auto_reject_not_ready"
+    )
+    aper_status = (
+        "review_required"
+        if bool(packet_ready_for_named_e_evt_handoff) and float(aper_reference_mae) <= MAX_APER_REFERENCE_MAE
+        else "auto_reject_not_ready"
+    )
+    energy_status = (
+        "review_required"
+        if bool(packet_ready_for_named_e_evt_handoff)
+        and float(energy_stage5_norm_reference_mae) <= MAX_ENERGY_STAGE5_NORM_REFERENCE_MAE
+        else "auto_reject_not_ready"
+    )
+    all_core_controls_ready = all(
+        status == "review_required"
+        for status in (f0_status, vuv_status, aper_status, energy_status)
+    )
+    return {
+        "gate_version": CONTROL_READINESS_GATE_VERSION,
+        "negative_gate_only": True,
+        "packet_ready_for_named_e_evt_handoff": bool(packet_ready_for_named_e_evt_handoff),
+        "e_evt_status": "review_required" if bool(packet_ready_for_named_e_evt_handoff) else "auto_reject_not_ready",
+        "z_art_status": "review_required",
+        "f0_status": f0_status,
+        "vuv_status": vuv_status,
+        "aper_status": aper_status,
+        "energy_status": energy_status,
+        "all_core_controls_ready": all_core_controls_ready,
+        "route_open_recommended": False,
+        "assessment": (
+            "review_required"
+            if all_core_controls_ready
+            else "auto_reject_named_control_incomplete"
+        ),
+    }
+
+
+def summarize_named_control_readiness(
+    records: list[dict[str, object]],
+) -> dict[str, object]:
+    summary = {
+        "gate_version": CONTROL_READINESS_GATE_VERSION,
+        "negative_gate_only": True,
+        "record_count": len(records),
+        "e_evt_ready_count": 0,
+        "f0_ready_count": 0,
+        "vuv_ready_count": 0,
+        "aper_ready_count": 0,
+        "energy_ready_count": 0,
+        "all_core_controls_ready_count": 0,
+        "auto_reject_count": 0,
+        "review_required_count": 0,
+    }
+    for record in records:
+        readiness = record.get("named_control_readiness")
+        if not isinstance(readiness, dict):
+            continue
+        if readiness.get("e_evt_status") == "review_required":
+            summary["e_evt_ready_count"] += 1
+        if readiness.get("f0_status") == "review_required":
+            summary["f0_ready_count"] += 1
+        if readiness.get("vuv_status") == "review_required":
+            summary["vuv_ready_count"] += 1
+        if readiness.get("aper_status") == "review_required":
+            summary["aper_ready_count"] += 1
+        if readiness.get("energy_status") == "review_required":
+            summary["energy_ready_count"] += 1
+        if bool(readiness.get("all_core_controls_ready")):
+            summary["all_core_controls_ready_count"] += 1
+        if str(readiness.get("assessment")) == "auto_reject_named_control_incomplete":
+            summary["auto_reject_count"] += 1
+        else:
+            summary["review_required_count"] += 1
+    summary["all_records_auto_reject"] = summary["auto_reject_count"] == len(records) and len(records) > 0
+    summary["all_records_core_controls_ready"] = (
+        summary["all_core_controls_ready_count"] == len(records) and len(records) > 0
+    )
+    return summary
 
 
 def calibrate_f0_log_proxy_to_reference(
@@ -470,6 +589,7 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- max_audio_sec: {summary['max_audio_sec']}",
         f"- conditioning: {json.dumps(summary['conditioning'], ensure_ascii=False)}",
         f"- contract: {json.dumps(summary['contract'], ensure_ascii=False)}",
+        f"- named_control_readiness_summary: {json.dumps(summary['named_control_readiness_summary'], ensure_ascii=False)}",
         "",
         "## Records",
     ]
@@ -480,6 +600,9 @@ def build_markdown(summary: dict[str, object]) -> str:
         lines.append(f"- frame_count: {record['frame_count']}")
         lines.append(
             f"- packet_ready_for_named_e_evt_handoff: {record['packet_ready_for_named_e_evt_handoff']}"
+        )
+        lines.append(
+            f"- named_control_readiness: {json.dumps(record['named_control_readiness'], ensure_ascii=False)}"
         )
         lines.append(f"- event_target_family: {record['event_target_family']}")
         lines.append(f"- event_projection_mode: {record['event_projection_mode']}")

@@ -25,6 +25,7 @@ from v5vc.offline_mvp.data import (
     load_target_weak_event_hint_map,
     load_waveform,
 )
+from v5vc.source_acoustic_state_extraction import extract_source_acoustic_state
 from v5vc.train_entry import load_training_split
 
 
@@ -51,6 +52,10 @@ class StreamingStudentTargetExample:
     teacher_frame_confidence: torch.Tensor
     teacher_confidence_mean: float
     teacher_low_confidence_frame_ratio: float
+    target_f0_hz: torch.Tensor | None = None
+    target_vuv: torch.Tensor | None = None
+    target_aper: torch.Tensor | None = None
+    target_energy: torch.Tensor | None = None
 
 
 @dataclass
@@ -400,6 +405,10 @@ def attach_streaming_student_paired_contract_metadata(
 
 def load_streaming_student_target_examples_from_records(
     records: list[dict[str, object]],
+    *,
+    frame_length: int | None = None,
+    hop_length: int | None = None,
+    include_target_acoustic_state: bool = False,
 ) -> list[StreamingStudentTargetExample]:
     examples: list[StreamingStudentTargetExample] = []
     for record in records:
@@ -421,6 +430,27 @@ def load_streaming_student_target_examples_from_records(
                 target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
                 valid_frame_count=int(teacher_payload["frame_mask"].to(torch.bool).sum().item()),
             )["tensor"]
+        target_f0_hz = None
+        target_vuv = None
+        target_aper = None
+        target_energy = None
+        if include_target_acoustic_state:
+            if frame_length is None or hop_length is None:
+                raise ValueError(
+                    "include_target_acoustic_state=True requires frame_length and hop_length."
+                )
+            valid_frame_count = int(teacher_payload["frame_mask"].to(torch.bool).sum().item())
+            frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
+            target_state = extract_source_acoustic_state(
+                waveform=waveform,
+                sample_rate=int(sample_rate),
+                frame_start_samples=frame_start_samples,
+                frame_length=int(frame_length),
+            )
+            target_f0_hz = target_state["f0_hz"].to(torch.float32)
+            target_vuv = target_state["vuv"].to(torch.float32)
+            target_aper = target_state["aper"].to(torch.float32)
+            target_energy = target_state["E"].to(torch.float32)
         examples.append(
             StreamingStudentTargetExample(
                 record_id=record_id,
@@ -444,6 +474,10 @@ def load_streaming_student_target_examples_from_records(
                 teacher_frame_confidence=teacher_payload["frame_confidence"].to(torch.float32),
                 teacher_confidence_mean=float(teacher_row.get("confidence_mean", 0.0)),
                 teacher_low_confidence_frame_ratio=float(teacher_row.get("low_confidence_frame_ratio", 0.0)),
+                target_f0_hz=target_f0_hz,
+                target_vuv=target_vuv,
+                target_aper=target_aper,
+                target_energy=target_energy,
             )
         )
     return examples
@@ -600,6 +634,10 @@ def collate_streaming_student_batch(
     teacher_e_evt = torch.zeros((len(examples), max_teacher_frames, event_dim), dtype=torch.float32)
     teacher_acoustic = torch.zeros((len(examples), max_teacher_frames, acoustic_dim), dtype=torch.float32)
     teacher_frame_confidence = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    teacher_target_f0_hz = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    teacher_target_vuv = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    teacher_target_aper = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    teacher_target_energy = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
 
     for index, example in enumerate(examples):
         frame_count = int(example.teacher_frame_mask.sum().item())
@@ -612,6 +650,14 @@ def collate_streaming_student_batch(
         teacher_e_evt[index, :frame_count] = example.teacher_e_evt[:frame_count]
         teacher_acoustic[index, :frame_count] = example.teacher_acoustic[:frame_count]
         teacher_frame_confidence[index, :frame_count] = example.teacher_frame_confidence[:frame_count]
+        if isinstance(example.target_f0_hz, torch.Tensor):
+            teacher_target_f0_hz[index, :frame_count] = example.target_f0_hz[:frame_count]
+        if isinstance(example.target_vuv, torch.Tensor):
+            teacher_target_vuv[index, :frame_count] = example.target_vuv[:frame_count]
+        if isinstance(example.target_aper, torch.Tensor):
+            teacher_target_aper[index, :frame_count] = example.target_aper[:frame_count]
+        if isinstance(example.target_energy, torch.Tensor):
+            teacher_target_energy[index, :frame_count] = example.target_energy[:frame_count]
 
     speaker_embedding = conditioning_asset["speaker_embedding"].to(torch.float32)
     geom_embedding = conditioning_asset["geom_embedding"].to(torch.float32)
@@ -636,6 +682,10 @@ def collate_streaming_student_batch(
         "teacher_e_evt": teacher_e_evt,
         "teacher_acoustic": teacher_acoustic,
         "teacher_frame_confidence": teacher_frame_confidence,
+        "teacher_target_f0_hz": teacher_target_f0_hz,
+        "teacher_target_vuv": teacher_target_vuv,
+        "teacher_target_aper": teacher_target_aper,
+        "teacher_target_energy": teacher_target_energy,
         "teacher_confidence_means": torch.tensor(
             [example.teacher_confidence_mean for example in examples],
             dtype=torch.float32,

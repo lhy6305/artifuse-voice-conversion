@@ -70,7 +70,10 @@ def run_streaming_student_training_step(
     )
 
     train_examples = load_streaming_student_target_examples_from_records(
-        list(records_by_split["target_train"][: max(1, min(int(batch_size), len(records_by_split["target_train"])))])
+        list(records_by_split["target_train"][: max(1, min(int(batch_size), len(records_by_split["target_train"])))]),
+        frame_length=int(config["model"]["frame_length"]),
+        hop_length=int(config["model"]["hop_length"]),
+        include_target_acoustic_state=True,
     )
     train_batch = collate_streaming_student_batch(
         examples=train_examples,
@@ -82,7 +85,10 @@ def run_streaming_student_training_step(
             records_by_split["target_validation"][
                 : max(1, min(int(batch_size), len(records_by_split["target_validation"])))
             ]
-        )
+        ),
+        frame_length=int(config["model"]["frame_length"]),
+        hop_length=int(config["model"]["hop_length"]),
+        include_target_acoustic_state=True,
     )
     validation_batch = collate_streaming_student_batch(
         examples=validation_examples,
@@ -213,12 +219,10 @@ def run_streaming_student_training_step(
     log_json_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
-        newline="\n",
     )
     log_md_path.write_text(
         build_markdown(summary),
         encoding="utf-8",
-        newline="\n",
     )
     print(
         "[stage3] training_step_completed "

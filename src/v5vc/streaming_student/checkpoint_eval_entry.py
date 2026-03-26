@@ -115,12 +115,10 @@ def evaluate_streaming_student_checkpoint(
     json_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
-        newline="\n",
     )
     md_path.write_text(
         build_markdown(summary),
         encoding="utf-8",
-        newline="\n",
     )
 
 
@@ -145,7 +143,12 @@ def evaluate_split(
         )
         if not batch_records:
             continue
-        examples = load_streaming_student_target_examples_from_records(batch_records)
+        examples = load_streaming_student_target_examples_from_records(
+            batch_records,
+            frame_length=int(model.frontend.frame_length),
+            hop_length=int(model.frontend.hop_length),
+            include_target_acoustic_state=True,
+        )
         batch = collate_streaming_student_batch(
             examples=examples,
             conditioning_asset=conditioning_asset,
@@ -173,20 +176,26 @@ def evaluate_split(
     }
 
 
-def average_metric_dicts(metrics_list: list[dict[str, float]]) -> dict[str, float]:
+def average_metric_dicts(
+    metrics_list: list[dict[str, float | bool | str]],
+) -> dict[str, float | bool | str | list[str]]:
     if not metrics_list:
         return {}
     keys = metrics_list[0].keys()
-    averaged: dict[str, float] = {}
+    averaged: dict[str, float | bool | str | list[str]] = {}
     for key in keys:
         first_value = metrics_list[0][key]
         if isinstance(first_value, bool):
             averaged[key] = bool(all(bool(metrics[key]) for metrics in metrics_list))
             continue
-        averaged[key] = round(
-            sum(float(metrics[key]) for metrics in metrics_list) / len(metrics_list),
-            6,
-        )
+        if isinstance(first_value, (int, float)):
+            averaged[key] = round(
+                sum(float(metrics[key]) for metrics in metrics_list) / len(metrics_list),
+                6,
+            )
+            continue
+        unique_values = sorted({str(metrics[key]) for metrics in metrics_list})
+        averaged[key] = unique_values[0] if len(unique_values) == 1 else unique_values
     return averaged
 
 

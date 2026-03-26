@@ -1,0 +1,8 @@
+{
+  "loss_weights": {
+    "teacher_f0_state": 0.002,
+    "teacher_vuv_state": 0.05,
+    "teacher_aper_state": 0.05,
+    "teacher_energy_state": 0.02
+  }
+}

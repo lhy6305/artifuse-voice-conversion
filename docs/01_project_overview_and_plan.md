@@ -130,10 +130,27 @@
    - 但 `F0 / aper / E` 仍是 proxy/control status，不应误写成已完成的 Stage5-ready contract
 7. 当前 cheap screen 报告：
    - `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
-8. 在新的 handoff family 通过更强 cheap screen 前，不再新增：
+8. `packet calibration audit` 已完成，但“直接往 Stage3 loss 注入 deterministic target acoustic state”这条线已失败：
+   - `docs/373_stage3_explicit_target_acoustic_state_supervision_ab_fail_report.md`
+   - 当前结论是：
+     - local state loss 可下降
+     - 但共享主指标变差
+     - 因此不继续扫 `teacher_f0_state / teacher_vuv_state / teacher_aper_state / teacher_energy_state`
+9. `student_control_packet` 现在新增了 named-control negative gate：
+   - `docs/374_stage3_student_control_packet_readiness_gate_report.md`
+   - 当前 directional best checkpoint 的结论是：
+     - `e_evt / z_art` 可保留
+     - `F0 / vuv / aper / E` 仍全部 auto-reject
+     - 因此当前仍不允许开启新的 Stage5 handoff route
+10. 在新的 handoff family 通过更强 cheap screen 前，不再新增：
   - Stage5 同层 decode 小实验
   - Stage5 同层 semantic/timing consumer 小实验
   - 同类 objective / weight 微扫
+11. 当前新的默认下一步改为：
+  - 不继续做 naive direct state loss injection
+  - 转回更结构化的 `target-state generation / contract completion`
+  - 并以 `named-control readiness negative gate` 作为新的下游前置门禁
+  - 尤其避免把“packet 可导出”或“local state MAE 下降”误判成“已经值得开新 Stage5 route”
 
 ## 关键参考报告
 - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
@@ -147,6 +164,8 @@
 - `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
 - `docs/371_stage3_student_control_packet_v1_bootstrap_and_proxy_screen_smoke_report.md`
 - `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
+- `docs/373_stage3_explicit_target_acoustic_state_supervision_ab_fail_report.md`
+- `docs/374_stage3_student_control_packet_readiness_gate_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。

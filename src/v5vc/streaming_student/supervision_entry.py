@@ -66,7 +66,12 @@ def prepare_streaming_student_supervision(
     with torch.no_grad():
         for split_name, records in records_by_split.items():
             batch_records = list(records[: max(1, min(int(batch_size), len(records)))])
-            examples = load_streaming_student_target_examples_from_records(batch_records)
+            examples = load_streaming_student_target_examples_from_records(
+                batch_records,
+                frame_length=int(config["model"]["frame_length"]),
+                hop_length=int(config["model"]["hop_length"]),
+                include_target_acoustic_state=True,
+            )
             batch = collate_streaming_student_batch(
                 examples=examples,
                 conditioning_asset=conditioning_asset,
@@ -135,12 +140,10 @@ def prepare_streaming_student_supervision(
     json_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
-        newline="\n",
     )
     md_path.write_text(
         build_markdown(summary),
         encoding="utf-8",
-        newline="\n",
     )
     print(
         "[stage3] supervision_completed "

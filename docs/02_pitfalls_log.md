@@ -201,3 +201,43 @@
   - 写入对应编号报告，不进入本文档。
 - 若本文档再次显著膨胀：
   - 继续做快照归档，不回到单文件堆历史的模式。
+
+### 18. local state loss 下降，不等于 handoff / 主监督更好
+- 现象：
+  - `explicit target acoustic-state supervision`
+    能明显压低 `loss_teacher_f0_state`
+  - 但 `loss_total` 与 `loss_total_semantic_disabled_reference` 同时变差
+- 风险：
+  - 很容易把 `F0 / aper / energy` 的局部改善误判成“packet calibration 已经开始转化为整体收益”
+- 正确处理：
+  - 必须同时检查：
+    - `loss_total`
+    - `loss_total_semantic_disabled_reference`
+    - `loss_teacher_event / event_prior`
+    - correction 正则是否异常抬升
+  - 若共享主指标更差，应直接停线
+
+### 19. 直接把 deterministic target state 压进现有 Stage3 loss，容易诱导 correction head 作弊
+- 现象：
+  - 在显式 `teacher_f0_state / vuv_state / aper_state / energy_state` A/B 里，
+    `loss_teacher_f0_state` 虽下降，
+    但 `loss_log_f0_correction_l1` 从很小值显著抬升
+- 风险：
+  - 模型可能优先学会“放大 correction head 去追局部 state target”，
+    而不是改善更共享的 teacher-event / target-state 主结构
+- 正确处理：
+  - 不继续扫这组 direct state loss 权重
+  - 回到更结构化的 generation-side / contract-side 升级
+
+### 20. `packet 可导出` 不等于 `named controls` 已达到 handoff 最低就绪线
+- 现象：
+  - `student_control_packet_v1` 已能稳定导出
+  - `cheap screen` 也没有明显退化
+- 风险：
+  - 很容易因此提前开启新的 Stage5 handoff route
+- 正确处理：
+  - 先过 `named-control readiness negative gate`
+  - 当前 gate 已证明：
+    - `e_evt / z_art` 可保留
+    - `F0 / vuv / aper / E` 仍全部未就绪
+  - 所以在 gate 放行前，不开新的 Stage5 adapter/scaffold
