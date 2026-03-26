@@ -42,6 +42,7 @@ SUPPORTED_TEACHER_VOCODER_SCAFFOLD_VERSIONS = {
     "offline_teacher_vocoder_input_scaffold_v1",
     "offline_teacher_vocoder_input_scaffold_v2",
     "offline_teacher_vocoder_input_scaffold_v3",
+    "streaming_student_vocoder_input_scaffold_v1",
 }
 SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
     "offline_mvp_nores_vocoder_train_targets_v1",
@@ -161,6 +162,7 @@ def build_offline_mvp_nores_vocoder_training_package(
     has_v2_core = scaffold_version in {
         "offline_teacher_vocoder_input_scaffold_v2",
         "offline_teacher_vocoder_input_scaffold_v3",
+        "streaming_student_vocoder_input_scaffold_v1",
     }
     resolved_semantic_consumer_mode = normalize_stage5_semantic_consumer_mode(semantic_consumer_mode)
     resolved_target_contract_mode = normalize_stage5_target_contract_mode(target_contract_mode)
@@ -1835,7 +1837,7 @@ def build_stage5_gate_targets(
     if not has_v2_core:
         if resolved_target_contract_mode != DEFAULT_STAGE5_TARGET_CONTRACT_MODE:
             raise ValueError(
-                "teacher_e_evt_gate_targets_v1 requires offline_teacher_vocoder_input_scaffold_v2/v3 with explicit vuv/aper/E controls."
+                "teacher_e_evt_gate_targets_v1 requires an explicit-control scaffold (teacher v2/v3 or streaming_student_v1) with vuv/aper/E controls."
             )
         return (
             voiced_proxy.clamp(0.0, 1.0),

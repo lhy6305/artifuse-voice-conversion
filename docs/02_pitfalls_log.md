@@ -202,7 +202,60 @@
 - 若本文档再次显著膨胀：
   - 继续做快照归档，不回到单文件堆历史的模式。
 
-### 18. local state loss 下降，不等于 handoff / 主监督更好
+### 18. 不能再用“只有 proxy、还没到真实 decoded.wav”作为拖延 Stage5 fail-fast 的理由
+- 现象：
+  - 当前 `student_control_packet -> minimal Stage5 adapter` 已经补齐。
+  - 新候选如果真的有 Stage5 端到端潜力，现在已经可以快速导出真实 `decoded.wav`。
+- 风险：
+  - 若还停在 proxy 音频，会把一条其实已经 end-to-end 失败的路线误留太久。
+- 正确处理：
+  - 一旦某条 packet 线路看起来有 Stage5 端到端潜力，
+    就尽快跑最小真实 decoded smoke。
+  - 不再把“还没做 Stage5 decode”当成默认状态。
+
+### 19. 但“已经能导出真实 decoded.wav”也不等于这条线值得扩成试听包
+- 现象：
+  - `vuvbalancedgate48` 已通过最小 adapter 真正导出了 Stage5 `decoded.wav`。
+  - 但第一条 smoke 样本就被机器门禁判成 `auto_reject_obvious_buzz`。
+- 风险：
+  - 很容易因为“终于有 decoded.wav 了”而继续扩到多条样本或人工听审。
+- 正确处理：
+  - 真实 decoded 只是一条更硬的 fail-fast 工具，不是成功信号。
+  - 如果 best-sample decoded 已经 obvious buzz，
+    就不默认扩成 3 条包，也不把 adapter 本身当主要调参对象。
+
+### 20. 不能把旧 `v2/event_probs` Stage5 checkpoint 上的 fail-fast 结果误读成“显式 e_evt contract 已被公平验证”
+- 现象：
+  - 当前 best no-res checkpoint 实际来自 `offline_teacher_vocoder_input_scaffold_v2`
+  - noise branch 前 8 维语义家族仍是 `event_probs`
+- 风险：
+  - 如果拿它去直接否定 `e_evt` 方向，会把“checkpoint 承接层旧”误读成“新 contract 本身错”
+- 正确处理：
+  - 先确认当前 Stage5 checkpoint 吃的是哪一版 scaffold family
+  - 再解释 decoded smoke 的含义
+  - 对旧 `v2` checkpoint，更应把它视为保守 fail-fast 工具，而不是新 contract 的最终裁判
+
+### 21. 当前 student packet 与 native teacher package 的主要差异病灶不在 periodic branch，而在 noise 前 8 维 event family
+- 现象：
+  - `z_art / periodic branch` 与 teacher 已非常接近
+  - 但 `event_presence_proxy`、noise first-8、以及其带出的 bright buzz 指标明显更差
+- 风险：
+  - 若继续把主要精力放在 `F0` 或 adapter 末端，会错过更直接的主病因
+- 正确处理：
+  - 下一步优先处理 Stage3 generation-side 的 event 维度分布
+  - 而不是继续修 Stage5 adapter
+
+### 22. 不能把“adapter 切成 legacy_event_probs 仍没变好”误判成 adapter 已经无信息量
+- 现象：
+  - 在当前 `vuvbalancedgate48` candidate 上，`e_evt == legacy_event_probs`
+  - 所以 adapter 名义切换不会带来任何实际张量变化
+- 风险：
+  - 若不先核对张量本身，就会把“这条候选本身没有差异”误写成“adapter 路线没有信息量”
+- 正确处理：
+  - 先核对 packet 内实际导出的控制张量是否不同
+  - 再解释 A/B 结果
+
+### 23. local state loss 下降，不等于 handoff / 主监督更好
 - 现象：
   - `explicit target acoustic-state supervision`
     能明显压低 `loss_teacher_f0_state`
@@ -217,7 +270,7 @@
     - correction 正则是否异常抬升
   - 若共享主指标更差，应直接停线
 
-### 19. 直接把 deterministic target state 压进现有 Stage3 loss，容易诱导 correction head 作弊
+### 24. 直接把 deterministic target state 压进现有 Stage3 loss，容易诱导 correction head 作弊
 - 现象：
   - 在显式 `teacher_f0_state / vuv_state / aper_state / energy_state` A/B 里，
     `loss_teacher_f0_state` 虽下降，
@@ -229,7 +282,7 @@
   - 不继续扫这组 direct state loss 权重
   - 回到更结构化的 generation-side / contract-side 升级
 
-### 20. `packet 可导出` 不等于 `named controls` 已达到 handoff 最低就绪线
+### 25. `packet 可导出` 不等于 `named controls` 已达到 handoff 最低就绪线
 - 现象：
   - `student_control_packet_v1` 已能稳定导出
   - `cheap screen` 也没有明显退化
@@ -242,7 +295,7 @@
     - `F0 / vuv / aper / E` 仍全部未就绪
   - 所以在 gate 放行前，不开新的 Stage5 adapter/scaffold
 
-### 21. 不应继续让 Stage3 在训练时各处临时重算 target-state
+### 26. 不应继续让 Stage3 在训练时各处临时重算 target-state
 - 现象：
   - 之前 deterministic target acoustic state 虽已可用，
     但主要还是在 Stage3 batch 里临时从 waveform 提取
@@ -255,7 +308,7 @@
     作为默认来源
   - 仅在旧资产缺字段时才回退重算
 
-### 22. teacher-label generation-side 再次正向，不等于 `student_control_packet` readiness 已同步打开
+### 27. teacher-label generation-side 再次正向，不等于 `student_control_packet` readiness 已同步打开
 - 现象：
   - `acoustic_directional_targetstate_bridge_v1`
     在 Stage3 `12-step / 24-step full-validation`
@@ -273,7 +326,7 @@
   - 因此不能因为新的 generation-side bridge 成功，
     就提前开新的 Stage5 route
 
-### 23. 不能把 `proxy target family` 替换或轻量 `detach` 当作足以完成 named-control handoff 的修复
+### 28. 不能把 `proxy target family` 替换或轻量 `detach` 当作足以完成 named-control handoff 的修复
 - 现象：
   - 本轮已验证三条线：
     - `named_control_proxy_target_family = deterministic_target_state_v1`
@@ -290,7 +343,7 @@
     - 轻量梯度 stop
     这些同层小变体上消耗预算
 
-### 24. `frontend/control branch split v1` 的 Stage3 正向，也不能直接外推成 handoff 已成立
+### 29. `frontend/control branch split v1` 的 Stage3 正向，也不能直接外推成 handoff 已成立
 - 现象：
   - `parallel_control_encoder_v1`
     能继续改善 Stage3 的 `loss_total / event_prior / z_art`
@@ -309,7 +362,7 @@
   - 所以 branch split v1 只能算“有信息量的失败”，
     不能直接进入新的 Stage5 route
 
-### 25. `F0` 落进物理范围，不等于 `F0` handoff 已经方向正确
+### 30. `F0` 落进物理范围，不等于 `F0` handoff 已经方向正确
 - 现象：
   - `bounded_log2_hz_v1`
     能把 `f0_log_proxy_mean` 收进合理的 `log2(Hz)` 区间
@@ -326,7 +379,7 @@
     - gate 完全不开
   - 所以 `bounded F0` 只能算量纲修饰，不是当前问题的解法
 
-### 26. 单独再加一层 `explicit F0 branch`，也不等于已经触到 named-control handoff 的主病因
+### 31. 单独再加一层 `explicit F0 branch`，也不等于已经触到 named-control handoff 的主病因
 - 现象：
   - `explicit_state_branch_v1`
     相对 `bounded F0` 基本打平
@@ -343,7 +396,7 @@
   - 若继续，必须上到更完整的
     `control-specific head family / explicit control-state branch`
 
-### 27. 即使把 `F0 / vuv / aper / energy` 一起放进 control-specific family，也不代表 handoff 病灶就在 student-side correction 层
+### 32. 即使把 `F0 / vuv / aper / energy` 一起放进 control-specific family，也不代表 handoff 病灶就在 student-side correction 层
 - 现象：
   - `explicit_named_control_family_v1`
     能继续改善 Stage3 `loss_total`
@@ -360,7 +413,7 @@
     - `coarse F0 target contract / sign-stable supervision`
   - 而不是继续在 correction family 上追加小修
 
-### 28. `F0 proxy` 从负相关翻正，不等于 handoff 已经打开
+### 33. `F0 proxy` 从负相关翻正，不等于 handoff 已经打开
 - 现象：
   - `coarse_f0_state` 直监督后，
     `F0 proxy` 已从全负翻到全正
@@ -372,8 +425,125 @@
     - `sign repair` 方向终于打中了
   - 还不能说：
     - `F0` 已经 ready
-  - 因为当前仍同时成立：
-    - `coarse_log_f0` 本体仍未翻正
+- 因为当前仍同时成立：
+    - 即使更长 horizon 下 `coarse_log_f0` 本体已经翻正，
+      gate 也仍可能不开
     - `f0_proxy_reference_corr` 还没到 gate 阈值
     - `calibrated_log2_mae` 仍偏高
     - 其它 named controls 也还没一起过门
+
+### 34. `F0 sign` 修到位以后，瓶颈会转移到其它 named controls；这时继续加同类 F0 loss 只会浪费时间
+- 现象：
+  - `24-step` 的 `coarse_f0_state` 已把 `coarse_log_f0` 本体翻成正相关
+  - `48-step` 继续改善了 `F0`
+  - 但 packet 仍：
+    - `f0_ready_count = 0`
+    - `vuv_ready_count <= 1`
+    - `aper_ready_count = 0`
+    - `energy_ready_count = 0`
+    - `all_records_auto_reject = true`
+- 风险：
+  - 很容易因为“F0 终于翻正了”，
+    就继续在同一条 `F0 sign repair` 线上追加：
+    - 更长 horizon
+    - 相关性 loss
+    - nof0corr
+    - 其它小参数化微调
+- 正确处理：
+  - `nof0corr` 和 `teacher_coarse_f0_correlation` 都应正式停线
+  - `coarse_f0_state` 也不再继续叠同层 horizon
+  - 下一步应把问题改写成：
+    - 剩余 named controls 的 contract completion
+    - 重点是 `vuv / aper / energy`
+
+### 35. raw audit 很差，不等于这个 control 在 contract 上完全不可用
+- 现象：
+  - `aper / energy` 的 raw MAE 很差，
+    但 affine-calibrated audit 后明显下降
+  - 当前 best packet 上：
+    - `aper_ready_count = 3`
+    - `energy_ready_count = 2`
+- 风险：
+  - 很容易因为 raw MAE 难看，
+    就误判 `aper / energy` 还必须继续靠训练主线去救
+- 正确处理：
+  - 先区分：
+    - “模型没有信号”
+    - “contract 坐标没对齐”
+  - 当前 `aper / energy` 更接近后者
+  - 所以后续优先级应下调，
+    不再把它们当当前第一主瓶颈
+
+### 36. 当 calibrated audit 已经把瓶颈收紧到 `vuv`，继续做 loss-side completion 仍可能是错层
+- 现象：
+  - mixed `vuv + aper + energy` state loss：
+    - 只把 `energy` 多推进 1 条
+    - 主指标更差
+  - `vuv-only`：
+    - `vuv_ready_count` 没升，
+      反而从 `1` 掉到 `0`
+    - `F0` 还略回退
+- 风险：
+  - 很容易因为“现在终于知道是 vuv 了”，
+    就继续扫：
+    - `teacher_vuv_state` 小权重
+    - `vuv-only / vuv+energy` 组合
+    - 更长 horizon 的同层 loss 试验
+- 正确处理：
+  - 到这里应正式判定：
+    - loss-side `named-control completion` 整条线停线
+  - 下一步不再继续这层小权重，
+    而要转去 `vuv contract / representation / target family`
+
+### 37. `vuv_ready_count` 不变，不等于 `vuv contract` 没有真实进展
+- 现象：
+  - `teacher_e_evt_v1_balanced_vuv_gate_v1` 在 `48-step sample-8` 上，
+    `vuv_ready_count` 仍是 `1/8`
+  - 但同一批记录里：
+    - `vuv_reference_mae` 已经是 `6/8` 改善
+- 风险：
+  - 如果只看 ready_count，
+    很容易把真实的 contract-level 改善误判成“没变化”
+- 正确处理：
+  - `vuv` 这类接近阈值的问题，
+    必须同时看：
+    - readiness count
+    - per-record MAE
+    - wider cheap screen win/loss
+  - 当前应表述为：
+    - `vuv contract` 已出现真实正向
+    - 但还未过 gate
+
+### 38. packet export 的 `semantic_supervision` 元数据当前不会自动反映 loss override 里的 family
+- 现象：
+  - 用 loss override 改了 `named_control_proxy_target_family` 后，
+    training summary / supervision dry-run 会显示新 family
+  - 但 packet export json 仍可能回显 checkpoint 基础 config 的旧 family
+- 风险：
+  - 很容易把 packet metadata 当成最终真相，
+    误判“新 contract 没有参与训练”
+- 正确处理：
+  - 当前阶段应以这些为准：
+    - supervision dry-run
+    - training loop summary
+    - packet 数值结果本身
+  - 不应只凭 packet metadata echo 判断这轮 contract 是否生效
+
+### 39. `F0` supervision 覆盖变窄后，Stage3 loss 变好并不自动意味着 handoff-facing `F0` 更好
+- 现象：
+  - `strong_voiced_gate_v1`
+    会明显压低：
+    - `loss_teacher_coarse_f0_state`
+    - `loss_teacher_f0_state`
+  - 同时 `loss_total` 也可能略优
+- 风险：
+  - 很容易把这解读成：
+    - `F0` 真正变好了
+    - 应该继续扩到更长 horizon
+- 正确处理：
+  - 这种 candidate 必须立刻过 packet cheap screen
+  - 如果：
+    - `f0_proxy_reference_corr`
+    - `f0_calibrated_log2_mae`
+    没有同步改善，
+    就应判定为“只是监督覆盖变窄”，而不是 handoff readiness 真改善

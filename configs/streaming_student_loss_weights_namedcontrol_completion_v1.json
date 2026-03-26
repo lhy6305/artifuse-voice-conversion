@@ -1,0 +1,36 @@
+{
+  "loss_weights": {
+    "teacher_coarse_f0_state": 0.05,
+    "teacher_f0_state": 0.02,
+    "teacher_vuv_state": 0.02,
+    "teacher_aper_state": 0.02,
+    "teacher_energy_state": 0.005
+  },
+  "loss_weight_schedule": {
+    "teacher_coarse_f0_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    },
+    "teacher_f0_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    },
+    "teacher_vuv_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    },
+    "teacher_aper_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    },
+    "teacher_energy_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    }
+  }
+}

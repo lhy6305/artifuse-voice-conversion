@@ -172,6 +172,18 @@ def export_streaming_student_downstream_control_packet(
                 reference_f0_hz=reference_f0_hz,
                 reference_vuv=reference_vuv,
             )
+            aper_calibration = calibrate_scalar_proxy_to_reference(
+                proxy=aper_prob,
+                reference=reference_aper,
+                clamp_min=0.0,
+                clamp_max=1.0,
+            )
+            energy_stage5_norm_calibration = calibrate_scalar_proxy_to_reference(
+                proxy=energy_stage5_norm,
+                reference=reference_energy_stage5_norm,
+                clamp_min=0.0,
+                clamp_max=1.0,
+            )
             packet_ready = bool(event_target_family == "teacher_e_evt_v1" and int(event_probs.shape[-1]) >= 8)
             if packet_ready:
                 packet_ready_count += 1
@@ -206,9 +218,11 @@ def export_streaming_student_downstream_control_packet(
                     "f0_hz_stage5_norm": f0_calibration["f0_hz_stage5_norm"],
                     "vuv_prob": vuv_prob,
                     "aper_prob": aper_prob,
+                    "aper_prob_calibrated": aper_calibration["calibrated"],
                     "energy_log": energy_log,
                     "energy_norm": energy_norm,
                     "energy_stage5_norm": energy_stage5_norm,
+                    "energy_stage5_norm_calibrated": energy_stage5_norm_calibration["calibrated"],
                 },
                 "reference_controls": {
                     "f0_hz": reference_f0_hz,
@@ -224,6 +238,8 @@ def export_streaming_student_downstream_control_packet(
                     "log_f0_correction": log_f0_correction,
                     "frame_mask": frame_mask[:frame_count],
                     "f0_calibration": dict(f0_calibration["summary"]),
+                    "aper_calibration": dict(aper_calibration["summary"]),
+                    "energy_stage5_norm_calibration": dict(energy_stage5_norm_calibration["summary"]),
                 },
                 "conditioning": {
                     "speaker_embedding": conditioning_asset["speaker_embedding"].to(torch.float32),
@@ -236,8 +252,8 @@ def export_streaming_student_downstream_control_packet(
                     "packet_ready_for_named_e_evt_handoff": packet_ready,
                     "e_evt_meta": e_evt_meta,
                     "f0_status": "analysis_only_affine_calibrated_to_target_reference",
-                    "aper_status": "bounded_proxy_with_target_reference_audit",
-                    "energy_status": "log_proxy_with_stage5_norm_and_target_reference_audit",
+                    "aper_status": "analysis_only_affine_calibrated_to_target_reference",
+                    "energy_status": "analysis_only_affine_calibrated_to_target_reference",
                     "r_res_status": "absent_by_design",
                 },
             }
@@ -251,6 +267,10 @@ def export_streaming_student_downstream_control_packet(
                 aper_reference_mae=float((aper_prob - reference_aper).abs().mean().item()),
                 energy_stage5_norm_reference_mae=float(
                     (energy_stage5_norm - reference_energy_stage5_norm).abs().mean().item()
+                ),
+                aper_calibrated_reference_mae=float(aper_calibration["summary"]["calibrated_mae"]),
+                energy_stage5_norm_calibrated_reference_mae=float(
+                    energy_stage5_norm_calibration["summary"]["calibrated_mae"]
                 ),
             )
 
@@ -290,9 +310,13 @@ def export_streaming_student_downstream_control_packet(
                         float((aper_prob - reference_aper).abs().mean().item()),
                         6,
                     ),
+                    "aper_calibrated_reference_mae": aper_calibration["summary"]["calibrated_mae"],
                     "energy_stage5_norm_reference_mae": round(
                         float((energy_stage5_norm - reference_energy_stage5_norm).abs().mean().item()),
                         6,
+                    ),
+                    "energy_stage5_norm_calibrated_reference_mae": (
+                        energy_stage5_norm_calibration["summary"]["calibrated_mae"]
                     ),
                     "named_control_readiness": readiness,
                 }
@@ -319,8 +343,8 @@ def export_streaming_student_downstream_control_packet(
             "hop_length": hop_length,
             "r_res_enabled": bool(config["model"].get("r_res_enabled", False)),
             "f0_status": "analysis_only_affine_calibrated_to_target_reference",
-            "aper_status": "bounded_proxy_with_target_reference_audit",
-            "energy_status": "log_proxy_with_stage5_norm_and_target_reference_audit",
+            "aper_status": "analysis_only_affine_calibrated_to_target_reference",
+            "energy_status": "analysis_only_affine_calibrated_to_target_reference",
         },
         "packet_ready_count": packet_ready_count,
         "named_control_readiness_summary": readiness_summary,
@@ -329,7 +353,7 @@ def export_streaming_student_downstream_control_packet(
             "This export is the first student-side downstream packet candidate, not a Stage5 training result.",
             "Current e_evt is exported only when checkpoint semantic_supervision.event_target_family=teacher_e_evt_v1.",
             "F0 now also exports an analysis-only affine-calibrated Hz view against target-reference acoustic state; this is an audit aid, not yet a deployment-ready control contract.",
-            "aper and energy now export target-reference audit views so packet usefulness can be judged before any new Stage5 adapter is opened.",
+            "aper and energy now also export analysis-only affine-calibrated audit views against target reference; this is an audit aid, not yet a deployment-ready control contract.",
             "named_control_readiness is a negative gate only: it can auto-reject clearly incomplete packets, but it does not prove a successful downstream handoff.",
             "r_res remains intentionally absent on this route.",
         ],
@@ -407,6 +431,8 @@ def assess_named_control_readiness(
     vuv_reference_mae: float,
     aper_reference_mae: float,
     energy_stage5_norm_reference_mae: float,
+    aper_calibrated_reference_mae: float | None = None,
+    energy_stage5_norm_calibrated_reference_mae: float | None = None,
 ) -> dict[str, object]:
     f0_status = "auto_reject_not_ready"
     if bool(packet_ready_for_named_e_evt_handoff):
@@ -423,15 +449,26 @@ def assess_named_control_readiness(
         if bool(packet_ready_for_named_e_evt_handoff) and float(vuv_reference_mae) <= MAX_VUV_REFERENCE_MAE
         else "auto_reject_not_ready"
     )
+    effective_aper_reference_mae = (
+        float(aper_calibrated_reference_mae)
+        if aper_calibrated_reference_mae is not None
+        else float(aper_reference_mae)
+    )
     aper_status = (
         "review_required"
-        if bool(packet_ready_for_named_e_evt_handoff) and float(aper_reference_mae) <= MAX_APER_REFERENCE_MAE
+        if bool(packet_ready_for_named_e_evt_handoff)
+        and effective_aper_reference_mae <= MAX_APER_REFERENCE_MAE
         else "auto_reject_not_ready"
+    )
+    effective_energy_reference_mae = (
+        float(energy_stage5_norm_calibrated_reference_mae)
+        if energy_stage5_norm_calibrated_reference_mae is not None
+        else float(energy_stage5_norm_reference_mae)
     )
     energy_status = (
         "review_required"
         if bool(packet_ready_for_named_e_evt_handoff)
-        and float(energy_stage5_norm_reference_mae) <= MAX_ENERGY_STAGE5_NORM_REFERENCE_MAE
+        and effective_energy_reference_mae <= MAX_ENERGY_STAGE5_NORM_REFERENCE_MAE
         else "auto_reject_not_ready"
     )
     all_core_controls_ready = all(
@@ -570,6 +607,53 @@ def calibrate_f0_log_proxy_to_reference(
     }
 
 
+def calibrate_scalar_proxy_to_reference(
+    *,
+    proxy: torch.Tensor,
+    reference: torch.Tensor,
+    clamp_min: float = 0.0,
+    clamp_max: float = 1.0,
+) -> dict[str, object]:
+    x = proxy.view(-1).to(torch.float32)
+    y = reference.view(-1).to(torch.float32)
+    if int(x.numel()) <= 1 or int(y.numel()) <= 1:
+        calibrated = x.clamp(min=clamp_min, max=clamp_max).unsqueeze(-1)
+        return {
+            "calibrated": calibrated,
+            "summary": {
+                "status": "degenerate_proxy",
+                "proxy_reference_corr": None,
+                "affine_scale": None,
+                "affine_bias": None,
+                "calibrated_mae": round(float((calibrated.squeeze(-1) - y).abs().mean().item()), 6),
+            },
+        }
+    x_centered = x - x.mean()
+    y_centered = y - y.mean()
+    denominator = float((x_centered.pow(2)).sum().item())
+    if denominator <= 1.0e-8:
+        scale = 0.0
+        bias = float(y.mean().item())
+        corr = 0.0
+    else:
+        scale = float((x_centered * y_centered).sum().item() / denominator)
+        bias = float((y.mean() - x.mean() * scale).item())
+        corr = compute_correlation(x, y)
+    scale = max(min(scale, 8.0), -8.0)
+    calibrated = (x * scale + bias).clamp(min=clamp_min, max=clamp_max).unsqueeze(-1)
+    calibrated_mae = float((calibrated.squeeze(-1) - y).abs().mean().item())
+    return {
+        "calibrated": calibrated,
+        "summary": {
+            "status": "ok",
+            "proxy_reference_corr": round(corr, 6),
+            "affine_scale": round(scale, 6),
+            "affine_bias": round(bias, 6),
+            "calibrated_mae": round(calibrated_mae, 6),
+        },
+    }
+
+
 def compute_correlation(x: torch.Tensor, y: torch.Tensor) -> float:
     if int(x.numel()) <= 1 or int(y.numel()) <= 1:
         return 0.0
@@ -631,7 +715,14 @@ def build_markdown(summary: dict[str, object]) -> str:
         lines.append(f"- vuv_reference_mae: {record['vuv_reference_mae']}")
         lines.append(f"- aper_reference_mae: {record['aper_reference_mae']}")
         lines.append(
+            f"- aper_calibrated_reference_mae: {record['aper_calibrated_reference_mae']}"
+        )
+        lines.append(
             f"- energy_stage5_norm_reference_mae: {record['energy_stage5_norm_reference_mae']}"
+        )
+        lines.append(
+            "- energy_stage5_norm_calibrated_reference_mae: "
+            f"{record['energy_stage5_norm_calibrated_reference_mae']}"
         )
         lines.append("")
     lines.extend(["## Notes"])

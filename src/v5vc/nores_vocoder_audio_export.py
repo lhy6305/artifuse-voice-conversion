@@ -41,6 +41,7 @@ def export_offline_mvp_nores_vocoder_audio(
     output_dir: Path,
     checkpoint_path: Path | None,
     checkpoint_selection_path: Path | None,
+    dataset_index_path: Path | None,
     selection_target: str,
     split_name: str,
     sample_count: int,
@@ -80,7 +81,10 @@ def export_offline_mvp_nores_vocoder_audio(
         selection_target=selection_target,
     )
     checkpoint_payload = torch.load(resolved_checkpoint_path, map_location="cpu", weights_only=False)
-    dataset_index_path = Path(str(checkpoint_payload["dataset_index_path"])).resolve()
+    if dataset_index_path is None:
+        dataset_index_path = Path(str(checkpoint_payload["dataset_index_path"])).resolve()
+    else:
+        dataset_index_path = dataset_index_path.resolve()
     dataset_index = json.loads(dataset_index_path.read_text(encoding="utf-8"))
     package_entries = resolve_package_entries(
         dataset_index=dataset_index,
@@ -256,6 +260,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
         },
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
+        "dataset_index_path": dataset_index_path.as_posix(),
         "checkpoint_selection_path": None if selection_summary is None else checkpoint_selection_path.resolve().as_posix(),
         "selection_target": None if selection_summary is None else str(selection_target),
         "selected_checkpoint_summary": selection_summary,

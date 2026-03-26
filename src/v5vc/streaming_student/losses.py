@@ -35,6 +35,7 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_vuv_proxy": 0.15,
         "teacher_aper_proxy": 0.1,
         "teacher_coarse_f0_state": 0.0,
+        "teacher_coarse_f0_temporal": 0.0,
         "teacher_coarse_f0_correlation": 0.0,
         "teacher_f0_state": 0.0,
         "teacher_vuv_state": 0.0,
@@ -95,6 +96,7 @@ def build_default_semantic_supervision_config() -> dict[str, object]:
         "event_target_family": "teacher_e_evt_v1",
         "event_projection_mode": "full_e_evt",
         "named_control_proxy_target_family": "teacher_e_evt_v1",
+        "f0_supervision_mask_family": "hard_voiced_v1",
         "required_contract_version": "target_event_semantic_sidecar_v1",
         "required_timing_contract_version": "target_event_timing_semantic_sidecar_v1",
         "timing_frame_routing_enabled": True,
@@ -161,6 +163,7 @@ def resolve_semantic_supervision_config(
             "event_target_family",
             "event_projection_mode",
             "named_control_proxy_target_family",
+            "f0_supervision_mask_family",
             "required_contract_version",
             "required_timing_contract_version",
         }:
@@ -184,17 +187,59 @@ def resolve_semantic_supervision_config(
     named_control_proxy_target_family = str(
         effective["named_control_proxy_target_family"]
     ).strip().lower()
-    if named_control_proxy_target_family not in {"teacher_e_evt_v1", "deterministic_target_state_v1"}:
+    if named_control_proxy_target_family not in {
+        "teacher_e_evt_v1",
+        "teacher_e_evt_v1_balanced_vuv_gate_v1",
+        "deterministic_target_state_v1",
+    }:
         raise ValueError(
             "Stage3 semantic supervision named_control_proxy_target_family must be one of: "
-            "teacher_e_evt_v1, deterministic_target_state_v1."
+            "teacher_e_evt_v1, teacher_e_evt_v1_balanced_vuv_gate_v1, deterministic_target_state_v1."
         )
     effective["named_control_proxy_target_family"] = named_control_proxy_target_family
+    f0_supervision_mask_family = str(effective["f0_supervision_mask_family"]).strip().lower()
+    if f0_supervision_mask_family not in {"hard_voiced_v1", "strong_voiced_gate_v1"}:
+        raise ValueError(
+            "Stage3 semantic supervision f0_supervision_mask_family must be one of: "
+            "hard_voiced_v1, strong_voiced_gate_v1."
+        )
+    effective["f0_supervision_mask_family"] = f0_supervision_mask_family
     if float(effective["min_multiplier"]) <= 0.0:
         raise ValueError("Stage3 semantic supervision min_multiplier must be > 0.")
     if float(effective["max_multiplier"]) < float(effective["min_multiplier"]):
         raise ValueError("Stage3 semantic supervision max_multiplier must be >= min_multiplier.")
     return effective
+
+
+def resolve_f0_supervision_mask(
+    *,
+    teacher_target_f0_hz: torch.Tensor,
+    teacher_target_vuv: torch.Tensor,
+    frame_weight: torch.Tensor,
+    semantic_supervision: Mapping[str, object],
+) -> dict[str, torch.Tensor | str | float]:
+    mask_family = str(semantic_supervision.get("f0_supervision_mask_family", "hard_voiced_v1")).strip().lower()
+    hard_voiced = (
+        (teacher_target_vuv >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD))
+        & (teacher_target_f0_hz > 0.0)
+    ).to(frame_weight.dtype)
+    if mask_family == "hard_voiced_v1":
+        return {
+            "f0_supervision_mask_family": "hard_voiced_v1",
+            "f0_supervision_mask": hard_voiced,
+            "f0_supervision_active_ratio": float(hard_voiced.mean().item()),
+        }
+    if mask_family == "strong_voiced_gate_v1":
+        strong_voiced = (
+            (teacher_target_vuv >= 0.5)
+            & (teacher_target_f0_hz > 0.0)
+        ).to(frame_weight.dtype)
+        return {
+            "f0_supervision_mask_family": "strong_voiced_gate_v1",
+            "f0_supervision_mask": strong_voiced,
+            "f0_supervision_active_ratio": float(strong_voiced.mean().item()),
+        }
+    raise ValueError(f"Unsupported Stage3 f0_supervision_mask_family resolved at loss time: {mask_family}")
 
 
 def resolve_teacher_event_supervision_targets(
@@ -270,15 +315,21 @@ def resolve_teacher_event_supervision_targets(
 def resolve_named_control_proxy_targets(
     batch: Mapping[str, torch.Tensor | list[str] | list[dict[str, object] | None]],
     semantic_supervision: Mapping[str, object],
-) -> dict[str, torch.Tensor | str]:
+) -> dict[str, torch.Tensor | str | float]:
     named_control_proxy_target_family = str(
         semantic_supervision.get("named_control_proxy_target_family", "teacher_e_evt_v1")
     ).strip().lower()
     teacher_e_evt = batch["teacher_e_evt"]
+    teacher_frame_mask = batch["teacher_frame_mask"]
+    teacher_target_f0_hz = batch["teacher_target_f0_hz"]
     teacher_target_vuv = batch["teacher_target_vuv"]
     teacher_target_aper = batch["teacher_target_aper"]
     if not isinstance(teacher_e_evt, torch.Tensor):
         raise ValueError("Stage3 batch is missing tensor teacher_e_evt.")
+    if not isinstance(teacher_frame_mask, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_frame_mask.")
+    if not isinstance(teacher_target_f0_hz, torch.Tensor):
+        raise ValueError("Stage3 batch is missing tensor teacher_target_f0_hz.")
     if not isinstance(teacher_target_vuv, torch.Tensor):
         raise ValueError("Stage3 batch is missing tensor teacher_target_vuv.")
     if not isinstance(teacher_target_aper, torch.Tensor):
@@ -289,6 +340,36 @@ def resolve_named_control_proxy_targets(
         return {
             "named_control_proxy_target_family": "teacher_e_evt_v1",
             "vuv_target": teacher_e_evt[..., 3:4].clamp(0.0, 1.0),
+            "aper_target": teacher_e_evt[..., 4:5].clamp(0.0, 1.0),
+        }
+    if named_control_proxy_target_family == "teacher_e_evt_v1_balanced_vuv_gate_v1":
+        if int(teacher_e_evt.shape[-1]) < 5:
+            raise ValueError(
+                "teacher_e_evt_v1_balanced_vuv_gate_v1 requires at least 5 dims in teacher_e_evt."
+            )
+        valid_mask = teacher_frame_mask.to(torch.float32).unsqueeze(-1)
+        voiced_gate = (
+            (teacher_target_vuv >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD))
+            & (teacher_target_f0_hz > 0.0)
+        ).to(torch.float32)
+        valid_count = valid_mask.sum(dim=1, keepdim=True).clamp_min(1.0)
+        voiced_count = (voiced_gate * valid_mask).sum(dim=1, keepdim=True)
+        unvoiced_count = ((1.0 - voiced_gate) * valid_mask).sum(dim=1, keepdim=True).clamp_min(1.0)
+        unvoiced_boost = (voiced_count / unvoiced_count).clamp(1.0, 6.0)
+        raw_vuv_frame_weight = torch.where(voiced_gate > 0.5, torch.ones_like(voiced_gate), unvoiced_boost)
+        raw_vuv_frame_weight = torch.where(
+            valid_mask > 0.0,
+            raw_vuv_frame_weight,
+            torch.zeros_like(raw_vuv_frame_weight),
+        )
+        normalized_vuv_frame_weight = raw_vuv_frame_weight / (
+            (raw_vuv_frame_weight * valid_mask).sum(dim=1, keepdim=True) / valid_count
+        ).clamp_min(1.0e-6)
+        return {
+            "named_control_proxy_target_family": "teacher_e_evt_v1_balanced_vuv_gate_v1",
+            "vuv_target": voiced_gate,
+            "vuv_frame_weight": normalized_vuv_frame_weight,
+            "vuv_unvoiced_boost_mean": float(unvoiced_boost.mean().item()),
             "aper_target": teacher_e_evt[..., 4:5].clamp(0.0, 1.0),
         }
     if named_control_proxy_target_family == "deterministic_target_state_v1":
@@ -417,6 +498,7 @@ def compute_streaming_student_teacher_supervision_loss(
     event_channel_weight = event_target_bundle["event_channel_weight"]
     vuv_proxy_target = named_control_proxy_target_bundle["vuv_target"]
     aper_proxy_target = named_control_proxy_target_bundle["aper_target"]
+    vuv_proxy_frame_weight = named_control_proxy_target_bundle.get("vuv_frame_weight")
     if not isinstance(teacher_event_target, torch.Tensor):
         raise ValueError("Resolved Stage3 teacher event target must be a torch Tensor.")
     if not isinstance(teacher_proxy_target, torch.Tensor):
@@ -427,6 +509,8 @@ def compute_streaming_student_teacher_supervision_loss(
         raise ValueError("Resolved Stage3 vuv_proxy_target must be a torch Tensor.")
     if not isinstance(aper_proxy_target, torch.Tensor):
         raise ValueError("Resolved Stage3 aper_proxy_target must be a torch Tensor.")
+    if vuv_proxy_frame_weight is not None and not isinstance(vuv_proxy_frame_weight, torch.Tensor):
+        raise ValueError("Resolved Stage3 vuv_proxy_frame_weight must be a torch Tensor when present.")
     teacher_acoustic = batch["teacher_acoustic"]
     teacher_target_f0_hz = batch["teacher_target_f0_hz"]
     teacher_target_vuv = batch["teacher_target_vuv"]
@@ -452,10 +536,15 @@ def compute_streaming_student_teacher_supervision_loss(
     if not isinstance(teacher_fused_hidden, torch.Tensor):
         raise ValueError("Stage3 batch is missing tensor teacher_fused_hidden.")
 
-    voiced_target_mask = (
-        (teacher_target_vuv >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD))
-        & (teacher_target_f0_hz > 0.0)
-    ).to(frame_weight.dtype)
+    f0_supervision_mask_bundle = resolve_f0_supervision_mask(
+        teacher_target_f0_hz=teacher_target_f0_hz,
+        teacher_target_vuv=teacher_target_vuv,
+        frame_weight=frame_weight,
+        semantic_supervision=semantic_config,
+    )
+    voiced_target_mask = f0_supervision_mask_bundle["f0_supervision_mask"]
+    if not isinstance(voiced_target_mask, torch.Tensor):
+        raise ValueError("Resolved Stage3 f0 supervision mask must be a torch Tensor.")
     predicted_log_f0 = outputs["coarse_log_f0"] + outputs["log_f0_correction"]
     predicted_vuv_logits = outputs["vuv_logits"] + outputs.get(
         "vuv_logit_correction",
@@ -514,7 +603,9 @@ def compute_streaming_student_teacher_supervision_loss(
     vuv_proxy_loss_per_sample = masked_bce_with_logits_per_sample(
         logits=predicted_vuv_logits,
         target=vuv_proxy_target,
-        frame_weight=frame_weight,
+        frame_weight=frame_weight
+        if vuv_proxy_frame_weight is None
+        else frame_weight * vuv_proxy_frame_weight,
     )
     aper_proxy_loss_per_sample = masked_mse_per_sample(
         prediction=outputs["aperiodicity"],
@@ -527,6 +618,11 @@ def compute_streaming_student_teacher_supervision_loss(
         frame_weight=frame_weight * voiced_target_mask,
     )
     coarse_f0_state_loss_per_sample = masked_mse_per_sample(
+        prediction=outputs["coarse_log_f0"],
+        target=target_log_f0,
+        frame_weight=frame_weight * voiced_target_mask,
+    )
+    coarse_f0_temporal_loss_per_sample = masked_temporal_mse_per_sample(
         prediction=outputs["coarse_log_f0"],
         target=target_log_f0,
         frame_weight=frame_weight * voiced_target_mask,
@@ -598,6 +694,7 @@ def compute_streaming_student_teacher_supervision_loss(
     vuv_proxy_loss = reduce_weighted_sample_loss(vuv_proxy_loss_per_sample)
     aper_proxy_loss = reduce_weighted_sample_loss(aper_proxy_loss_per_sample)
     coarse_f0_state_loss = reduce_weighted_sample_loss(coarse_f0_state_loss_per_sample)
+    coarse_f0_temporal_loss = reduce_weighted_sample_loss(coarse_f0_temporal_loss_per_sample)
     coarse_f0_correlation_loss = reduce_weighted_sample_loss(coarse_f0_correlation_loss_per_sample)
     f0_state_loss = reduce_weighted_sample_loss(f0_state_loss_per_sample)
     vuv_state_loss = reduce_weighted_sample_loss(vuv_state_loss_per_sample)
@@ -624,6 +721,7 @@ def compute_streaming_student_teacher_supervision_loss(
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
         + coarse_f0_state_loss * effective_weights["teacher_coarse_f0_state"]
+        + coarse_f0_temporal_loss * effective_weights["teacher_coarse_f0_temporal"]
         + coarse_f0_correlation_loss * effective_weights["teacher_coarse_f0_correlation"]
         + f0_state_loss * effective_weights["teacher_f0_state"]
         + vuv_state_loss * effective_weights["teacher_vuv_state"]
@@ -647,6 +745,7 @@ def compute_streaming_student_teacher_supervision_loss(
         + vuv_proxy_loss * default_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * default_weights["teacher_aper_proxy"]
         + coarse_f0_state_loss * default_weights["teacher_coarse_f0_state"]
+        + coarse_f0_temporal_loss * default_weights["teacher_coarse_f0_temporal"]
         + coarse_f0_correlation_loss * default_weights["teacher_coarse_f0_correlation"]
         + f0_state_loss * default_weights["teacher_f0_state"]
         + vuv_state_loss * default_weights["teacher_vuv_state"]
@@ -670,6 +769,7 @@ def compute_streaming_student_teacher_supervision_loss(
         + vuv_proxy_loss * effective_weights["teacher_vuv_proxy"]
         + aper_proxy_loss * effective_weights["teacher_aper_proxy"]
         + coarse_f0_state_loss * effective_weights["teacher_coarse_f0_state"]
+        + coarse_f0_temporal_loss * effective_weights["teacher_coarse_f0_temporal"]
         + coarse_f0_correlation_loss * effective_weights["teacher_coarse_f0_correlation"]
         + f0_state_loss * effective_weights["teacher_f0_state"]
         + vuv_state_loss * effective_weights["teacher_vuv_state"]
@@ -702,6 +802,7 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_teacher_vuv_proxy": round(float(vuv_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_aper_proxy": round(float(aper_proxy_loss.detach().cpu().item()), 6),
         "loss_teacher_coarse_f0_state": round(float(coarse_f0_state_loss.detach().cpu().item()), 6),
+        "loss_teacher_coarse_f0_temporal": round(float(coarse_f0_temporal_loss.detach().cpu().item()), 6),
         "loss_teacher_coarse_f0_correlation": round(
             float(coarse_f0_correlation_loss.detach().cpu().item()),
             6,
@@ -737,6 +838,17 @@ def compute_streaming_student_teacher_supervision_loss(
         ),
         "teacher_named_control_proxy_target_family": str(
             named_control_proxy_target_bundle["named_control_proxy_target_family"]
+        ),
+        "teacher_vuv_proxy_unvoiced_boost_mean": round(
+            float(named_control_proxy_target_bundle.get("vuv_unvoiced_boost_mean", 1.0)),
+            6,
+        ),
+        "teacher_f0_supervision_mask_family": str(
+            f0_supervision_mask_bundle["f0_supervision_mask_family"]
+        ),
+        "teacher_f0_supervision_active_ratio": round(
+            float(f0_supervision_mask_bundle.get("f0_supervision_active_ratio", 0.0)),
+            6,
         ),
     }
     metrics.update(semantic_metrics)

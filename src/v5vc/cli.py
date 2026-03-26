@@ -109,6 +109,7 @@ from v5vc.streaming_student import (
     run_streaming_student_training_step,
     select_streaming_student_best_checkpoint,
 )
+from v5vc.streaming_student.stage5_handoff import build_streaming_student_stage5_dataset_packages
 from v5vc.target_special_supervision import analyze_round1_target_special_supervision
 from v5vc.target_format_recovery import recover_round1_target_formats
 from v5vc.train_entry import prepare_offline_mvp_training
@@ -3224,9 +3225,68 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional Stage5 checkpoint-selection json used to resolve the export checkpoint.",
     )
     nores_vocoder_audio_export_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        default=None,
+        help="Optional dataset index override. When omitted, the export uses the dataset index recorded inside the checkpoint payload.",
+    )
+    nores_vocoder_audio_export_parser.add_argument(
         "--selection-target",
         default="stable_late_stop",
         help="Checkpoint role to export from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    student_stage5_dataset_parser = subparsers.add_parser(
+        "build-streaming-student-stage5-dataset-packages",
+        help="Adapt exported Stage3 student_control_packet records into minimal Stage5 packages for fail-fast decoded.wav export.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--packet-export",
+        type=Path,
+        required=True,
+        help="streaming_student_downstream_control_packet.json produced by the Stage3 packet exporter.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/streaming_student_stage5_dataset_packages"),
+        help="Directory for scaffold/package artifacts and the synthetic dataset index.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Synthetic split name to write into the dataset index: validation or train.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=3,
+        help="How many packet records to adapt when --target-record-ids is omitted.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit record ids to adapt from the packet export.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--semantic-consumer-mode",
+        default="none",
+        help="How Stage5 semantic sidecar features are consumed inside each synthetic package. Keep none for the minimal route.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--target-contract-mode",
+        default=DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
+        help="How package gate targets are built inside each synthetic Stage5 package.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--noise-event-family",
+        default="e_evt",
+        help="Which Stage3 packet family populates the Stage5 noise-branch first 8 dims: e_evt or legacy_event_probs.",
+    )
+    student_stage5_dataset_parser.add_argument(
+        "--skip-existing",
+        action="store_true",
+        help="Reuse existing scaffold/package artifacts when the synthetic package already exists.",
     )
     nores_vocoder_audio_export_parser.add_argument(
         "--split-name",
@@ -5033,6 +5093,7 @@ def main(argv: list[str] | None = None) -> int:
             output_dir=args.output_dir,
             checkpoint_path=args.checkpoint,
             checkpoint_selection_path=args.checkpoint_selection,
+            dataset_index_path=args.dataset_index,
             selection_target=args.selection_target,
             split_name=args.split_name,
             sample_count=args.sample_count,
@@ -5051,6 +5112,19 @@ def main(argv: list[str] | None = None) -> int:
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+        )
+        return 0
+    if args.command == "build-streaming-student-stage5-dataset-packages":
+        build_streaming_student_stage5_dataset_packages(
+            packet_export_path=args.packet_export,
+            output_dir=args.output_dir,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            semantic_consumer_mode=args.semantic_consumer_mode,
+            target_contract_mode=args.target_contract_mode,
+            noise_event_family=args.noise_event_family,
+            skip_existing=args.skip_existing,
         )
         return 0
     if args.command == "analyze-stage5-nores-speech-emergence":
