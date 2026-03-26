@@ -100,6 +100,7 @@ class StudentControlHeads(nn.Module):
         f0_correction_enabled: bool,
         aper_correction_enabled: bool,
         detach_frontend_named_controls_for_student: bool,
+        detach_shared_hidden_for_student: bool,
     ) -> None:
         super().__init__()
         self.r_res_enabled = r_res_enabled
@@ -108,6 +109,7 @@ class StudentControlHeads(nn.Module):
         self.detach_frontend_named_controls_for_student = bool(
             detach_frontend_named_controls_for_student
         )
+        self.detach_shared_hidden_for_student = bool(detach_shared_hidden_for_student)
         self.condition_proj = nn.Sequential(
             nn.Linear(speaker_embed_dim + geom_embed_dim, conditioning_dim),
             nn.GELU(),
@@ -139,6 +141,9 @@ class StudentControlHeads(nn.Module):
         geom_embedding: torch.Tensor,
     ) -> dict[str, torch.Tensor]:
         shared_hidden = frontend_outputs["shared_hidden"]
+        shared_hidden_for_student = (
+            shared_hidden.detach() if self.detach_shared_hidden_for_student else shared_hidden
+        )
         batch_size, frame_count, _ = shared_hidden.shape
         conditioning = self.condition_proj(torch.cat([speaker_embedding, geom_embedding], dim=-1))
         conditioning = conditioning.unsqueeze(1).expand(batch_size, frame_count, conditioning.shape[-1])
@@ -160,7 +165,7 @@ class StudentControlHeads(nn.Module):
             ],
             dim=-1,
         )
-        student_input = torch.cat([shared_hidden, conditioning, frontend_controls], dim=-1)
+        student_input = torch.cat([shared_hidden_for_student, conditioning, frontend_controls], dim=-1)
         student_hidden = self.student_encoder(self.student_norm(self.student_input_proj(student_input)))
         event_logits = self.event_head(student_hidden)
         outputs = {
@@ -210,6 +215,7 @@ class StreamingStudentScaffold(nn.Module):
         aper_correction_enabled: bool,
         timing_aux_enabled: bool = False,
         detach_frontend_named_controls_for_student: bool = False,
+        detach_shared_hidden_for_student: bool = False,
     ) -> None:
         super().__init__()
         self.frontend = UnifiedStreamingFrontend(
@@ -238,6 +244,7 @@ class StreamingStudentScaffold(nn.Module):
             f0_correction_enabled=f0_correction_enabled,
             aper_correction_enabled=aper_correction_enabled,
             detach_frontend_named_controls_for_student=detach_frontend_named_controls_for_student,
+            detach_shared_hidden_for_student=detach_shared_hidden_for_student,
         )
 
     def forward(

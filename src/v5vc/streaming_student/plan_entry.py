@@ -266,6 +266,9 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
         detach_frontend_named_controls_for_student=bool(
             model_config.get("detach_frontend_named_controls_for_student", False)
         ),
+        detach_shared_hidden_for_student=bool(
+            model_config.get("detach_shared_hidden_for_student", False)
+        ),
     )
 
 
@@ -283,6 +286,9 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
             "event_prior_logits": {"feature_dim": int(model_config["event_prior_dim"])},
             "detach_frontend_named_controls_for_student": bool(
                 model_config.get("detach_frontend_named_controls_for_student", False)
+            ),
+            "detach_shared_hidden_for_student": bool(
+                model_config.get("detach_shared_hidden_for_student", False)
             ),
             "timing_pause_boundary_logits": {
                 "feature_dim": 1 if bool(model_config.get("timing_aux_enabled", False)) else 0

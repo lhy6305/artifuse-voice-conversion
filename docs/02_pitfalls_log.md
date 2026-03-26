@@ -272,3 +272,20 @@
     - `all_records_auto_reject = true`
   - 因此不能因为新的 generation-side bridge 成功，
     就提前开新的 Stage5 route
+
+### 23. 不能把 `proxy target family` 替换或轻量 `detach` 当作足以完成 named-control handoff 的修复
+- 现象：
+  - 本轮已验证三条线：
+    - `named_control_proxy_target_family = deterministic_target_state_v1`
+    - `detach_frontend_named_controls_for_student`
+    - `detach_shared_hidden_for_student`
+- 风险：
+  - 很容易把这种“看起来结构更干净”的局部改动误判成接近解法，
+    继续在同一层扫更多小开关
+- 正确处理：
+  - 这三条都没有打开 readiness gate
+  - 下一步应上到更明确的 `frontend/control branch split`
+  - 而不是继续在：
+    - proxy target family
+    - 轻量梯度 stop
+    这些同层小变体上消耗预算

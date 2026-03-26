@@ -31,7 +31,7 @@
     "f0_correction_enabled": true,
     "aper_correction_enabled": true,
     "detach_frontend_named_controls_for_student": false,
-    "detach_shared_hidden_for_student": false
+    "detach_shared_hidden_for_student": true
   },
   "training": {
     "mode": "streaming_student_stage",

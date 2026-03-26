@@ -169,6 +169,14 @@
     继续做更结构化的 `target-state / named-control generation-side completion`
   - 并以 `named-control readiness negative gate` 作为新的下游前置门禁
   - 尤其避免把“packet 可导出”或“local state MAE 下降”误判成“已经值得开新 Stage5 route”
+14. 本轮又新增了一层更硬的负结论：
+  - `docs/377_stage3_named_control_handoff_ablation_fail_report.md`
+  - 当前已证伪：
+    - `named_control_proxy_target_family = deterministic_target_state_v1`
+    - `detach_frontend_named_controls_for_student`
+    - `detach_shared_hidden_for_student`
+  - 所以下一步不再扫这些轻量开关，而是上到更明确的
+    `frontend/control branch split`
 
 ## 关键参考报告
 - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
@@ -186,6 +194,7 @@
 - `docs/374_stage3_student_control_packet_readiness_gate_report.md`
 - `docs/375_stage3_teacher_label_target_state_contract_completion_report.md`
 - `docs/376_stage3_teacher_eevt_directional_targetstate_bridge_ab_and_readiness_report.md`
+- `docs/377_stage3_named_control_handoff_ablation_fail_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。
