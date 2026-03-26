@@ -42,6 +42,16 @@ from v5vc.offline_vocoder_training import (
     reconstruct_waveform_from_frames,
 )
 from v5vc.stage5_low_activity_probe import compute_waveform_spectral_summary
+from v5vc.stage5_speech_emergence_probe import (
+    compute_pearson_correlation,
+    frame_waveform_sequence,
+    summarize_frame_sequence_metrics,
+)
+from v5vc.stage5_waveform_handoff_probe import (
+    HANDOFF_DECODE_ROUTES,
+    build_handoff_stage_aggregates,
+    summarize_handoff_stage_metrics,
+)
 from v5vc.streaming_student.teacher_labels import resolve_teacher_source
 from v5vc.target_format_recovery import write_waveform_int16
 from v5vc.train_entry import instantiate_offline_mvp_model
