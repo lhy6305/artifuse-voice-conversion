@@ -677,3 +677,63 @@
     就应直接停整条同分支小修线
   - 后续先回到修正后的 baseline probe，
     再选更保守、且不重复历史死线的 teacher-side 候选
+### 46. probe 里看起来强的 `active_template + zero-target flux-jitter` 组合，也不能直接外推成 native teacher fullsplit 上值得继续扩的 objective 线
+- 现象：
+  - waveform-objective-collapse probe 里，
+    `active_template + zero-target flux-jitter`
+    在 probe ranking 上是强信号
+  - 但 native teacher fullsplit24 候选
+    `acttmpl005 + zero_target_flux_jitter=4.0`
+    在真实 `decoded.wav` 上仍然：
+    - `3/3 auto_reject_obvious_buzz`
+    - 且相对 corrected baseline 明显更差
+- 风险：
+  - 很容易因为它比 `acttmpl005_delta6` 更“保守”，
+    就继续扫：
+    - `zerojitter=1/2/4`
+    - `acttmpl + zerojitter`
+      的同族小权重
+- 正确处理：
+  - 当前不再继续这组 waveform frame objective 族
+  - 应把问题上收到更结构化的 forward-path / fusion 层
+
+### 47. `fusion -> fused_hidden` 确实是有信息量的病灶层，但弱 `fused_hidden template/delta` penalty 仍不足以把 native teacher 拉出 buzz 假解
+- 现象：
+  - decoder-structure probe 明确显示：
+    - 更大的 collapse 已发生在 `fusion -> fused_hidden`
+  - 但 native teacher fullsplit24 候选
+    `fused_hidden_template=0.05 + fused_hidden_delta=2.0`
+    在真实 `decoded.wav` 上仍然：
+    - `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline 仍更差
+- 风险：
+  - 很容易把“病灶定位对了”误读成“只差再扫一点 template/delta 小权重”
+- 正确处理：
+  - 停止：
+    - `fused_hidden_template`
+    - `fused_hidden_delta`
+      同族小权重 sweep
+  - 下一步应升级到更直接的
+    `forward-path structural`
+    native teacher 候选
+### 48. 即使 probe 显示 `branch_mean` 方向最有反应，轻量 `decoder_branch_mean_mix_alpha` 也不等于足够强的结构改路
+- 现象：
+  - decoder-structure probe 里，
+    `fused_hidden_from_branch_mean`
+    是影响最大的变体之一
+  - 但 native teacher fullsplit24 候选
+    `decoder_branch_mean_mix_alpha = 0.25`
+    在真实 `decoded.wav` 上仍然：
+    - `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline 仍更差
+- 风险：
+  - 很容易把“方向上有响应”误读成
+    “只要再扫 `alpha=0.1/0.2/0.3` 就会成”
+- 正确处理：
+  - 停止：
+    - `decoder_branch_mean_mix_alpha`
+      小范围 sweep
+    - 同级别轻量 operating-point mix
+  - 下一步应继续升级到更强的
+    `fusion / branch-conditioned decoder`
+    结构候选

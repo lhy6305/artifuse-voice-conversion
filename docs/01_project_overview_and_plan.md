@@ -384,6 +384,43 @@
       同分支上的 local RMS floor / high-band / 小权重补丁
   - 下一步应先回到修正后的 native teacher baseline probes，
     再选择更保守的 teacher-side 候选
+33. probe 指向的 `acttmpl005 + zero_target_flux_jitter=4.0`
+    也已完成 native teacher fullsplit24 fail-fast：
+  - `docs/396_stage5_native_teacher_acttmpl005_zerojitter4_fail_fast_report.md`
+  - 当前结论是：
+    - 新增 loss 已真实接通，并通过 1-step smoke
+    - 但真实 `decoded.wav` 仍然 `3/3 auto_reject_obvious_buzz`
+    - 而且相对 corrected native baseline 明显更差
+  - 因此当前不再继续：
+    - `zero_target_flux_jitter`
+    - `active_template + zero_target_flux_jitter`
+      同族小权重或同族 objective 变体
+34. 指向 `fusion -> fused_hidden` 的弱正则候选
+    `fused_hidden_template=0.05 + fused_hidden_delta=2.0`
+    也已完成 native teacher fullsplit24 fail-fast：
+  - `docs/397_stage5_native_teacher_fusedhidden_t005_d2_fail_fast_report.md`
+  - 当前结论是：
+    - 它比 `acttmpl005 + zerojitter4` 更接近 baseline，
+      但仍然 `3/3 auto_reject_obvious_buzz`
+    - 因此也不值得继续扩成同族小权重 sweep
+  - 当前下一步应升级为：
+    - 更直接的 `forward-path structural` native teacher 候选
+    - 而不是继续叠弱 `objective-side` 或弱 `fused_hidden` penalty
+35. 更直接的 `forward-path structural` 轻量候选
+    `decoder_branch_mean_mix_alpha=0.25`
+    也已完成 native teacher fullsplit24 fail-fast：
+  - `docs/398_stage5_native_teacher_branchmix025_fail_fast_report.md`
+  - 当前结论是：
+    - 它与 `fused_hidden_t005_d2` 大致同量级，
+      虽好于 `zerojitter4`，
+      但真实 `decoded.wav` 仍然 `3/3 auto_reject_obvious_buzz`
+    - 因此当前不再继续：
+      - `decoder_branch_mean_mix_alpha`
+        小范围 sweep
+      - 同级别轻量 operating-point mix 变体
+  - 当前下一步应继续上收到：
+    - 更强的 `forward-path structural` native teacher 候选
+    - 例如真正改变 fusion / branch-conditioned decoder 形态
 
 ## 关键参考报告
 - `docs/355_post_buzz_fail_main_scheme_reevaluation_and_v2core_gap_report.md`
@@ -420,6 +457,9 @@
 - `docs/393_stage5_export_semantics_correction_scope_and_rerun_requirements.md`
 - `docs/394_stage5_export_semantics_rerun_confirmation_report.md`
 - `docs/395_stage5_native_teacher_recurrent_temporal_periodicrmsfloor005_fail_fast_report.md`
+- `docs/396_stage5_native_teacher_acttmpl005_zerojitter4_fail_fast_report.md`
+- `docs/397_stage5_native_teacher_fusedhidden_t005_d2_fail_fast_report.md`
+- `docs/398_stage5_native_teacher_branchmix025_fail_fast_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。
