@@ -466,6 +466,8 @@
 - `docs/402_stage5_native_teacher_gatemasked_spectral_target_fail_fast_report.md`
 - `docs/403_stage5_native_teacher_activitygate00_nogatedrecon_fail_fast_report.md`
 - `docs/404_stage5_dataset_split_builder_processpool_takeover_report.md`
+- `docs/405_stage5_native_teacher_aperenergyonly_target_contract_fail_fast_report.md`
+- `docs/406_stage5_native_teacher_eevttargetcontract_target_contract_fail_fast_report.md`
 
 ## 维护规则
 - 新实验细节默认写入独立编号报告，不再整段追加到本文档。
@@ -556,3 +558,88 @@
   - 但当前只完成了 `1 train + 1 validation`
     的最小真 smoke，
     尚未完成 full-split 吞吐实测
+44. 更保守的 `target_contract_mode = v2core_aper_energy_only_v1`
+  也已完成 fullsplit24 fail-fast：
+  - `docs/405_stage5_native_teacher_aperenergyonly_target_contract_fail_fast_report.md`
+  - 当前结论是：
+    - full-split package、24-step training、checkpoint selection、validation3 real decoded
+      都已跑通
+    - 真实 `decoded.wav`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline，
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      都明显更差
+  - 因而当前不再值得继续扫：
+    - `target_contract_mode`
+      现有这几条 gate 公式变体
+    - `aper / energy / event_presence`
+      的简单加减法式 contract 改写
+  - 下一步必须继续上收到：
+    - noise/periodic target family
+    - objective meaning
+    - template-collapse 的更根本诱因
+45. 显式 `target_contract_mode = teacher_e_evt_gate_targets_v1`
+  也已完成 corrected native-teacher fullsplit24 fail-fast：
+  - `docs/406_stage5_native_teacher_eevttargetcontract_target_contract_fail_fast_report.md`
+  - 当前结论是：
+    - full-split package、24-step training、checkpoint selection、validation3 real decoded
+      都已跑通
+    - 真实 `decoded.wav`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline，
+      三条样本的
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      仍明显更差
+  - 因而当前 `target_contract_mode`
+    家族已在 native-teacher corrected 主线上完成封口：
+    - `legacy_proxy`
+    - `v2core_aper_energy_only_v1`
+    - `teacher_e_evt_gate_targets_v1`
+  - 下一步若继续留在这条主线，
+    只能继续上收到：
+    - 更根本的 noise/periodic target family
+    - objective meaning
+    - template-collapse 的诱因定位
+46. 更显式的 package-level `spectral_target_mode = f0_harmonicity_split_v1`
+  也已完成 corrected native-teacher fullsplit24 fail-fast：
+  - `docs/407_stage5_native_teacher_f0harmonicity_spectral_target_fail_fast_report.md`
+  - 当前结论是：
+    - full-split package、24-step training、checkpoint selection、validation3 real decoded
+      都已跑通
+    - `spectral_target_contract`
+      已真实切换到
+      `harmonic_bins_from_f0_hz_and_vuv`
+      / `spectral_complement_of_harmonic_mask`
+    - 真实 `decoded.wav`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对 corrected baseline，
+      三条样本的
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      仍全面更差
+  - 因而当前不再继续：
+    - `spectral_target_mode`
+      的 package-level target family 微扫
+    - 把 `F0 / vuv`
+      显式编码进 harmonic/noise spectral target
+      的近邻变体
+47. 对这条 `f0_harmonicity` 线路补做 objective-collapse probe 后，
+  当前口径还要再收紧一层：
+  - `docs/408_stage5_native_teacher_f0harmonicity_objective_collapse_probe_report.md`
+  - 当前结论是：
+    - baseline decode route
+      `mean_weighted_wave_objective = 0.240339`
+    - 两个 fixed-template oracle
+      仍显著更低：
+      - `0.141467`
+      - `0.147455`
+    - `active_template + delta`
+      在这条更差 target family 上
+      也只做到 `20 / 24`
+      而不是先前 probe 里的完整压制
+  - 因而当前默认下一步不再是继续扫
+    Stage5 package target/contract family，
+    而应转去：
+    - corrected baseline 主线上的 objective meaning
+    - template-collapse 的更根本诱因定位
+    - 以及为什么 fixed-template counterexample
+      仍能稳定压过 baseline objective

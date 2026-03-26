@@ -2883,7 +2883,7 @@ def build_parser() -> argparse.ArgumentParser:
         default=DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
         help=(
             "How Stage5 harmonic/noise spectral targets are built inside each package: "
-            "legacy_halfsplit or gate_masked_halfsplit_v1."
+            "legacy_halfsplit, gate_masked_halfsplit_v1, or f0_harmonicity_split_v1."
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(

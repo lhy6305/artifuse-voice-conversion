@@ -843,3 +843,140 @@
       是否写回 `worker_processes`
   - 在产物里看到这些证据之前，
     不能把它写成“并行路径已完成”。
+
+### 52. 不能把“把 noise gate 收窄成纯 `aper * E`”想当然地当作更干净、更安全的 native teacher contract
+- 现象：
+  - `target_contract_mode = v2core_aper_energy_only_v1`
+    已完成 full-split package、fullsplit24 training、checkpoint selection、validation3 real decoded 全链路
+  - 真实结果仍然是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 且相对 corrected baseline，
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      全面更差
+- 风险：
+  - 很容易因为它“看起来更保守、更物理”，
+    就继续围绕：
+    - `aper`
+    - `energy`
+    - `event_presence_proxy`
+      的加减法小修
+  - 把这类同层 gate 公式改写误当成当前 Stage5 主解法
+- 正确处理：
+  - 当前应把这条解释降级：
+    - native teacher 的主故障
+      不是只要把 noise gate 改成纯 `aper * E` 就会自然变好
+  - 后续不再继续：
+    - `v2core_aper_energy_only_v1` 同层扩展
+    - `aper / energy / event_presence`
+      的简单门公式微扫
+  - 应继续上收到：
+    - 更根本的 noise/periodic target family
+    - objective meaning
+    - template-collapse 的诱因定位
+
+### 53. 不能把“把 Stage5 gate supervision 显式换成 `e_evt` 公式”想当然地当作当前 native teacher buzz 的主解法
+- 现象：
+  - `target_contract_mode = teacher_e_evt_gate_targets_v1`
+    已在 corrected native-teacher fullsplit24 主线上完成：
+    - full-split package
+    - 24-step training
+    - checkpoint selection
+    - validation3 real decoded
+  - 真实结果仍然是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 且相对 corrected baseline，
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      全面更差
+- 风险：
+  - 很容易因为它“终于显式用了 `e_evt`”，
+    就继续围绕：
+    - `p_voicing`
+    - `p_frication`
+    - `p_stop_closure`
+    - `p_burst`
+    - `pause / terminal boundary`
+    的 gate 公式做同层微扫
+  - 把 supervision-side `e_evt gate target`
+    误判成当前 Stage5 主突破口
+- 正确处理：
+  - 当前应把这条解释降级：
+    - native teacher 的主故障
+      不是只要把 gate supervision 显式改写成 `e_evt` 公式就会自然变好
+  - 后续不再继续：
+    - `teacher_e_evt_gate_targets_v1` 同层扩展
+    - 现有 `target_contract_mode`
+      家族里的语义 gate 公式微扫
+  - 应继续上收到：
+    - 更根本的 noise/periodic target family
+    - objective meaning
+    - template-collapse 的诱因定位
+
+### 54. 不能把“按 `F0 / vuv` 显式构造 harmonic/noise spectral target”想当然地当作当前 native teacher 的更正确 target family
+- 现象：
+  - `spectral_target_mode = f0_harmonicity_split_v1`
+    已完成 corrected native-teacher fullsplit24 主线的：
+    - full-split package
+    - 24-step training
+    - checkpoint selection
+    - validation3 real decoded
+  - 单包 `spectral_target_contract`
+    已真实切换到：
+    - `harmonic_mask_formula = harmonic_bins_from_f0_hz_and_vuv`
+    - `noise_mask_formula = spectral_complement_of_harmonic_mask`
+  - 真实结果仍然是：
+    - `3/3 auto_reject_obvious_buzz`
+    - 且相对 corrected baseline，
+      `loss_total / spectral_centroid_gap_hz / spectral_high_band_energy_ratio_gap`
+      全面更差
+- 风险：
+  - 很容易因为它“更像谐波结构、更像设计态”，
+    就继续围绕：
+    - `F0`
+    - `vuv`
+    - harmonic mask 宽度
+    - harmonic/noise spectral complement
+    做 package-level target family 微扫
+- 正确处理：
+  - 当前应把这条解释降级：
+    - native teacher 的主故障
+      不是只要把 half-split 换成 `F0 / vuv`
+      驱动的 spectral target family 就会自然变好
+  - 后续不再继续：
+    - `f0_harmonicity_split_v1` 同层扩展
+    - `spectral_target_mode`
+      的近邻 package-level 变体
+  - 应继续上收到：
+    - objective meaning
+    - template-collapse 的诱因定位
+
+### 55. 不能在已经更差的 package target family 上继续叠 objective-side penalty，误把它当作主线
+- 现象：
+  - 对 `f0_harmonicity_split_v1`
+    补做 waveform-objective collapse probe 后，
+    baseline decode route 的
+    `mean_weighted_wave_objective = 0.240339`
+    仍显著输给：
+    - `oracle_active_frame_target_rms = 0.141467`
+    - `oracle_sine_target_rms = 0.147455`
+  - 同时：
+    - `active_template + delta`
+      在这条线上最好也只做到
+      `20 / 24`
+    - 没有回到先前 corrected baseline probe
+      那种更强的压制形态
+- 风险：
+  - 很容易因为“objective 还没修好”，
+    就继续在一个已经更差的 target family 上：
+    - 叠更多 waveform/frame penalty
+    - 反复开 fullsplit24
+    - 把 package target family
+      和 objective root cause
+      混在一起做
+- 正确处理：
+  - objective-side 根因分析
+    应回到 corrected baseline 主线来做，
+    不应默认继续在更差 target family 上叠 penalty
+  - 当前新的默认顺序应是：
+    - 先停止 Stage5 package target/contract family 微扫
+    - 再在 corrected baseline 主线上做
+      objective meaning / collapse 诱因定位

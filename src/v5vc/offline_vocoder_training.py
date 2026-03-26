@@ -35,6 +35,7 @@ from v5vc.offline_teacher_vocoder_input_scaffold import (
     normalize_energy_log_rms_for_stage5,
 )
 from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
+from v5vc.source_acoustic_state_extraction import DEFAULT_VUV_VOICED_FRAME_THRESHOLD
 
 DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE = "pre_overlap_add"
 DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD = 0.02
@@ -67,6 +68,7 @@ SUPPORTED_STAGE5_TARGET_CONTRACT_MODES = {
 SUPPORTED_STAGE5_SPECTRAL_TARGET_MODES = {
     DEFAULT_STAGE5_SPECTRAL_TARGET_MODE,
     "gate_masked_halfsplit_v1",
+    "f0_harmonicity_split_v1",
 }
 STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES = [
     "clean_text_available",
@@ -191,10 +193,13 @@ def build_offline_mvp_nores_vocoder_training_package(
     )
     harmonic_target, noise_target, spectrogram_stats = build_branch_spectral_targets(
         waveform=aligned_waveform,
+        sample_rate=resolved_sample_rate,
         frame_length=resolved_frame_length,
         hop_length=resolved_hop_length,
         harmonic_bins=int(harmonic_bins),
         noise_bins=int(noise_bins),
+        spectral_target_mode=resolved_spectral_target_mode,
+        available_controls=available_controls,
     )
 
     voiced_proxy = available_controls["voiced_proxy"].to(torch.float32)
@@ -303,6 +308,7 @@ def build_offline_mvp_nores_vocoder_training_package(
         noise_gate_target=noise_gate_target,
         spectral_target_mode=resolved_spectral_target_mode,
     )
+    spectrogram_stats["spectral_target_mode"] = str(resolved_spectral_target_mode)
     target_semantic_overview = build_record_semantic_overview(
         {
             "target_event_semantic_sidecar": (
@@ -1247,7 +1253,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
             "When available, paired_parallel_source_semantic_parity_sidecar is attached by source_record_id and summarized in package/index metadata.",
             "semantic_consumer_mode controls whether target-side semantic sidecar remains metadata only or is broadcast into Stage5 branch features as a forward-path consumer.",
             "target_contract_mode controls how Stage5 periodic_gate_target / noise_gate_target are built inside each package; this is the supervision-side contract, not another input-side semantic consumer.",
-            "spectral_target_mode controls whether harmonic/noise spectral targets stay as a raw half-split STFT proxy or are additionally masked by the selected gate targets.",
+            "spectral_target_mode controls whether harmonic/noise spectral targets use the legacy raw half-split STFT proxy, an explicit f0-harmonicity split, or an additional gate-masked half-split variant.",
             "teacher_e_evt_bridge_mode controls how the first 5 explicit e_evt acoustic dims are bridged before entering the Stage5 downstream/scaffold route.",
             "teacher_e_evt_target_shaping_mode controls how explicit e_evt boundary/final-clause labels are rasterized before entering the Stage5 downstream/scaffold route.",
             "worker_processes=1 keeps the original serial split builder; worker_processes>1 switches split package export to ProcessPoolExecutor and logs progress from the main process by future completion count.",
@@ -3141,11 +3147,15 @@ def align_waveform_to_teacher_frames(
 
 def build_branch_spectral_targets(
     waveform: torch.Tensor,
+    sample_rate: int,
     frame_length: int,
     hop_length: int,
     harmonic_bins: int,
     noise_bins: int,
+    spectral_target_mode: str,
+    available_controls: dict[str, object],
 ) -> tuple[torch.Tensor, torch.Tensor, dict[str, float]]:
+    resolved_mode = normalize_stage5_spectral_target_mode(spectral_target_mode)
     window = torch.hann_window(frame_length, dtype=waveform.dtype)
     spectrogram = torch.stft(
         waveform,
@@ -3158,6 +3168,49 @@ def build_branch_spectral_targets(
     )
     log_magnitude = torch.log1p(spectrogram.abs()).transpose(0, 1).contiguous()
     freq_bins = int(log_magnitude.shape[-1])
+    if resolved_mode == "f0_harmonicity_split_v1":
+        harmonic_mask, mask_summary = build_f0_harmonicity_spectral_masks(
+            f0_hz=expect_stage5_control_tensor(
+                controls=available_controls,
+                key="f0_hz",
+                frame_count=int(log_magnitude.shape[0]),
+                mode=resolved_mode,
+            ),
+            vuv=expect_stage5_control_tensor(
+                controls=available_controls,
+                key="vuv",
+                frame_count=int(log_magnitude.shape[0]),
+                mode=resolved_mode,
+            ),
+            frame_length=int(frame_length),
+            sample_rate=int(sample_rate),
+            freq_bins=freq_bins,
+        )
+        noise_mask = (1.0 - harmonic_mask).clamp(0.0, 1.0)
+        harmonic_target = masked_adaptive_avg_pool1d(
+            values=log_magnitude,
+            mask=harmonic_mask,
+            output_bins=int(harmonic_bins),
+        )
+        noise_target = masked_adaptive_avg_pool1d(
+            values=log_magnitude,
+            mask=noise_mask,
+            output_bins=int(noise_bins),
+        )
+        stats = {
+            "stft_freq_bins": freq_bins,
+            "harmonic_source_bins": int(freq_bins),
+            "noise_source_bins": int(freq_bins),
+            "harmonic_target_mean": round(float(harmonic_target.mean().item()), 6),
+            "noise_target_mean": round(float(noise_target.mean().item()), 6),
+            "harmonic_mask_mean": round(float(harmonic_mask.mean().item()), 6),
+            "noise_mask_mean": round(float(noise_mask.mean().item()), 6),
+            "harmonic_mask_voiced_frame_mean": float(mask_summary["harmonic_mask_voiced_frame_mean"]),
+            "voiced_frame_ratio_for_masking": float(mask_summary["voiced_frame_ratio_for_masking"]),
+            "target_family_formula": "f0_harmonicity_mask_from_v2core_controls",
+        }
+        return harmonic_target, noise_target, stats
+
     split_bin = max(2, min(freq_bins - 1, freq_bins // 2))
     harmonic_source = log_magnitude[:, :split_bin]
     noise_source = log_magnitude[:, split_bin:]
@@ -3172,8 +3225,94 @@ def build_branch_spectral_targets(
         "noise_source_bins": int(noise_source.shape[-1]),
         "harmonic_target_mean": round(float(harmonic_target.mean().item()), 6),
         "noise_target_mean": round(float(noise_target.mean().item()), 6),
+        "target_family_formula": "legacy_freq_halfsplit",
     }
     return harmonic_target, noise_target, stats
+
+
+def expect_stage5_control_tensor(
+    *,
+    controls: dict[str, object],
+    key: str,
+    frame_count: int,
+    mode: str,
+) -> torch.Tensor:
+    value = controls.get(key)
+    if not isinstance(value, torch.Tensor):
+        raise ValueError(f"{mode} requires available_controls[{key!r}] tensor in scaffold payload.")
+    tensor = value.to(torch.float32)
+    if tensor.ndim != 2 or int(tensor.shape[0]) != int(frame_count):
+        raise ValueError(
+            f"{mode} requires available_controls[{key!r}] with shape [frames, dim] aligned to the package frame count."
+        )
+    return tensor
+
+
+def masked_adaptive_avg_pool1d(
+    *,
+    values: torch.Tensor,
+    mask: torch.Tensor,
+    output_bins: int,
+) -> torch.Tensor:
+    masked_values = values * mask
+    pooled_values = F.adaptive_avg_pool1d(masked_values.unsqueeze(1), int(output_bins)).squeeze(1)
+    pooled_mask = F.adaptive_avg_pool1d(mask.unsqueeze(1), int(output_bins)).squeeze(1)
+    return torch.where(
+        pooled_mask > 1.0e-6,
+        pooled_values / pooled_mask.clamp_min(1.0e-6),
+        torch.zeros_like(pooled_values),
+    )
+
+
+def build_f0_harmonicity_spectral_masks(
+    *,
+    f0_hz: torch.Tensor,
+    vuv: torch.Tensor,
+    frame_length: int,
+    sample_rate: int,
+    freq_bins: int,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    frame_count = int(f0_hz.shape[0])
+    harmonic_mask = torch.zeros((frame_count, int(freq_bins)), dtype=torch.float32)
+    freq_resolution = float(sample_rate) / float(frame_length)
+    nyquist_hz = float(sample_rate) * 0.5
+    voiced_mask = vuv[:, 0] >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD)
+    mask_cache: dict[int, torch.Tensor] = {}
+    for frame_index in range(frame_count):
+        if not bool(voiced_mask[frame_index].item()):
+            continue
+        resolved_f0 = float(f0_hz[frame_index, 0].item())
+        if resolved_f0 <= 0.0:
+            continue
+        cache_key = max(1, int(round(resolved_f0)))
+        cached_mask = mask_cache.get(cache_key)
+        if cached_mask is None:
+            cached_mask = torch.zeros((int(freq_bins),), dtype=torch.float32)
+            max_harmonic = max(1, int(nyquist_hz // resolved_f0))
+            half_width_hz = max(30.0, min(90.0, resolved_f0 * 0.2))
+            half_width_bins = max(1, int(round(half_width_hz / max(freq_resolution, 1.0e-6))))
+            for harmonic_index in range(1, max_harmonic + 1):
+                harmonic_hz = harmonic_index * resolved_f0
+                center_bin = int(round(harmonic_hz / max(freq_resolution, 1.0e-6)))
+                if center_bin >= int(freq_bins):
+                    break
+                start = max(0, center_bin - half_width_bins)
+                end = min(int(freq_bins), center_bin + half_width_bins + 1)
+                cached_mask[start:end] = 1.0
+            mask_cache[cache_key] = cached_mask
+        harmonic_mask[frame_index] = cached_mask
+
+    voiced_frame_count = int(voiced_mask.sum().item())
+    voiced_frame_mask_mean = 0.0
+    if voiced_frame_count > 0:
+        voiced_frame_mask_mean = float(harmonic_mask[voiced_mask].mean().item())
+    return (
+        harmonic_mask,
+        {
+            "voiced_frame_ratio_for_masking": round(voiced_frame_count / max(1, frame_count), 6),
+            "harmonic_mask_voiced_frame_mean": round(voiced_frame_mask_mean, 6),
+        },
+    )
 
 
 def apply_stage5_spectral_target_mode(
@@ -3195,6 +3334,18 @@ def apply_stage5_spectral_target_mode(
                 "uses_gate_masking": False,
                 "harmonic_mask_formula": "none",
                 "noise_mask_formula": "none",
+            },
+        )
+    if resolved_mode == "f0_harmonicity_split_v1":
+        return (
+            harmonic_target,
+            noise_target,
+            {
+                "spectral_target_mode": resolved_mode,
+                "contract_family": "f0_harmonicity_split_v1",
+                "uses_gate_masking": False,
+                "harmonic_mask_formula": "harmonic_bins_from_f0_hz_and_vuv",
+                "noise_mask_formula": "spectral_complement_of_harmonic_mask",
             },
         )
     masked_harmonic_target = harmonic_target * periodic_gate_target.clamp(0.0, 1.0)
