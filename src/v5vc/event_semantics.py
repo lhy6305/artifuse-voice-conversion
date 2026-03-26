@@ -31,11 +31,15 @@ TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1 = (
 TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TRANSITION_BRIDGE_V1 = (
     "acoustic_directional_transition_bridge_v1"
 )
+TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1 = (
+    "acoustic_directional_targetstate_bridge_v1"
+)
 TEACHER_E_EVT_BRIDGE_MODE_CHOICES = {
     TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_GUIDED_EVENT_BRIDGE_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TRANSITION_BRIDGE_V1,
+    TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1,
 }
 TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1 = "hard_box_v1"
 TEACHER_E_EVT_TARGET_SHAPING_MODE_CENTER_WEIGHTED_FINAL_RAMP_V1 = (
@@ -217,6 +221,10 @@ def build_teacher_e_evt_v1_targets(
     *,
     legacy_event_probs: object,
     teacher_acoustic_target: object | None = None,
+    teacher_target_f0_hz: object | None = None,
+    teacher_target_vuv: object | None = None,
+    teacher_target_aper: object | None = None,
+    teacher_target_energy: object | None = None,
     target_event_semantic_sidecar: dict[str, object] | None = None,
     target_event_timing_semantic_sidecar: dict[str, object] | None = None,
     source_semantic_parity_sidecar: dict[str, object] | None = None,
@@ -245,6 +253,13 @@ def build_teacher_e_evt_v1_targets(
         teacher_acoustic_target=teacher_acoustic_target,
         frame_count=frame_count,
     )
+    target_state_tensor = resolve_teacher_e_evt_target_state(
+        teacher_target_f0_hz=teacher_target_f0_hz,
+        teacher_target_vuv=teacher_target_vuv,
+        teacher_target_aper=teacher_target_aper,
+        teacher_target_energy=teacher_target_energy,
+        frame_count=frame_count,
+    )
     if frame_count <= 0:
         return {
             "tensor": legacy_tensor.new_zeros((0, len(DESIGN_STATE_E_EVT_V1_DIMENSIONS))),
@@ -257,6 +272,7 @@ def build_teacher_e_evt_v1_targets(
                 "teacher_e_evt_bridge_mode": bridge_mode,
                 "teacher_e_evt_target_shaping_mode": shaping_mode,
                 "teacher_acoustic_target_used": acoustic_tensor is not None,
+                "teacher_target_state_used": target_state_tensor is not None,
                 "timing_sidecar_used": False,
                 "source_semantic_parity_used": False,
                 "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
@@ -277,6 +293,7 @@ def build_teacher_e_evt_v1_targets(
     ) = build_teacher_e_evt_acoustic_bridge_dims(
         normalized_legacy=normalized_legacy,
         teacher_acoustic_target=acoustic_tensor,
+        teacher_target_state=target_state_tensor,
         bridge_mode=bridge_mode,
     )
 
@@ -314,6 +331,7 @@ def build_teacher_e_evt_v1_targets(
             "teacher_e_evt_bridge_mode": bridge_mode,
             "teacher_e_evt_target_shaping_mode": shaping_mode,
             "teacher_acoustic_target_used": acoustic_tensor is not None,
+            "teacher_target_state_used": target_state_tensor is not None,
             "timing_sidecar_used": isinstance(target_event_timing_semantic_sidecar, dict),
             "source_semantic_parity_used": isinstance(source_semantic_parity_sidecar, dict),
             "semantic_sidecar_used": isinstance(target_event_semantic_sidecar, dict),
@@ -345,10 +363,40 @@ def resolve_teacher_e_evt_acoustic_target(
     return acoustic_tensor[:frame_count].to(torch.float32)
 
 
+def resolve_teacher_e_evt_target_state(
+    *,
+    teacher_target_f0_hz: object | None,
+    teacher_target_vuv: object | None,
+    teacher_target_aper: object | None,
+    teacher_target_energy: object | None,
+    frame_count: int,
+) -> dict[str, torch.Tensor] | None:
+    values = {
+        "f0_hz": teacher_target_f0_hz,
+        "vuv": teacher_target_vuv,
+        "aper": teacher_target_aper,
+        "energy": teacher_target_energy,
+    }
+    if all(value is None for value in values.values()):
+        return None
+    resolved: dict[str, torch.Tensor] = {}
+    for name, value in values.items():
+        if value is None or not hasattr(value, "detach"):
+            raise TypeError(f"teacher_target_{name} must be a torch Tensor-like object when provided.")
+        tensor = value.detach().to("cpu")
+        if tensor.ndim != 2 or tensor.shape[-1] != 1:
+            raise ValueError(
+                f"teacher_target_{name} must have shape [T, 1], got {tuple(tensor.shape)}"
+            )
+        resolved[name] = tensor[:frame_count].to(torch.float32)
+    return resolved
+
+
 def build_teacher_e_evt_acoustic_bridge_dims(
     *,
     normalized_legacy: torch.Tensor,
     teacher_acoustic_target: torch.Tensor | None,
+    teacher_target_state: dict[str, torch.Tensor] | None,
     bridge_mode: str,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     high_zero_cross = normalized_legacy[:, 2:3]
@@ -372,6 +420,15 @@ def build_teacher_e_evt_acoustic_bridge_dims(
     energy = teacher_acoustic_target[:, 0:1]
     zero_cross = teacher_acoustic_target[:, 2:3].clamp(0.0, 1.0)
     delta_energy = teacher_acoustic_target[:, 3:4]
+    if (
+        bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1
+        and teacher_target_state is None
+    ):
+        raise ValueError(
+            "teacher_e_evt_bridge_mode=acoustic_directional_targetstate_bridge_v1 requires teacher_target_state."
+        )
+    if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1:
+        energy = teacher_target_state["energy"]
     energy_norm = torch.sigmoid((energy + 4.0) * 2.0)
     low_zero_cross_strength = torch.sigmoid((0.11 - zero_cross) * 18.0)
     high_zero_cross_strength = torch.sigmoid((zero_cross - 0.12) * 18.0)
@@ -544,6 +601,35 @@ def build_teacher_e_evt_acoustic_bridge_dims(
         * (0.3 + 0.7 * past_closure_support)
         * (0.45 + 0.55 * future_energy_support)
     ).clamp(0.0, 1.0)
+    if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1:
+        target_vuv = teacher_target_state["vuv"].clamp(0.0, 1.0)
+        target_aper = teacher_target_state["aper"].clamp(0.0, 1.0)
+        target_f0_hz = teacher_target_state["f0_hz"].clamp_min(0.0)
+        target_voiced_gate = ((target_vuv >= 0.2) & (target_f0_hz > 0.0)).to(torch.float32)
+        target_voicing = torch.maximum(target_vuv, target_voiced_gate).clamp(0.0, 1.0)
+        target_aper_blend = (0.8 * target_aper + 0.2 * contextual_aper).clamp(0.0, 1.0)
+        target_frication = (
+            directional_frication
+            * (0.45 + 0.55 * (1.0 - target_voicing))
+            * (0.55 + 0.45 * target_aper_blend)
+        ).clamp(0.0, 1.0)
+        target_closure = (
+            directional_closure
+            * (0.55 + 0.45 * (1.0 - target_voicing))
+            * (0.65 + 0.35 * (1.0 - target_aper_blend))
+        ).clamp(0.0, 1.0)
+        target_burst = (
+            directional_burst
+            * (0.5 + 0.5 * target_aper_blend)
+            * (0.75 + 0.25 * (1.0 - target_voicing))
+        ).clamp(0.0, 1.0)
+        return (
+            target_frication,
+            target_closure,
+            target_burst,
+            target_voicing,
+            target_aper_blend,
+        )
     return (
         directional_frication,
         directional_closure,

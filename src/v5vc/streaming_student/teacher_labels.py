@@ -546,6 +546,10 @@ def export_single_record(
     teacher_e_evt = build_teacher_e_evt_v1_targets(
         legacy_event_probs=outputs["event_probs"][sample_index],
         teacher_acoustic_target=frame_targets["acoustic_target"][sample_index],
+        teacher_target_f0_hz=target_acoustic_state["f0_hz"],
+        teacher_target_vuv=target_acoustic_state["vuv"],
+        teacher_target_aper=target_acoustic_state["aper"],
+        teacher_target_energy=target_acoustic_state["E"],
         target_event_semantic_sidecar=record.get("target_event_semantic_sidecar"),
         target_event_timing_semantic_sidecar=record.get("target_event_timing_semantic_sidecar"),
         valid_frame_count=valid_frame_count,
