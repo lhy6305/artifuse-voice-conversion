@@ -1187,3 +1187,112 @@
     - decoder-side template projector
     - branch dynamics 到 waveform handoff 的保真
   - 不应再把“亮度明显变好”误判成已经值得回到同层 brightness 微扫
+
+### 62. 不能把“主病灶已经收缩到 decoder-side”误判成“直接把 branch-conditioned hidden adapter 插回 decoder 就会自然变好”
+- 现象：
+  - `branch_mean_contrast_residual_v1`
+    已把 brightness 明显压下来了，
+    剩余主故障主要收缩成
+    `template-collapse + envelope-following`
+  - 但在这条 backbone 上直接叠
+    `use_decoder_branch_condition_adapter = true`
+    后，
+    fullsplit24 真 decoded 结果仍然：
+    - `3/3 auto_reject_obvious_buzz`
+    - `decoded_frame_rms_to_aligned_frame_rms_corr`
+      仍稳定在 `0.89 ~ 0.90`
+    - brightness 还明显回升：
+      - `spectral_centroid_gap_hz`
+        回到 `~2.9k`
+      - `spectral_high_band_energy_ratio_gap`
+        回到 `0.47 ~ 0.52`
+- 风险：
+  - 很容易因为“病灶就在 decoder 附近”、
+    “adapter 也是最现成的 decoder 补丁”，
+    就继续围绕：
+    - hidden-side branch adapter
+    - decoder hidden additive conditioning
+    - 同族小 gate / 小 projection
+    做微扫
+- 正确处理：
+  - 当前应把这条解释降级：
+    - decoder-side 仍是问题层，
+      但“直接改 decoder hidden”
+      不是当前正确的改法
+  - 结构 probe 说明：
+    - fusion backbone 基本没坏
+    - 更差的是 hidden-side conditioning
+      把 waveform projector 又推回模板区
+  - 下一步若继续把 branch dynamics
+    带回 waveform，
+    应优先考虑：
+    - frame-space residual
+    - residual-shape
+    - 输出侧更受限的 handoff
+  - 不应再继续：
+    - hidden-side decoder branch adapter
+      同族变体
+
+### 63. 不能把第一次从 `auto_reject` 进入 `review_required` 误写成 Stage5 已经脱离 buzz
+- 现象：
+  - `branch_mean_contrast_residual_v1 + residualshapecond`
+    是当前第一条把
+    validation3
+    从 `3/3 auto_reject_obvious_buzz`
+    拉到
+    `3/3 review_required`
+    的 route
+- 风险：
+  - 很容易把“终于不是 auto reject 了”
+    误写成：
+    - 已经出现可用人声
+    - 下一步只要做人工听审收尾
+- 正确处理：
+  - 当前仍必须同时看：
+    - `decoded_frame_template_cosine_mean`
+    - `decoded_frame_rms_to_aligned_frame_rms_corr`
+    - `spectral_centroid_gap_hz`
+    - `spectral_high_band_energy_ratio_gap`
+  - 这条线当前只能说明：
+    - 从 obvious buzz 假解
+      进入了更有信息量的
+      `review_required` operating region
+  - 不能说明：
+    - 已经脱离
+      `template-collapse + envelope-following`
+
+### 64. 不能把 selector 稳定性重新变好，误判成当前 residual-shape route 的 heard-path 指标也更优
+- 现象：
+  - `residual_shape_branch_condition_scale = 0.25`
+    重新拿回了
+    `selected_stable_late_stop = step24`
+    且
+    `decoded_to_target_rms_ratio = 0.992803`
+    更接近 `1.0`
+  - 但在同一路由上，
+    `scale = 0.5`
+    的：
+    - `decoded_frame_template_cosine_mean`
+    - `spectral_centroid_gap_hz`
+    - `spectral_high_band_energy_ratio_gap`
+    反而更优
+- 风险：
+  - 很容易因为 selector 和 RMS ratio
+    更好看，
+    就把 `0.25`
+    直接当作当前最优 route
+- 正确处理：
+  - 当前要把这两档分开解释：
+    - `0.5`
+      是 heard-path collapse / brightness
+      更优的一档
+    - `0.25`
+      是 selector / RMS stability
+      更优的一档
+  - 下一步不应只围绕：
+    - selector
+    - RMS ratio
+    做单维优化
+  - 而应直接处理：
+    - 两档都没动到的
+      `envelope-following`

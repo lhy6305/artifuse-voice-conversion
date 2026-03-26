@@ -12,6 +12,7 @@ from v5vc.nores_vocoder_audio_export import (
     resolve_checkpoint_path_from_inputs,
     resolve_package_entries,
 )
+from v5vc.offline_vocoder_scaffold import resolve_residual_shape_branch_condition_delta
 from v5vc.offline_vocoder_training import (
     extract_training_batch,
     extract_training_runtime,
@@ -97,6 +98,11 @@ def analyze_stage5_nores_waveform_decoder_structure(
         checkpoint_path=checkpoint_path,
         checkpoint_selection_path=checkpoint_selection_path,
         selection_target=selection_target,
+    )
+    resolved_selection_target = (
+        str(selection_summary.get("_resolved_selection_target", selection_target))
+        if isinstance(selection_summary, dict)
+        else str(selection_target)
     )
     checkpoint_payload = torch.load(resolved_checkpoint_path, map_location="cpu", weights_only=False)
     dataset_index = json.loads(dataset_index_path.read_text(encoding="utf-8"))
@@ -186,7 +192,7 @@ def analyze_stage5_nores_waveform_decoder_structure(
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "checkpoint_selection_path": None if checkpoint_selection_path is None else checkpoint_selection_path.resolve().as_posix(),
-        "selection_target": None if checkpoint_selection_path is None else str(selection_target),
+        "selection_target": None if checkpoint_selection_path is None else resolved_selection_target,
         "selected_checkpoint_summary": selection_summary,
         "dataset_index_path": dataset_index_path.as_posix(),
         "split_name": str(split_name),
@@ -199,6 +205,16 @@ def analyze_stage5_nores_waveform_decoder_structure(
             "predicted_activity_gate_apply_mode": resolved_apply_mode,
             "fusion_mode": str(model.fusion_mode),
             "waveform_decoder_mode": str(model.waveform_decoder_mode),
+            "use_decoder_branch_condition_adapter": bool(getattr(model, "use_decoder_branch_condition_adapter", False)),
+            "use_residual_shape_branch_condition_adapter": bool(
+                getattr(model, "use_residual_shape_branch_condition_adapter", False)
+            ),
+            "residual_shape_branch_condition_scale": float(
+                getattr(model, "residual_shape_branch_condition_scale", 1.0)
+            ),
+            "residual_shape_branch_condition_mode": str(
+                getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")
+            ),
         },
         "probe_variants": [
             {
@@ -280,7 +296,12 @@ def run_structure_probe_variant(
         periodic_hidden=periodic_hidden,
         noise_hidden=noise_hidden,
     )
-    waveform_frames = torch.tanh(model.waveform_decoder(fused_hidden))
+    waveform_frames = compute_waveform_frames_for_probe(
+        model=model,
+        periodic_hidden=periodic_hidden,
+        noise_hidden=noise_hidden,
+        fused_hidden=fused_hidden,
+    )
     periodic_gate = torch.sigmoid(model.periodic_gate(periodic_hidden))
     noise_gate = torch.sigmoid(model.noise_gate(noise_hidden))
     predicted_activity = torch.maximum(periodic_gate, noise_gate)
@@ -383,6 +404,84 @@ def compute_fused_hidden_for_probe(
         )
         return branch_mean_hidden + fusion_residual_hidden
     raise ValueError(f"Unsupported fusion_mode in structure probe: {fusion_mode!r}")
+
+
+def compute_waveform_frames_for_probe(
+    *,
+    model: torch.nn.Module,
+    periodic_hidden: torch.Tensor,
+    noise_hidden: torch.Tensor,
+    fused_hidden: torch.Tensor,
+) -> torch.Tensor:
+    waveform_decoder_mode = str(getattr(model, "waveform_decoder_mode", "fused_single"))
+    if waveform_decoder_mode != "fused_single":
+        raise ValueError(f"Unsupported waveform_decoder_mode in structure probe: {waveform_decoder_mode!r}")
+    waveform_decoder = getattr(model, "waveform_decoder", None)
+    if waveform_decoder is None:
+        raise RuntimeError("waveform_decoder is not initialized for fused_single structure probe.")
+    branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
+    decoder_hidden = fused_hidden
+    branch_condition_gate = None
+    if bool(getattr(model, "use_decoder_branch_condition_adapter", False)):
+        decoder_branch_condition_adapter = getattr(model, "decoder_branch_condition_adapter", None)
+        decoder_branch_condition_gate = getattr(model, "decoder_branch_condition_gate", None)
+        decoder_fused_condition_proj = getattr(model, "decoder_fused_condition_proj", None)
+        if (
+            decoder_branch_condition_adapter is None
+            or decoder_branch_condition_gate is None
+            or decoder_fused_condition_proj is None
+        ):
+            raise RuntimeError("Decoder branch-condition adapter modules are not initialized for structure probe.")
+        branch_condition_features = torch.cat(
+            [
+                fused_hidden,
+                branch_mean_hidden,
+                fused_hidden - branch_mean_hidden,
+            ],
+            dim=-1,
+        )
+        branch_condition_context = decoder_branch_condition_adapter(branch_condition_features)
+        branch_condition_gate = torch.sigmoid(decoder_branch_condition_gate(branch_condition_context))
+        fused_condition = torch.tanh(decoder_fused_condition_proj(branch_condition_context))
+        decoder_hidden = decoder_hidden + branch_condition_gate * fused_condition
+    waveform_frame_logits = waveform_decoder(decoder_hidden)
+    if bool(getattr(model, "use_residual_shape_branch_condition_adapter", False)):
+        residual_shape_branch_condition_adapter = getattr(model, "residual_shape_branch_condition_adapter", None)
+        residual_shape_branch_condition_gate_head = getattr(model, "residual_shape_branch_condition_gate", None)
+        residual_shape_branch_condition_proj = getattr(model, "residual_shape_branch_condition_proj", None)
+        if (
+            residual_shape_branch_condition_adapter is None
+            or residual_shape_branch_condition_gate_head is None
+            or residual_shape_branch_condition_proj is None
+        ):
+            raise RuntimeError("Residual-shape branch-condition adapter modules are not initialized for structure probe.")
+        residual_shape_branch_condition_features = torch.cat(
+            [
+                fused_hidden,
+                branch_mean_hidden,
+                fused_hidden - branch_mean_hidden,
+            ],
+            dim=-1,
+        )
+        residual_shape_branch_condition_context = residual_shape_branch_condition_adapter(
+            residual_shape_branch_condition_features
+        )
+        residual_shape_branch_condition_gate = torch.sigmoid(
+            residual_shape_branch_condition_gate_head(residual_shape_branch_condition_context)
+        )
+        residual_shape_branch_condition_delta = resolve_residual_shape_branch_condition_delta(
+            delta=torch.tanh(
+                residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
+            ),
+            mode=str(getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")),
+        )
+        waveform_frame_logits = (
+            waveform_frame_logits
+            + float(getattr(model, "residual_shape_branch_condition_scale", 1.0))
+            * residual_shape_branch_condition_gate
+            * residual_shape_branch_condition_delta
+        )
+    return torch.tanh(waveform_frame_logits)
 
 
 def apply_structure_transform(

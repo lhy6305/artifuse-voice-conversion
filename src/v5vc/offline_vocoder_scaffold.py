@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime
 import json
+import math
 from pathlib import Path
 
 import torch
@@ -29,6 +30,10 @@ SUPPORTED_FUSION_MODES = {
     "periodic_residual_v1",
     "branch_mean_contrast_residual_v1",
 }
+SUPPORTED_RESIDUAL_SHAPE_BRANCH_CONDITION_MODES = {
+    "raw_additive_v1",
+    "shape_only_unit_rms_v1",
+}
 
 
 class NoResidualSourceFilterVocoderScaffold(nn.Module):
@@ -44,6 +49,8 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         waveform_decoder_mode: str = "fused_single",
         use_decoder_branch_condition_adapter: bool = False,
         use_residual_shape_branch_condition_adapter: bool = False,
+        residual_shape_branch_condition_scale: float = 1.0,
+        residual_shape_branch_condition_mode: str = "raw_additive_v1",
     ) -> None:
         super().__init__()
         self.frame_length = int(frame_length) if frame_length is not None and int(frame_length) > 0 else None
@@ -51,6 +58,12 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.waveform_decoder_mode = normalize_waveform_decoder_mode(waveform_decoder_mode)
         self.use_decoder_branch_condition_adapter = bool(use_decoder_branch_condition_adapter)
         self.use_residual_shape_branch_condition_adapter = bool(use_residual_shape_branch_condition_adapter)
+        self.residual_shape_branch_condition_scale = normalize_residual_shape_branch_condition_scale(
+            residual_shape_branch_condition_scale
+        )
+        self.residual_shape_branch_condition_mode = normalize_residual_shape_branch_condition_mode(
+            residual_shape_branch_condition_mode
+        )
         self.periodic_encoder = build_mlp(periodic_input_dim, hidden_dim, hidden_dim)
         self.noise_encoder = build_mlp(noise_input_dim, hidden_dim, hidden_dim)
         self.periodic_gate = nn.Linear(hidden_dim, 1)
@@ -435,8 +448,11 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             residual_shape_branch_condition_gate = torch.sigmoid(
                 self.residual_shape_branch_condition_gate(residual_shape_branch_condition_context)
             )
-            residual_shape_branch_condition_delta = torch.tanh(
-                self.residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
+            residual_shape_branch_condition_delta = resolve_residual_shape_branch_condition_delta(
+                delta=torch.tanh(
+                    self.residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
+                ),
+                mode=self.residual_shape_branch_condition_mode,
             )
         outputs = {
             "periodic_hidden": periodic_hidden,
@@ -466,7 +482,16 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         if self.waveform_decoder_mode == "fused_single":
             if self.waveform_decoder is None:
                 raise RuntimeError("waveform_decoder is not initialized for fused_single mode.")
-            outputs["waveform_frames"] = torch.tanh(self.waveform_decoder(decoder_hidden))
+            waveform_frame_logits = self.waveform_decoder(decoder_hidden)
+            if residual_shape_branch_condition_gate is not None and residual_shape_branch_condition_delta is not None:
+                waveform_frame_logits = (
+                    waveform_frame_logits
+                    + float(self.residual_shape_branch_condition_scale)
+                    * residual_shape_branch_condition_gate
+                    * residual_shape_branch_condition_delta
+                )
+            outputs["waveform_frame_logits"] = waveform_frame_logits
+            outputs["waveform_frames"] = torch.tanh(waveform_frame_logits)
             return outputs
         if resolved_decoder_branch_mean_mix_alpha > 1.0e-9:
             raise ValueError("decoder_branch_mean_mix_alpha is only supported for fused_single waveform decoder mode.")
@@ -922,6 +947,8 @@ def build_nores_vocoder_scaffold_from_state_dict(
     periodic_input_dim: int,
     noise_input_dim: int,
     frame_length: int,
+    residual_shape_branch_condition_scale: float = 1.0,
+    residual_shape_branch_condition_mode: str = "raw_additive_v1",
 ) -> NoResidualSourceFilterVocoderScaffold:
     hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
     harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
@@ -939,6 +966,8 @@ def build_nores_vocoder_scaffold_from_state_dict(
         use_residual_shape_branch_condition_adapter=infer_residual_shape_branch_condition_adapter_from_state_dict(
             state_dict
         ),
+        residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
+        residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
     )
 
 
@@ -970,6 +999,34 @@ def normalize_fusion_mode(fusion_mode: str) -> str:
             f"{fusion_mode!r}"
         )
     return resolved
+
+
+def normalize_residual_shape_branch_condition_scale(scale: float) -> float:
+    resolved = float(scale)
+    if not math.isfinite(resolved):
+        raise ValueError("residual_shape_branch_condition_scale must be finite.")
+    if resolved < 0.0:
+        raise ValueError("residual_shape_branch_condition_scale must be >= 0.0.")
+    return resolved
+
+
+def normalize_residual_shape_branch_condition_mode(mode: str) -> str:
+    resolved = str(mode).strip().lower()
+    if resolved not in SUPPORTED_RESIDUAL_SHAPE_BRANCH_CONDITION_MODES:
+        raise ValueError(
+            "Unsupported residual_shape_branch_condition_mode for no-residual vocoder scaffold: "
+            f"{mode!r}"
+        )
+    return resolved
+
+
+def resolve_residual_shape_branch_condition_delta(*, delta: torch.Tensor, mode: str) -> torch.Tensor:
+    resolved_mode = normalize_residual_shape_branch_condition_mode(mode)
+    if resolved_mode == "raw_additive_v1":
+        return delta
+    if resolved_mode == "shape_only_unit_rms_v1":
+        return normalize_frames_unit_rms_local(delta)
+    raise RuntimeError(f"Unsupported residual_shape_branch_condition_mode at runtime: {resolved_mode!r}")
 
 
 def normalize_frames_unit_rms_local(frames: torch.Tensor) -> torch.Tensor:

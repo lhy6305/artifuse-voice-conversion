@@ -2535,6 +2535,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Enable a learned non-linear branch-conditioned correction applied only to the residual-shape / residual-envelope path.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--residual-shape-branch-condition-scale",
+        type=float,
+        default=1.0,
+        help="Optional scalar applied to the residual-shape branch-conditioned frame-logit correction.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--residual-shape-branch-condition-mode",
+        default="raw_additive_v1",
+        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1 or shape_only_unit_rms_v1.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
         type=float,
         default=0.0,
@@ -2749,6 +2760,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--use-residual-shape-branch-condition-adapter",
         action="store_true",
         help="Enable a learned non-linear branch-conditioned correction applied only to the residual-shape / residual-envelope path.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--residual-shape-branch-condition-scale",
+        type=float,
+        default=1.0,
+        help="Optional scalar applied to the residual-shape branch-conditioned frame-logit correction.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--residual-shape-branch-condition-mode",
+        default="raw_additive_v1",
+        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1 or shape_only_unit_rms_v1.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
@@ -3178,6 +3200,17 @@ def build_parser() -> argparse.ArgumentParser:
         "--use-residual-shape-branch-condition-adapter",
         action="store_true",
         help="Enable a learned non-linear branch-conditioned correction applied only to the residual-shape / residual-envelope path.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--residual-shape-branch-condition-scale",
+        type=float,
+        default=1.0,
+        help="Optional scalar applied to the residual-shape branch-conditioned frame-logit correction.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--residual-shape-branch-condition-mode",
+        default="raw_additive_v1",
+        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1 or shape_only_unit_rms_v1.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
@@ -5148,6 +5181,8 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_mode=args.waveform_decoder_mode,
             use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
+            residual_shape_branch_condition_scale=args.residual_shape_branch_condition_scale,
+            residual_shape_branch_condition_mode=args.residual_shape_branch_condition_mode,
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -5188,6 +5223,8 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_mode=args.waveform_decoder_mode,
             use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
+            residual_shape_branch_condition_scale=args.residual_shape_branch_condition_scale,
+            residual_shape_branch_condition_mode=args.residual_shape_branch_condition_mode,
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -5263,6 +5300,8 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_mode=args.waveform_decoder_mode,
             use_decoder_branch_condition_adapter=bool(args.use_decoder_branch_condition_adapter),
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
+            residual_shape_branch_condition_scale=args.residual_shape_branch_condition_scale,
+            residual_shape_branch_condition_mode=args.residual_shape_branch_condition_mode,
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,

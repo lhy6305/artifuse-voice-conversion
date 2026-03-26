@@ -89,6 +89,11 @@ def analyze_stage5_nores_waveform_objective_collapse(
         checkpoint_selection_path=checkpoint_selection_path,
         selection_target=selection_target,
     )
+    resolved_selection_target = (
+        str(selection_summary.get("_resolved_selection_target", selection_target))
+        if isinstance(selection_summary, dict)
+        else str(selection_target)
+    )
     checkpoint_payload = torch.load(resolved_checkpoint_path, map_location="cpu", weights_only=False)
     dataset_index = json.loads(dataset_index_path.read_text(encoding="utf-8"))
     package_entries = resolve_package_entries(
@@ -272,7 +277,7 @@ def analyze_stage5_nores_waveform_objective_collapse(
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "checkpoint_selection_path": None if checkpoint_selection_path is None else checkpoint_selection_path.resolve().as_posix(),
-        "selection_target": None if checkpoint_selection_path is None else str(selection_target),
+        "selection_target": None if checkpoint_selection_path is None else resolved_selection_target,
         "selected_checkpoint_summary": selection_summary,
         "dataset_index_path": dataset_index_path.as_posix(),
         "split_name": str(split_name),

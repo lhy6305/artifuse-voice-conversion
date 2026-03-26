@@ -83,6 +83,11 @@ def export_offline_mvp_nores_vocoder_audio(
         checkpoint_selection_path=checkpoint_selection_path,
         selection_target=selection_target,
     )
+    resolved_selection_target = (
+        str(selection_summary.get("_resolved_selection_target", selection_target))
+        if isinstance(selection_summary, dict)
+        else str(selection_target)
+    )
     checkpoint_payload = torch.load(resolved_checkpoint_path, map_location="cpu", weights_only=False)
     training_summary = resolve_nores_vocoder_training_summary(
         checkpoint_path=resolved_checkpoint_path,
@@ -120,7 +125,7 @@ def export_offline_mvp_nores_vocoder_audio(
     branch_label = infer_branch_label(
         checkpoint_path=resolved_checkpoint_path,
         selection_summary=selection_summary,
-        selection_target=selection_target,
+        selection_target=resolved_selection_target,
         use_predicted_activity_gate=bool(resolved_export_use_predicted_activity_gate),
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
@@ -128,6 +133,10 @@ def export_offline_mvp_nores_vocoder_audio(
         decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
         use_decoder_branch_condition_adapter=bool(model.use_decoder_branch_condition_adapter),
         use_residual_shape_branch_condition_adapter=bool(model.use_residual_shape_branch_condition_adapter),
+        residual_shape_branch_condition_scale=float(getattr(model, "residual_shape_branch_condition_scale", 1.0)),
+        residual_shape_branch_condition_mode=str(
+            getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")
+        ),
     )
     loss_metrics_exactly_match_decoded_audio = bool(
         (not bool(resolved_export_use_predicted_activity_gate) and not bool(training_loss_weights["use_predicted_activity_gate"]))
@@ -295,11 +304,17 @@ def export_offline_mvp_nores_vocoder_audio(
             "fusion_mode": str(model.fusion_mode),
             "use_decoder_branch_condition_adapter": bool(model.use_decoder_branch_condition_adapter),
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
+            "residual_shape_branch_condition_scale": float(
+                getattr(model, "residual_shape_branch_condition_scale", 1.0)
+            ),
+            "residual_shape_branch_condition_mode": str(
+                getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")
+            ),
         },
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "dataset_index_path": dataset_index_path.as_posix(),
         "checkpoint_selection_path": None if selection_summary is None else checkpoint_selection_path.resolve().as_posix(),
-        "selection_target": None if selection_summary is None else str(selection_target),
+        "selection_target": None if selection_summary is None else resolved_selection_target,
         "selected_checkpoint_summary": selection_summary,
         "loss_metrics_semantics": {
             "source": "checkpoint_forward_objective_metrics",
@@ -369,7 +384,15 @@ def resolve_checkpoint_path_from_inputs(
         raise ValueError("Either checkpoint_path or checkpoint_selection_path is required.")
     payload = json.loads(checkpoint_selection_path.resolve().read_text(encoding="utf-8"))
     target_key = normalize_selection_target(selection_target)
+    resolved_selection_target = str(selection_target).strip().lower()
     selected = payload.get(target_key)
+    if (not isinstance(selected, dict) or "step" not in selected) and target_key == "selected_stable_late_stop":
+        fallback_key = "best_validation_checkpoint"
+        fallback_selected = payload.get(fallback_key)
+        if isinstance(fallback_selected, dict) and "step" in fallback_selected:
+            target_key = fallback_key
+            resolved_selection_target = "best_validation"
+            selected = fallback_selected
     if not isinstance(selected, dict) or "step" not in selected:
         raise ValueError(f"checkpoint selection payload does not contain {target_key!r}.")
     summary_path = Path(str(payload["summary_path"])).resolve()
@@ -385,7 +408,10 @@ def resolve_checkpoint_path_from_inputs(
             break
     if matched_path is None:
         raise ValueError(f"Unable to resolve checkpoint path for selected step {selected_step}.")
-    return matched_path, dict(selected)
+    selection_summary = dict(selected)
+    selection_summary["_resolved_selection_target_key"] = target_key
+    selection_summary["_resolved_selection_target"] = resolved_selection_target
+    return matched_path, selection_summary
 
 
 def resolve_nores_vocoder_training_summary(
@@ -707,11 +733,23 @@ def build_model_from_checkpoint(
     first_runtime: dict[str, int],
 ) -> NoResidualSourceFilterVocoderScaffold:
     state_dict = dict(checkpoint_payload["model_state_dict"])
+    model_config = checkpoint_payload.get("model_config")
+    residual_shape_branch_condition_scale = 1.0
+    residual_shape_branch_condition_mode = "raw_additive_v1"
+    if isinstance(model_config, dict):
+        residual_shape_branch_condition_scale = float(
+            model_config.get("residual_shape_branch_condition_scale", 1.0)
+        )
+        residual_shape_branch_condition_mode = str(
+            model_config.get("residual_shape_branch_condition_mode", "raw_additive_v1")
+        )
     model = build_nores_vocoder_scaffold_from_state_dict(
         state_dict=state_dict,
         periodic_input_dim=int(first_batch["periodic_branch_features"].shape[-1]),
         noise_input_dim=int(first_batch["noise_branch_features"].shape[-1]),
         frame_length=int(first_runtime["frame_length"]),
+        residual_shape_branch_condition_scale=residual_shape_branch_condition_scale,
+        residual_shape_branch_condition_mode=residual_shape_branch_condition_mode,
     )
     model.load_state_dict(state_dict)
     return model
@@ -998,6 +1036,8 @@ def infer_branch_label(
     decoder_branch_mean_mix_alpha: float = 0.0,
     use_decoder_branch_condition_adapter: bool = False,
     use_residual_shape_branch_condition_adapter: bool = False,
+    residual_shape_branch_condition_scale: float = 1.0,
+    residual_shape_branch_condition_mode: str = "raw_additive_v1",
 ) -> str:
     suffix = describe_waveform_decode_variant(
         use_predicted_activity_gate=bool(use_predicted_activity_gate),
@@ -1007,6 +1047,8 @@ def infer_branch_label(
         decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
         use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
         use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
+        residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
+        residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
     )
     if selection_summary is not None:
         selected_step = selection_summary.get("step")
@@ -1023,12 +1065,19 @@ def describe_waveform_decode_variant(
     decoder_branch_mean_mix_alpha: float = 0.0,
     use_decoder_branch_condition_adapter: bool = False,
     use_residual_shape_branch_condition_adapter: bool = False,
+    residual_shape_branch_condition_scale: float = 1.0,
+    residual_shape_branch_condition_mode: str = "raw_additive_v1",
 ) -> str:
     parts: list[str] = []
     if bool(use_decoder_branch_condition_adapter):
         parts.append("branchcond")
     if bool(use_residual_shape_branch_condition_adapter):
         parts.append("residualshapecond")
+        if abs(float(residual_shape_branch_condition_scale) - 1.0) > 1.0e-9:
+            scale_tag = int(round(float(residual_shape_branch_condition_scale) * 1000.0))
+            parts.append(f"rsscale{scale_tag:03d}")
+        if str(residual_shape_branch_condition_mode).strip().lower() != "raw_additive_v1":
+            parts.append("rsunitrms")
     if float(decoder_branch_mean_mix_alpha) > 1.0e-9:
         mix_tag = int(round(float(decoder_branch_mean_mix_alpha) * 1000.0))
         parts.append(f"mix{mix_tag:03d}")

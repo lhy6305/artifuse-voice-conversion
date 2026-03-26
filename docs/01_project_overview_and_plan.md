@@ -784,10 +784,96 @@
       `template-collapse + envelope-following`
   - 因而当前口径应进一步改成：
     - 不再把主线写成“继续修 brightness”
-    - 而是：
+  - 而是：
       在保留
       `branch_mean_contrast`
       这条 backbone 的前提下，
       直接改
       decoder interaction / handoff-shape，
       去打掉 decoder-side template projector
+54. 在这条最强 backbone 上直接叠
+  `use_decoder_branch_condition_adapter = true`
+  的组合候选，
+  也已完成 corrected native-teacher fullsplit24 fail-fast：
+  - `docs/416_stage5_native_teacher_fusion_branchmean_contrast_branchcond_fail_fast_report.md`
+  - 当前结论是：
+    - `validation3`
+      仍是 `3/3 auto_reject_obvious_buzz`
+    - 相对纯
+      `branch_mean_contrast_residual_v1`
+      并没有打掉
+      `template-collapse + envelope-following`
+    - 反而把已经压下来的 brightness
+      明显抬回去：
+      - `spectral_centroid_gap_hz`
+        从约 `1.0k`
+        回升到约 `2.9k`
+      - `spectral_high_band_energy_ratio_gap`
+        从约 `0.01 ~ 0.07`
+        回升到约 `0.47 ~ 0.52`
+    - structure probe 也说明：
+      fusion 本体基本没坏，
+      更差的是 decoder-side hidden conditioning
+      把输出重新推向模板投影区
+  - 因而当前下一步应继续收紧为：
+    - 保留
+      `branch_mean_contrast`
+      这条 backbone
+    - 排除
+      hidden-side decoder branch adapter
+    - 若还要把 branch dynamics
+      重新带回 waveform，
+      只能考虑更保守的
+      frame-space / residual-shape
+      交互
+55. 输出侧
+  `residualshapecond`
+  这条更保守的 waveform handoff
+  已经真正接通并完成 corrected native-teacher fullsplit24：
+  - `docs/417_stage5_native_teacher_fusion_branchmean_contrast_residualshape_breakthrough_report.md`
+  - 当前结论是：
+    - 这是第一条把
+      `validation3`
+      从
+      `3/3 auto_reject_obvious_buzz`
+      拉到
+      `3/3 review_required`
+      的 decoder-side structural 候选
+    - 但它还不是成功：
+      - `selected_stable_late_stop = null`
+      - `decoded_frame_rms_to_aligned_frame_rms_corr`
+        仍在 `~0.90`
+      - 剩余主病灶仍是
+        `template-collapse + envelope-following`
+  - 因而当前 Stage5 主线应正式改成：
+    - 保留
+      `branch_mean_contrast`
+      backbone
+    - 保留输出侧
+      `residual-shape`
+      handoff
+    - 不再回到 hidden-side adapter
+56. 这条新 route 的
+  scale operating region
+  也已继续收紧：
+  - `docs/418_stage5_native_teacher_fusion_branchmean_contrast_residualshape_scale_refine_report.md`
+  - 当前结论是：
+    - `residual_shape_branch_condition_scale = 0.5`
+      在 heard-path 指标上更强：
+      - `decoded_frame_template_cosine_mean = 0.975055`
+      - `spectral_centroid_gap_hz = 3955.47168`
+      - `spectral_high_band_energy_ratio_gap = 0.326294`
+    - `residual_shape_branch_condition_scale = 0.25`
+      在 selector stability 上更强：
+      - `selected_stable_late_stop = step24`
+      - `decoded_to_target_rms_ratio = 0.992803`
+    - 但两者都仍保留：
+      - `decoded_frame_rms_to_aligned_frame_rms_corr ~ 0.89`
+  - 因而当前下一步不应继续发散到新 family，
+    也不应只围绕 brightness 或 selector 做单维 sweep，
+    而应在这条已成立的
+    `0.25 ~ 0.5 residualshapecond`
+    operating region 内，
+    直接处理剩余的
+    `envelope-following`
+    根因。

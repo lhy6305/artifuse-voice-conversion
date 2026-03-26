@@ -122,6 +122,11 @@ def analyze_stage5_nores_speech_emergence(
         checkpoint_selection_path=checkpoint_selection_path,
         selection_target=selection_target,
     )
+    resolved_selection_target = (
+        str(selection_summary.get("_resolved_selection_target", selection_target))
+        if isinstance(selection_summary, dict)
+        else str(selection_target)
+    )
     checkpoint_payload = torch.load(resolved_checkpoint_path, map_location="cpu", weights_only=False)
     dataset_index = json.loads(dataset_index_path.read_text(encoding="utf-8"))
     package_entries = resolve_package_entries(
@@ -219,7 +224,7 @@ def analyze_stage5_nores_speech_emergence(
         "generated_at": datetime.now().isoformat(timespec="seconds"),
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "checkpoint_selection_path": None if checkpoint_selection_path is None else checkpoint_selection_path.resolve().as_posix(),
-        "selection_target": None if checkpoint_selection_path is None else str(selection_target),
+        "selection_target": None if checkpoint_selection_path is None else resolved_selection_target,
         "selected_checkpoint_summary": selection_summary,
         "dataset_index_path": dataset_index_path.as_posix(),
         "split_name": str(split_name),
@@ -230,6 +235,20 @@ def analyze_stage5_nores_speech_emergence(
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_apply_mode,
+            "fusion_mode": str(getattr(model, "fusion_mode", "plain")),
+            "waveform_decoder_mode": str(getattr(model, "waveform_decoder_mode", "unknown")),
+            "use_decoder_branch_condition_adapter": bool(
+                getattr(model, "use_decoder_branch_condition_adapter", False)
+            ),
+            "use_residual_shape_branch_condition_adapter": bool(
+                getattr(model, "use_residual_shape_branch_condition_adapter", False)
+            ),
+            "residual_shape_branch_condition_scale": float(
+                getattr(model, "residual_shape_branch_condition_scale", 1.0)
+            ),
+            "residual_shape_branch_condition_mode": str(
+                getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")
+            ),
         },
         "probe_variants": [
             {
