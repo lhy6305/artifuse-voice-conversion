@@ -1488,3 +1488,27 @@
   - 下一阶段转向更贴近 probe 结论的
     `branch-specific / lag-aware / target-relative temporal regularization`
   - 优先围绕 `noise_E_log_rms_norm` 家族，而不是全局 `E`
+- `docs/437_stage5_noise_family_lagcorr_fullsplit24_rejection_report.md`
+  已补完并验证上述下一阶段中的最小正式候选：
+  - 保持原始 `contractv2_normfix` fullsplit 不变
+  - strongest backbone 保持不变
+  - 训练时只新增 noise-family 的 center-weighted lag-profile excess 正则：
+    - `noise_energy_frame_rms_lagcorr_excess`
+    - `noise_aper_energy_frame_rms_lagcorr_excess`
+- 这条 lag-aware route 的当前结论是：
+  - objective 依旧优于 strongest native candidate：`validation loss_total = 0.850578 -> 0.825358`
+  - user-line 的 `template / activity_corr` 比上一轮全局 corrreg 再低一小步：
+    - `template = 0.982265 -> 0.982206`
+    - `activity_corr = 0.414830 -> 0.401372`
+  - 但 native validation3 仍然是：
+    - `auto_reject_count = 3`
+    - `rms_corr = 0.537991 -> 0.509435`
+    - `centroid_gap = 5426.24 -> 5462.51`
+    - `high_band_gap = 0.552879 -> 0.553493`
+- 因此当前主线再次更新为：
+  - 不继续围绕 output-side `frame_rms lagcorr` 做局部权重或窗口 sweep
+  - `branch-specific / lag-aware / target-relative`
+    这个大方向本身提供了方向性证据，但其当前“最终 `waveform_frames` soft regularizer”实现也已被正式否决
+  - 下一步必须继续上收到：
+    - 更贴近 noise-family 内部表示 / decoder interface 的约束
+    - 或更强的 `shape-aware / substage-aware` temporal target

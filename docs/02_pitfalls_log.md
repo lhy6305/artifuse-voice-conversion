@@ -2047,3 +2047,34 @@
   - 下一步必须上收到
     `branch-specific / lag-aware / target-relative`
     级别，而不是继续在全局 zero-lag 权重上抠细节。
+### 2026-03-27 补充坑点：把 zero-lag corrreg 升级成最终输出上的 lag-aware corrreg，仍不足以成为主线
+- 现象：
+  - 在 strongest backbone 上把上一轮
+    `global zero-lag excess`
+    升级为
+    `noise-family center-weighted lag-profile excess`
+    以后，
+    objective 仍然很好，
+    user-line 的 `template / activity_corr`
+    还会继续小幅下降。
+- 风险：
+  - 很容易把这种结果写成：
+    - “大方向已经确定，只差继续调 lag window / 权重”
+  - 但当前正式回投结果是：
+    - user-line brightness 仍未回到 strongest candidate
+    - Stage5 native validation3 依旧 `auto_reject = 3/3`
+    - 相比上一轮全局 corrreg，
+      native `rms_corr / centroid_gap / high_band_gap`
+      甚至略差
+- 正确处理：
+  - 不能继续围绕
+    `noise_energy_frame_rms_lagcorr_excess`
+    和
+    `noise_aper_energy_frame_rms_lagcorr_excess`
+    做局部 sweep。
+  - 这说明问题不只是：
+    - “最终输出的 frame-RMS 与 acoustic-state 的近零延迟曲线过强”
+  - 下一步必须继续上收到：
+    - noise-family 内部表示
+    - decoder interface / handoff substage
+    - 或更强的 `shape-aware / substage-aware` temporal target

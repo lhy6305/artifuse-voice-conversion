@@ -41,6 +41,7 @@ from v5vc.source_acoustic_state_extraction import DEFAULT_VUV_VOICED_FRAME_THRES
 DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE = "pre_overlap_add"
 DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD = 0.02
 DEFAULT_PERIODIC_WAVEFORM_HIGH_BAND_HZ = 4000.0
+DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES = 4
 SUPPORTED_TEACHER_VOCODER_SCAFFOLD_VERSIONS = {
     "offline_teacher_vocoder_input_scaffold_v1",
     "offline_teacher_vocoder_input_scaffold_v2",
@@ -501,6 +502,9 @@ def run_offline_mvp_nores_vocoder_training_step(
     multires_stft_short_weight: float = 0.0,
     noise_energy_frame_rms_excess_corr_weight: float = 0.0,
     noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    noise_aper_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -593,6 +597,9 @@ def run_offline_mvp_nores_vocoder_training_step(
         multires_stft_short_weight=multires_stft_short_weight,
         noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
         noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+        noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+        noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+        frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
     )
     optimizer.zero_grad(set_to_none=True)
     total_loss.backward()
@@ -652,6 +659,11 @@ def run_offline_mvp_nores_vocoder_training_step(
             "multires_stft_short": float(multires_stft_short_weight),
             "noise_energy_frame_rms_excess_corr": float(noise_energy_frame_rms_excess_corr_weight),
             "noise_aper_energy_frame_rms_excess_corr": float(noise_aper_energy_frame_rms_excess_corr_weight),
+            "noise_energy_frame_rms_lagcorr_excess": float(noise_energy_frame_rms_lagcorr_excess_weight),
+            "noise_aper_energy_frame_rms_lagcorr_excess": float(
+                noise_aper_energy_frame_rms_lagcorr_excess_weight
+            ),
+            "frame_rms_lagcorr_max_lag_frames": int(frame_rms_lagcorr_max_lag_frames),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
@@ -745,6 +757,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
     multires_stft_short_weight: float = 0.0,
     noise_energy_frame_rms_excess_corr_weight: float = 0.0,
     noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    noise_aper_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -858,6 +873,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
             multires_stft_short_weight=multires_stft_short_weight,
             noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
             noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+            noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+            noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
@@ -919,6 +937,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 multires_stft_short_weight=multires_stft_short_weight,
                 noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
                 noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+                noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+                noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+                frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
                 validation_source=(
                     "separate_validation_package"
                     if resolved_validation_package_path is not None
@@ -1027,6 +1048,11 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "noise_aper_energy_frame_rms_excess_corr": float(
                     noise_aper_energy_frame_rms_excess_corr_weight
                 ),
+                "noise_energy_frame_rms_lagcorr_excess": float(noise_energy_frame_rms_lagcorr_excess_weight),
+                "noise_aper_energy_frame_rms_lagcorr_excess": float(
+                    noise_aper_energy_frame_rms_lagcorr_excess_weight
+                ),
+                "frame_rms_lagcorr_max_lag_frames": int(frame_rms_lagcorr_max_lag_frames),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1389,6 +1415,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     multires_stft_short_weight: float = 0.0,
     noise_energy_frame_rms_excess_corr_weight: float = 0.0,
     noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    noise_aper_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
     semantic_supervision_enabled: bool = False,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
@@ -1535,6 +1564,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 multires_stft_short_weight=multires_stft_short_weight,
                 noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
                 noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+                noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+                noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+                frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
             )
             semantic_weighting = build_stage5_package_semantic_weighting(
                 target_event_semantic_sidecar=payload.get("target_event_semantic_sidecar"),
@@ -1636,6 +1668,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     multires_stft_short_weight=multires_stft_short_weight,
                     noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
                     noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+                    noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+                    noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+                    frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
                     semantic_supervision=semantic_supervision,
                     validation_source="validation_packages",
                 )
@@ -1671,6 +1706,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     multires_stft_short_weight=multires_stft_short_weight,
                     noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
                     noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+                    noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+                    noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+                    frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
                     semantic_supervision=semantic_supervision,
                     validation_source="train_packages_reused",
                 )
@@ -1776,6 +1814,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "noise_aper_energy_frame_rms_excess_corr": float(
                     noise_aper_energy_frame_rms_excess_corr_weight
                 ),
+                "noise_energy_frame_rms_lagcorr_excess": float(noise_energy_frame_rms_lagcorr_excess_weight),
+                "noise_aper_energy_frame_rms_lagcorr_excess": float(
+                    noise_aper_energy_frame_rms_lagcorr_excess_weight
+                ),
+                "frame_rms_lagcorr_max_lag_frames": int(frame_rms_lagcorr_max_lag_frames),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -3828,6 +3871,101 @@ def compute_frame_rms_excess_correlation_loss_against_aligned_target(
     return (predicted_corr - aligned_corr).clamp_min(0.0), predicted_corr, aligned_corr
 
 
+def compute_lagged_sequence_correlation_curve(
+    *,
+    source: torch.Tensor,
+    target: torch.Tensor,
+    max_lag_frames: int,
+    zero_like: torch.Tensor | None = None,
+) -> torch.Tensor:
+    resolved_max_lag_frames = max(0, int(max_lag_frames))
+    source_sequence = source.to(torch.float32).view(-1)
+    target_sequence = target.to(torch.float32).view(-1)
+    corr_values: list[torch.Tensor] = []
+    for lag in range(-resolved_max_lag_frames, resolved_max_lag_frames + 1):
+        if lag < 0:
+            aligned_source = source_sequence[-lag:]
+            aligned_target = target_sequence[: int(target_sequence.shape[0]) + lag]
+        elif lag > 0:
+            aligned_source = source_sequence[:-lag]
+            aligned_target = target_sequence[lag:]
+        else:
+            aligned_source = source_sequence
+            aligned_target = target_sequence
+        corr_values.append(
+            compute_zero_lag_sequence_correlation(
+                aligned_source,
+                aligned_target,
+                zero_like=zero_like if zero_like is not None else source_sequence,
+            )
+        )
+    if not corr_values:
+        zero_source = source_sequence if zero_like is None else zero_like
+        return zero_source.new_zeros((1,))
+    return torch.stack(corr_values)
+
+
+def build_triangular_lag_weights(
+    *,
+    max_lag_frames: int,
+    device: torch.device,
+    dtype: torch.dtype,
+) -> torch.Tensor:
+    resolved_max_lag_frames = max(0, int(max_lag_frames))
+    lag_values = torch.arange(
+        -resolved_max_lag_frames,
+        resolved_max_lag_frames + 1,
+        device=device,
+        dtype=dtype,
+    )
+    weights = (float(resolved_max_lag_frames) + 1.0 - lag_values.abs()).clamp_min(0.0)
+    return weights / weights.sum().clamp_min(1.0e-6)
+
+
+def compute_frame_rms_lagcorr_excess_loss_against_aligned_target(
+    *,
+    predicted_frames: torch.Tensor,
+    aligned_waveform: torch.Tensor,
+    control_target: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    max_lag_frames: int,
+    zero_like: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
+    aligned_analysis_frames = frame_waveform_sequence(
+        waveform=aligned_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    predicted_frame_rms = compute_centered_frame_rms(predicted_frames).clamp_min(1.0e-6)
+    aligned_frame_rms = compute_centered_frame_rms(aligned_analysis_frames).clamp_min(1.0e-6)
+    predicted_curve = compute_lagged_sequence_correlation_curve(
+        source=predicted_frame_rms,
+        target=control_target,
+        max_lag_frames=int(max_lag_frames),
+        zero_like=zero_like if zero_like is not None else predicted_frames,
+    )
+    aligned_curve = compute_lagged_sequence_correlation_curve(
+        source=aligned_frame_rms,
+        target=control_target,
+        max_lag_frames=int(max_lag_frames),
+        zero_like=zero_like if zero_like is not None else aligned_waveform,
+    )
+    lag_weights = build_triangular_lag_weights(
+        max_lag_frames=int(max_lag_frames),
+        device=predicted_curve.device,
+        dtype=predicted_curve.dtype,
+    )
+    lagcorr_excess = ((predicted_curve - aligned_curve).clamp_min(0.0) * lag_weights).sum()
+    zero_lag_index = max(0, int(max_lag_frames))
+    return (
+        lagcorr_excess,
+        predicted_curve[zero_lag_index],
+        aligned_curve[zero_lag_index],
+        (predicted_curve * lag_weights).sum(),
+    )
+
+
 def normalize_frames_unit_rms(frames: torch.Tensor) -> torch.Tensor:
     frames_tensor = frames.to(torch.float32)
     centered = frames_tensor - frames_tensor.mean(dim=1, keepdim=True)
@@ -4082,6 +4220,9 @@ def compute_nores_vocoder_losses(
     multires_stft_short_weight: float = 0.0,
     noise_energy_frame_rms_excess_corr_weight: float = 0.0,
     noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    noise_aper_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
         reconstruction_frame_gain_apply_mode
@@ -4128,6 +4269,8 @@ def compute_nores_vocoder_losses(
     multires_stft_short_loss = harmonic_loss.new_zeros(())
     noise_energy_frame_rms_excess_corr_loss = harmonic_loss.new_zeros(())
     noise_aper_energy_frame_rms_excess_corr_loss = harmonic_loss.new_zeros(())
+    noise_energy_frame_rms_lagcorr_excess_loss = harmonic_loss.new_zeros(())
+    noise_aper_energy_frame_rms_lagcorr_excess_loss = harmonic_loss.new_zeros(())
     periodic_waveform_frame_rms_mean = 0.0
     aligned_active_frame_rms_mean = 0.0
     decoded_waveform_rms = 0.0
@@ -4138,6 +4281,8 @@ def compute_nores_vocoder_losses(
     aligned_frame_rms_to_energy_control_corr = 0.0
     waveform_frame_rms_to_aper_energy_corr = 0.0
     aligned_frame_rms_to_aper_energy_corr = 0.0
+    waveform_frame_rms_to_energy_control_lagcorr = 0.0
+    waveform_frame_rms_to_aper_energy_lagcorr = 0.0
     periodic_hidden = outputs.get("periodic_hidden")
     noise_hidden = outputs.get("noise_hidden")
     fused_hidden = outputs.get("fused_hidden")
@@ -4168,6 +4313,8 @@ def compute_nores_vocoder_losses(
         or float(multires_stft_short_weight) > 0.0
         or float(noise_energy_frame_rms_excess_corr_weight) > 0.0
         or float(noise_aper_energy_frame_rms_excess_corr_weight) > 0.0
+        or float(noise_energy_frame_rms_lagcorr_excess_weight) > 0.0
+        or float(noise_aper_energy_frame_rms_lagcorr_excess_weight) > 0.0
     ):
         if aligned_waveform is None:
             raise ValueError("aligned_waveform is required when waveform/structure losses are enabled.")
@@ -4238,6 +4385,24 @@ def compute_nores_vocoder_losses(
             aligned_frame_rms_to_energy_control_corr = float(
                 aligned_frame_rms_to_energy_control_corr_tensor.detach().cpu().item()
             )
+            if float(noise_energy_frame_rms_lagcorr_excess_weight) > 0.0:
+                (
+                    noise_energy_frame_rms_lagcorr_excess_loss,
+                    _waveform_frame_rms_to_energy_control_zero_corr_tensor,
+                    _aligned_frame_rms_to_energy_control_zero_corr_tensor,
+                    waveform_frame_rms_to_energy_control_lagcorr_tensor,
+                ) = compute_frame_rms_lagcorr_excess_loss_against_aligned_target(
+                    predicted_frames=waveform_frames,
+                    aligned_waveform=target_waveform,
+                    control_target=energy_alignment_target,
+                    frame_length=int(frame_length),
+                    hop_length=int(hop_length),
+                    max_lag_frames=int(frame_rms_lagcorr_max_lag_frames),
+                    zero_like=harmonic_loss,
+                )
+                waveform_frame_rms_to_energy_control_lagcorr = float(
+                    waveform_frame_rms_to_energy_control_lagcorr_tensor.detach().cpu().item()
+                )
             if aper_target is not None:
                 aper_energy_target = aper_target.to(torch.float32) * energy_alignment_target.to(torch.float32)
                 (
@@ -4258,6 +4423,24 @@ def compute_nores_vocoder_losses(
                 aligned_frame_rms_to_aper_energy_corr = float(
                     aligned_frame_rms_to_aper_energy_corr_tensor.detach().cpu().item()
                 )
+                if float(noise_aper_energy_frame_rms_lagcorr_excess_weight) > 0.0:
+                    (
+                        noise_aper_energy_frame_rms_lagcorr_excess_loss,
+                        _waveform_frame_rms_to_aper_energy_zero_corr_tensor,
+                        _aligned_frame_rms_to_aper_energy_zero_corr_tensor,
+                        waveform_frame_rms_to_aper_energy_lagcorr_tensor,
+                    ) = compute_frame_rms_lagcorr_excess_loss_against_aligned_target(
+                        predicted_frames=waveform_frames,
+                        aligned_waveform=target_waveform,
+                        control_target=aper_energy_target,
+                        frame_length=int(frame_length),
+                        hop_length=int(hop_length),
+                        max_lag_frames=int(frame_rms_lagcorr_max_lag_frames),
+                        zero_like=harmonic_loss,
+                    )
+                    waveform_frame_rms_to_aper_energy_lagcorr = float(
+                        waveform_frame_rms_to_aper_energy_lagcorr_tensor.detach().cpu().item()
+                    )
         periodic_waveform_frames = outputs.get("periodic_waveform_frames")
         if periodic_waveform_frames is not None and (
             float(periodic_waveform_frame_delta_weight) > 0.0
@@ -4361,6 +4544,10 @@ def compute_nores_vocoder_losses(
         + multires_stft_short_loss * float(multires_stft_short_weight)
         + noise_energy_frame_rms_excess_corr_loss * float(noise_energy_frame_rms_excess_corr_weight)
         + noise_aper_energy_frame_rms_excess_corr_loss * float(noise_aper_energy_frame_rms_excess_corr_weight)
+        + noise_energy_frame_rms_lagcorr_excess_loss * float(noise_energy_frame_rms_lagcorr_excess_weight)
+        + noise_aper_energy_frame_rms_lagcorr_excess_loss * float(
+            noise_aper_energy_frame_rms_lagcorr_excess_weight
+        )
     )
     metrics = {
         "loss_total": round(float(total_loss.detach().cpu().item()), 6),
@@ -4423,6 +4610,14 @@ def compute_nores_vocoder_losses(
             float(noise_aper_energy_frame_rms_excess_corr_loss.detach().cpu().item()),
             6,
         ),
+        "loss_noise_energy_frame_rms_lagcorr_excess": round(
+            float(noise_energy_frame_rms_lagcorr_excess_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_noise_aper_energy_frame_rms_lagcorr_excess": round(
+            float(noise_aper_energy_frame_rms_lagcorr_excess_loss.detach().cpu().item()),
+            6,
+        ),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
         "noise_gate_pred_mean": round(float(outputs["noise_gate"].detach().mean().cpu().item()), 6),
         "activity_gate_pred_mean": round(float(predicted_activity.detach().mean().cpu().item()), 6),
@@ -4440,6 +4635,9 @@ def compute_nores_vocoder_losses(
         "aligned_frame_rms_to_energy_control_corr": round(aligned_frame_rms_to_energy_control_corr, 6),
         "waveform_frame_rms_to_aper_energy_corr": round(waveform_frame_rms_to_aper_energy_corr, 6),
         "aligned_frame_rms_to_aper_energy_corr": round(aligned_frame_rms_to_aper_energy_corr, 6),
+        "waveform_frame_rms_to_energy_control_lagcorr": round(waveform_frame_rms_to_energy_control_lagcorr, 6),
+        "waveform_frame_rms_to_aper_energy_lagcorr": round(waveform_frame_rms_to_aper_energy_lagcorr, 6),
+        "frame_rms_lagcorr_max_lag_frames": float(frame_rms_lagcorr_max_lag_frames),
         "energy_log_rms_norm_target_present": 1.0 if energy_log_rms_norm_target is not None else 0.0,
         "aper_target_present": 1.0 if aper_target is not None else 0.0,
         "decoded_to_target_rms_ratio": round(
@@ -4481,6 +4679,9 @@ def run_nores_vocoder_validation_pass(
     multires_stft_short_weight: float = 0.0,
     noise_energy_frame_rms_excess_corr_weight: float = 0.0,
     noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    noise_aper_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> dict[str, object]:
     model.eval()
     with torch.no_grad():
@@ -4524,6 +4725,9 @@ def run_nores_vocoder_validation_pass(
             multires_stft_short_weight=multires_stft_short_weight,
             noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
             noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+            noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+            noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
         )
     return {
         "step": int(step),
@@ -4592,6 +4796,9 @@ def run_nores_vocoder_dataset_validation_pass(
     multires_stft_short_weight: float = 0.0,
     noise_energy_frame_rms_excess_corr_weight: float = 0.0,
     noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    noise_aper_energy_frame_rms_lagcorr_excess_weight: float = 0.0,
+    frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
     semantic_supervision: dict[str, object] | None = None,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
@@ -4648,6 +4855,9 @@ def run_nores_vocoder_dataset_validation_pass(
                 multires_stft_short_weight=multires_stft_short_weight,
                 noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
                 noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
+                noise_energy_frame_rms_lagcorr_excess_weight=noise_energy_frame_rms_lagcorr_excess_weight,
+                noise_aper_energy_frame_rms_lagcorr_excess_weight=noise_aper_energy_frame_rms_lagcorr_excess_weight,
+                frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
             )
             semantic_weighting = build_stage5_package_semantic_weighting(
                 target_event_semantic_sidecar=payload.get("target_event_semantic_sidecar"),

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime
+import hashlib
 import json
 import shutil
 from pathlib import Path
@@ -101,6 +102,13 @@ DEFAULT_RUNTIME_APPLICABILITY_RISK_HEURISTIC_VERSION_V2 = "teacher_first_runtime
 DEFAULT_RUNTIME_REFERENCE_DECODER_BEHAVIOR_CACHE_DIR = Path(
     "reports/runtime/offline_mvp_teacher_first_vc_reference_decoder_behavior_cache"
 )
+DEFAULT_REVIEW_BUNDLE_CASE_COMPONENT_MAX_LEN = 28
+TEACHER_FIRST_CONTRACT_DIRNAME = "t_contract"
+TEACHER_FIRST_TMP_CONTRACT_DIRNAME = "_tmp_t_contract"
+TEACHER_FIRST_SCAFFOLD_DIRNAME = "t_scaffold"
+TEACHER_FIRST_TMP_SCAFFOLD_DIRNAME = "_tmp_t_scaffold"
+TEACHER_FIRST_WAVEFORM_HANDOFF_DIRNAME = "whp"
+TEACHER_FIRST_WAVEFORM_DECODER_STRUCTURE_DIRNAME = "wdsp"
 HIGH_RISK_SPECTRAL_CENTROID_HZ = 3200.0
 HIGH_RISK_SPECTRAL_ROLLOFF95_HZ = 22000.0
 HIGH_RISK_HIGH_BAND_ENERGY_RATIO = 0.25
@@ -483,12 +491,8 @@ def run_offline_mvp_teacher_first_vc_demo(
     decoded_path = output_dir / "decoded.wav"
     summary_json_path = output_dir / "teacher_first_vc_demo.json"
     summary_md_path = output_dir / "teacher_first_vc_demo.md"
-    contract_dir = output_dir / (
-        "teacher_contract" if bool(save_intermediates) else "_tmp_teacher_contract"
-    )
-    scaffold_dir = output_dir / (
-        "teacher_vocoder_input_scaffold" if bool(save_intermediates) else "_tmp_teacher_vocoder_input_scaffold"
-    )
+    contract_dir = output_dir / get_teacher_contract_dir_name(save_intermediates=bool(save_intermediates))
+    scaffold_dir = output_dir / get_teacher_scaffold_dir_name(save_intermediates=bool(save_intermediates))
     contract_tensor_path = contract_dir / "teacher_downstream_control_contract.pt"
     scaffold_tensor_path = scaffold_dir / "teacher_vocoder_input_scaffold.pt"
     contract_runtime: dict[str, object] = {}
@@ -2353,17 +2357,84 @@ def build_review_bundle_case_id(
         base = str(raw_case_id)
     else:
         base = input_audio_path.stem
-    sanitized = sanitize_bundle_component(base)
+    sanitized = compact_bundle_component(
+        base,
+        max_length=DEFAULT_REVIEW_BUNDLE_CASE_COMPONENT_MAX_LEN,
+    )
     if not sanitized:
         sanitized = f"case_{index:03d}"
     return f"{index:03d}_{sanitized}"
 
 
 def sanitize_bundle_component(raw_value: object) -> str:
-    return "".join(
+    sanitized = "".join(
         char if char.isalnum() or char in {"_", "-"} else "_"
         for char in str(raw_value)
-    ).strip("_")
+    ).strip("_-")
+    while "__" in sanitized:
+        sanitized = sanitized.replace("__", "_")
+    while "--" in sanitized:
+        sanitized = sanitized.replace("--", "-")
+    return sanitized
+
+
+def compact_bundle_component(
+    raw_value: object,
+    *,
+    max_length: int,
+) -> str:
+    sanitized = sanitize_bundle_component(raw_value)
+    if len(sanitized) <= int(max_length):
+        return sanitized
+    digest = hashlib.sha1(sanitized.encode("utf-8")).hexdigest()[:6]
+    body_budget = max(int(max_length) - len(digest) - 2, 8)
+    head_budget = max(body_budget - 6, body_budget // 2)
+    tail_budget = max(body_budget - head_budget, 4)
+    head = sanitized[:head_budget].rstrip("_-")
+    tail = sanitized[-tail_budget:].lstrip("_-")
+    compact = "_".join(part for part in (head, tail, digest) if part)
+    if len(compact) <= int(max_length):
+        return compact
+    head_budget = max(int(max_length) - len(digest) - 1, 1)
+    head = sanitized[:head_budget].rstrip("_-")
+    compact = "_".join(part for part in (head, digest) if part)
+    return compact[: int(max_length)].strip("_-")
+
+
+def get_teacher_contract_dir_name(*, save_intermediates: bool) -> str:
+    return (
+        TEACHER_FIRST_CONTRACT_DIRNAME
+        if bool(save_intermediates)
+        else TEACHER_FIRST_TMP_CONTRACT_DIRNAME
+    )
+
+
+def get_teacher_scaffold_dir_name(*, save_intermediates: bool) -> str:
+    return (
+        TEACHER_FIRST_SCAFFOLD_DIRNAME
+        if bool(save_intermediates)
+        else TEACHER_FIRST_TMP_SCAFFOLD_DIRNAME
+    )
+
+
+def get_teacher_contract_tensor_path(
+    output_dir: Path,
+    *,
+    save_intermediates: bool = True,
+) -> Path:
+    return output_dir / get_teacher_contract_dir_name(save_intermediates=save_intermediates) / (
+        "teacher_downstream_control_contract.pt"
+    )
+
+
+def get_teacher_scaffold_tensor_path(
+    output_dir: Path,
+    *,
+    save_intermediates: bool = True,
+) -> Path:
+    return output_dir / get_teacher_scaffold_dir_name(save_intermediates=save_intermediates) / (
+        "teacher_vocoder_input_scaffold.pt"
+    )
 
 
 def coerce_optional_float(value: object) -> float | None:
@@ -3068,7 +3139,7 @@ def resolve_checkpoint_path_from_training_summary(
 
 
 def build_compare_variant_id(*, label: str, index: int) -> str:
-    sanitized = sanitize_bundle_component(label)
+    sanitized = compact_bundle_component(label, max_length=32)
     if not sanitized:
         sanitized = f"variant_{index:02d}"
     return sanitized
@@ -3376,7 +3447,7 @@ def analyze_teacher_first_vc_applicability(
         )
         demo_summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
         scaffold_payload = torch.load(
-            case_output_dir / "teacher_vocoder_input_scaffold" / "teacher_vocoder_input_scaffold.pt",
+            get_teacher_scaffold_tensor_path(case_output_dir),
             map_location="cpu",
             weights_only=False,
         )
@@ -4197,8 +4268,8 @@ def analyze_teacher_first_vc_acoustic_temporal_alignment(
             index=index,
         )
         case_output_dir = cases_dir / case_id
-        contract_dir = case_output_dir / "teacher_contract"
-        scaffold_dir = case_output_dir / "teacher_vocoder_input_scaffold"
+        contract_dir = case_output_dir / get_teacher_contract_dir_name(save_intermediates=True)
+        scaffold_dir = case_output_dir / get_teacher_scaffold_dir_name(save_intermediates=True)
         contract_dir.mkdir(parents=True, exist_ok=True)
         scaffold_dir.mkdir(parents=True, exist_ok=True)
         stage_state: dict[str, object] = {
@@ -4357,7 +4428,7 @@ def analyze_teacher_first_vc_decoder_behavior(
         )
         demo_summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
         scaffold_payload = torch.load(
-            case_output_dir / "teacher_vocoder_input_scaffold" / "teacher_vocoder_input_scaffold.pt",
+            get_teacher_scaffold_tensor_path(case_output_dir),
             map_location="cpu",
             weights_only=False,
         )
@@ -4508,7 +4579,7 @@ def analyze_teacher_first_vc_waveform_handoff(
         )
         demo_summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
         scaffold_payload = torch.load(
-            case_output_dir / "teacher_vocoder_input_scaffold" / "teacher_vocoder_input_scaffold.pt",
+            get_teacher_scaffold_tensor_path(case_output_dir),
             map_location="cpu",
             weights_only=False,
         )
@@ -4663,7 +4734,7 @@ def analyze_teacher_first_vc_waveform_decoder_structure(
         )
         demo_summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
         scaffold_payload = torch.load(
-            case_output_dir / "teacher_vocoder_input_scaffold" / "teacher_vocoder_input_scaffold.pt",
+            get_teacher_scaffold_tensor_path(case_output_dir),
             map_location="cpu",
             weights_only=False,
         )
@@ -4782,7 +4853,7 @@ def build_waveform_handoff_case_summary(
         waveform_frames=waveform_frames,
     )
 
-    handoff_dir = case_output_dir / "waveform_handoff_probe"
+    handoff_dir = case_output_dir / TEACHER_FIRST_WAVEFORM_HANDOFF_DIRNAME
     handoff_dir.mkdir(parents=True, exist_ok=True)
     logits_audio_path = handoff_dir / "waveform_frame_logits_stitched.wav"
     frames_audio_path = handoff_dir / "waveform_frames_stitched.wav"
@@ -4892,7 +4963,7 @@ def build_waveform_decoder_structure_case_summary(
 
     periodic_branch_features = branch_scaffold["periodic_branch_features"].to(device=device, dtype=torch.float32)
     noise_branch_features = branch_scaffold["noise_branch_features"].to(device=device, dtype=torch.float32)
-    structure_dir = case_output_dir / "waveform_decoder_structure_probe"
+    structure_dir = case_output_dir / TEACHER_FIRST_WAVEFORM_DECODER_STRUCTURE_DIRNAME
     structure_dir.mkdir(parents=True, exist_ok=True)
 
     variant_rows: list[dict[str, object]] = []

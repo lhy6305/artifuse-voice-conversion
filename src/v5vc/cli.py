@@ -2214,7 +2214,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=Path,
         default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/decoder_behavior_probe"
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/dbp"
         ),
         help="Directory for per-case runs and decoder-behavior summaries.",
     )
@@ -2323,7 +2323,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=Path,
         default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/acoustic_temporal_alignment_probe"
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/atap"
         ),
         help="Directory for per-case scaffold exports and temporal-alignment summaries.",
     )
@@ -2420,7 +2420,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=Path,
         default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/waveform_handoff_probe"
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/whp"
         ),
         help="Directory for per-case runs, handoff tensors, and staged waveform exports.",
     )
@@ -2512,7 +2512,7 @@ def build_parser() -> argparse.ArgumentParser:
         "--output-dir",
         type=Path,
         default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/waveform_decoder_structure_probe"
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/wdsp"
         ),
         help="Directory for per-case runs, structure-bypass audios, and summary outputs.",
     )
@@ -2890,6 +2890,24 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own aper*energy correlation.",
     )
+    nores_vocoder_train_step_parser.add_argument(
+        "--noise-energy-frame-rms-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family energy control relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--noise-aper-energy-frame-rms-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family aper*energy control relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--frame-rms-lagcorr-max-lag-frames",
+        type=int,
+        default=4,
+        help="Maximum absolute lag in frames used by the lag-aware frame-RMS correlation regularizers.",
+    )
     nores_vocoder_train_loop_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-training-loop",
         help="Run a minimal multi-step training loop on the no-residual vocoder target package.",
@@ -3128,6 +3146,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own aper*energy correlation.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--noise-energy-frame-rms-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family energy control relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--noise-aper-energy-frame-rms-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family aper*energy control relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--frame-rms-lagcorr-max-lag-frames",
+        type=int,
+        default=4,
+        help="Maximum absolute lag in frames used by the lag-aware frame-RMS correlation regularizers.",
     )
     nores_vocoder_dataset_packages_parser = subparsers.add_parser(
         "build-offline-mvp-nores-vocoder-dataset-packages",
@@ -3580,6 +3616,24 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own aper*energy correlation.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--noise-energy-frame-rms-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family energy control relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--noise-aper-energy-frame-rms-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family aper*energy control relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--frame-rms-lagcorr-max-lag-frames",
+        type=int,
+        default=4,
+        help="Maximum absolute lag in frames used by the lag-aware frame-RMS correlation regularizers.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--semantic-supervision-enabled",
@@ -5648,6 +5702,9 @@ def main(argv: list[str] | None = None) -> int:
             multires_stft_short_weight=args.multires_stft_short_weight,
             noise_energy_frame_rms_excess_corr_weight=args.noise_energy_frame_rms_excess_corr_weight,
             noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
+            noise_energy_frame_rms_lagcorr_excess_weight=args.noise_energy_frame_rms_lagcorr_excess_weight,
+            noise_aper_energy_frame_rms_lagcorr_excess_weight=args.noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -5692,6 +5749,9 @@ def main(argv: list[str] | None = None) -> int:
             multires_stft_short_weight=args.multires_stft_short_weight,
             noise_energy_frame_rms_excess_corr_weight=args.noise_energy_frame_rms_excess_corr_weight,
             noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
+            noise_energy_frame_rms_lagcorr_excess_weight=args.noise_energy_frame_rms_lagcorr_excess_weight,
+            noise_aper_energy_frame_rms_lagcorr_excess_weight=args.noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -5771,6 +5831,9 @@ def main(argv: list[str] | None = None) -> int:
             multires_stft_short_weight=args.multires_stft_short_weight,
             noise_energy_frame_rms_excess_corr_weight=args.noise_energy_frame_rms_excess_corr_weight,
             noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
+            noise_energy_frame_rms_lagcorr_excess_weight=args.noise_energy_frame_rms_lagcorr_excess_weight,
+            noise_aper_energy_frame_rms_lagcorr_excess_weight=args.noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
             semantic_supervision_enabled=bool(args.semantic_supervision_enabled),
         )
         return 0
