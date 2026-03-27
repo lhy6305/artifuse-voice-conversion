@@ -1,0 +1,210 @@
+{
+  "dataset_index_version": "offline_mvp_nores_vocoder_dataset_index_v1",
+  "generated_at": "2026-03-27T14:02:35",
+  "mode": "teacher_first_stage5_input_variant_dataset_v1",
+  "source_dataset_index_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/offline_mvp_nores_vocoder_dataset_index.json",
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1",
+  "control_family_overrides": [
+    {
+      "family": "aper",
+      "mode": "time_shuffle",
+      "targets": [
+        "noise.aper"
+      ]
+    },
+    {
+      "family": "noise_E_log_rms_norm",
+      "mode": "time_shuffle",
+      "targets": [
+        "noise.E_log_rms_norm"
+      ]
+    }
+  ],
+  "max_train_packages": 2,
+  "max_validation_packages": 1,
+  "train_package_count": 2,
+  "validation_package_count": 1,
+  "train_packages": [
+    {
+      "record_id": "target::archive_firefly_1",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/archive_firefly_1.wav",
+      "duration_sec": 11.087982,
+      "split_name": "train",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1/packages/train/target__archive_firefly_1/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v2",
+      "frame_count": 3054,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 6913253,
+      "package_build_sec": 2.356193,
+      "package_status": "built_now",
+      "input_variant": {
+        "control_family_overrides": [
+          {
+            "family": "aper",
+            "mode": "time_shuffle",
+            "targets": [
+              "noise.aper"
+            ]
+          },
+          {
+            "family": "noise_E_log_rms_norm",
+            "mode": "time_shuffle",
+            "targets": [
+              "noise.E_log_rms_norm"
+            ]
+          }
+        ],
+        "transform_summary": {
+          "transformations": [
+            "noise.aper -> time_shuffle[8:9]",
+            "noise.E_log_rms_norm -> time_shuffle[10:11]"
+          ],
+          "control_family_overrides": [
+            {
+              "family": "aper",
+              "mode": "time_shuffle",
+              "targets": [
+                "noise.aper"
+              ]
+            },
+            {
+              "family": "noise_E_log_rms_norm",
+              "mode": "time_shuffle",
+              "targets": [
+                "noise.E_log_rms_norm"
+              ]
+            }
+          ]
+        },
+        "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/packages/train/target__archive_firefly_1/train_targets/offline_mvp_nores_vocoder_train_targets.pt"
+      }
+    },
+    {
+      "record_id": "target::archive_firefly_10",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/archive_firefly_10.wav",
+      "duration_sec": 17.184989,
+      "split_name": "train",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1/packages/train/target__archive_firefly_10/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v2",
+      "frame_count": 4735,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 10698610,
+      "package_build_sec": 4.987214,
+      "package_status": "built_now",
+      "input_variant": {
+        "control_family_overrides": [
+          {
+            "family": "aper",
+            "mode": "time_shuffle",
+            "targets": [
+              "noise.aper"
+            ]
+          },
+          {
+            "family": "noise_E_log_rms_norm",
+            "mode": "time_shuffle",
+            "targets": [
+              "noise.E_log_rms_norm"
+            ]
+          }
+        ],
+        "transform_summary": {
+          "transformations": [
+            "noise.aper -> time_shuffle[8:9]",
+            "noise.E_log_rms_norm -> time_shuffle[10:11]"
+          ],
+          "control_family_overrides": [
+            {
+              "family": "aper",
+              "mode": "time_shuffle",
+              "targets": [
+                "noise.aper"
+              ]
+            },
+            {
+              "family": "noise_E_log_rms_norm",
+              "mode": "time_shuffle",
+              "targets": [
+                "noise.E_log_rms_norm"
+              ]
+            }
+          ]
+        },
+        "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/packages/train/target__archive_firefly_10/train_targets/offline_mvp_nores_vocoder_train_targets.pt"
+      }
+    }
+  ],
+  "validation_packages": [
+    {
+      "record_id": "target::chapter3_3_firefly_162",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/firefly_mainstream/audio/chapter3_3_firefly_162.wav",
+      "duration_sec": 0.612993,
+      "split_name": "validation",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "offline_teacher_vocoder_input_scaffold_v2",
+      "frame_count": 167,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 411395,
+      "package_build_sec": 0.190097,
+      "package_status": "built_now",
+      "input_variant": {
+        "control_family_overrides": [
+          {
+            "family": "aper",
+            "mode": "time_shuffle",
+            "targets": [
+              "noise.aper"
+            ]
+          },
+          {
+            "family": "noise_E_log_rms_norm",
+            "mode": "time_shuffle",
+            "targets": [
+              "noise.E_log_rms_norm"
+            ]
+          }
+        ],
+        "transform_summary": {
+          "transformations": [
+            "noise.aper -> time_shuffle[8:9]",
+            "noise.E_log_rms_norm -> time_shuffle[10:11]"
+          ],
+          "control_family_overrides": [
+            {
+              "family": "aper",
+              "mode": "time_shuffle",
+              "targets": [
+                "noise.aper"
+              ]
+            },
+            {
+              "family": "noise_E_log_rms_norm",
+              "mode": "time_shuffle",
+              "targets": [
+                "noise.E_log_rms_norm"
+              ]
+            }
+          ]
+        },
+        "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt"
+      }
+    }
+  ],
+  "notes": [
+    "This command rewrites Stage5 training packages by applying probe-style input-control transforms directly to package inputs.",
+    "It is intended to bridge user-line diagnostics into a reusable training-dataset candidate without modifying the baseline training loop.",
+    "Only zero/time_roll_half/time_shuffle are supported here because reference-backed replacements need external reference statistics and are probe-only."
+  ]
+}

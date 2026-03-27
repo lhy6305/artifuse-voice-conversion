@@ -1,0 +1,21 @@
+# Stage5 Input Variant Dataset
+
+- generated_at: 2026-03-27T14:02:35
+- mode: teacher_first_stage5_input_variant_dataset_v1
+- source_dataset_index_path: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/offline_mvp_nores_vocoder_dataset_index.json
+- output_dir: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1
+- train_package_count: 2
+- validation_package_count: 1
+- control_family_overrides: [{"family": "aper", "mode": "time_shuffle", "targets": ["noise.aper"]}, {"family": "noise_E_log_rms_norm", "mode": "time_shuffle", "targets": ["noise.E_log_rms_norm"]}]
+
+## Train Packages
+- target::archive_firefly_1: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1/packages/train/target__archive_firefly_1/train_targets/offline_mvp_nores_vocoder_train_targets.pt variant={"control_family_overrides": [{"family": "aper", "mode": "time_shuffle", "targets": ["noise.aper"]}, {"family": "noise_E_log_rms_norm", "mode": "time_shuffle", "targets": ["noise.E_log_rms_norm"]}], "transform_summary": {"transformations": ["noise.aper -> time_shuffle[8:9]", "noise.E_log_rms_norm -> time_shuffle[10:11]"], "control_family_overrides": [{"family": "aper", "mode": "time_shuffle", "targets": ["noise.aper"]}, {"family": "noise_E_log_rms_norm", "mode": "time_shuffle", "targets": ["noise.E_log_rms_norm"]}]}, "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/packages/train/target__archive_firefly_1/train_targets/offline_mvp_nores_vocoder_train_targets.pt"}
+- target::archive_firefly_10: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1/packages/train/target__archive_firefly_10/train_targets/offline_mvp_nores_vocoder_train_targets.pt variant={"control_family_overrides": [{"family": "aper", "mode": "time_shuffle", "targets": ["noise.aper"]}, {"family": "noise_E_log_rms_norm", "mode": "time_shuffle", "targets": ["noise.E_log_rms_norm"]}], "transform_summary": {"transformations": ["noise.aper -> time_shuffle[8:9]", "noise.E_log_rms_norm -> time_shuffle[10:11]"], "control_family_overrides": [{"family": "aper", "mode": "time_shuffle", "targets": ["noise.aper"]}, {"family": "noise_E_log_rms_norm", "mode": "time_shuffle", "targets": ["noise.E_log_rms_norm"]}]}, "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/packages/train/target__archive_firefly_10/train_targets/offline_mvp_nores_vocoder_train_targets.pt"}
+
+## Validation Packages
+- target::chapter3_3_firefly_162: F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_inputvariant_noiseenergy_apershuffle_smoke_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt variant={"control_family_overrides": [{"family": "aper", "mode": "time_shuffle", "targets": ["noise.aper"]}, {"family": "noise_E_log_rms_norm", "mode": "time_shuffle", "targets": ["noise.E_log_rms_norm"]}], "transform_summary": {"transformations": ["noise.aper -> time_shuffle[8:9]", "noise.E_log_rms_norm -> time_shuffle[10:11]"], "control_family_overrides": [{"family": "aper", "mode": "time_shuffle", "targets": ["noise.aper"]}, {"family": "noise_E_log_rms_norm", "mode": "time_shuffle", "targets": ["noise.E_log_rms_norm"]}]}, "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/offline_mvp_nores_vocoder_dataset_fullsplit_export_contractv2_normfix_round1_1/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt"}
+
+## Notes
+- This command rewrites Stage5 training packages by applying probe-style input-control transforms directly to package inputs.
+- It is intended to bridge user-line diagnostics into a reusable training-dataset candidate without modifying the baseline training loop.
+- Only zero/time_roll_half/time_shuffle are supported here because reference-backed replacements need external reference statistics and are probe-only.

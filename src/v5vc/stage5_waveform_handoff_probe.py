@@ -113,10 +113,18 @@ def analyze_stage5_nores_waveform_handoff(
             )
             if predicted_activity.ndim == 2 and int(predicted_activity.shape[-1]) == 1:
                 predicted_activity = predicted_activity.squeeze(-1)
+            periodic_hidden = outputs["periodic_hidden"].detach().cpu().to(torch.float32)
+            noise_hidden = outputs["noise_hidden"].detach().cpu().to(torch.float32)
+            branch_mean_hidden = outputs["branch_mean_hidden"].detach().cpu().to(torch.float32)
+            fused_hidden = outputs["fused_hidden"].detach().cpu().to(torch.float32)
             decoder_hidden = outputs["decoder_hidden"].detach().cpu().to(torch.float32)
             waveform_frame_logits = outputs["waveform_frame_logits"].detach().cpu().to(torch.float32)
             waveform_frames = outputs["waveform_frames"].detach().cpu().to(torch.float32)
             stage_metrics = summarize_handoff_stage_metrics(
+                periodic_hidden=periodic_hidden,
+                noise_hidden=noise_hidden,
+                branch_mean_hidden=branch_mean_hidden,
+                fused_hidden=fused_hidden,
                 decoder_hidden=decoder_hidden,
                 waveform_frame_logits=waveform_frame_logits,
                 waveform_frames=waveform_frames,
@@ -223,11 +231,23 @@ def sanitize_record_id(record_id: str) -> str:
 
 def summarize_handoff_stage_metrics(
     *,
+    periodic_hidden: torch.Tensor | None = None,
+    noise_hidden: torch.Tensor | None = None,
+    branch_mean_hidden: torch.Tensor | None = None,
+    fused_hidden: torch.Tensor | None = None,
     decoder_hidden: torch.Tensor,
     waveform_frame_logits: torch.Tensor,
     waveform_frames: torch.Tensor,
 ) -> dict[str, float]:
     metrics = {}
+    if periodic_hidden is not None:
+        metrics.update(prefix_metrics("periodic_hidden", summarize_sequence_metrics(periodic_hidden)))
+    if noise_hidden is not None:
+        metrics.update(prefix_metrics("noise_hidden", summarize_sequence_metrics(noise_hidden)))
+    if branch_mean_hidden is not None:
+        metrics.update(prefix_metrics("branch_mean_hidden", summarize_sequence_metrics(branch_mean_hidden)))
+    if fused_hidden is not None:
+        metrics.update(prefix_metrics("fused_hidden", summarize_sequence_metrics(fused_hidden)))
     metrics.update(prefix_metrics("decoder_hidden", summarize_sequence_metrics(decoder_hidden)))
     metrics.update(prefix_metrics("waveform_frame_logits", summarize_sequence_metrics(waveform_frame_logits)))
     metrics.update(prefix_metrics("waveform_frames", summarize_sequence_metrics(waveform_frames)))
@@ -246,6 +266,38 @@ def summarize_handoff_stage_metrics(
     metrics["logits_to_frames_adjacent_cosine_gap"] = round(
         float(metrics["waveform_frames_adjacent_cosine_mean"])
         - float(metrics["waveform_frame_logits_adjacent_cosine_mean"]),
+        6,
+    )
+    if branch_mean_hidden is not None and fused_hidden is not None:
+        metrics["branch_mean_to_fused_template_cosine_gap"] = round(
+            float(metrics["fused_hidden_template_cosine_mean"])
+            - float(metrics["branch_mean_hidden_template_cosine_mean"]),
+            6,
+        )
+        metrics["branch_mean_to_fused_adjacent_cosine_gap"] = round(
+            float(metrics["fused_hidden_adjacent_cosine_mean"])
+            - float(metrics["branch_mean_hidden_adjacent_cosine_mean"]),
+            6,
+        )
+    if fused_hidden is not None:
+        metrics["fused_to_decoder_template_cosine_gap"] = round(
+            float(metrics["decoder_hidden_template_cosine_mean"])
+            - float(metrics["fused_hidden_template_cosine_mean"]),
+            6,
+        )
+        metrics["fused_to_decoder_adjacent_cosine_gap"] = round(
+            float(metrics["decoder_hidden_adjacent_cosine_mean"])
+            - float(metrics["fused_hidden_adjacent_cosine_mean"]),
+            6,
+        )
+    metrics["decoder_to_logits_template_cosine_gap"] = round(
+        float(metrics["waveform_frame_logits_template_cosine_mean"])
+        - float(metrics["decoder_hidden_template_cosine_mean"]),
+        6,
+    )
+    metrics["decoder_to_logits_adjacent_cosine_gap"] = round(
+        float(metrics["waveform_frame_logits_adjacent_cosine_mean"])
+        - float(metrics["decoder_hidden_adjacent_cosine_mean"]),
         6,
     )
     return metrics

@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from concurrent.futures import ProcessPoolExecutor, as_completed
 from datetime import datetime
+from functools import lru_cache
 import json
 import math
 import os
@@ -498,6 +499,8 @@ def run_offline_mvp_nores_vocoder_training_step(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    noise_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -562,6 +565,9 @@ def run_offline_mvp_nores_vocoder_training_step(
         periodic_gate_target=periodic_gate_target,
         noise_gate_target=noise_gate_target,
         aligned_waveform=training_batch["aligned_waveform"],
+        energy_proxy_target=training_batch.get("energy_proxy_target"),
+        energy_log_rms_norm_target=training_batch.get("energy_log_rms_norm_target"),
+        aper_target=training_batch.get("aper_target"),
         sample_rate=int(runtime["sample_rate"]),
         frame_length=int(runtime["frame_length"]),
         hop_length=int(runtime["hop_length"]),
@@ -585,6 +591,8 @@ def run_offline_mvp_nores_vocoder_training_step(
         periodic_waveform_stft_weight=periodic_waveform_stft_weight,
         periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
         multires_stft_short_weight=multires_stft_short_weight,
+        noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+        noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
     )
     optimizer.zero_grad(set_to_none=True)
     total_loss.backward()
@@ -642,6 +650,8 @@ def run_offline_mvp_nores_vocoder_training_step(
             "periodic_waveform_stft": float(periodic_waveform_stft_weight),
             "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
             "multires_stft_short": float(multires_stft_short_weight),
+            "noise_energy_frame_rms_excess_corr": float(noise_energy_frame_rms_excess_corr_weight),
+            "noise_aper_energy_frame_rms_excess_corr": float(noise_aper_energy_frame_rms_excess_corr_weight),
             "use_predicted_activity_gate": bool(use_predicted_activity_gate),
             "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
         },
@@ -733,6 +743,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    noise_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
 ) -> None:
     training_package_path = training_package_path.resolve()
     output_dir = output_dir.resolve()
@@ -818,6 +830,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
             periodic_gate_target=training_batch["periodic_gate_target"],
             noise_gate_target=training_batch["noise_gate_target"],
             aligned_waveform=training_batch["aligned_waveform"],
+            energy_proxy_target=training_batch.get("energy_proxy_target"),
+            energy_log_rms_norm_target=training_batch.get("energy_log_rms_norm_target"),
+            aper_target=training_batch.get("aper_target"),
             sample_rate=int(training_runtime["sample_rate"]),
             frame_length=int(training_runtime["frame_length"]),
             hop_length=int(training_runtime["hop_length"]),
@@ -841,6 +856,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
             periodic_waveform_stft_weight=periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
             multires_stft_short_weight=multires_stft_short_weight,
+            noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+            noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
@@ -900,6 +917,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                 multires_stft_short_weight=multires_stft_short_weight,
+                noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+                noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
                 validation_source=(
                     "separate_validation_package"
                     if resolved_validation_package_path is not None
@@ -1004,6 +1023,10 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "periodic_waveform_stft": float(periodic_waveform_stft_weight),
                 "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
                 "multires_stft_short": float(multires_stft_short_weight),
+                "noise_energy_frame_rms_excess_corr": float(noise_energy_frame_rms_excess_corr_weight),
+                "noise_aper_energy_frame_rms_excess_corr": float(
+                    noise_aper_energy_frame_rms_excess_corr_weight
+                ),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1364,6 +1387,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    noise_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
     semantic_supervision_enabled: bool = False,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
@@ -1479,6 +1504,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 periodic_gate_target=batch["periodic_gate_target"],
                 noise_gate_target=batch["noise_gate_target"],
                 aligned_waveform=batch["aligned_waveform"],
+                energy_proxy_target=batch.get("energy_proxy_target"),
+                energy_log_rms_norm_target=batch.get("energy_log_rms_norm_target"),
+                aper_target=batch.get("aper_target"),
                 sample_rate=int(runtime["sample_rate"]),
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
@@ -1505,6 +1533,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                 multires_stft_short_weight=multires_stft_short_weight,
+                noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+                noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
             )
             semantic_weighting = build_stage5_package_semantic_weighting(
                 target_event_semantic_sidecar=payload.get("target_event_semantic_sidecar"),
@@ -1604,6 +1634,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                     periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                     multires_stft_short_weight=multires_stft_short_weight,
+                    noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+                    noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
                     semantic_supervision=semantic_supervision,
                     validation_source="validation_packages",
                 )
@@ -1637,6 +1669,8 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                     periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                     multires_stft_short_weight=multires_stft_short_weight,
+                    noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+                    noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
                     semantic_supervision=semantic_supervision,
                     validation_source="train_packages_reused",
                 )
@@ -1738,6 +1772,10 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "periodic_waveform_stft": float(periodic_waveform_stft_weight),
                 "periodic_waveform_high_band_excess": float(periodic_waveform_high_band_excess_weight),
                 "multires_stft_short": float(multires_stft_short_weight),
+                "noise_energy_frame_rms_excess_corr": float(noise_energy_frame_rms_excess_corr_weight),
+                "noise_aper_energy_frame_rms_excess_corr": float(
+                    noise_aper_energy_frame_rms_excess_corr_weight
+                ),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
@@ -1810,13 +1848,70 @@ def load_training_package_payload(training_package_path: Path) -> dict[str, obje
             "Unsupported training_package_version for no-residual vocoder training: "
             f"{payload.get('training_package_version')!r}"
         )
-    return payload
+    return enrich_training_package_payload_targets(payload)
+
+
+@lru_cache(maxsize=256)
+def load_source_scaffold_auxiliary_targets(source_scaffold_path: str) -> dict[str, torch.Tensor]:
+    scaffold_payload = torch.load(source_scaffold_path, map_location="cpu", weights_only=False)
+    if not isinstance(scaffold_payload, dict):
+        raise TypeError(f"Unsupported source scaffold payload type: {type(scaffold_payload)!r}")
+    available_controls = dict(scaffold_payload.get("available_controls", {}))
+    auxiliary_targets: dict[str, torch.Tensor] = {}
+    for target_name, control_key in (
+        ("aper_target", "aper"),
+        ("energy_control_target", "E"),
+        ("energy_log_rms_norm_target", "E_log_rms_norm"),
+    ):
+        control_value = available_controls.get(control_key)
+        if isinstance(control_value, torch.Tensor):
+            auxiliary_targets[target_name] = control_value.detach().to(torch.float32).cpu()
+    return auxiliary_targets
+
+
+def enrich_training_package_payload_targets(payload: dict[str, object]) -> dict[str, object]:
+    targets = dict(payload.get("targets", {}))
+    source_scaffold_path = payload.get("source_scaffold_path")
+    if not isinstance(source_scaffold_path, str) or not source_scaffold_path:
+        return payload
+    auxiliary_targets = load_source_scaffold_auxiliary_targets(source_scaffold_path)
+    if not auxiliary_targets:
+        return payload
+    frame_count = int(payload.get("frame_count", 0))
+    targets_updated = False
+    for target_name, tensor in auxiliary_targets.items():
+        if target_name in targets:
+            continue
+        if tensor.ndim != 2 or int(tensor.shape[0]) != frame_count:
+            raise ValueError(
+                f"Auxiliary target {target_name!r} from source scaffold does not match frame_count={frame_count}: "
+                f"shape={tuple(tensor.shape)}"
+            )
+        targets[target_name] = tensor.clone()
+        targets_updated = True
+    if not targets_updated:
+        return payload
+    enriched_payload = dict(payload)
+    enriched_payload["targets"] = targets
+    return enriched_payload
+
+
+def extract_optional_training_tensor(
+    mapping: dict[str, object],
+    key: str,
+) -> torch.Tensor | None:
+    value = mapping.get(key)
+    if value is None:
+        return None
+    if not isinstance(value, torch.Tensor):
+        raise TypeError(f"Expected training tensor {key!r}, got {type(value)!r}")
+    return value.to(torch.float32)
 
 
 def extract_training_batch(payload: dict[str, object]) -> dict[str, torch.Tensor]:
     inputs = dict(payload["inputs"])
     targets = dict(payload["targets"])
-    return {
+    batch: dict[str, torch.Tensor] = {
         "periodic_branch_features": inputs["periodic_branch_features"].to(torch.float32),
         "noise_branch_features": inputs["noise_branch_features"].to(torch.float32),
         "harmonic_target": targets["harmonic_envelope_target"].to(torch.float32),
@@ -1825,6 +1920,16 @@ def extract_training_batch(payload: dict[str, object]) -> dict[str, torch.Tensor
         "noise_gate_target": targets["noise_gate_target"].to(torch.float32),
         "aligned_waveform": payload["aligned_waveform"].to(torch.float32),
     }
+    for optional_key in (
+        "energy_proxy_target",
+        "energy_control_target",
+        "energy_log_rms_norm_target",
+        "aper_target",
+    ):
+        optional_tensor = extract_optional_training_tensor(targets, optional_key)
+        if optional_tensor is not None:
+            batch[optional_key] = optional_tensor
+    return batch
 
 
 def extract_training_runtime(payload: dict[str, object]) -> dict[str, int]:
@@ -3674,6 +3779,55 @@ def compute_centered_frame_rms(frames: torch.Tensor) -> torch.Tensor:
     return centered.pow(2).mean(dim=1).sqrt()
 
 
+def compute_zero_lag_sequence_correlation(
+    first: torch.Tensor,
+    second: torch.Tensor,
+    zero_like: torch.Tensor | None = None,
+) -> torch.Tensor:
+    first_tensor = first.to(torch.float32).view(-1)
+    second_tensor = second.to(torch.float32).view(-1)
+    valid_length = min(int(first_tensor.numel()), int(second_tensor.numel()))
+    if valid_length <= 1:
+        zero_source = first_tensor if zero_like is None else zero_like
+        return zero_source.new_zeros(())
+    first_centered = first_tensor[:valid_length] - first_tensor[:valid_length].mean()
+    second_centered = second_tensor[:valid_length] - second_tensor[:valid_length].mean()
+    denominator = first_centered.norm() * second_centered.norm()
+    if float(denominator.detach().cpu().item()) <= 1.0e-6:
+        zero_source = first_tensor if zero_like is None else zero_like
+        return zero_source.new_zeros(())
+    return (first_centered * second_centered).sum() / denominator.clamp_min(1.0e-6)
+
+
+def compute_frame_rms_excess_correlation_loss_against_aligned_target(
+    *,
+    predicted_frames: torch.Tensor,
+    aligned_waveform: torch.Tensor,
+    control_target: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    zero_like: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+    aligned_analysis_frames = frame_waveform_sequence(
+        waveform=aligned_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    predicted_frame_rms = compute_centered_frame_rms(predicted_frames).clamp_min(1.0e-6)
+    aligned_frame_rms = compute_centered_frame_rms(aligned_analysis_frames).clamp_min(1.0e-6)
+    predicted_corr = compute_zero_lag_sequence_correlation(
+        predicted_frame_rms,
+        control_target,
+        zero_like=zero_like if zero_like is not None else predicted_frames,
+    )
+    aligned_corr = compute_zero_lag_sequence_correlation(
+        aligned_frame_rms,
+        control_target,
+        zero_like=zero_like if zero_like is not None else aligned_waveform,
+    )
+    return (predicted_corr - aligned_corr).clamp_min(0.0), predicted_corr, aligned_corr
+
+
 def normalize_frames_unit_rms(frames: torch.Tensor) -> torch.Tensor:
     frames_tensor = frames.to(torch.float32)
     centered = frames_tensor - frames_tensor.mean(dim=1, keepdim=True)
@@ -3897,6 +4051,9 @@ def compute_nores_vocoder_losses(
     periodic_gate_target: torch.Tensor,
     noise_gate_target: torch.Tensor,
     aligned_waveform: torch.Tensor | None,
+    energy_proxy_target: torch.Tensor | None,
+    energy_log_rms_norm_target: torch.Tensor | None,
+    aper_target: torch.Tensor | None,
     sample_rate: int | None,
     frame_length: int | None,
     hop_length: int | None,
@@ -3923,6 +4080,8 @@ def compute_nores_vocoder_losses(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    noise_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
 ) -> tuple[torch.Tensor, dict[str, float]]:
     resolved_reconstruction_frame_gain_apply_mode = normalize_training_reconstruction_frame_gain_apply_mode(
         reconstruction_frame_gain_apply_mode
@@ -3967,12 +4126,18 @@ def compute_nores_vocoder_losses(
     periodic_waveform_stft_loss = harmonic_loss.new_zeros(())
     periodic_waveform_high_band_excess_loss = harmonic_loss.new_zeros(())
     multires_stft_short_loss = harmonic_loss.new_zeros(())
+    noise_energy_frame_rms_excess_corr_loss = harmonic_loss.new_zeros(())
+    noise_aper_energy_frame_rms_excess_corr_loss = harmonic_loss.new_zeros(())
     periodic_waveform_frame_rms_mean = 0.0
     aligned_active_frame_rms_mean = 0.0
     decoded_waveform_rms = 0.0
     target_waveform_rms = 0.0
     periodic_waveform_high_band_ratio = 0.0
     aligned_waveform_high_band_ratio = 0.0
+    waveform_frame_rms_to_energy_control_corr = 0.0
+    aligned_frame_rms_to_energy_control_corr = 0.0
+    waveform_frame_rms_to_aper_energy_corr = 0.0
+    aligned_frame_rms_to_aper_energy_corr = 0.0
     periodic_hidden = outputs.get("periodic_hidden")
     noise_hidden = outputs.get("noise_hidden")
     fused_hidden = outputs.get("fused_hidden")
@@ -4001,6 +4166,8 @@ def compute_nores_vocoder_losses(
         or float(periodic_waveform_stft_weight) > 0.0
         or float(periodic_waveform_high_band_excess_weight) > 0.0
         or float(multires_stft_short_weight) > 0.0
+        or float(noise_energy_frame_rms_excess_corr_weight) > 0.0
+        or float(noise_aper_energy_frame_rms_excess_corr_weight) > 0.0
     ):
         if aligned_waveform is None:
             raise ValueError("aligned_waveform is required when waveform/structure losses are enabled.")
@@ -4047,6 +4214,50 @@ def compute_nores_vocoder_losses(
         )
         decoded_waveform_rms = float(decoded_rms_tensor.detach().cpu().item())
         target_waveform_rms = float(target_rms_tensor.detach().cpu().item())
+        energy_alignment_target = (
+            energy_log_rms_norm_target
+            if energy_log_rms_norm_target is not None
+            else energy_proxy_target
+        )
+        if energy_alignment_target is not None:
+            (
+                noise_energy_frame_rms_excess_corr_loss,
+                waveform_frame_rms_to_energy_control_corr_tensor,
+                aligned_frame_rms_to_energy_control_corr_tensor,
+            ) = compute_frame_rms_excess_correlation_loss_against_aligned_target(
+                predicted_frames=waveform_frames,
+                aligned_waveform=target_waveform,
+                control_target=energy_alignment_target,
+                frame_length=int(frame_length),
+                hop_length=int(hop_length),
+                zero_like=harmonic_loss,
+            )
+            waveform_frame_rms_to_energy_control_corr = float(
+                waveform_frame_rms_to_energy_control_corr_tensor.detach().cpu().item()
+            )
+            aligned_frame_rms_to_energy_control_corr = float(
+                aligned_frame_rms_to_energy_control_corr_tensor.detach().cpu().item()
+            )
+            if aper_target is not None:
+                aper_energy_target = aper_target.to(torch.float32) * energy_alignment_target.to(torch.float32)
+                (
+                    noise_aper_energy_frame_rms_excess_corr_loss,
+                    waveform_frame_rms_to_aper_energy_corr_tensor,
+                    aligned_frame_rms_to_aper_energy_corr_tensor,
+                ) = compute_frame_rms_excess_correlation_loss_against_aligned_target(
+                    predicted_frames=waveform_frames,
+                    aligned_waveform=target_waveform,
+                    control_target=aper_energy_target,
+                    frame_length=int(frame_length),
+                    hop_length=int(hop_length),
+                    zero_like=harmonic_loss,
+                )
+                waveform_frame_rms_to_aper_energy_corr = float(
+                    waveform_frame_rms_to_aper_energy_corr_tensor.detach().cpu().item()
+                )
+                aligned_frame_rms_to_aper_energy_corr = float(
+                    aligned_frame_rms_to_aper_energy_corr_tensor.detach().cpu().item()
+                )
         periodic_waveform_frames = outputs.get("periodic_waveform_frames")
         if periodic_waveform_frames is not None and (
             float(periodic_waveform_frame_delta_weight) > 0.0
@@ -4148,6 +4359,8 @@ def compute_nores_vocoder_losses(
         + periodic_waveform_stft_loss * float(periodic_waveform_stft_weight)
         + periodic_waveform_high_band_excess_loss * float(periodic_waveform_high_band_excess_weight)
         + multires_stft_short_loss * float(multires_stft_short_weight)
+        + noise_energy_frame_rms_excess_corr_loss * float(noise_energy_frame_rms_excess_corr_weight)
+        + noise_aper_energy_frame_rms_excess_corr_loss * float(noise_aper_energy_frame_rms_excess_corr_weight)
     )
     metrics = {
         "loss_total": round(float(total_loss.detach().cpu().item()), 6),
@@ -4202,6 +4415,14 @@ def compute_nores_vocoder_losses(
             float(multires_stft_short_loss.detach().cpu().item()),
             6,
         ),
+        "loss_noise_energy_frame_rms_corr_excess": round(
+            float(noise_energy_frame_rms_excess_corr_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_noise_aper_energy_frame_rms_corr_excess": round(
+            float(noise_aper_energy_frame_rms_excess_corr_loss.detach().cpu().item()),
+            6,
+        ),
         "periodic_gate_pred_mean": round(float(outputs["periodic_gate"].detach().mean().cpu().item()), 6),
         "noise_gate_pred_mean": round(float(outputs["noise_gate"].detach().mean().cpu().item()), 6),
         "activity_gate_pred_mean": round(float(predicted_activity.detach().mean().cpu().item()), 6),
@@ -4215,6 +4436,12 @@ def compute_nores_vocoder_losses(
         "aligned_active_frame_rms_mean": round(aligned_active_frame_rms_mean, 6),
         "periodic_waveform_high_band_energy_ratio": round(periodic_waveform_high_band_ratio, 6),
         "aligned_waveform_high_band_energy_ratio": round(aligned_waveform_high_band_ratio, 6),
+        "waveform_frame_rms_to_energy_control_corr": round(waveform_frame_rms_to_energy_control_corr, 6),
+        "aligned_frame_rms_to_energy_control_corr": round(aligned_frame_rms_to_energy_control_corr, 6),
+        "waveform_frame_rms_to_aper_energy_corr": round(waveform_frame_rms_to_aper_energy_corr, 6),
+        "aligned_frame_rms_to_aper_energy_corr": round(aligned_frame_rms_to_aper_energy_corr, 6),
+        "energy_log_rms_norm_target_present": 1.0 if energy_log_rms_norm_target is not None else 0.0,
+        "aper_target_present": 1.0 if aper_target is not None else 0.0,
         "decoded_to_target_rms_ratio": round(
             0.0 if target_waveform_rms <= 1.0e-8 else decoded_waveform_rms / target_waveform_rms,
             6,
@@ -4252,6 +4479,8 @@ def run_nores_vocoder_validation_pass(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    noise_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
 ) -> dict[str, object]:
     model.eval()
     with torch.no_grad():
@@ -4267,6 +4496,9 @@ def run_nores_vocoder_validation_pass(
             periodic_gate_target=validation_batch["periodic_gate_target"],
             noise_gate_target=validation_batch["noise_gate_target"],
             aligned_waveform=validation_batch["aligned_waveform"],
+            energy_proxy_target=validation_batch.get("energy_proxy_target"),
+            energy_log_rms_norm_target=validation_batch.get("energy_log_rms_norm_target"),
+            aper_target=validation_batch.get("aper_target"),
             sample_rate=int(sample_rate),
             frame_length=int(frame_length),
             hop_length=int(hop_length),
@@ -4290,6 +4522,8 @@ def run_nores_vocoder_validation_pass(
             periodic_waveform_stft_weight=periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
             multires_stft_short_weight=multires_stft_short_weight,
+            noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+            noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
         )
     return {
         "step": int(step),
@@ -4356,6 +4590,8 @@ def run_nores_vocoder_dataset_validation_pass(
     periodic_waveform_stft_weight: float = 0.0,
     periodic_waveform_high_band_excess_weight: float = 0.0,
     multires_stft_short_weight: float = 0.0,
+    noise_energy_frame_rms_excess_corr_weight: float = 0.0,
+    noise_aper_energy_frame_rms_excess_corr_weight: float = 0.0,
     semantic_supervision: dict[str, object] | None = None,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
@@ -4381,6 +4617,9 @@ def run_nores_vocoder_dataset_validation_pass(
                 periodic_gate_target=batch["periodic_gate_target"],
                 noise_gate_target=batch["noise_gate_target"],
                 aligned_waveform=batch["aligned_waveform"],
+                energy_proxy_target=batch.get("energy_proxy_target"),
+                energy_log_rms_norm_target=batch.get("energy_log_rms_norm_target"),
+                aper_target=batch.get("aper_target"),
                 sample_rate=int(runtime["sample_rate"]),
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
@@ -4407,6 +4646,8 @@ def run_nores_vocoder_dataset_validation_pass(
                 periodic_waveform_stft_weight=periodic_waveform_stft_weight,
                 periodic_waveform_high_band_excess_weight=periodic_waveform_high_band_excess_weight,
                 multires_stft_short_weight=multires_stft_short_weight,
+                noise_energy_frame_rms_excess_corr_weight=noise_energy_frame_rms_excess_corr_weight,
+                noise_aper_energy_frame_rms_excess_corr_weight=noise_aper_energy_frame_rms_excess_corr_weight,
             )
             semantic_weighting = build_stage5_package_semantic_weighting(
                 target_event_semantic_sidecar=payload.get("target_event_semantic_sidecar"),

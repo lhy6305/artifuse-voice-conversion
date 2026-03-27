@@ -970,3 +970,521 @@
       能压低 brightness / collapse，
       却仍留下
       `envelope-following`
+59. 用户线已新增专门的
+  `waveform handoff probe`
+  命令，
+  可把
+  `decoder_hidden / waveform_frame_logits / waveform_frames / decoded_no_gate / decoded_pre_ola_gate / decoded_post_ola_gate`
+  在同一批
+  teacher-first case
+  上一起导出并汇总：
+  - `docs/421_teacher_first_waveform_handoff_probe_bootstrap_report.md`
+  - 当前结论是：
+    - 这条 probe
+      已在单条 user-line smoke 上跑通
+    - 每个 case
+      会额外落盘：
+      - `waveform_frame_logits_stitched.wav`
+      - `waveform_frames_stitched.wav`
+      - `decoded_no_gate.wav`
+      - `decoded_pre_ola_gate.wav`
+      - `decoded_post_ola_gate.wav`
+      - `teacher_first_vc_waveform_handoff_tensors.pt`
+    - 这让后续所有 decode-side 修复
+      都能直接回答：
+      - 坏相位是从
+        `logits`
+        就开始，
+      - 还是主要在
+        `tanh / OLA / gate`
+        才放大
+  - 当前下一步应直接拿
+    已确认 pure buzz
+    的固定三条 user-line 样本
+    跑这条 probe，
+    作为后续每一层修复的统一前后对照基线。
+60. 固定三条
+  pure buzz
+  user-line 样本
+  已完成第一轮
+  waveform handoff probe：
+  - `docs/422_teacher_first_waveform_handoff_probe_triplet_run_report.md`
+  - 当前结论是：
+    - 三条样本都表现出：
+      - `waveform_frame_logits_template_cosine_mean ~ 0.9995 ~ 0.9998`
+      - `waveform_frames_template_cosine_mean ~ 0.9994 ~ 0.9998`
+      - `logits_to_frames_template_cosine_gap ≈ -0.00006 ~ -0.00003`
+    - 也就是说：
+      - 坏相位不是
+        `tanh`
+        才新引入
+    - 同时
+      `decoded_no_gate`
+      已经稳定很坏：
+      - aggregate
+        `decoded_frame_template_cosine_mean = 0.99358`
+      - aggregate
+        `decoded_spectral_centroid_hz = 6852.94`
+      - aggregate
+        `decoded_spectral_high_band_energy_ratio = 0.391782`
+    - `pre/post_ola gate`
+      主要做的是：
+      - 把
+        `predicted_activity_to_decoded_frame_rms_corr`
+        从
+        `-0.0496`
+        拉到
+        `~0.989`
+      - 但只让 brightness / template
+        轻微回落，
+        没有出现新的大幅恶化
+  - 因而当前用户线 decode-side 主线应进一步收紧为：
+    - 暂停把主故障继续写成
+      `gate semantics`
+    - 优先定位
+      `waveform_frames`
+      之前的 collapse /
+      projector operating region /
+      handoff source
+61. 同 checkpoint 的
+  Stage5 validation package
+  也已完成最小 waveform handoff 对照：
+  - `docs/423_teacher_first_vs_stage5_validation_waveform_handoff_alignment_report.md`
+  - 当前结论是：
+    - user-line 与 validation package
+      在 handoff stage 侧
+      并没有出现“只有 user-line 才坏”的新分叉
+    - 例如 aggregate 上：
+      - user-line
+        `waveform_frame_logits_template_cosine_mean = 0.999641`
+      - validation
+        `waveform_frame_logits_template_cosine_mean = 0.999573`
+    - `waveform_frames`
+      也同样接近：
+      - user-line
+        `0.999597`
+      - validation
+        `0.999516`
+    - 这说明当前 user-line
+      所暴露的 waveform handoff collapse，
+      本质上与 checkpoint-native
+      的坏 manifold
+      是同一类问题
+  - 因而当前更准确的主线表述应改成：
+    - 不是
+      “user-line 特有 gate 失配”
+    - 而是
+      “当前 checkpoint
+      在 native validation 路线上
+      自己就已经停在同类 waveform handoff collapse”
+62. user-line 固定三条
+  pure buzz
+  样本
+  已完成第一轮
+  `waveform decoder structure probe`：
+  - `docs/424_teacher_first_waveform_decoder_structure_probe_triplet_report.md`
+  - 当前结论是：
+    - baseline 下：
+      - `fused_hidden_template_cosine_mean = 0.994928`
+      - `waveform_frames_template_cosine_mean = 0.999597`
+      - 自动诊断仍是
+        `collapse_not_localized_to_waveform_decoder`
+    - `fused_hidden_frame_mean`
+      几乎不改变输出：
+      - `waveform_mean_abs_delta_vs_baseline = 0.007526`
+    - 但只要直接用
+      `periodic / noise / branch_mean`
+      绕过 fusion，
+      `decoded_template`
+      就会从
+      `0.993580`
+      掉到
+      `0.859604 / 0.915412 / 0.901776`
+    - 同时 centroid / high-band
+      会大幅上冲到
+      `10667 ~ 12240 Hz`
+      与
+      `0.808 ~ 0.852`
+  - 因而当前 user-line
+    结构层结论应写成：
+    - decoder
+      不是彻底失去响应能力
+    - 更像是：
+      - `fusion / decoder input manifold`
+        已先坍缩
+      - decoder
+        围绕这块坏 manifold
+        学到了稳定的高模板 buzz 解
+63. 同 checkpoint 的
+  Stage5 validation3
+  gate-off
+  `waveform decoder structure probe`
+  也已补跑最小对照：
+  - `docs/425_teacher_first_vs_stage5_validation_waveform_decoder_structure_alignment_report.md`
+  - 当前结论是：
+    - user-line 与 validation3
+      在结构层的响应形状仍然高度一致：
+      - baseline 都是
+        `collapse_not_localized_to_waveform_decoder`
+      - `fused_hidden_frame_mean`
+        都几乎无效
+      - branch bypass
+        都会把输出显著拉出 baseline 模板区，
+        同时推入更亮、更高频的非稳态
+  - 因而当前主线应进一步收紧为：
+    - 这不是
+      user-line 特有结构故障
+    - 而是当前 checkpoint-native 的
+      `fusion / decoder input manifold`
+      问题
+64. plain-fusion baseline
+  已完成 fusion 子阶段定位：
+  - `docs/426_plain_fusion_substage_localization_report.md`
+  - 当前结论是：
+    - 无论 user-line
+      还是 validation3，
+      最大模板化跳变都首先发生在：
+      - `fusion.0 Linear`
+    - 第二个明确跳变点是：
+      - `fusion.3 Linear`
+    - `GELU / LayerNorm`
+      不是主坍缩起点
+  - 因而 plain baseline
+    的问题现在不应再泛写成：
+    - “fusion 之后都坏了”
+  - 而应更准确地写成：
+    - plain fusion backbone
+      的首层与末层线性投影
+      正在把 branch dynamics
+      压进坏 manifold
+65. native-teacher 最强候选
+  `branch_mean_contrast_residual_v1 + residualshapecond`
+  已完成 user-line 三样本转移验证：
+  - `docs/427_teacher_first_candidate_transfer_report.md`
+  - 当前结论是：
+    - 它不是只在 native validation
+      上偶然有效，
+      也能稳定把 user-line
+      拉离 plain-fusion 的纯 buzz 坏 manifold
+    - 最关键的一步：
+      - `branch_mean_to_fused_template_cosine_gap`
+        `0.073843 -> 0.001379`
+    - handoff stage
+      也同步改善：
+      - `waveform_frame_logits_template_cosine_mean`
+        `0.999641 -> 0.994119`
+      - `waveform_frames_template_cosine_mean`
+        `0.999597 -> 0.993178`
+    - `decoded_no_gate template`
+      也下降到：
+      - `0.984637`
+  - 因而当前实验主线应正式切换为：
+    - 不再继续围绕
+      plain fusion baseline
+      做局部修补
+    - 直接研究候选线
+      为什么仍残留
+      `envelope-following`
+66. 候选线剩余
+  `envelope-following`
+  已完成 user-line family-level 归因：
+  - `docs/428_teacher_first_candidate_envelope_following_family_attribution_report.md`
+  - 当前结论是：
+    - 主承载家族不是
+      `conditioning_family`
+      也不是
+      `event_family`
+    - 而是：
+      - `acoustic_state_family`
+    - 在这个家族里：
+      - `aper`
+        是最强的 residual
+        envelope-following 承载项
+      - `E_log_rms_norm`
+        更偏 brightness / high-band
+        杠杆
+    - 但直接把
+      `aper`
+      或
+      `aper + energy`
+      清零，
+      又会把系统往
+      更模板化区域
+      拉回去
+  - 因而当前下一步主线应写成：
+    - 不是继续扩大
+      family-level zero sweep
+    - 而是研究
+      `aper / energy`
+      的 anti-template 贡献
+      与 envelope-following 耦合
+      如何被拆开
+67. 候选线
+  `aper / energy`
+  已完成 reference-backed
+  去耦对照：
+  - `docs/429_teacher_first_candidate_acoustic_reference_backed_decoupling_report.md`
+  - 当前结论是：
+    - `reference_mean`
+      只能通过
+      压扁 acoustic-state
+      时间动态来压低
+      `activity_corr`
+    - `reference_affine_match`
+      一旦保留时间动态，
+      `activity_corr`
+      与 brightness
+      就会一起回升，
+      甚至高于 baseline
+    - 因而 residual 主问题
+      不能再写成：
+      - 静态均值失配
+      - 静态方差失配
+    - 更准确地应写成：
+      - `aper / energy`
+        的时间动态本身
+        同时承载：
+        - anti-template 动态
+        - envelope-following 耦合
+  - 因而当前下一步主线应进一步收紧为：
+    - 不再继续做
+      reference-backed
+      静态替换扫描
+    - 直接研究
+      acoustic-state
+      时间动态的去耦方式
+68. 候选线
+  acoustic-state
+  已完成时间对齐去耦 probe：
+  - `docs/430_teacher_first_candidate_acoustic_temporal_alignment_decoupling_report.md`
+  - 当前结论是：
+    - `aper`
+      只要做
+      `time_roll_half / time_shuffle`
+      这类时间对齐打断，
+      `activity_corr`
+      就会从
+      `0.519889`
+      明显降到
+      `0.243811 / 0.259761`
+      而
+      `template`
+      仍保持在
+      `0.983xxx`
+    - 更关键的是：
+      - `aper + energy = time_shuffle`
+        达到
+        `decoded_template = 0.981053`
+        与
+        `activity_corr = 0.101686`
+    - 这明显优于：
+      - `zero`
+        的塌缩倾向
+      - `reference_mean`
+        的动态压扁
+      - `reference_affine_match`
+        的包络回升
+  - 因而当前主线应进一步收敛为：
+    - residual 主故障
+      不是静态分布失配
+    - 而是
+      `aper / energy`
+      与当前 activity
+      的时间对齐耦合
+  - 因而下一步应直接研究：
+    - 如何在训练/结构上
+      抑制这种时间对齐，
+      同时保留
+      anti-template 动态
+69. user-line source scaffold
+  与 Stage5 reference
+  的 acoustic temporal alignment
+  已完成直接对照：
+  - `docs/431_teacher_first_acoustic_temporal_alignment_source_vs_reference_report.md`
+  - 当前结论是：
+    - 问题不能再写成：
+      - teacher/scaffold 完全正常
+      - 或全部由 checkpoint 凭空制造
+    - 更准确地说：
+      - user-line source scaffold
+        已经在
+        `energy -> frame_rms`
+        上表现出
+        明显偏高的零延迟耦合
+      - `aper*energy -> frame_rms`
+        也从 reference 的
+        更滞后结构，
+        明显向更即时的
+        envelope 跟随偏移
+      - `aper`
+        自身则偏移较弱，
+        不如 `energy`
+        一致
+    - 因而当前 residual 主问题
+      应进一步收敛为：
+      - source-derived scaffold
+        已经把
+        `energy / aper*energy`
+        的即时包络耦合
+        带高
+      - checkpoint downstream
+        再将其放大成
+        可听 residual EF
+  - 因而当前下一步主线应直接转向：
+    - 如何在训练/结构上
+      限制
+      `energy`
+      尤其
+      `aper*energy`
+      的即时 envelope 对齐
+70. `energy`
+  单项时间打断
+  已完成最小必要对照：
+  - `docs/432_teacher_first_energy_temporal_break_ablation_report.md`
+  - 当前结论是：
+    - 单独打断
+      `energy`
+      的时间对齐，
+      确实能把
+      `activity_corr`
+      从
+      `0.519889`
+      压到
+      `0.426418 / 0.367678`
+    - 但它仍明显弱于：
+      - `aper = time_shuffle`
+        的
+        `0.259761`
+      - `aper + energy = time_shuffle`
+        的
+        `0.101686`
+  - 因而当前训练/结构主线应更准确地写成：
+    - `energy`
+      是优先的上游异常入口
+    - 但最终仍需
+      与
+      `aper`
+      联动去耦，
+      不能只改单项
+71. `E_log_rms_norm`
+  已完成 periodic/noise
+  分支级对照：
+  - `docs/433_teacher_first_branch_specific_energy_alignment_report.md`
+  - 当前结论是：
+    - `periodic_E_log_rms_norm = time_shuffle`
+      会把
+      `activity_corr`
+      从
+      `0.519889`
+      拉高到
+      `0.556154`
+    - `noise_E_log_rms_norm = time_shuffle`
+      则会把它压到
+      `0.310713`
+    - 更关键的是：
+      - `aper + noise_E_log_rms_norm = time_shuffle`
+        达到
+        `decoded_template = 0.982003`
+        与
+        `activity_corr = 0.012374`
+      - 这比
+        `aper + E_log_rms_norm = time_shuffle`
+        更强
+  - 因而当前最小训练候选应正式收敛为：
+    - `noise_E_log_rms_norm`
+      为主
+    - 与
+      `aper`
+      联动去耦
+  - 当前不再考虑：
+    - periodic 支能量约束
+    - 整条 energy family
+      一刀切处理
+72. `noise_E_log_rms_norm + aper`
+  的联动去耦
+  已经落成可训练候选数据集入口：
+  - `docs/434_stage5_noise_energy_aper_alignment_variant_dataset_smoke_report.md`
+  - 当前结论是：
+    - 新命令
+      `materialize-offline-mvp-teacher-first-stage5-input-variant-dataset`
+      已可把
+      `aper=time_shuffle + noise_E_log_rms_norm=time_shuffle`
+      直接写进 Stage5 packages
+    - 该变体索引
+      已完成：
+      - `2 train + 1 validation`
+        的小规模物化 smoke
+      - 以及
+        现有 dataset training loop
+        的 `1 step` CPU smoke
+  - 因而当前主线已从：
+    - 纯诊断
+    进入到：
+    - 可直接发起训练候选
+73. `noise_E_log_rms_norm + aper`
+  的 hard-shuffle
+  fullsplit 正式训练
+  已完成并被否决：
+  - `docs/435_stage5_noiseenergy_apershuffle_fullsplit_rejection_report.md`
+  - 当前结论是：
+    - 把
+      `aper=time_shuffle + noise_E_log_rms_norm=time_shuffle`
+      直接固化成 full-package
+      训练输入，
+      虽然会把
+      validation loss
+      从
+      `0.850578`
+      压到
+      `0.841304`，
+      但 user-line 与原始 Stage5 native validation
+      都会明显回退到
+      更亮、更模板化的高频 buzz
+    - user-line aggregate
+      已从旧 strongest candidate 的：
+      - `template = 0.984637`
+      - `activity_corr = 0.519889`
+      - `centroid = 6510.052734`
+      - `high_band = 0.449300`
+      回退到：
+      - `template = 0.988341`
+      - `activity_corr = 0.543954`
+      - `centroid = 13654.723633`
+      - `high_band = 0.793869`
+    - 原始 `contractv2_normfix`
+      validation3
+      也同步回退到：
+      - `decoded_no_gate auto_reject_count = 3/3`
+      - `template = 0.986660`
+      - `centroid_gap = 11348.081055`
+      - `high_band_gap = 0.737495`
+  - 因而当前主线必须更新为：
+    - `time_shuffle`
+      仍可保留为 probe 诊断工具
+    - 但不能再作为
+      full-package
+      训练输入语义
+      直接固化
+  - 下一步方向应转向：
+    - 保持原始 inference scaffold
+      分布不变的
+      软约束 / 正则化 / 局部扰动
+    - 而不是继续硬写
+      shuffle variant
+## 2026-03-27 补充更新
+- `docs/435_stage5_noiseenergy_apershuffle_fullsplit_rejection_report.md`
+  已正式否决把 `aper + noise_E_log_rms_norm = time_shuffle` 直接固化进 fullsplit 训练输入的路线。
+- `docs/436_stage5_global_acoustic_corrreg_fullsplit24_rejection_report.md`
+  已补完并验证一种“不改 inference scaffold 分布”的训练侧 soft route：
+  - 从 `source_scaffold_path` 回填 `aper / E_log_rms_norm`
+  - 在 `waveform_frames` 上加全局 `E / aper*E` 超额零延迟相关正则
+- 这条 soft route 的当前结论是：
+  - 训练 objective 更好：`validation loss_total = 0.850578 -> 0.825239`
+  - user-line 某些指标变好：`decoded_no_gate template = 0.984637 -> 0.982265`，`activity_corr = 0.519889 -> 0.414830`
+  - 但 native validation3 明确回退：`auto_reject_count = 0 -> 3`，`centroid_gap ≈ 4405.95 -> 5426.24`，`high_band_gap ≈ 0.361477 -> 0.552879`
+- 因此当前主线更新为：
+  - 不继续扫“全局 `E / aper*E` corrreg”权重
+  - 保持 inference scaffold 语义不变
+  - 下一阶段转向更贴近 probe 结论的
+    `branch-specific / lag-aware / target-relative temporal regularization`
+  - 优先围绕 `noise_E_log_rms_norm` 家族，而不是全局 `E`

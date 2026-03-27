@@ -8,6 +8,10 @@ from pathlib import Path
 import torch
 
 from v5vc.ablation_eval import load_checkpoint
+from v5vc.event_semantics import (
+    TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+    TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
+)
 from v5vc.manifest_builder import load_jsonl
 from v5vc.nores_vocoder_audio_export import (
     DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
@@ -34,6 +38,7 @@ from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teache
 from v5vc.offline_vocoder_scaffold import (
     NoResidualSourceFilterVocoderScaffold,
     build_nores_vocoder_scaffold_from_state_dict,
+    resolve_residual_shape_branch_condition_delta,
 )
 from v5vc.offline_vocoder_training import (
     extract_training_batch,
@@ -45,7 +50,16 @@ from v5vc.stage5_low_activity_probe import compute_waveform_spectral_summary
 from v5vc.stage5_speech_emergence_probe import (
     compute_pearson_correlation,
     frame_waveform_sequence,
+    summarize_probe_delta_vs_baseline,
     summarize_frame_sequence_metrics,
+)
+from v5vc.stage5_waveform_decoder_structure_probe import (
+    STRUCTURE_PROBE_VARIANTS,
+    apply_structure_transform,
+    build_baseline_decoder_collapse_summary,
+    build_variant_aggregates,
+    build_variant_impact_ranking,
+    compute_fused_hidden_for_probe,
 )
 from v5vc.stage5_waveform_handoff_probe import (
     HANDOFF_DECODE_ROUTES,
@@ -115,6 +129,12 @@ DECODER_PROBE_CONTROL_FAMILY_ALIASES = {
     "energy_log_rms_norm": "E_log_rms_norm",
     "e_log_rms_norm": "E_log_rms_norm",
     "e": "E_log_rms_norm",
+    "periodic_e_log_rms_norm": "periodic_E_log_rms_norm",
+    "periodic_energy_control": "periodic_E_log_rms_norm",
+    "periodic_energy_log_rms_norm": "periodic_E_log_rms_norm",
+    "noise_e_log_rms_norm": "noise_E_log_rms_norm",
+    "noise_energy_control": "noise_E_log_rms_norm",
+    "noise_energy_log_rms_norm": "noise_E_log_rms_norm",
     "conditioning_family": "conditioning_family",
     "acoustic_state_family": "acoustic_state_family",
     "proxy_family": "proxy_family",
@@ -134,6 +154,15 @@ DECODER_PROBE_CONTROL_OVERRIDE_MODE_ALIASES = {
     "reference_mean": "reference_mean",
     "refmean": "reference_mean",
     "mean": "reference_mean",
+    "reference_affine_match": "reference_affine_match",
+    "reference_affine": "reference_affine_match",
+    "affine": "reference_affine_match",
+    "time_roll_half": "time_roll_half",
+    "roll_half": "time_roll_half",
+    "temporal_roll_half": "time_roll_half",
+    "time_shuffle": "time_shuffle",
+    "shuffle": "time_shuffle",
+    "temporal_shuffle": "time_shuffle",
 }
 DECODER_PROBE_CONTROL_FAMILY_TARGETS = {
     "z_art": (("periodic", "z_art"),),
@@ -142,6 +171,8 @@ DECODER_PROBE_CONTROL_FAMILY_TARGETS = {
     "vuv": (("periodic", "vuv"), ("noise", "vuv")),
     "aper": (("noise", "aper"),),
     "E_log_rms_norm": (("periodic", "E_log_rms_norm"), ("noise", "E_log_rms_norm")),
+    "periodic_E_log_rms_norm": (("periodic", "E_log_rms_norm"),),
+    "noise_E_log_rms_norm": (("noise", "E_log_rms_norm"),),
     "conditioning_family": (
         ("periodic", "alpha"),
         ("periodic", "s_spk_target"),
@@ -174,6 +205,26 @@ DECODER_PROBE_CONTROL_FAMILY_TARGETS = {
         ("noise", "energy_proxy"),
     ),
 }
+ACOUSTIC_TEMPORAL_ALIGNMENT_PAIR_DEFINITIONS = (
+    {
+        "pair_id": "aper_to_frame_rms",
+        "label": "aper -> frame_rms",
+        "series_key": "noise.aper",
+        "description": "Lagged correlation between noise-branch aper and waveform frame RMS.",
+    },
+    {
+        "pair_id": "energy_to_frame_rms",
+        "label": "E_log_rms_norm -> frame_rms",
+        "series_key": "noise.E_log_rms_norm",
+        "description": "Lagged correlation between noise-branch normalized energy control and waveform frame RMS.",
+    },
+    {
+        "pair_id": "aper_energy_product_to_frame_rms",
+        "label": "aper * E_log_rms_norm -> frame_rms",
+        "series_key": "noise.aper_times_E_log_rms_norm",
+        "description": "Lagged correlation between the acoustic-state product aper*E and waveform frame RMS.",
+    },
+)
 
 
 PIPELINE_LAYER_DEFINITIONS = (
@@ -844,6 +895,11 @@ def export_teacher_contract_with_stage_tracking(
     max_audio_sec: float | None,
     verify_against_full_pass: bool,
     stage_state: dict[str, object],
+    target_event_semantic_sidecar: dict[str, object] | None = None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None = None,
+    source_semantic_parity_sidecar: dict[str, object] | None = None,
+    teacher_e_evt_bridge_mode: str = TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
+    teacher_e_evt_target_shaping_mode: str = TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1,
 ) -> dict[str, object]:
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -940,6 +996,11 @@ def export_teacher_contract_with_stage_tracking(
         streaming_outputs=streaming_outputs,
         conditioning=conditioning,
         verification=verification,
+        target_event_semantic_sidecar=target_event_semantic_sidecar,
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
     tensor_payload = build_tensor_payload(
         input_audio_path=input_audio_path,
@@ -951,6 +1012,11 @@ def export_teacher_contract_with_stage_tracking(
         chunk_samples=effective_chunk_samples,
         streaming_outputs=streaming_outputs,
         conditioning=conditioning,
+        target_event_semantic_sidecar=target_event_semantic_sidecar,
+        target_event_timing_semantic_sidecar=target_event_timing_semantic_sidecar,
+        source_semantic_parity_sidecar=source_semantic_parity_sidecar,
+        teacher_e_evt_bridge_mode=teacher_e_evt_bridge_mode,
+        teacher_e_evt_target_shaping_mode=teacher_e_evt_target_shaping_mode,
     )
 
     set_stage(stage_state, "teacher_contract_write")
@@ -3385,6 +3451,180 @@ def build_reference_distribution_summary(reference_package_paths: list[Path]) ->
     }
 
 
+def materialize_stage5_input_variant_split(
+    *,
+    package_entries: list[dict[str, object]],
+    split_name: str,
+    packages_root: Path,
+    control_family_overrides: list[dict[str, object]],
+    package_limit: int | None,
+) -> list[dict[str, object]]:
+    selected_entries = list(package_entries)
+    if package_limit is not None and int(package_limit) >= 0:
+        selected_entries = selected_entries[: int(package_limit)]
+    output_entries = []
+    for entry in selected_entries:
+        source_package_path = Path(str(entry["training_package_path"])).resolve()
+        payload = load_training_package_payload(source_package_path)
+        source_scaffold_path = Path(str(payload["source_scaffold_path"])).resolve()
+        source_scaffold = torch.load(source_scaffold_path, map_location="cpu", weights_only=False)
+        if not isinstance(source_scaffold, dict):
+            raise TypeError(f"Unsupported source scaffold payload type: {type(source_scaffold)!r}")
+        transformed_inputs, transform_summary = apply_input_variant_to_training_package_payload(
+            payload=payload,
+            source_scaffold=source_scaffold,
+            control_family_overrides=control_family_overrides,
+        )
+        record_id = str(entry.get("record_id", source_package_path.parent.parent.name))
+        record_dir = packages_root / split_name / sanitize_bundle_component(record_id) / "train_targets"
+        record_dir.mkdir(parents=True, exist_ok=True)
+        output_package_path = record_dir / "offline_mvp_nores_vocoder_train_targets.pt"
+        transformed_payload = dict(payload)
+        transformed_payload["inputs"] = transformed_inputs
+        transformed_payload["input_variant"] = {
+            "control_family_overrides": serialize_decoder_probe_control_family_overrides(control_family_overrides),
+            "transform_summary": transform_summary,
+            "source_package_path": source_package_path.as_posix(),
+        }
+        torch.save(transformed_payload, output_package_path)
+        output_entries.append(
+            {
+                **entry,
+                "split_name": split_name,
+                "training_package_path": output_package_path.as_posix(),
+                "input_variant": dict(transformed_payload["input_variant"]),
+            }
+        )
+    return output_entries
+
+
+def apply_input_variant_to_training_package_payload(
+    *,
+    payload: dict[str, object],
+    source_scaffold: dict[str, object],
+    control_family_overrides: list[dict[str, object]],
+) -> tuple[dict[str, torch.Tensor], dict[str, object]]:
+    inputs = dict(payload["inputs"])
+    periodic_features = inputs["periodic_branch_features"].detach().clone().to(torch.float32)
+    noise_features = inputs["noise_branch_features"].detach().clone().to(torch.float32)
+    layout = build_branch_feature_layout(source_scaffold)
+    transformations: list[str] = []
+    applied_targets = []
+    for override in control_family_overrides:
+        family = str(override["family"])
+        mode = str(override["mode"])
+        serialized_targets = []
+        for branch_name, semantic in list(override.get("targets", [])):
+            slice_info = layout[branch_name].get(semantic)
+            if slice_info is None:
+                continue
+            start, end = slice_info
+            branch_features = periodic_features if branch_name == "periodic" else noise_features
+            if mode == "zero":
+                branch_features[:, start:end] = 0.0
+            elif mode in {"time_roll_half", "time_shuffle"}:
+                branch_features[:, start:end] = apply_temporal_probe_override(
+                    candidate_features=branch_features[:, start:end],
+                    mode=mode,
+                    semantic_key=f"{branch_name}.{semantic}",
+                )
+            else:
+                raise ValueError(f"Unsupported dataset input variant mode: {mode!r}")
+            transformations.append(f"{branch_name}.{semantic} -> {mode}[{start}:{end}]")
+            serialized_targets.append(f"{branch_name}.{semantic}")
+        applied_targets.append(
+            {
+                "family": family,
+                "mode": mode,
+                "targets": serialized_targets,
+            }
+        )
+    return (
+        {
+            **inputs,
+            "periodic_branch_features": periodic_features,
+            "noise_branch_features": noise_features,
+        },
+        {
+            "transformations": transformations,
+            "control_family_overrides": applied_targets,
+        },
+    )
+
+
+def build_reference_acoustic_temporal_alignment_case_summary(
+    *,
+    package_path: Path,
+    max_lag_frames: int,
+) -> dict[str, object]:
+    payload = load_training_package_payload(package_path)
+    batch = extract_training_batch(payload)
+    runtime = extract_training_runtime(payload)
+    source_scaffold_path = Path(str(payload["source_scaffold_path"])).resolve()
+    source_scaffold = torch.load(source_scaffold_path, map_location="cpu", weights_only=False)
+    if not isinstance(source_scaffold, dict):
+        raise TypeError(f"Unsupported source scaffold payload type: {type(source_scaffold)!r}")
+    series_map = build_scaffold_feature_series_map(
+        periodic_features=batch["periodic_branch_features"],
+        noise_features=batch["noise_branch_features"],
+        scaffold_payload=source_scaffold,
+    )
+    frame_rms = build_frame_rms_sequence(
+        waveform=batch["aligned_waveform"],
+        frame_length=int(runtime["frame_length"]),
+        hop_length=int(runtime["hop_length"]),
+        target_frame_count=int(payload["frame_count"]),
+    )
+    return {
+        "record_id": str(package_path.parent.parent.name),
+        "training_package_path": package_path.as_posix(),
+        "source_scaffold_path": source_scaffold_path.as_posix(),
+        "frame_count": int(payload["frame_count"]),
+        "pair_summaries": build_acoustic_temporal_alignment_pair_summaries(
+            series_map=series_map,
+            frame_rms=frame_rms,
+            max_lag_frames=int(max_lag_frames),
+        ),
+    }
+
+
+def build_reference_acoustic_temporal_alignment_summary(
+    *,
+    reference_cases: list[dict[str, object]],
+) -> dict[str, object]:
+    pair_aggregates: dict[str, dict[str, object]] = {}
+    for pair_definition in ACOUSTIC_TEMPORAL_ALIGNMENT_PAIR_DEFINITIONS:
+        pair_id = str(pair_definition["pair_id"])
+        rows = [
+            dict(case_pair)
+            for case in reference_cases
+            for case_pair in list(case.get("pair_summaries", []))
+            if str(case_pair.get("pair_id")) == pair_id
+        ]
+        scalar_distributions = {}
+        for metric_key in (
+            "zero_lag_corr",
+            "best_corr",
+            "best_lag_frames",
+            "best_nonzero_corr",
+            "zero_minus_best_nonzero_corr",
+        ):
+            scalar_distributions[metric_key] = summarize_scalar_distribution(
+                [float(row.get(metric_key, 0.0)) for row in rows]
+            )
+        pair_aggregates[pair_id] = {
+            "label": str(pair_definition["label"]),
+            "description": str(pair_definition["description"]),
+            "record_count": len(rows),
+            "scalar_distributions": scalar_distributions,
+        }
+    return {
+        "reference_case_count": len(reference_cases),
+        "pair_aggregates": pair_aggregates,
+        "cases": reference_cases,
+    }
+
+
 def summarize_feature_distribution(features: torch.Tensor) -> dict[str, object]:
     tensor = features.to(torch.float32)
     per_dim_mean = tensor.mean(dim=0)
@@ -3487,6 +3727,231 @@ def analyze_feature_shift(
     }
 
 
+def build_user_acoustic_temporal_alignment_case_summary(
+    *,
+    case_id: str,
+    input_audio_path: Path,
+    scaffold_payload: dict[str, object],
+    max_audio_sec: float | None,
+    max_lag_frames: int,
+    reference_summary: dict[str, object],
+) -> dict[str, object]:
+    branch_scaffold = dict(scaffold_payload["branch_scaffold"])
+    source_runtime = dict(scaffold_payload.get("source_runtime", {}))
+    waveform, sample_rate = load_waveform(input_audio_path, max_duration_sec=max_audio_sec)
+    frame_rms = build_frame_rms_sequence(
+        waveform=waveform,
+        frame_length=int(source_runtime["frame_length"]),
+        hop_length=int(source_runtime["hop_length"]),
+        target_frame_count=int(scaffold_payload["frame_count"]),
+    )
+    pair_summaries = build_acoustic_temporal_alignment_pair_summaries(
+        series_map=build_scaffold_feature_series_map(
+            periodic_features=branch_scaffold["periodic_branch_features"].to(torch.float32),
+            noise_features=branch_scaffold["noise_branch_features"].to(torch.float32),
+            scaffold_payload=scaffold_payload,
+        ),
+        frame_rms=frame_rms,
+        max_lag_frames=int(max_lag_frames),
+    )
+    return {
+        "case_id": case_id,
+        "input_audio_path": input_audio_path.as_posix(),
+        "sample_rate": int(sample_rate),
+        "frame_count": int(scaffold_payload["frame_count"]),
+        "pair_summaries": [
+            annotate_acoustic_temporal_alignment_pair_against_reference(
+                pair_summary=pair_summary,
+                reference_summary=reference_summary,
+            )
+            for pair_summary in pair_summaries
+        ],
+    }
+
+
+def build_frame_rms_sequence(
+    *,
+    waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    target_frame_count: int,
+) -> torch.Tensor:
+    frames = frame_waveform_sequence(
+        waveform=waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        target_frame_count=int(target_frame_count),
+    )
+    return frames.pow(2).mean(dim=1).sqrt().to(torch.float32)
+
+
+def build_scaffold_feature_series_map(
+    *,
+    periodic_features: torch.Tensor,
+    noise_features: torch.Tensor,
+    scaffold_payload: dict[str, object],
+) -> dict[str, torch.Tensor]:
+    layout = build_branch_feature_layout(scaffold_payload)
+    series_map = {}
+    for branch_name, branch_layout in layout.items():
+        branch_features = periodic_features if branch_name == "periodic" else noise_features
+        for semantic, (start, end) in branch_layout.items():
+            if end - start <= 0:
+                continue
+            series_map[f"{branch_name}.{semantic}"] = branch_features[:, start:end].to(torch.float32)
+    aper = series_map.get("noise.aper")
+    energy = series_map.get("noise.E_log_rms_norm")
+    if isinstance(aper, torch.Tensor) and isinstance(energy, torch.Tensor):
+        series_map["noise.aper_times_E_log_rms_norm"] = aper * energy
+    return series_map
+
+
+def build_acoustic_temporal_alignment_pair_summaries(
+    *,
+    series_map: dict[str, torch.Tensor],
+    frame_rms: torch.Tensor,
+    max_lag_frames: int,
+) -> list[dict[str, object]]:
+    pair_summaries = []
+    for pair_definition in ACOUSTIC_TEMPORAL_ALIGNMENT_PAIR_DEFINITIONS:
+        series_key = str(pair_definition["series_key"])
+        source_series = series_map.get(series_key)
+        if not isinstance(source_series, torch.Tensor):
+            continue
+        collapsed_source = source_series.to(torch.float32)
+        if collapsed_source.ndim == 2 and int(collapsed_source.shape[1]) > 1:
+            collapsed_source = collapsed_source.mean(dim=1)
+        else:
+            collapsed_source = collapsed_source.view(-1)
+        lag_curve = build_lagged_correlation_curve(
+            source=collapsed_source,
+            target=frame_rms,
+            max_lag_frames=int(max_lag_frames),
+        )
+        best_row = max(lag_curve, key=lambda item: float(item["corr"]))
+        nonzero_rows = [row for row in lag_curve if int(row["lag_frames"]) != 0]
+        best_nonzero_row = max(nonzero_rows, key=lambda item: float(item["corr"])) if nonzero_rows else best_row
+        zero_row = next(row for row in lag_curve if int(row["lag_frames"]) == 0)
+        pair_summaries.append(
+            {
+                "pair_id": str(pair_definition["pair_id"]),
+                "label": str(pair_definition["label"]),
+                "description": str(pair_definition["description"]),
+                "series_key": series_key,
+                "zero_lag_corr": float(zero_row["corr"]),
+                "best_corr": float(best_row["corr"]),
+                "best_lag_frames": int(best_row["lag_frames"]),
+                "best_nonzero_corr": float(best_nonzero_row["corr"]),
+                "zero_minus_best_nonzero_corr": round(
+                    float(zero_row["corr"]) - float(best_nonzero_row["corr"]),
+                    6,
+                ),
+                "lag_curve": lag_curve,
+            }
+        )
+    return pair_summaries
+
+
+def build_lagged_correlation_curve(
+    *,
+    source: torch.Tensor,
+    target: torch.Tensor,
+    max_lag_frames: int,
+) -> list[dict[str, object]]:
+    source_cpu = source.detach().cpu().to(torch.float32).view(-1)
+    target_cpu = target.detach().cpu().to(torch.float32).view(-1)
+    rows = []
+    for lag in range(-int(max_lag_frames), int(max_lag_frames) + 1):
+        if lag < 0:
+            aligned_source = source_cpu[-lag:]
+            aligned_target = target_cpu[: int(target_cpu.shape[0]) + lag]
+        elif lag > 0:
+            aligned_source = source_cpu[:-lag]
+            aligned_target = target_cpu[lag:]
+        else:
+            aligned_source = source_cpu
+            aligned_target = target_cpu
+        common_length = min(int(aligned_source.shape[0]), int(aligned_target.shape[0]))
+        rows.append(
+            {
+                "lag_frames": int(lag),
+                "corr": float(
+                    compute_pearson_correlation(
+                        aligned_source[:common_length],
+                        aligned_target[:common_length],
+                    )
+                ),
+            }
+        )
+    return rows
+
+
+def summarize_scalar_distribution(values: list[float]) -> dict[str, object]:
+    if not values:
+        return {
+            "count": 0,
+            "mean": 0.0,
+            "std": 0.0,
+            "min": 0.0,
+            "q01": 0.0,
+            "median": 0.0,
+            "q99": 0.0,
+            "max": 0.0,
+        }
+    tensor = torch.tensor(values, dtype=torch.float32)
+    quantiles = torch.quantile(tensor, torch.tensor([0.01, 0.5, 0.99], dtype=torch.float32))
+    return {
+        "count": int(tensor.numel()),
+        "mean": round(float(tensor.mean().item()), 6),
+        "std": round(float(tensor.std(unbiased=False).item()), 6),
+        "min": round(float(tensor.min().item()), 6),
+        "q01": round(float(quantiles[0].item()), 6),
+        "median": round(float(quantiles[1].item()), 6),
+        "q99": round(float(quantiles[2].item()), 6),
+        "max": round(float(tensor.max().item()), 6),
+    }
+
+
+def annotate_acoustic_temporal_alignment_pair_against_reference(
+    *,
+    pair_summary: dict[str, object],
+    reference_summary: dict[str, object],
+) -> dict[str, object]:
+    pair_id = str(pair_summary["pair_id"])
+    pair_reference = dict(dict(reference_summary["pair_aggregates"]).get(pair_id, {}))
+    scalar_distributions = dict(pair_reference.get("scalar_distributions", {}))
+    annotated = dict(pair_summary)
+    annotated["reference_comparison"] = {
+        metric_key: build_scalar_reference_comparison(
+            value=float(pair_summary.get(metric_key, 0.0)),
+            distribution=dict(scalar_distributions.get(metric_key, {})),
+        )
+        for metric_key in (
+            "zero_lag_corr",
+            "best_corr",
+            "best_lag_frames",
+            "best_nonzero_corr",
+            "zero_minus_best_nonzero_corr",
+        )
+    }
+    return annotated
+
+
+def build_scalar_reference_comparison(
+    *,
+    value: float,
+    distribution: dict[str, object],
+) -> dict[str, object]:
+    mean = float(distribution.get("mean", 0.0))
+    std = float(distribution.get("std", 0.0))
+    z_score = 0.0 if std <= 1.0e-8 else (float(value) - mean) / std
+    return {
+        "reference_mean": round(mean, 6),
+        "reference_std": round(std, 6),
+        "z_score": round(float(z_score), 6),
+    }
+
+
 def normalize_feature_semantic(feature_semantics: list[object], index: int) -> str:
     if index >= len(feature_semantics):
         return f"feature_{index}"
@@ -3529,10 +3994,292 @@ def build_applicability_probe_markdown(summary: dict[str, object]) -> str:
     return "\n".join(lines) + "\n"
 
 
+def build_teacher_first_acoustic_temporal_alignment_markdown(summary: dict[str, object]) -> str:
+    lines = [
+        "# Teacher-First VC Acoustic Temporal Alignment Probe",
+        "",
+        f"- generated_at: {summary['generated_at']}",
+        f"- mode: {summary['mode']}",
+        f"- output_dir: {summary['output_dir']}",
+        f"- device: {summary['device']}",
+        f"- max_audio_sec: {summary['max_audio_sec']}",
+        f"- chunk_ms: {summary['chunk_ms']}",
+        f"- max_lag_frames: {summary['max_lag_frames']}",
+        f"- reference_package_count: {summary['reference_package_count']}",
+        f"- case_count: {summary['case_count']}",
+        "",
+        "## Reference Pair Aggregates",
+    ]
+    reference_summary = dict(summary.get("reference_summary", {}))
+    pair_aggregates = dict(reference_summary.get("pair_aggregates", {}))
+    for pair_id, pair_summary in pair_aggregates.items():
+        scalar_distributions = dict(pair_summary.get("scalar_distributions", {}))
+        lines.append(
+            f"- {pair_id}: "
+            f"zero_lag_mean={dict(scalar_distributions.get('zero_lag_corr', {})).get('mean', 0.0)} "
+            f"best_lag_mean={dict(scalar_distributions.get('best_lag_frames', {})).get('mean', 0.0)} "
+            f"zero_minus_best_nonzero_mean={dict(scalar_distributions.get('zero_minus_best_nonzero_corr', {})).get('mean', 0.0)}"
+        )
+    lines.extend(["", "## Cases"])
+    for case in list(summary.get("cases", [])):
+        lines.extend(
+            [
+                f"- case_id: {case.get('case_id')}",
+                f"  input_audio_path: {case.get('input_audio_path')}",
+                f"  frame_count: {case.get('frame_count')}",
+            ]
+        )
+        for pair_summary in list(case.get("pair_summaries", [])):
+            reference_comparison = dict(pair_summary.get("reference_comparison", {}))
+            zero_ref = dict(reference_comparison.get("zero_lag_corr", {}))
+            gap_ref = dict(reference_comparison.get("zero_minus_best_nonzero_corr", {}))
+            lines.append(
+                "  "
+                f"{pair_summary.get('pair_id')}: zero_lag_corr={pair_summary.get('zero_lag_corr')} "
+                f"best_corr={pair_summary.get('best_corr')} "
+                f"best_lag_frames={pair_summary.get('best_lag_frames')} "
+                f"zero_minus_best_nonzero_corr={pair_summary.get('zero_minus_best_nonzero_corr')} "
+                f"zero_lag_z={zero_ref.get('z_score', 0.0)} "
+                f"gap_z={gap_ref.get('z_score', 0.0)}"
+            )
+    lines.extend(["", "## Notes"])
+    for note in list(summary.get("notes", [])):
+        lines.append(f"- {note}")
+    return "\n".join(lines) + "\n"
+
+
+def build_stage5_input_variant_dataset_markdown(summary: dict[str, object]) -> str:
+    lines = [
+        "# Stage5 Input Variant Dataset",
+        "",
+        f"- generated_at: {summary['generated_at']}",
+        f"- mode: {summary['mode']}",
+        f"- source_dataset_index_path: {summary['source_dataset_index_path']}",
+        f"- output_dir: {summary['output_dir']}",
+        f"- train_package_count: {summary['train_package_count']}",
+        f"- validation_package_count: {summary['validation_package_count']}",
+        f"- control_family_overrides: {json.dumps(summary['control_family_overrides'], ensure_ascii=False)}",
+        "",
+        "## Train Packages",
+    ]
+    for entry in list(summary.get("train_packages", [])):
+        lines.append(
+            f"- {entry.get('record_id')}: {entry.get('training_package_path')} "
+            f"variant={json.dumps(entry.get('input_variant', {}), ensure_ascii=False)}"
+        )
+    lines.extend(["", "## Validation Packages"])
+    for entry in list(summary.get("validation_packages", [])):
+        lines.append(
+            f"- {entry.get('record_id')}: {entry.get('training_package_path')} "
+            f"variant={json.dumps(entry.get('input_variant', {}), ensure_ascii=False)}"
+        )
+    lines.extend(["", "## Notes"])
+    for note in list(summary.get("notes", [])):
+        lines.append(f"- {note}")
+    return "\n".join(lines) + "\n"
+
+
+def materialize_teacher_first_stage5_input_variant_dataset(
+    *,
+    dataset_index_path: Path,
+    output_dir: Path,
+    control_family_overrides: list[str] | None,
+    max_train_packages: int | None,
+    max_validation_packages: int | None,
+) -> None:
+    resolved_control_family_overrides = parse_decoder_probe_control_family_overrides(control_family_overrides)
+    unsupported_modes = [
+        str(item["mode"])
+        for item in resolved_control_family_overrides
+        if str(item["mode"]) not in {"zero", "time_roll_half", "time_shuffle"}
+    ]
+    if unsupported_modes:
+        raise ValueError(
+            "Dataset input variant materializer supports only zero/time_roll_half/time_shuffle overrides; "
+            f"got {unsupported_modes}."
+        )
+    dataset_index = json.loads(dataset_index_path.resolve().read_text(encoding="utf-8"))
+    output_dir = output_dir.resolve()
+    reset_managed_directory(output_dir)
+    packages_root = output_dir / "packages"
+    packages_root.mkdir(parents=True, exist_ok=True)
+
+    train_entries = materialize_stage5_input_variant_split(
+        package_entries=list(dataset_index.get("train_packages", [])),
+        split_name="train",
+        packages_root=packages_root,
+        control_family_overrides=resolved_control_family_overrides,
+        package_limit=max_train_packages,
+    )
+    validation_entries = materialize_stage5_input_variant_split(
+        package_entries=list(dataset_index.get("validation_packages", [])),
+        split_name="validation",
+        packages_root=packages_root,
+        control_family_overrides=resolved_control_family_overrides,
+        package_limit=max_validation_packages,
+    )
+    summary = {
+        "dataset_index_version": "offline_mvp_nores_vocoder_dataset_index_v1",
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "teacher_first_stage5_input_variant_dataset_v1",
+        "source_dataset_index_path": dataset_index_path.resolve().as_posix(),
+        "output_dir": output_dir.as_posix(),
+        "control_family_overrides": serialize_decoder_probe_control_family_overrides(
+            resolved_control_family_overrides
+        ),
+        "max_train_packages": max_train_packages,
+        "max_validation_packages": max_validation_packages,
+        "train_package_count": len(train_entries),
+        "validation_package_count": len(validation_entries),
+        "train_packages": train_entries,
+        "validation_packages": validation_entries,
+        "notes": [
+            "This command rewrites Stage5 training packages by applying probe-style input-control transforms directly to package inputs.",
+            "It is intended to bridge user-line diagnostics into a reusable training-dataset candidate without modifying the baseline training loop.",
+            "Only zero/time_roll_half/time_shuffle are supported here because reference-backed replacements need external reference statistics and are probe-only.",
+        ],
+    }
+    (output_dir / "offline_mvp_nores_vocoder_dataset_index.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (output_dir / "offline_mvp_nores_vocoder_dataset_index.md").write_text(
+        build_stage5_input_variant_dataset_markdown(summary),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def analyze_teacher_first_vc_acoustic_temporal_alignment(
+    *,
+    input_audio_paths: list[Path],
+    output_dir: Path,
+    reference_package_paths: list[Path],
+    reference_package_limit: int,
+    device: str,
+    max_audio_sec: float | None,
+    chunk_ms: float | None,
+    max_lag_frames: int,
+) -> None:
+    if not input_audio_paths:
+        raise ValueError("Acoustic temporal-alignment probe requires at least one input audio.")
+    if int(max_lag_frames) < 0:
+        raise ValueError("max_lag_frames must be >= 0.")
+    resolved_reference_packages = resolve_reference_package_paths(
+        reference_package_paths=reference_package_paths,
+        reference_package_limit=reference_package_limit,
+    )
+    if not resolved_reference_packages:
+        raise ValueError("Acoustic temporal-alignment probe requires at least one reference Stage5 training package.")
+
+    output_dir = output_dir.resolve()
+    reset_managed_directory(output_dir)
+    cases_dir = output_dir / "cases"
+    cases_dir.mkdir(parents=True, exist_ok=True)
+
+    reference_cases = [
+        build_reference_acoustic_temporal_alignment_case_summary(
+            package_path=package_path,
+            max_lag_frames=int(max_lag_frames),
+        )
+        for package_path in resolved_reference_packages
+    ]
+    reference_summary = build_reference_acoustic_temporal_alignment_summary(
+        reference_cases=reference_cases,
+    )
+
+    case_summaries = []
+    for index, input_audio_path in enumerate(input_audio_paths, start=1):
+        case_id = build_review_bundle_case_id(
+            raw_case_id=None,
+            input_audio_path=input_audio_path.resolve(),
+            index=index,
+        )
+        case_output_dir = cases_dir / case_id
+        contract_dir = case_output_dir / "teacher_contract"
+        scaffold_dir = case_output_dir / "teacher_vocoder_input_scaffold"
+        contract_dir.mkdir(parents=True, exist_ok=True)
+        scaffold_dir.mkdir(parents=True, exist_ok=True)
+        stage_state: dict[str, object] = {
+            "current_stage": "teacher_source_resolution",
+            "completed_stages": [],
+            "skipped_stages": [],
+        }
+        export_teacher_contract_with_stage_tracking(
+            input_audio_path=input_audio_path,
+            output_dir=contract_dir,
+            route_handoff_path=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+            checkpoint_path=None,
+            calibration_asset_path=DEFAULT_CALIBRATION_ASSET_PATH,
+            device=str(device),
+            max_audio_sec=max_audio_sec,
+            chunk_samples=None,
+            chunk_ms=chunk_ms,
+            verify_against_full_pass=False,
+            stage_state=stage_state,
+            conditioning=None,
+        )
+        build_offline_mvp_teacher_vocoder_input_scaffold(
+            contract_path=contract_dir / "teacher_downstream_control_contract.pt",
+            output_dir=scaffold_dir,
+        )
+        scaffold_payload = torch.load(
+            scaffold_dir / "teacher_vocoder_input_scaffold.pt",
+            map_location="cpu",
+            weights_only=False,
+        )
+        if not isinstance(scaffold_payload, dict):
+            raise TypeError(f"Unsupported scaffold payload type: {type(scaffold_payload)!r}")
+        case_summaries.append(
+            build_user_acoustic_temporal_alignment_case_summary(
+                case_id=case_id,
+                input_audio_path=input_audio_path.resolve(),
+                scaffold_payload=scaffold_payload,
+                max_audio_sec=max_audio_sec,
+                max_lag_frames=int(max_lag_frames),
+                reference_summary=reference_summary,
+            )
+        )
+
+    summary = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "teacher_first_single_target_vc_acoustic_temporal_alignment_probe_v1",
+        "output_dir": output_dir.as_posix(),
+        "device": str(device),
+        "max_audio_sec": max_audio_sec,
+        "chunk_ms": chunk_ms,
+        "max_lag_frames": int(max_lag_frames),
+        "reference_package_count": len(resolved_reference_packages),
+        "reference_packages": [path.as_posix() for path in resolved_reference_packages],
+        "reference_summary": reference_summary,
+        "case_count": len(case_summaries),
+        "cases": case_summaries,
+        "notes": [
+            "This probe compares user-line source-derived acoustic-state controls against actual waveform frame RMS, then checks whether the lag-correlation shape looks in-distribution relative to Stage5 training packages.",
+            "It does not decode waveform audio and therefore isolates scaffold/control timing behavior from checkpoint decode behavior.",
+            "If user-line zero-lag alignment stays near the reference package range, the remaining failure is more likely checkpoint consumption or downstream amplification than teacher/scaffold over-alignment alone.",
+        ],
+    }
+    (output_dir / "teacher_first_vc_acoustic_temporal_alignment_probe.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (output_dir / "teacher_first_vc_acoustic_temporal_alignment_probe.md").write_text(
+        build_teacher_first_acoustic_temporal_alignment_markdown(summary),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
 def analyze_teacher_first_vc_decoder_behavior(
     *,
     input_audio_paths: list[Path],
     output_dir: Path,
+    vocoder_checkpoint_path: Path | None,
+    vocoder_checkpoint_selection_path: Path | None,
+    selection_target: str,
     reference_package_paths: list[Path],
     reference_package_limit: int,
     device: str,
@@ -3553,9 +4300,9 @@ def analyze_teacher_first_vc_decoder_behavior(
         raise ValueError("Decoder-behavior probe requires at least one input audio.")
 
     resolved_checkpoint_path, selection_summary = resolve_checkpoint_path_from_inputs(
-        checkpoint_path=None,
-        checkpoint_selection_path=DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
-        selection_target="best_validation",
+        checkpoint_path=vocoder_checkpoint_path,
+        checkpoint_selection_path=vocoder_checkpoint_selection_path,
+        selection_target=selection_target,
     )
     checkpoint_payload = load_vocoder_checkpoint_payload(resolved_checkpoint_path)
     resolved_device = resolve_runtime_device(device)
@@ -3596,7 +4343,7 @@ def analyze_teacher_first_vc_decoder_behavior(
             calibration_asset_path=DEFAULT_CALIBRATION_ASSET_PATH,
             vocoder_checkpoint_path=resolved_checkpoint_path,
             vocoder_checkpoint_selection_path=None,
-            selection_target="best_validation",
+            selection_target=selection_target,
             chunk_samples=None,
             chunk_ms=chunk_ms,
             device=str(device),
@@ -3680,6 +4427,893 @@ def analyze_teacher_first_vc_decoder_behavior(
         encoding="utf-8",
         newline="\n",
     )
+
+
+def analyze_teacher_first_vc_waveform_handoff(
+    *,
+    input_audio_paths: list[Path],
+    output_dir: Path,
+    vocoder_checkpoint_path: Path | None,
+    vocoder_checkpoint_selection_path: Path | None,
+    selection_target: str,
+    reference_package_paths: list[Path],
+    reference_package_limit: int,
+    device: str,
+    max_audio_sec: float | None,
+    chunk_ms: float | None,
+    predicted_activity_gate_floor: float,
+    predicted_activity_gate_smoothing_frames: int,
+    control_family_overrides: list[str] | None = None,
+) -> None:
+    if not input_audio_paths:
+        raise ValueError("Waveform handoff probe requires at least one input audio.")
+
+    resolved_checkpoint_path, selection_summary = resolve_checkpoint_path_from_inputs(
+        checkpoint_path=vocoder_checkpoint_path,
+        checkpoint_selection_path=vocoder_checkpoint_selection_path,
+        selection_target=selection_target,
+    )
+    checkpoint_payload = load_vocoder_checkpoint_payload(resolved_checkpoint_path)
+    resolved_device = resolve_runtime_device(device)
+    resolved_control_family_overrides = parse_decoder_probe_control_family_overrides(control_family_overrides)
+    requires_reference_summary = any(
+        str(item.get("mode")).startswith("reference_") for item in resolved_control_family_overrides
+    )
+    resolved_reference_packages: list[Path] = []
+    reference_feature_summary: dict[str, object] | None = None
+    if requires_reference_summary:
+        resolved_reference_packages = resolve_reference_package_paths(
+            reference_package_paths=reference_package_paths,
+            reference_package_limit=reference_package_limit,
+        )
+        if not resolved_reference_packages:
+            raise ValueError(
+                "Waveform handoff probe requires at least one reference Stage5 training package when "
+                "using reference_mean control-family overrides."
+            )
+        reference_feature_summary = build_reference_distribution_summary(resolved_reference_packages)
+
+    output_dir = output_dir.resolve()
+    reset_managed_directory(output_dir)
+    cases_dir = output_dir / "cases"
+    cases_dir.mkdir(parents=True, exist_ok=True)
+
+    case_summaries = []
+    for index, input_audio_path in enumerate(input_audio_paths, start=1):
+        case_id = build_review_bundle_case_id(
+            raw_case_id=None,
+            input_audio_path=input_audio_path.resolve(),
+            index=index,
+        )
+        case_output_dir = cases_dir / case_id
+        run_offline_mvp_teacher_first_vc_demo(
+            input_audio_path=input_audio_path,
+            output_dir=case_output_dir,
+            teacher_route_handoff_path=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+            teacher_checkpoint_path=None,
+            calibration_asset_path=DEFAULT_CALIBRATION_ASSET_PATH,
+            vocoder_checkpoint_path=resolved_checkpoint_path,
+            vocoder_checkpoint_selection_path=None,
+            selection_target=selection_target,
+            chunk_samples=None,
+            chunk_ms=chunk_ms,
+            device=str(device),
+            max_audio_sec=max_audio_sec,
+            verify_against_full_pass=False,
+            save_intermediates=True,
+            use_predicted_activity_gate=True,
+            predicted_activity_gate_floor=float(predicted_activity_gate_floor),
+            predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+            predicted_activity_gate_apply_mode="post_ola_envelope",
+        )
+        demo_summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
+        scaffold_payload = torch.load(
+            case_output_dir / "teacher_vocoder_input_scaffold" / "teacher_vocoder_input_scaffold.pt",
+            map_location="cpu",
+            weights_only=False,
+        )
+        if not isinstance(scaffold_payload, dict):
+            raise TypeError(f"Unsupported scaffold payload type: {type(scaffold_payload)!r}")
+        if reference_feature_summary is None:
+            empty_reference_feature_summary = {
+                "periodic": {"per_dim_mean": [], "per_dim_q01": [], "per_dim_q99": []},
+                "noise": {"per_dim_mean": [], "per_dim_q01": [], "per_dim_q99": []},
+            }
+            normalized_scaffold_payload, normalization_summary = normalize_scaffold_payload_for_decoder_probe(
+                scaffold_payload=scaffold_payload,
+                reference_feature_summary=empty_reference_feature_summary,
+                normalization_strategy="none",
+                control_family_overrides=resolved_control_family_overrides,
+            )
+        else:
+            normalized_scaffold_payload, normalization_summary = normalize_scaffold_payload_for_decoder_probe(
+                scaffold_payload=scaffold_payload,
+                reference_feature_summary=reference_feature_summary,
+                normalization_strategy="none",
+                control_family_overrides=resolved_control_family_overrides,
+            )
+        case_summaries.append(
+            build_waveform_handoff_case_summary(
+                case_id=case_id,
+                demo_summary=demo_summary,
+                scaffold_payload=normalized_scaffold_payload,
+                checkpoint_payload=checkpoint_payload,
+                device=resolved_device,
+                predicted_activity_gate_floor=float(predicted_activity_gate_floor),
+                predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+                case_output_dir=case_output_dir,
+                normalization_summary=normalization_summary,
+            )
+        )
+
+    handoff_stage_aggregates = build_handoff_stage_aggregates(
+        [{"stage_metrics": dict(case["stage_metrics"])} for case in case_summaries]
+    )
+    route_aggregates = build_teacher_first_waveform_handoff_route_aggregates(case_summaries)
+    summary = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "teacher_first_single_target_vc_waveform_handoff_probe_v1",
+        "output_dir": output_dir.as_posix(),
+        "device": str(device),
+        "max_audio_sec": max_audio_sec,
+        "chunk_ms": chunk_ms,
+        "checkpoint_path": resolved_checkpoint_path.as_posix(),
+        "selected_checkpoint_summary": selection_summary,
+        "waveform_decode": {
+            "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
+            "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
+            "route_labels": [str(route["label"]) for route in HANDOFF_DECODE_ROUTES],
+            "control_family_overrides": serialize_decoder_probe_control_family_overrides(
+                resolved_control_family_overrides
+            ),
+        },
+        "reference_package_count": len(resolved_reference_packages),
+        "reference_packages": [path.as_posix() for path in resolved_reference_packages],
+        "reference_feature_summary": reference_feature_summary,
+        "case_count": len(case_summaries),
+        "handoff_stage_aggregates": handoff_stage_aggregates,
+        "route_aggregates": route_aggregates,
+        "diagnosis": diagnose_teacher_first_waveform_handoff(
+            handoff_stage_aggregates=handoff_stage_aggregates,
+            route_aggregates=route_aggregates,
+        ),
+        "cases": case_summaries,
+        "notes": [
+            "This probe keeps the current teacher-first runtime path intact, then replays the same saved scaffold through one Stage5 forward pass and exports intermediate waveform handoff assets.",
+            "decoder_hidden is summarized numerically and saved in tensors only because it is not waveform-valued audio.",
+            "waveform_frame_logits_stitched.wav and waveform_frames_stitched.wav let us hear the pre-OLA stage before overlap-add and gate semantics.",
+            "decoded_no_gate, decoded_pre_ola_gate, and decoded_post_ola_gate isolate whether the failure is already present before predicted activity gating or is materially amplified by the export-side gate route.",
+            "control_family_overrides are inference-only probe interventions; they do not modify the saved teacher contract or default runtime path.",
+            "reference_mean control-family overrides reuse Stage5 training-package feature means as a probe-time replacement source.",
+        ],
+    }
+    (output_dir / "teacher_first_vc_waveform_handoff_probe.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (output_dir / "teacher_first_vc_waveform_handoff_probe.md").write_text(
+        build_teacher_first_waveform_handoff_probe_markdown(summary),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def analyze_teacher_first_vc_waveform_decoder_structure(
+    *,
+    input_audio_paths: list[Path],
+    output_dir: Path,
+    vocoder_checkpoint_path: Path | None,
+    vocoder_checkpoint_selection_path: Path | None,
+    selection_target: str,
+    device: str,
+    max_audio_sec: float | None,
+    chunk_ms: float,
+    use_predicted_activity_gate: bool,
+    predicted_activity_gate_floor: float,
+    predicted_activity_gate_smoothing_frames: int,
+    predicted_activity_gate_apply_mode: str,
+) -> None:
+    if not input_audio_paths:
+        raise ValueError("At least one --input-audio path is required for the teacher-first waveform decoder structure probe.")
+    output_dir = output_dir.resolve()
+    reset_managed_directory(output_dir)
+    cases_dir = output_dir / "cases"
+    cases_dir.mkdir(parents=True, exist_ok=True)
+    resolved_device = torch.device(device)
+    resolved_apply_mode = normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_mode)
+    resolved_checkpoint_path, selection_summary = resolve_checkpoint_path_from_inputs(
+        checkpoint_path=vocoder_checkpoint_path,
+        checkpoint_selection_path=vocoder_checkpoint_selection_path,
+        selection_target=selection_target,
+    )
+    checkpoint_payload = torch.load(
+        resolved_checkpoint_path,
+        map_location="cpu",
+        weights_only=False,
+    )
+
+    case_summaries: list[dict[str, object]] = []
+    for case_index, input_audio_path in enumerate(input_audio_paths, start=1):
+        case_id = build_review_bundle_case_id(
+            raw_case_id=None,
+            input_audio_path=input_audio_path.resolve(),
+            index=case_index,
+        )
+        case_output_dir = cases_dir / case_id
+        run_offline_mvp_teacher_first_vc_demo(
+            input_audio_path=input_audio_path,
+            output_dir=case_output_dir,
+            teacher_route_handoff_path=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+            teacher_checkpoint_path=None,
+            calibration_asset_path=DEFAULT_CALIBRATION_ASSET_PATH,
+            vocoder_checkpoint_path=resolved_checkpoint_path,
+            vocoder_checkpoint_selection_path=None,
+            selection_target=selection_target,
+            chunk_samples=None,
+            chunk_ms=chunk_ms,
+            device=str(device),
+            max_audio_sec=max_audio_sec,
+            verify_against_full_pass=False,
+            save_intermediates=True,
+            use_predicted_activity_gate=bool(use_predicted_activity_gate),
+            predicted_activity_gate_floor=float(predicted_activity_gate_floor),
+            predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+            predicted_activity_gate_apply_mode=resolved_apply_mode,
+        )
+        demo_summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
+        scaffold_payload = torch.load(
+            case_output_dir / "teacher_vocoder_input_scaffold" / "teacher_vocoder_input_scaffold.pt",
+            map_location="cpu",
+            weights_only=False,
+        )
+        if not isinstance(scaffold_payload, dict):
+            raise TypeError(f"Unsupported scaffold payload type: {type(scaffold_payload)!r}")
+        case_summaries.append(
+            build_waveform_decoder_structure_case_summary(
+                case_id=case_id,
+                demo_summary=demo_summary,
+                scaffold_payload=scaffold_payload,
+                checkpoint_payload=checkpoint_payload,
+                device=resolved_device,
+                use_predicted_activity_gate=bool(use_predicted_activity_gate),
+                predicted_activity_gate_floor=float(predicted_activity_gate_floor),
+                predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+                predicted_activity_gate_apply_mode=resolved_apply_mode,
+                case_output_dir=case_output_dir,
+            )
+        )
+
+    aggregate_rows = build_variant_aggregates(case_summaries)
+    summary = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "teacher_first_single_target_vc_waveform_decoder_structure_probe_v1",
+        "output_dir": output_dir.as_posix(),
+        "device": str(device),
+        "max_audio_sec": max_audio_sec,
+        "chunk_ms": chunk_ms,
+        "checkpoint_path": resolved_checkpoint_path.as_posix(),
+        "selected_checkpoint_summary": selection_summary,
+        "decode_runtime": {
+            "device": str(resolved_device),
+            "use_predicted_activity_gate": bool(use_predicted_activity_gate),
+            "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
+            "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
+            "predicted_activity_gate_apply_mode": resolved_apply_mode,
+        },
+        "case_count": len(case_summaries),
+        "probe_variants": [
+            {
+                "label": str(item["label"]),
+                "description": str(item["description"]),
+                "transforms": [f"{stage}={mode}" for stage, mode in list(item["transforms"])],
+            }
+            for item in STRUCTURE_PROBE_VARIANTS
+        ],
+        "variant_impact_ranking": build_variant_impact_ranking(aggregate_rows),
+        "baseline_decoder_collapse_summary": build_baseline_decoder_collapse_summary(aggregate_rows),
+        "variant_aggregates": aggregate_rows,
+        "cases": case_summaries,
+        "notes": [
+            "This probe reuses the teacher-first user-line scaffold, then applies the same hidden-state bypass transforms used by the Stage5 waveform decoder structure probe.",
+            "baseline is decoded from the teacher-first user-line scaffold with the current checkpoint and the requested predicted-activity gate setting.",
+            "fused_hidden_from_periodic_hidden, fused_hidden_from_noise_hidden, and fused_hidden_from_branch_mean bypass fusion and test whether the current decoder route can still respond to branch-side hidden dynamics on user-line inputs.",
+            "If branch-side bypasses reduce decoded template metrics sharply while baseline remains near-fixed-template, the first collapse is still upstream of the decoder, even on user-line.",
+        ],
+    }
+    (output_dir / "teacher_first_vc_waveform_decoder_structure_probe.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (output_dir / "teacher_first_vc_waveform_decoder_structure_probe.md").write_text(
+        build_teacher_first_waveform_decoder_structure_probe_markdown(summary),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
+def build_waveform_handoff_case_summary(
+    *,
+    case_id: str,
+    demo_summary: dict[str, object],
+    scaffold_payload: dict[str, object],
+    checkpoint_payload: dict[str, object],
+    device: torch.device,
+    predicted_activity_gate_floor: float,
+    predicted_activity_gate_smoothing_frames: int,
+    case_output_dir: Path,
+    normalization_summary: dict[str, object] | None = None,
+) -> dict[str, object]:
+    branch_scaffold = dict(scaffold_payload["branch_scaffold"])
+    source_runtime = dict(scaffold_payload["source_runtime"])
+    model = build_vocoder_model_from_runtime_dims(
+        checkpoint_payload=checkpoint_payload,
+        periodic_input_dim=int(branch_scaffold["periodic_branch_features"].shape[-1]),
+        noise_input_dim=int(branch_scaffold["noise_branch_features"].shape[-1]),
+        frame_length=int(source_runtime["frame_length"]),
+    ).to(device)
+    model.eval()
+    with torch.no_grad():
+        outputs = model(
+            periodic_branch_features=branch_scaffold["periodic_branch_features"].to(device=device, dtype=torch.float32),
+            noise_branch_features=branch_scaffold["noise_branch_features"].to(device=device, dtype=torch.float32),
+        )
+
+    periodic_gate = outputs["periodic_gate"].detach().cpu().to(torch.float32)
+    noise_gate = outputs["noise_gate"].detach().cpu().to(torch.float32)
+    predicted_activity = torch.maximum(periodic_gate, noise_gate).detach().cpu().to(torch.float32)
+    if predicted_activity.ndim == 2 and int(predicted_activity.shape[-1]) == 1:
+        predicted_activity = predicted_activity.squeeze(-1)
+    periodic_hidden = outputs["periodic_hidden"].detach().cpu().to(torch.float32)
+    noise_hidden = outputs["noise_hidden"].detach().cpu().to(torch.float32)
+    branch_mean_hidden = outputs["branch_mean_hidden"].detach().cpu().to(torch.float32)
+    fused_hidden = outputs["fused_hidden"].detach().cpu().to(torch.float32)
+    decoder_hidden = outputs["decoder_hidden"].detach().cpu().to(torch.float32)
+    waveform_frame_logits = outputs["waveform_frame_logits"].detach().cpu().to(torch.float32)
+    waveform_frames = outputs["waveform_frames"].detach().cpu().to(torch.float32)
+    stage_metrics = summarize_handoff_stage_metrics(
+        periodic_hidden=periodic_hidden,
+        noise_hidden=noise_hidden,
+        branch_mean_hidden=branch_mean_hidden,
+        fused_hidden=fused_hidden,
+        decoder_hidden=decoder_hidden,
+        waveform_frame_logits=waveform_frame_logits,
+        waveform_frames=waveform_frames,
+    )
+
+    handoff_dir = case_output_dir / "waveform_handoff_probe"
+    handoff_dir.mkdir(parents=True, exist_ok=True)
+    logits_audio_path = handoff_dir / "waveform_frame_logits_stitched.wav"
+    frames_audio_path = handoff_dir / "waveform_frames_stitched.wav"
+    write_waveform_int16(
+        logits_audio_path,
+        flatten_frame_sequence_for_audio(waveform_frame_logits),
+        sample_rate=int(source_runtime["sample_rate"]),
+    )
+    write_waveform_int16(
+        frames_audio_path,
+        flatten_frame_sequence_for_audio(waveform_frames),
+        sample_rate=int(source_runtime["sample_rate"]),
+    )
+
+    torch.save(
+        {
+            "periodic_hidden": periodic_hidden,
+            "noise_hidden": noise_hidden,
+            "branch_mean_hidden": branch_mean_hidden,
+            "fused_hidden": fused_hidden,
+            "decoder_hidden": decoder_hidden,
+            "waveform_frame_logits": waveform_frame_logits,
+            "waveform_frames": waveform_frames,
+            "periodic_gate": periodic_gate,
+            "noise_gate": noise_gate,
+            "predicted_activity": predicted_activity,
+        },
+        handoff_dir / "teacher_first_vc_waveform_handoff_tensors.pt",
+    )
+
+    route_rows = []
+    for route in HANDOFF_DECODE_ROUTES:
+        route_waveform = reconstruct_waveform_from_frames(
+            waveform_frames=waveform_frames,
+            frame_length=int(source_runtime["frame_length"]),
+            hop_length=int(source_runtime["hop_length"]),
+            frame_gains=predicted_activity if bool(route["use_predicted_activity_gate"]) else None,
+            frame_gain_floor=float(predicted_activity_gate_floor),
+            frame_gain_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+            frame_gain_apply_mode=str(route["predicted_activity_gate_apply_mode"]),
+        ).detach().cpu().to(torch.float32)
+        route_audio_path = handoff_dir / f"{sanitize_bundle_component(str(route['label']))}.wav"
+        write_waveform_int16(
+            route_audio_path,
+            route_waveform,
+            sample_rate=int(source_runtime["sample_rate"]),
+        )
+        route_rows.append(
+            {
+                "label": str(route["label"]),
+                "description": str(route["description"]),
+                "audio_path": route_audio_path.as_posix(),
+                "metrics": summarize_teacher_first_handoff_route_metrics(
+                    waveform=route_waveform,
+                    sample_rate=int(source_runtime["sample_rate"]),
+                    frame_length=int(source_runtime["frame_length"]),
+                    hop_length=int(source_runtime["hop_length"]),
+                    predicted_activity=predicted_activity,
+                ),
+            }
+        )
+
+    return {
+        "case_id": case_id,
+        "input_audio_path": demo_summary.get("input_audio_path"),
+        "main_decoded_audio_path": demo_summary.get("decoded_audio_path"),
+        "decoded_audio_sec": demo_summary.get("decoded_audio_sec"),
+        "decoded_waveform_rms": demo_summary.get("decoded_waveform_rms"),
+        "normalization": normalization_summary or {
+            "strategy": "none",
+            "transformations": [],
+            "control_family_overrides": [],
+        },
+        "handoff_dir": handoff_dir.as_posix(),
+        "handoff_tensor_path": (handoff_dir / "teacher_first_vc_waveform_handoff_tensors.pt").as_posix(),
+        "stage_audio_exports": {
+            "waveform_frame_logits_stitched_audio_path": logits_audio_path.as_posix(),
+            "waveform_frames_stitched_audio_path": frames_audio_path.as_posix(),
+        },
+        "stage_metrics": stage_metrics,
+        "routes": route_rows,
+    }
+
+
+def build_waveform_decoder_structure_case_summary(
+    *,
+    case_id: str,
+    demo_summary: dict[str, object],
+    scaffold_payload: dict[str, object],
+    checkpoint_payload: dict[str, object],
+    device: torch.device,
+    use_predicted_activity_gate: bool,
+    predicted_activity_gate_floor: float,
+    predicted_activity_gate_smoothing_frames: int,
+    predicted_activity_gate_apply_mode: str,
+    case_output_dir: Path,
+) -> dict[str, object]:
+    branch_scaffold = dict(scaffold_payload["branch_scaffold"])
+    source_runtime = dict(scaffold_payload["source_runtime"])
+    model = build_vocoder_model_from_runtime_dims(
+        checkpoint_payload=checkpoint_payload,
+        periodic_input_dim=int(branch_scaffold["periodic_branch_features"].shape[-1]),
+        noise_input_dim=int(branch_scaffold["noise_branch_features"].shape[-1]),
+        frame_length=int(source_runtime["frame_length"]),
+    ).to(device)
+    model.eval()
+
+    periodic_branch_features = branch_scaffold["periodic_branch_features"].to(device=device, dtype=torch.float32)
+    noise_branch_features = branch_scaffold["noise_branch_features"].to(device=device, dtype=torch.float32)
+    structure_dir = case_output_dir / "waveform_decoder_structure_probe"
+    structure_dir.mkdir(parents=True, exist_ok=True)
+
+    variant_rows: list[dict[str, object]] = []
+    baseline_waveform = None
+    baseline_scalar_metrics = None
+    tensors_to_save: dict[str, dict[str, torch.Tensor]] = {}
+    with torch.no_grad():
+        base_periodic_hidden = model.periodic_encoder(periodic_branch_features)
+        base_noise_hidden = model.noise_encoder(noise_branch_features)
+        for variant in STRUCTURE_PROBE_VARIANTS:
+            transforms = list(variant["transforms"])
+            transform_notes: list[str] = []
+            periodic_hidden = apply_structure_transform(
+                tensor=base_periodic_hidden,
+                transforms=transforms,
+                stage_name="periodic_hidden",
+                transform_notes=transform_notes,
+            )
+            noise_hidden = apply_structure_transform(
+                tensor=base_noise_hidden,
+                transforms=transforms,
+                stage_name="noise_hidden",
+                transform_notes=transform_notes,
+            )
+            fused_hidden = compute_fused_hidden_for_probe(
+                model=model,
+                periodic_hidden=periodic_hidden,
+                noise_hidden=noise_hidden,
+            )
+            fused_hidden = apply_structure_transform(
+                tensor=fused_hidden,
+                transforms=transforms,
+                stage_name="fused_hidden",
+                transform_notes=transform_notes,
+                periodic_hidden=periodic_hidden,
+                noise_hidden=noise_hidden,
+            )
+            outputs = compute_teacher_first_waveform_structure_outputs(
+                model=model,
+                periodic_hidden=periodic_hidden,
+                noise_hidden=noise_hidden,
+                fused_hidden=fused_hidden,
+            )
+            branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
+            periodic_gate = torch.sigmoid(model.periodic_gate(periodic_hidden))
+            noise_gate = torch.sigmoid(model.noise_gate(noise_hidden))
+            predicted_activity = torch.maximum(periodic_gate, noise_gate)
+            if predicted_activity.ndim == 2 and int(predicted_activity.shape[-1]) == 1:
+                predicted_activity = predicted_activity.squeeze(-1)
+            decoded_waveform = reconstruct_waveform_from_frames(
+                waveform_frames=outputs["waveform_frames"].detach().cpu().to(torch.float32),
+                frame_length=int(source_runtime["frame_length"]),
+                hop_length=int(source_runtime["hop_length"]),
+                frame_gains=predicted_activity.detach().cpu().to(torch.float32)
+                if bool(use_predicted_activity_gate)
+                else None,
+                frame_gain_floor=float(predicted_activity_gate_floor),
+                frame_gain_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
+                frame_gain_apply_mode=str(predicted_activity_gate_apply_mode),
+            ).detach().cpu().to(torch.float32)
+            stage_metrics = summarize_handoff_stage_metrics(
+                periodic_hidden=periodic_hidden.detach().cpu().to(torch.float32),
+                noise_hidden=noise_hidden.detach().cpu().to(torch.float32),
+                branch_mean_hidden=branch_mean_hidden.detach().cpu().to(torch.float32),
+                fused_hidden=fused_hidden.detach().cpu().to(torch.float32),
+                decoder_hidden=outputs["decoder_hidden"].detach().cpu().to(torch.float32),
+                waveform_frame_logits=outputs["waveform_frame_logits"].detach().cpu().to(torch.float32),
+                waveform_frames=outputs["waveform_frames"].detach().cpu().to(torch.float32),
+            )
+            scalar_metrics = summarize_teacher_first_structure_scalar_metrics(
+                stage_metrics=stage_metrics,
+                decoded_waveform=decoded_waveform,
+                sample_rate=int(source_runtime["sample_rate"]),
+                frame_length=int(source_runtime["frame_length"]),
+                hop_length=int(source_runtime["hop_length"]),
+                predicted_activity=predicted_activity.detach().cpu().to(torch.float32),
+            )
+            label = str(variant["label"])
+            audio_path = structure_dir / f"{sanitize_bundle_component(label)}.wav"
+            write_waveform_int16(
+                audio_path,
+                decoded_waveform,
+                sample_rate=int(source_runtime["sample_rate"]),
+            )
+            variant_row = {
+                "label": label,
+                "description": str(variant["description"]),
+                "transform_notes": transform_notes,
+                "audio_path": audio_path.as_posix(),
+                "scalar_metrics": scalar_metrics,
+                "stage_metrics": stage_metrics,
+                "_decoded_waveform": decoded_waveform,
+            }
+            tensors_to_save[label] = {
+                "periodic_hidden": periodic_hidden.detach().cpu().to(torch.float32),
+                "noise_hidden": noise_hidden.detach().cpu().to(torch.float32),
+                "branch_mean_hidden": branch_mean_hidden.detach().cpu().to(torch.float32),
+                "fused_hidden": fused_hidden.detach().cpu().to(torch.float32),
+                "decoder_hidden": outputs["decoder_hidden"].detach().cpu().to(torch.float32),
+                "waveform_frame_logits": outputs["waveform_frame_logits"].detach().cpu().to(torch.float32),
+                "waveform_frames": outputs["waveform_frames"].detach().cpu().to(torch.float32),
+                "predicted_activity": predicted_activity.detach().cpu().to(torch.float32),
+            }
+            if label == "baseline":
+                baseline_waveform = decoded_waveform
+                baseline_scalar_metrics = scalar_metrics
+            variant_rows.append(variant_row)
+
+    if baseline_waveform is None or baseline_scalar_metrics is None:
+        raise RuntimeError("Teacher-first waveform decoder structure probe failed to produce a baseline variant.")
+
+    for variant_row in variant_rows:
+        variant_row["delta_vs_baseline"] = summarize_probe_delta_vs_baseline(
+            candidate_metrics=dict(variant_row["scalar_metrics"]),
+            baseline_metrics=baseline_scalar_metrics,
+            candidate_waveform=variant_row.get("_decoded_waveform"),
+            baseline_waveform=baseline_waveform,
+        )
+        variant_row["stage_delta_vs_baseline"] = {}
+        variant_row.pop("_decoded_waveform", None)
+
+    torch.save(
+        tensors_to_save,
+        structure_dir / "teacher_first_vc_waveform_decoder_structure_tensors.pt",
+    )
+    return {
+        "record_id": case_id,
+        "input_audio_path": demo_summary.get("input_audio_path"),
+        "main_decoded_audio_path": demo_summary.get("decoded_audio_path"),
+        "structure_dir": structure_dir.as_posix(),
+        "training_package_path": None,
+        "variants": variant_rows,
+    }
+
+
+def compute_teacher_first_waveform_structure_outputs(
+    *,
+    model: NoResidualSourceFilterVocoderScaffold,
+    periodic_hidden: torch.Tensor,
+    noise_hidden: torch.Tensor,
+    fused_hidden: torch.Tensor,
+) -> dict[str, torch.Tensor]:
+    waveform_decoder_mode = str(getattr(model, "waveform_decoder_mode", "fused_single"))
+    if waveform_decoder_mode != "fused_single":
+        raise ValueError(f"Unsupported waveform_decoder_mode in teacher-first structure probe: {waveform_decoder_mode!r}")
+    waveform_decoder = getattr(model, "waveform_decoder", None)
+    if waveform_decoder is None:
+        raise RuntimeError("waveform_decoder is not initialized for fused_single teacher-first structure probe.")
+    branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
+    decoder_hidden = fused_hidden
+    if bool(getattr(model, "use_decoder_branch_condition_adapter", False)):
+        decoder_branch_condition_adapter = getattr(model, "decoder_branch_condition_adapter", None)
+        decoder_branch_condition_gate = getattr(model, "decoder_branch_condition_gate", None)
+        decoder_fused_condition_proj = getattr(model, "decoder_fused_condition_proj", None)
+        if (
+            decoder_branch_condition_adapter is None
+            or decoder_branch_condition_gate is None
+            or decoder_fused_condition_proj is None
+        ):
+            raise RuntimeError("Decoder branch-condition adapter modules are not initialized for teacher-first structure probe.")
+        branch_condition_features = torch.cat(
+            [
+                fused_hidden,
+                branch_mean_hidden,
+                fused_hidden - branch_mean_hidden,
+            ],
+            dim=-1,
+        )
+        branch_condition_context = decoder_branch_condition_adapter(branch_condition_features)
+        branch_condition_gate = torch.sigmoid(decoder_branch_condition_gate(branch_condition_context))
+        fused_condition = torch.tanh(decoder_fused_condition_proj(branch_condition_context))
+        decoder_hidden = decoder_hidden + branch_condition_gate * fused_condition
+    waveform_frame_logits = waveform_decoder(decoder_hidden)
+    if bool(getattr(model, "use_residual_shape_branch_condition_adapter", False)):
+        residual_shape_branch_condition_adapter = getattr(model, "residual_shape_branch_condition_adapter", None)
+        residual_shape_branch_condition_gate_head = getattr(model, "residual_shape_branch_condition_gate", None)
+        residual_shape_branch_condition_proj = getattr(model, "residual_shape_branch_condition_proj", None)
+        if (
+            residual_shape_branch_condition_adapter is None
+            or residual_shape_branch_condition_gate_head is None
+            or residual_shape_branch_condition_proj is None
+        ):
+            raise RuntimeError(
+                "Residual-shape branch-condition adapter modules are not initialized for teacher-first structure probe."
+            )
+        residual_shape_branch_condition_features = torch.cat(
+            [
+                fused_hidden,
+                branch_mean_hidden,
+                fused_hidden - branch_mean_hidden,
+            ],
+            dim=-1,
+        )
+        residual_shape_branch_condition_context = residual_shape_branch_condition_adapter(
+            residual_shape_branch_condition_features
+        )
+        residual_shape_branch_condition_gate = torch.sigmoid(
+            residual_shape_branch_condition_gate_head(residual_shape_branch_condition_context)
+        )
+        residual_shape_branch_condition_delta = resolve_residual_shape_branch_condition_delta(
+            delta=torch.tanh(
+                residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
+            ),
+            mode=str(getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")),
+        )
+        waveform_frame_logits = (
+            waveform_frame_logits
+            + float(getattr(model, "residual_shape_branch_condition_scale", 1.0))
+            * residual_shape_branch_condition_gate
+            * residual_shape_branch_condition_delta
+        )
+    return {
+        "decoder_hidden": decoder_hidden,
+        "waveform_frame_logits": waveform_frame_logits,
+        "waveform_frames": torch.tanh(waveform_frame_logits),
+    }
+
+
+def summarize_teacher_first_structure_scalar_metrics(
+    *,
+    stage_metrics: dict[str, float],
+    decoded_waveform: torch.Tensor,
+    sample_rate: int,
+    frame_length: int,
+    hop_length: int,
+    predicted_activity: torch.Tensor,
+) -> dict[str, float]:
+    route_metrics = summarize_teacher_first_handoff_route_metrics(
+        waveform=decoded_waveform,
+        sample_rate=int(sample_rate),
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        predicted_activity=predicted_activity,
+    )
+    scalar_metrics = dict(stage_metrics)
+    scalar_metrics.update(
+        {
+            "decoded_waveform_rms": float(route_metrics["waveform_rms"]),
+            "decoded_abs_mean": float(route_metrics["waveform_abs_mean"]),
+            "decoded_peak_abs": float(route_metrics["waveform_peak_abs"]),
+            "decoded_zero_crossing_rate": float(route_metrics["waveform_zero_crossing_rate"]),
+            "decoded_frames_template_cosine_mean": float(route_metrics["decoded_frame_template_cosine_mean"]),
+            "decoded_frames_adjacent_cosine_mean": float(route_metrics["decoded_frame_adjacent_cosine_mean"]),
+            "decoded_frames_frame_rms_cv": float(route_metrics["decoded_frame_rms_cv"]),
+            "predicted_activity_to_decoded_frame_rms_corr": float(
+                route_metrics["predicted_activity_to_decoded_frame_rms_corr"]
+            ),
+            "decoded_spectral_centroid_hz": float(route_metrics["decoded_spectral_centroid_hz"]),
+            "decoded_spectral_bandwidth_hz": float(route_metrics["decoded_spectral_bandwidth_hz"]),
+            "decoded_spectral_rolloff95_hz": float(route_metrics["decoded_spectral_rolloff95_hz"]),
+            "decoded_spectral_high_band_energy_ratio": float(
+                route_metrics["decoded_spectral_high_band_energy_ratio"]
+            ),
+            "predicted_activity_mean": round(float(predicted_activity.mean().item()), 6),
+            "predicted_activity_std": round(float(predicted_activity.std(unbiased=False).item()), 6),
+        }
+    )
+    scalar_metrics["fused_to_waveform_template_cosine_gap"] = round(
+        float(scalar_metrics["waveform_frames_template_cosine_mean"])
+        - float(scalar_metrics["fused_hidden_template_cosine_mean"]),
+        6,
+    )
+    scalar_metrics["fused_to_waveform_adjacent_cosine_gap"] = round(
+        float(scalar_metrics["waveform_frames_adjacent_cosine_mean"])
+        - float(scalar_metrics["fused_hidden_adjacent_cosine_mean"]),
+        6,
+    )
+    scalar_metrics["waveform_to_decoded_template_cosine_gap"] = round(
+        float(scalar_metrics["decoded_frames_template_cosine_mean"])
+        - float(scalar_metrics["waveform_frames_template_cosine_mean"]),
+        6,
+    )
+    scalar_metrics["waveform_to_decoded_adjacent_cosine_gap"] = round(
+        float(scalar_metrics["decoded_frames_adjacent_cosine_mean"])
+        - float(scalar_metrics["waveform_frames_adjacent_cosine_mean"]),
+        6,
+    )
+    return scalar_metrics
+
+
+def flatten_frame_sequence_for_audio(frames: torch.Tensor) -> torch.Tensor:
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    if frames_cpu.ndim != 2:
+        raise ValueError(f"Expected frames shape [frames, samples], got {tuple(frames_cpu.shape)}")
+    return frames_cpu.reshape(-1)
+
+
+def summarize_teacher_first_handoff_route_metrics(
+    *,
+    waveform: torch.Tensor,
+    sample_rate: int,
+    frame_length: int,
+    hop_length: int,
+    predicted_activity: torch.Tensor,
+) -> dict[str, float]:
+    waveform_cpu = waveform.detach().cpu().to(torch.float32).view(-1)
+    spectral = compute_waveform_spectral_summary(waveform_cpu, int(sample_rate))
+    frames = frame_waveform_sequence(
+        waveform=waveform_cpu,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        target_frame_count=int(predicted_activity.shape[0]),
+    )
+    frame_metrics = summarize_frame_sequence_metrics(frames)
+    frame_rms = frames.pow(2).mean(dim=1).sqrt()
+    return {
+        "waveform_rms": round(float(waveform_cpu.pow(2).mean().sqrt().item()), 6),
+        "waveform_abs_mean": round(float(waveform_cpu.abs().mean().item()), 6),
+        "waveform_peak_abs": round(float(waveform_cpu.abs().max().item()), 6),
+        "waveform_zero_crossing_rate": round(float(compute_zero_crossing_rate(waveform_cpu)), 6),
+        "decoded_frame_template_cosine_mean": float(frame_metrics["template_cosine_mean"]),
+        "decoded_frame_adjacent_cosine_mean": float(frame_metrics["adjacent_cosine_mean"]),
+        "decoded_frame_rms_cv": float(frame_metrics["frame_rms_cv"]),
+        "predicted_activity_to_decoded_frame_rms_corr": float(
+            compute_pearson_correlation(predicted_activity.view(-1), frame_rms)
+        ),
+        "decoded_spectral_centroid_hz": round(float(spectral["centroid_hz"]), 6),
+        "decoded_spectral_bandwidth_hz": round(float(spectral["bandwidth_hz"]), 6),
+        "decoded_spectral_rolloff95_hz": round(float(spectral["rolloff95_hz"]), 6),
+        "decoded_spectral_high_band_energy_ratio": round(float(spectral["high_band_energy_ratio"]), 6),
+    }
+
+
+def build_teacher_first_waveform_handoff_route_aggregates(
+    case_summaries: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    route_map: dict[str, dict[str, object]] = {}
+    for case in case_summaries:
+        for route in list(case.get("routes", [])):
+            label = str(route["label"])
+            bucket = route_map.setdefault(
+                label,
+                {
+                    "label": label,
+                    "description": str(route["description"]),
+                    "record_count": 0,
+                    "metrics": {},
+                },
+            )
+            bucket["record_count"] = int(bucket["record_count"]) + 1
+            for key, value in dict(route.get("metrics", {})).items():
+                bucket["metrics"].setdefault(str(key), []).append(float(value))
+    order = {str(route["label"]): index for index, route in enumerate(HANDOFF_DECODE_ROUTES)}
+    aggregates = []
+    for label, payload in route_map.items():
+        aggregates.append(
+            {
+                "label": label,
+                "description": str(payload["description"]),
+                "record_count": int(payload["record_count"]),
+                "metrics": {
+                    key: summarize_scalar_values(values)
+                    for key, values in sorted(dict(payload["metrics"]).items())
+                },
+            }
+        )
+    return sorted(aggregates, key=lambda item: order.get(str(item["label"]), 999))
+
+
+def diagnose_teacher_first_waveform_handoff(
+    *,
+    handoff_stage_aggregates: dict[str, dict[str, float]],
+    route_aggregates: list[dict[str, object]],
+) -> dict[str, object]:
+    route_map = {str(item["label"]): item for item in route_aggregates}
+    no_gate_metrics = dict(dict(route_map.get("decoded_no_gate", {})).get("metrics", {}))
+    pre_gate_metrics = dict(dict(route_map.get("decoded_pre_ola_gate", {})).get("metrics", {}))
+    post_gate_metrics = dict(dict(route_map.get("decoded_post_ola_gate", {})).get("metrics", {}))
+
+    def mean_metric(bucket: dict[str, object], key: str) -> float:
+        return float(dict(bucket.get(key, {})).get("mean", 0.0))
+
+    logits_template = float(
+        dict(handoff_stage_aggregates.get("waveform_frame_logits_template_cosine_mean", {})).get("mean", 0.0)
+    )
+    frames_template = float(
+        dict(handoff_stage_aggregates.get("waveform_frames_template_cosine_mean", {})).get("mean", 0.0)
+    )
+    logits_adjacent = float(
+        dict(handoff_stage_aggregates.get("waveform_frame_logits_adjacent_cosine_mean", {})).get("mean", 0.0)
+    )
+    frames_adjacent = float(
+        dict(handoff_stage_aggregates.get("waveform_frames_adjacent_cosine_mean", {})).get("mean", 0.0)
+    )
+    return {
+        "logits_to_frames_template_cosine_gap": round(frames_template - logits_template, 6),
+        "logits_to_frames_adjacent_cosine_gap": round(frames_adjacent - logits_adjacent, 6),
+        "pre_ola_vs_no_gate_template_delta": round(
+            mean_metric(pre_gate_metrics, "decoded_frame_template_cosine_mean")
+            - mean_metric(no_gate_metrics, "decoded_frame_template_cosine_mean"),
+            6,
+        ),
+        "post_ola_vs_no_gate_template_delta": round(
+            mean_metric(post_gate_metrics, "decoded_frame_template_cosine_mean")
+            - mean_metric(no_gate_metrics, "decoded_frame_template_cosine_mean"),
+            6,
+        ),
+        "post_ola_vs_no_gate_high_band_delta": round(
+            mean_metric(post_gate_metrics, "decoded_spectral_high_band_energy_ratio")
+            - mean_metric(no_gate_metrics, "decoded_spectral_high_band_energy_ratio"),
+            6,
+        ),
+        "post_ola_vs_no_gate_centroid_hz_delta": round(
+            mean_metric(post_gate_metrics, "decoded_spectral_centroid_hz")
+            - mean_metric(no_gate_metrics, "decoded_spectral_centroid_hz"),
+            6,
+        ),
+        "likely_failure_already_present_by_frames_before_gate": bool(
+            abs(frames_template - logits_template) < 0.01
+            and abs(
+                mean_metric(post_gate_metrics, "decoded_spectral_high_band_energy_ratio")
+                - mean_metric(no_gate_metrics, "decoded_spectral_high_band_energy_ratio")
+            )
+            < 0.02
+            and abs(
+                mean_metric(post_gate_metrics, "decoded_frame_template_cosine_mean")
+                - mean_metric(no_gate_metrics, "decoded_frame_template_cosine_mean")
+            )
+            < 0.01
+        ),
+    }
 
 
 def build_reference_decoder_behavior_summary(
@@ -3817,7 +5451,8 @@ def parse_decoder_probe_control_family_overrides(
         if mode is None:
             raise ValueError(
                 "Unsupported control-family override mode: "
-                f"{raw_mode!r}. Expected one of: zero, reference_mean."
+                f"{raw_mode!r}. Expected one of: zero, reference_mean, reference_affine_match, "
+                "time_roll_half, time_shuffle."
             )
         dedupe_key = (family, mode)
         if dedupe_key in seen:
@@ -3880,14 +5515,60 @@ def normalize_scaffold_payload_for_decoder_probe(
         )
 
     layout = build_branch_feature_layout(scaffold_payload)
-    periodic_reference = dict(reference_feature_summary["periodic"])
-    noise_reference = dict(reference_feature_summary["noise"])
-    periodic_mean = torch.tensor(periodic_reference["per_dim_mean"], dtype=torch.float32)
-    periodic_q01 = torch.tensor(periodic_reference["per_dim_q01"], dtype=torch.float32)
-    periodic_q99 = torch.tensor(periodic_reference["per_dim_q99"], dtype=torch.float32)
-    noise_mean = torch.tensor(noise_reference["per_dim_mean"], dtype=torch.float32)
-    noise_q01 = torch.tensor(noise_reference["per_dim_q01"], dtype=torch.float32)
-    noise_q99 = torch.tensor(noise_reference["per_dim_q99"], dtype=torch.float32)
+    periodic_reference = dict(reference_feature_summary.get("periodic", {}))
+    noise_reference = dict(reference_feature_summary.get("noise", {}))
+    requires_reference_mean = normalized_strategy in {
+        "conditioning_reference_mean",
+        "conditioning_reference_mean_plus_reference_q01_q99_clip",
+        "reference_affine_match",
+    } or any(str(item.get("mode")) in {"reference_mean", "reference_affine_match"} for item in resolved_control_family_overrides)
+    requires_reference_std = normalized_strategy == "reference_affine_match" or any(
+        str(item.get("mode")) == "reference_affine_match" for item in resolved_control_family_overrides
+    )
+    requires_reference_quantiles = normalized_strategy in {
+        "reference_q01_q99_clip",
+        "conditioning_reference_mean_plus_reference_q01_q99_clip",
+    }
+    periodic_mean = resolve_reference_stat_tensor(
+        reference_distribution=periodic_reference,
+        key="per_dim_mean",
+        required=requires_reference_mean,
+    )
+    periodic_std = resolve_reference_stat_tensor(
+        reference_distribution=periodic_reference,
+        key="per_dim_std",
+        required=requires_reference_std,
+    )
+    periodic_q01 = resolve_reference_stat_tensor(
+        reference_distribution=periodic_reference,
+        key="per_dim_q01",
+        required=requires_reference_quantiles,
+    )
+    periodic_q99 = resolve_reference_stat_tensor(
+        reference_distribution=periodic_reference,
+        key="per_dim_q99",
+        required=requires_reference_quantiles,
+    )
+    noise_mean = resolve_reference_stat_tensor(
+        reference_distribution=noise_reference,
+        key="per_dim_mean",
+        required=requires_reference_mean,
+    )
+    noise_std = resolve_reference_stat_tensor(
+        reference_distribution=noise_reference,
+        key="per_dim_std",
+        required=requires_reference_std,
+    )
+    noise_q01 = resolve_reference_stat_tensor(
+        reference_distribution=noise_reference,
+        key="per_dim_q01",
+        required=requires_reference_quantiles,
+    )
+    noise_q99 = resolve_reference_stat_tensor(
+        reference_distribution=noise_reference,
+        key="per_dim_q99",
+        required=requires_reference_quantiles,
+    )
 
     if normalized_strategy in {
         "conditioning_reference_mean",
@@ -3958,9 +5639,11 @@ def normalize_scaffold_payload_for_decoder_probe(
             if branch_name == "periodic":
                 branch_features = periodic_features
                 reference_mean = periodic_mean
+                reference_std = periodic_std
             else:
                 branch_features = noise_features
                 reference_mean = noise_mean
+                reference_std = noise_std
             if mode == "zero":
                 branch_features[:, start:end] = 0.0
                 transformations.append(f"{branch_name}.{semantic} -> zero[{start}:{end}]")
@@ -3971,6 +5654,24 @@ def normalize_scaffold_payload_for_decoder_probe(
                 )
                 transformations.append(
                     f"{branch_name}.{semantic} -> reference_mean[{start}:{end}]"
+                )
+            elif mode == "reference_affine_match":
+                branch_features[:, start:end] = match_feature_distribution_to_reference(
+                    candidate_features=branch_features[:, start:end],
+                    reference_mean=reference_mean[start:end],
+                    reference_std=reference_std[start:end],
+                )
+                transformations.append(
+                    f"{branch_name}.{semantic} -> reference_affine_match[{start}:{end}]"
+                )
+            elif mode in {"time_roll_half", "time_shuffle"}:
+                branch_features[:, start:end] = apply_temporal_probe_override(
+                    candidate_features=branch_features[:, start:end],
+                    mode=mode,
+                    semantic_key=f"{branch_name}.{semantic}",
+                )
+                transformations.append(
+                    f"{branch_name}.{semantic} -> {mode}[{start}:{end}]"
                 )
             else:
                 raise ValueError(f"Unsupported control-family override mode after normalization: {mode!r}")
@@ -4019,6 +5720,44 @@ def match_feature_distribution_to_reference(
             int(zero_reference_mask.sum().item()),
         )
     return matched
+
+
+def resolve_reference_stat_tensor(
+    *,
+    reference_distribution: dict[str, object],
+    key: str,
+    required: bool,
+) -> torch.Tensor:
+    values = reference_distribution.get(key)
+    if values is None:
+        if required:
+            raise ValueError(
+                f"Reference feature summary is missing required statistic {key!r} for the requested probe."
+            )
+        return torch.empty(0, dtype=torch.float32)
+    return torch.tensor(values, dtype=torch.float32)
+
+
+def apply_temporal_probe_override(
+    *,
+    candidate_features: torch.Tensor,
+    mode: str,
+    semantic_key: str,
+) -> torch.Tensor:
+    candidate = candidate_features.to(torch.float32)
+    frame_count = int(candidate.shape[0])
+    if frame_count <= 1:
+        return candidate
+    if mode == "time_roll_half":
+        shift = max(1, frame_count // 2)
+        return torch.roll(candidate, shifts=shift, dims=0)
+    if mode == "time_shuffle":
+        seed = sum((index + 1) * byte for index, byte in enumerate(semantic_key.encode("utf-8")))
+        generator = torch.Generator(device="cpu")
+        generator.manual_seed(int(seed % 2_147_483_647))
+        permutation = torch.randperm(frame_count, generator=generator, device="cpu")
+        return candidate.index_select(0, permutation.to(device=candidate.device))
+    raise ValueError(f"Unsupported temporal probe override mode: {mode!r}")
 
 
 def build_branch_feature_layout(scaffold_payload: dict[str, object]) -> dict[str, dict[str, tuple[int, int]]]:
@@ -4402,6 +6141,132 @@ def build_decoder_behavior_probe_markdown(summary: dict[str, object]) -> str:
                 f"  reference_shift: {json.dumps(case.get('reference_shift'), ensure_ascii=False)}",
             ]
         )
+    lines.extend(["", "## Notes"])
+    for note in list(summary.get("notes", [])):
+        lines.append(f"- {note}")
+    return "\n".join(lines) + "\n"
+
+
+def build_teacher_first_waveform_handoff_probe_markdown(summary: dict[str, object]) -> str:
+    lines = [
+        "# Teacher-First VC Waveform Handoff Probe",
+        "",
+        f"- generated_at: {summary['generated_at']}",
+        f"- mode: {summary['mode']}",
+        f"- output_dir: {summary['output_dir']}",
+        f"- device: {summary['device']}",
+        f"- max_audio_sec: {summary['max_audio_sec']}",
+        f"- chunk_ms: {summary['chunk_ms']}",
+        f"- checkpoint_path: {summary['checkpoint_path']}",
+        f"- waveform_decode: {json.dumps(summary.get('waveform_decode', {}), ensure_ascii=False)}",
+        f"- diagnosis: {json.dumps(summary.get('diagnosis', {}), ensure_ascii=False)}",
+        "",
+        "## Route Aggregates",
+    ]
+    for route in list(summary.get("route_aggregates", [])):
+        metrics = dict(route.get("metrics", {}))
+        lines.append(
+            "- "
+            f"{route.get('label')}: "
+            f"template={dict(metrics.get('decoded_frame_template_cosine_mean', {})).get('mean', 0.0)}, "
+            f"activity_corr={dict(metrics.get('predicted_activity_to_decoded_frame_rms_corr', {})).get('mean', 0.0)}, "
+            f"centroid={dict(metrics.get('decoded_spectral_centroid_hz', {})).get('mean', 0.0)}, "
+            f"high_band={dict(metrics.get('decoded_spectral_high_band_energy_ratio', {})).get('mean', 0.0)}"
+        )
+    lines.extend(
+        [
+            "",
+            "## Handoff Stage Aggregates",
+            "- "
+            f"logits_template={dict(summary.get('handoff_stage_aggregates', {})).get('waveform_frame_logits_template_cosine_mean', {}).get('mean', 0.0)}, "
+            f"frames_template={dict(summary.get('handoff_stage_aggregates', {})).get('waveform_frames_template_cosine_mean', {}).get('mean', 0.0)}, "
+            f"logits_abs_ge_1={dict(summary.get('handoff_stage_aggregates', {})).get('waveform_frame_logits_fraction_abs_ge_1', {}).get('mean', 0.0)}, "
+            f"frames_abs_ge_095={dict(summary.get('handoff_stage_aggregates', {})).get('waveform_frames_fraction_abs_ge_095', {}).get('mean', 0.0)}",
+            "",
+            "## Cases",
+        ]
+    )
+    for case in list(summary.get("cases", [])):
+        lines.extend(
+            [
+                f"- case_id: {case.get('case_id')}",
+                f"  input_audio_path: {case.get('input_audio_path')}",
+                f"  main_decoded_audio_path: {case.get('main_decoded_audio_path')}",
+                f"  normalization: {json.dumps(case.get('normalization', {}), ensure_ascii=False)}",
+                f"  handoff_dir: {case.get('handoff_dir')}",
+                f"  stage_audio_exports: {json.dumps(case.get('stage_audio_exports', {}), ensure_ascii=False)}",
+                f"  stage_metrics: {json.dumps(case.get('stage_metrics', {}), ensure_ascii=False)}",
+            ]
+        )
+        for route in list(case.get("routes", [])):
+            lines.append(
+                "  "
+                f"{route.get('label')}: audio_path={route.get('audio_path')} "
+                f"metrics={json.dumps(route.get('metrics', {}), ensure_ascii=False)}"
+            )
+    lines.extend(["", "## Notes"])
+    for note in list(summary.get("notes", [])):
+        lines.append(f"- {note}")
+    return "\n".join(lines) + "\n"
+
+
+def build_teacher_first_waveform_decoder_structure_probe_markdown(summary: dict[str, object]) -> str:
+    lines = [
+        "# Teacher-First VC Waveform Decoder Structure Probe",
+        "",
+        f"- generated_at: {summary['generated_at']}",
+        f"- mode: {summary['mode']}",
+        f"- output_dir: {summary['output_dir']}",
+        f"- device: {summary['device']}",
+        f"- max_audio_sec: {summary['max_audio_sec']}",
+        f"- chunk_ms: {summary['chunk_ms']}",
+        f"- checkpoint_path: {summary['checkpoint_path']}",
+        f"- decode_runtime: {json.dumps(summary.get('decode_runtime', {}), ensure_ascii=False)}",
+        f"- baseline_decoder_collapse_summary: {json.dumps(summary.get('baseline_decoder_collapse_summary', {}), ensure_ascii=False)}",
+        "",
+        "## Variant Impact Ranking",
+    ]
+    for item in list(summary.get("variant_impact_ranking", [])):
+        lines.append(
+            "- "
+            f"{item['label']}: "
+            f"waveform_mean_abs_delta_vs_baseline={item['mean_waveform_mean_abs_delta_vs_baseline']:.6f}, "
+            f"fused_to_waveform_template_gap={item['mean_fused_to_waveform_template_cosine_gap']:.6f}, "
+            f"fused_to_waveform_adjacent_gap={item['mean_fused_to_waveform_adjacent_cosine_gap']:.6f}, "
+            f"waveform_template={item['mean_waveform_frames_template_cosine_mean']:.6f}, "
+            f"decoded_template={item['mean_decoded_frame_template_cosine_mean']:.6f}"
+        )
+    lines.extend(["", "## Variant Aggregates"])
+    for item in list(summary.get("variant_aggregates", [])):
+        scalar_metrics = dict(item.get("scalar_metrics", {}))
+        delta_vs_baseline = dict(item.get("delta_vs_baseline", {}))
+        lines.append(
+            "- "
+            f"{item['label']}: "
+            f"record_count={item['record_count']}, "
+            f"waveform_delta={delta_vs_baseline.get('waveform_mean_abs_delta_vs_baseline', {}).get('mean', 0.0)}, "
+            f"fused_template={scalar_metrics.get('fused_hidden_template_cosine_mean', {}).get('mean', 0.0)}, "
+            f"waveform_template={scalar_metrics.get('waveform_frames_template_cosine_mean', {}).get('mean', 0.0)}, "
+            f"decoded_template={scalar_metrics.get('decoded_frames_template_cosine_mean', {}).get('mean', 0.0)}, "
+            f"decoded_centroid={scalar_metrics.get('decoded_spectral_centroid_hz', {}).get('mean', 0.0)}, "
+            f"decoded_high_band={scalar_metrics.get('decoded_spectral_high_band_energy_ratio', {}).get('mean', 0.0)}"
+        )
+    lines.extend(["", "## Cases"])
+    for case in list(summary.get("cases", [])):
+        lines.extend(
+            [
+                f"- record_id: {case.get('record_id')}",
+                f"  input_audio_path: {case.get('input_audio_path')}",
+                f"  main_decoded_audio_path: {case.get('main_decoded_audio_path')}",
+                f"  structure_dir: {case.get('structure_dir')}",
+            ]
+        )
+        for variant in list(case.get("variants", [])):
+            lines.append(
+                "  "
+                f"{variant.get('label')}: audio_path={variant.get('audio_path')} "
+                f"scalar_metrics={json.dumps(variant.get('scalar_metrics', {}), ensure_ascii=False)}"
+            )
     lines.extend(["", "## Notes"])
     for note in list(summary.get("notes", [])):
         lines.append(f"- {note}")

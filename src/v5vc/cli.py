@@ -47,11 +47,15 @@ from v5vc.offline_teacher_runtime import run_offline_mvp_teacher_runtime
 from v5vc.offline_teacher_vocoder_input_scaffold import build_offline_mvp_teacher_vocoder_input_scaffold
 from v5vc.source_acoustic_state_audit import audit_source_acoustic_state_extraction
 from v5vc.teacher_first_vc_demo import (
+    analyze_teacher_first_vc_acoustic_temporal_alignment,
     analyze_teacher_first_vc_applicability,
     analyze_teacher_first_vc_decoder_behavior,
+    analyze_teacher_first_vc_waveform_decoder_structure,
+    analyze_teacher_first_vc_waveform_handoff,
     build_teacher_first_vc_audible_compare_bundle,
     build_teacher_first_vc_audible_smoke_bundle,
     build_teacher_first_vc_review_bundle,
+    materialize_teacher_first_stage5_input_variant_dataset,
     DEFAULT_AUDIBLE_SMOKE_TARGET_REFERENCE_MAX_AUDIO_SEC,
     DEFAULT_CALIBRATION_ASSET_PATH,
     DEFAULT_SELF_CHECK_INPUT_AUDIO_PATH,
@@ -1883,7 +1887,8 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help=(
             "Optional inference-only family-level override. "
-            "Format: family=mode, for example event_probs=reference_mean. "
+            "Format: family=mode, for example event_probs=reference_mean, aper=reference_affine_match, "
+            "or aper=time_roll_half. "
             "Can be passed multiple times."
         ),
     )
@@ -2214,6 +2219,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory for per-case runs and decoder-behavior summaries.",
     )
     teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--vocoder-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit Stage5 no-res vocoder checkpoint override.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--vocoder-checkpoint-selection",
+        type=Path,
+        default=DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+        help="Checkpoint-selection json used when --vocoder-checkpoint is omitted.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to use when resolving --vocoder-checkpoint-selection: best_validation, stable_late_stop, or best_rms.",
+    )
+    teacher_first_vc_decoder_behavior_parser.add_argument(
         "--reference-package",
         dest="reference_package_list",
         action="append",
@@ -2280,9 +2302,283 @@ def build_parser() -> argparse.ArgumentParser:
         default=[],
         help=(
             "Optional inference-only family-level override for root-cause isolation. "
-            "Format: family=mode, for example z_art=reference_mean or proxy_family=zero. "
+            "Format: family=mode, for example z_art=reference_mean, aper=reference_affine_match, "
+            "aper=time_shuffle, or proxy_family=zero. "
             "Can be passed multiple times."
         ),
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser = subparsers.add_parser(
+        "analyze-offline-mvp-teacher-first-vc-acoustic-temporal-alignment",
+        help="Compare user-line acoustic-state controls against waveform frame RMS and check whether their lag-correlation shape looks in-distribution relative to Stage5 training packages.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        required=True,
+        help="Input wav path to diagnose. Can be passed multiple times.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/acoustic_temporal_alignment_probe"
+        ),
+        help="Directory for per-case scaffold exports and temporal-alignment summaries.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--reference-package",
+        dest="reference_package_list",
+        action="append",
+        type=Path,
+        default=[],
+        help="Optional Stage5 training-package path used as the in-distribution reference set. Can be passed multiple times.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--reference-package-limit",
+        type=int,
+        default=32,
+        help="When explicit reference packages are omitted, use up to this many default Stage5 train packages.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for teacher contract/scaffold export. Defaults to cpu.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from each diagnostic input wav.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each diagnostic export.",
+    )
+    teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
+        "--max-lag-frames",
+        type=int,
+        default=12,
+        help="Maximum positive/negative lag in frames for the correlation sweep.",
+    )
+    teacher_first_stage5_input_variant_dataset_parser = subparsers.add_parser(
+        "materialize-offline-mvp-teacher-first-stage5-input-variant-dataset",
+        help="Rewrite Stage5 training packages with probe-style input-control transforms so a concrete training candidate dataset can be reused by the existing training loop.",
+    )
+    teacher_first_stage5_input_variant_dataset_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json path to rewrite.",
+    )
+    teacher_first_stage5_input_variant_dataset_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for the rewritten package tree and replacement dataset index.",
+    )
+    teacher_first_stage5_input_variant_dataset_parser.add_argument(
+        "--control-family-override",
+        dest="control_family_overrides",
+        action="append",
+        default=[],
+        help=(
+            "Probe-style family override to bake into package inputs. "
+            "Supported modes here are zero, time_roll_half, and time_shuffle. "
+            "Format: family=mode, for example aper=time_shuffle or noise_energy_log_rms_norm=time_shuffle. "
+            "Can be passed multiple times."
+        ),
+    )
+    teacher_first_stage5_input_variant_dataset_parser.add_argument(
+        "--max-train-packages",
+        type=int,
+        default=None,
+        help="Optional cap for the number of rewritten train packages. Useful for smoke builds.",
+    )
+    teacher_first_stage5_input_variant_dataset_parser.add_argument(
+        "--max-validation-packages",
+        type=int,
+        default=None,
+        help="Optional cap for the number of rewritten validation packages. Useful for smoke builds.",
+    )
+    teacher_first_vc_waveform_handoff_parser = subparsers.add_parser(
+        "analyze-offline-mvp-teacher-first-vc-waveform-handoff",
+        help="Export teacher-first user-line waveform handoff stages so decoder_hidden/logits/frames/no_gate/pre_ola/post_ola can be compared on the same cases.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        required=True,
+        help="Input wav path to diagnose. Can be passed multiple times.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/waveform_handoff_probe"
+        ),
+        help="Directory for per-case runs, handoff tensors, and staged waveform exports.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--vocoder-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit Stage5 no-res vocoder checkpoint override.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--vocoder-checkpoint-selection",
+        type=Path,
+        default=DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+        help="Checkpoint-selection json used when --vocoder-checkpoint is omitted.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to use when resolving --vocoder-checkpoint-selection: best_validation, stable_late_stop, or best_rms.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the diagnostic case exports. Defaults to cpu.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from each diagnostic input wav.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each diagnostic export.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Optional minimum frame gain applied on the gated handoff routes.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help="Moving-average radius for predicted activity gate smoothing across neighboring frames on the gated routes.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--reference-package",
+        dest="reference_package_list",
+        action="append",
+        type=Path,
+        default=[],
+        help="Optional Stage5 training-package path used when reference_mean family overrides are requested. Can be passed multiple times.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--reference-package-limit",
+        type=int,
+        default=32,
+        help="When reference-backed family overrides are enabled without explicit reference packages, use up to this many default Stage5 train packages.",
+    )
+    teacher_first_vc_waveform_handoff_parser.add_argument(
+        "--control-family-override",
+        dest="control_family_overrides",
+        action="append",
+        default=[],
+        help=(
+            "Optional inference-only family-level override for root-cause isolation. "
+            "Format: family=mode, for example event_family=zero, aper=reference_mean, "
+            "aper=reference_affine_match, aper=time_roll_half, or aper=time_shuffle. "
+            "Can be passed multiple times."
+        ),
+    )
+    teacher_first_vc_waveform_decoder_structure_parser = subparsers.add_parser(
+        "analyze-offline-mvp-teacher-first-vc-waveform-decoder-structure",
+        help="Apply Stage5 hidden-state bypass transforms on teacher-first user-line inputs to localize whether collapse starts before fusion or inside the waveform decoder route.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        required=True,
+        help="Input wav path to diagnose. Can be passed multiple times.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/waveform_decoder_structure_probe"
+        ),
+        help="Directory for per-case runs, structure-bypass audios, and summary outputs.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--vocoder-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit Stage5 no-res vocoder checkpoint override.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--vocoder-checkpoint-selection",
+        type=Path,
+        default=DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+        help="Checkpoint-selection json used when --vocoder-checkpoint is omitted.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to use when resolving --vocoder-checkpoint-selection: best_validation, stable_late_stop, or best_rms.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the diagnostic case exports. Defaults to cpu.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from each diagnostic input wav.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each diagnostic export.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.set_defaults(use_predicted_activity_gate=False)
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--use-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_true",
+        help="Apply predicted frame activity during waveform reconstruction for the structure variants.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--disable-predicted-activity-gate",
+        dest="use_predicted_activity_gate",
+        action="store_false",
+        help="Bypass predicted frame activity so the structure variants are heard on the raw decoder output.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--predicted-activity-gate-floor",
+        type=float,
+        default=0.0,
+        help="Optional minimum frame gain applied when --use-predicted-activity-gate is enabled.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--predicted-activity-gate-smoothing-frames",
+        type=int,
+        default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+        help="Moving-average radius for predicted activity gate smoothing across neighboring frames when gating is enabled.",
+    )
+    teacher_first_vc_waveform_decoder_structure_parser.add_argument(
+        "--predicted-activity-gate-apply-mode",
+        default="post_ola_envelope",
+        help="How predicted activity gains are applied during waveform reconstruction: pre_overlap_add or post_ola_envelope.",
     )
 
     nores_vocoder_parser = subparsers.add_parser(
@@ -2582,6 +2878,18 @@ def build_parser() -> argparse.ArgumentParser:
         default=0.0,
         help="Optional loss weight for short-window MRSTFT supervision on decoded waveform.",
     )
+    nores_vocoder_train_step_parser.add_argument(
+        "--noise-energy-frame-rms-excess-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own energy-control correlation.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--noise-aper-energy-frame-rms-excess-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own aper*energy correlation.",
+    )
     nores_vocoder_train_loop_parser = subparsers.add_parser(
         "run-offline-mvp-nores-vocoder-training-loop",
         help="Run a minimal multi-step training loop on the no-residual vocoder target package.",
@@ -2808,6 +3116,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for short-window MRSTFT supervision on decoded waveform.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--noise-energy-frame-rms-excess-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own energy-control correlation.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--noise-aper-energy-frame-rms-excess-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own aper*energy correlation.",
     )
     nores_vocoder_dataset_packages_parser = subparsers.add_parser(
         "build-offline-mvp-nores-vocoder-dataset-packages",
@@ -3248,6 +3568,18 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for short-window MRSTFT reconstruction using frame lengths 256, 512, and the runtime frame length.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--noise-energy-frame-rms-excess-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own energy-control correlation.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--noise-aper-energy-frame-rms-excess-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing decoded waveform_frames frame-RMS zero-lag correlation above the aligned target's own aper*energy correlation.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--semantic-supervision-enabled",
@@ -5188,6 +5520,9 @@ def main(argv: list[str] | None = None) -> int:
         analyze_teacher_first_vc_decoder_behavior(
             input_audio_paths=list(args.input_audio_list),
             output_dir=args.output_dir,
+            vocoder_checkpoint_path=args.vocoder_checkpoint,
+            vocoder_checkpoint_selection_path=args.vocoder_checkpoint_selection,
+            selection_target=args.selection_target,
             reference_package_paths=list(args.reference_package_list),
             reference_package_limit=args.reference_package_limit,
             device=args.device,
@@ -5197,6 +5532,60 @@ def main(argv: list[str] | None = None) -> int:
             predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
             normalization_strategy=args.normalization_strategy,
             control_family_overrides=list(args.control_family_overrides),
+        )
+        return 0
+    if args.command == "analyze-offline-mvp-teacher-first-vc-acoustic-temporal-alignment":
+        analyze_teacher_first_vc_acoustic_temporal_alignment(
+            input_audio_paths=list(args.input_audio_list),
+            output_dir=args.output_dir,
+            reference_package_paths=list(args.reference_package_list),
+            reference_package_limit=args.reference_package_limit,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+            chunk_ms=args.chunk_ms,
+            max_lag_frames=args.max_lag_frames,
+        )
+        return 0
+    if args.command == "materialize-offline-mvp-teacher-first-stage5-input-variant-dataset":
+        materialize_teacher_first_stage5_input_variant_dataset(
+            dataset_index_path=args.dataset_index,
+            output_dir=args.output_dir,
+            control_family_overrides=list(args.control_family_overrides),
+            max_train_packages=args.max_train_packages,
+            max_validation_packages=args.max_validation_packages,
+        )
+        return 0
+    if args.command == "analyze-offline-mvp-teacher-first-vc-waveform-handoff":
+        analyze_teacher_first_vc_waveform_handoff(
+            input_audio_paths=list(args.input_audio_list),
+            output_dir=args.output_dir,
+            vocoder_checkpoint_path=args.vocoder_checkpoint,
+            vocoder_checkpoint_selection_path=args.vocoder_checkpoint_selection,
+            selection_target=args.selection_target,
+            reference_package_paths=list(args.reference_package_list),
+            reference_package_limit=args.reference_package_limit,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+            chunk_ms=args.chunk_ms,
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            control_family_overrides=list(args.control_family_overrides),
+        )
+        return 0
+    if args.command == "analyze-offline-mvp-teacher-first-vc-waveform-decoder-structure":
+        analyze_teacher_first_vc_waveform_decoder_structure(
+            input_audio_paths=list(args.input_audio_list),
+            output_dir=args.output_dir,
+            vocoder_checkpoint_path=args.vocoder_checkpoint,
+            vocoder_checkpoint_selection_path=args.vocoder_checkpoint_selection,
+            selection_target=args.selection_target,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+            chunk_ms=args.chunk_ms,
+            use_predicted_activity_gate=bool(args.use_predicted_activity_gate),
+            predicted_activity_gate_floor=args.predicted_activity_gate_floor,
+            predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            predicted_activity_gate_apply_mode=args.predicted_activity_gate_apply_mode,
         )
         return 0
     if args.command == "prepare-offline-mvp-nores-vocoder-scaffold":
@@ -5257,6 +5646,8 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
             multires_stft_short_weight=args.multires_stft_short_weight,
+            noise_energy_frame_rms_excess_corr_weight=args.noise_energy_frame_rms_excess_corr_weight,
+            noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
         )
         return 0
     if args.command == "run-offline-mvp-nores-vocoder-training-loop":
@@ -5299,6 +5690,8 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
             multires_stft_short_weight=args.multires_stft_short_weight,
+            noise_energy_frame_rms_excess_corr_weight=args.noise_energy_frame_rms_excess_corr_weight,
+            noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
         )
         return 0
     if args.command == "build-offline-mvp-nores-vocoder-dataset-packages":
@@ -5376,6 +5769,8 @@ def main(argv: list[str] | None = None) -> int:
             periodic_waveform_stft_weight=args.periodic_waveform_stft_weight,
             periodic_waveform_high_band_excess_weight=args.periodic_waveform_high_band_excess_weight,
             multires_stft_short_weight=args.multires_stft_short_weight,
+            noise_energy_frame_rms_excess_corr_weight=args.noise_energy_frame_rms_excess_corr_weight,
+            noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
             semantic_supervision_enabled=bool(args.semantic_supervision_enabled),
         )
         return 0

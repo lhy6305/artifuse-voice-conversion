@@ -66,25 +66,25 @@
 - `z_art=reference_mean`
   - `.../review_bundle_triplet_decoder_behavior_zartref_probe/`
 - `event_probs=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_eventref_probe/`
+  - `.../rbt_db_evtref_probe/`
 - `proxy_family=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_proxyfamilyref_probe/`
+  - `.../rbt_db_pfref_probe/`
 
 ### proxy family 细分
 - `voiced_proxy=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_voicedproxyref_probe/`
+  - `.../rbt_db_vpref_probe/`
 - `energy_proxy=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_energyproxyref_probe/`
+  - `.../rbt_db_eproxyref_probe/`
 - `aperiodicity_proxy=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_aperiodicityref_probe/`
+  - `.../rbt_db_aperref_probe/`
 - `event_presence_proxy=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_eventpresenceref_probe/`
+  - `.../rbt_db_evtpresref_probe/`
 - `energy_change_proxy=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_energychangeref_probe/`
+  - `.../rbt_db_echgref_probe/`
 - `periodic_energy_proxy=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_periodicenergyref_probe/`
+  - `.../rbt_db_peref_probe/`
 - `noise_energy_proxy=reference_mean`
-  - `.../review_bundle_triplet_decoder_behavior_noiseenergyref_probe/`
+  - `.../rbt_db_neref_probe/`
 
 ## 关键结果
 

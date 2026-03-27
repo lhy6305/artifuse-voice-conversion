@@ -1396,3 +1396,654 @@
       能压低 brightness / collapse，
       却仍保留
       `envelope-following`
+
+### 67. 复用 `run_offline_mvp_teacher_first_vc_demo` 做用户线诊断时，不能假设 teacher-contract wrapper 会自动跟上下游 contract 新签名
+- 现象：
+  - 新增
+    teacher-first
+    `waveform handoff probe`
+    的最小 smoke
+    首次失败点
+    不在 vocoder，
+    而在：
+    - `teacher_first_vc_demo.py`
+      里的
+      `export_teacher_contract_with_stage_tracking`
+  - 原因是：
+    - `offline_teacher_downstream_contract.build_contract_payload`
+      与
+      `build_tensor_payload`
+      已新增：
+      - `target_event_semantic_sidecar`
+      - `target_event_timing_semantic_sidecar`
+      - `source_semantic_parity_sidecar`
+      - `teacher_e_evt_bridge_mode`
+      - `teacher_e_evt_target_shaping_mode`
+    - 但旧 wrapper
+      还没同步透传这些参数
+- 风险：
+  - 很容易把这类报错误读成：
+    - 新 probe
+      本身写坏了
+    - 或 Stage5 vocoder
+      又出现新兼容性问题
+  - 实际上它会让所有复用
+    `run_offline_mvp_teacher_first_vc_demo`
+    的用户线诊断命令，
+    在进入 waveform handoff 之前
+    就被 teacher-contract 阶段提前拦死
+- 正确处理：
+  - 只要 teacher contract
+    新增必填语义参数，
+    就必须同步检查：
+    - `offline_teacher_downstream_contract` 正式 CLI
+    - `teacher_first_vc_demo` 里的 wrapper
+    - 所有基于该 wrapper
+      的 probe / bundle 命令
+  - 当前已修复方式是：
+    - 在
+      `export_teacher_contract_with_stage_tracking`
+      上补齐同名参数及 legacy 默认值，
+      并继续向下透传，
+    - 先恢复所有用户线 probe
+      的可运行性，
+      再判断真正的 decoder-side 结论。
+
+### 68. 当 user-line waveform handoff probe 已明确显示 `decoded_no_gate` 本身就坏、且 `logits -> frames` 几乎不再恶化时，不能继续把主故障优先写成 `gate / OLA` 语义
+- 现象：
+  - 固定三条
+    pure buzz
+    user-line case
+    的 waveform handoff probe
+    已给出一致结果：
+    - `waveform_frame_logits_template_cosine_mean`
+      已在
+      `~0.9995 ~ 0.9998`
+    - `waveform_frames_template_cosine_mean`
+      也仍在
+      `~0.9994 ~ 0.9998`
+    - `logits_to_frames_template_cosine_gap`
+      只有
+      `-0.00006 ~ -0.00003`
+    - 同时
+      `decoded_no_gate`
+      已经稳定很坏：
+      - template
+        `~0.990 ~ 0.996`
+      - centroid
+        `~6774 ~ 6963 Hz`
+      - high_band
+        `~0.384 ~ 0.396`
+  - `pre/post_ola gate`
+    确实会把：
+    - `predicted_activity_to_decoded_frame_rms_corr`
+      拉到
+      `~0.973 ~ 0.997`
+    但 brightness / template
+    只出现轻微回落，
+    没有新的同量级恶化
+- 风险：
+  - 很容易因为：
+    - gated route
+      听起来更像“跟包络走”
+    - 或 `post_ola`
+      在主观上最接近最终导出的坏相位
+    就继续优先怀疑：
+    - `pre_overlap_add`
+    - `post_ola_envelope`
+    - smoothing / floor
+    - OLA 实现细节
+- 正确处理：
+  - 当前更准确的写法应是：
+    - gate
+      主要在放大
+      `envelope-following`
+      这一层可听表象，
+      但不是第一次把系统推入坏 manifold
+    - 真正更上游的病灶
+      已经在：
+      - `waveform_frame_logits`
+      - `waveform_frames`
+      - 或它们之前的 projector / handoff
+      附近形成
+  - 因而下一步不应继续优先做：
+    - gate apply mode 微扫
+    - gate smoothing / floor
+    - OLA 语义小修
+  - 而应转到：
+    - gate 之前的 waveform handoff source
+    - projector collapse
+    - 为什么 user-line scaffold
+      会把 Stage5
+      推入这块固定模板区
+
+### 69. 如果同 checkpoint 的 Stage5 validation package 也呈现几乎同样的 waveform handoff collapse，就不能再把 user-line 现象优先解释成“用户输入特有失配”
+- 现象：
+  - user-line 固定三样本
+    与同 checkpoint 的
+    validation3 package
+    在 handoff stage aggregate
+    上非常接近：
+    - `waveform_frame_logits_template_cosine_mean`
+      - user-line: `0.999641`
+      - validation: `0.999573`
+    - `waveform_frames_template_cosine_mean`
+      - user-line: `0.999597`
+      - validation: `0.999516`
+    - `logits_to_frames_template_cosine_gap`
+      两边都接近 `0`
+  - 也就是说：
+    - 当前 user-line
+      暴露出来的坏工作区，
+      并不是一个只在 user-line
+      才第一次形成的新 handoff collapse
+- 风险：
+  - 很容易因为 user-line
+    是终端入口、
+    试听也更刺耳，
+    就继续把主叙事写成：
+    - user-line controls
+      把健康 checkpoint
+      推坏了
+    - 或 user-line special mismatch
+      才是主故障
+- 正确处理：
+  - 当前更准确的口径应是：
+    - user-line
+      只是把已有的
+      checkpoint-native waveform collapse
+      又复现了一遍，
+      并把它听得更直接
+  - 若 validation package
+    自己也落在同一类 handoff 形状，
+    下一步就不应继续优先投入：
+    - user-line 特化 normalize
+    - user-line gate 小修
+    - 只面向终端入口的 decode tweak
+  - 而应回到：
+    - Stage5 native teacher
+      本体的 waveform handoff / projector
+      主病灶
+
+### 70. 如果 `fused_hidden_frame_mean` 几乎不改变输出，而 `fused_hidden_from_branch_mean / periodic / noise` 会立刻显著脱模，就不要再把主病灶写成“decoder 已完全死掉”
+- 现象：
+  - user-line 固定三条 pure buzz
+    的 structure probe
+    与 validation3 gate-off
+    的 structure probe
+    都表现出：
+    - `fused_hidden_frame_mean`
+      的
+      `waveform_mean_abs_delta_vs_baseline`
+      只有
+      `~0.0075`
+    - 但 branch bypass
+      会立刻带来
+      `~0.315 ~ 0.333`
+      的大波形变化
+    - 同时
+      `decoded_template`
+      明显下降
+- 风险：
+  - 很容易把当前现象误写成：
+    - decoder
+      无论输入什么都只会吐一个固定 buzz
+    - 所以只改 decoder
+      就能解释全部问题
+- 正确处理：
+  - 这组证据更支持：
+    - baseline 的
+      `fused_hidden`
+      自身已经接近常模板
+    - decoder
+      对 branch-side dynamics
+      仍然有响应
+    - 但当前响应会落到高频非稳态
+  - 因而主病灶优先级应继续放在：
+    - `branch_mean -> fused_hidden`
+    - `decoder input manifold`
+    - 而不是
+      “decoder 已完全死掉”
+
+### 71. 如果 user-line 与 validation 的 decoder structure probe 方向一致，就不要继续把 bypass 响应解释成 user-line 特有结构问题
+- 现象：
+  - user-line 与 validation3
+    在同 checkpoint、
+    同 gate-off 口径下，
+    都表现出：
+    - baseline
+      `collapse_not_localized_to_waveform_decoder`
+    - `fused_hidden_frame_mean`
+      几乎无效
+    - branch bypass
+      会显著脱模，
+      但同时把 centroid / high-band
+      推到更高频、更刺耳区域
+- 风险：
+  - 可能因为 user-line
+    的可听表现更刺耳，
+    就继续把结构问题优先解释成：
+    - user-line scaffold mismatch
+    - user-line 特有 decoder route 异常
+- 正确处理：
+  - 当前更准确的表述应是：
+    - 这是一类
+      checkpoint-native
+      的结构响应，
+      user-line 与 validation
+      只是不同观测面
+  - 下一步不应优先投入：
+    - 只面向 user-line
+      的 decoder 小修
+    - 只面向 user-line
+      的 structure 解释
+  - 而应继续回到：
+    - fusion 为何把系统压进坏 manifold
+    - 以及这块 manifold
+      如何限制后续 decoder handoff
+
+### 72. 对 plain-fusion baseline，主坍缩如果已经定位到 `fusion.0 Linear` 与 `fusion.3 Linear`，就不要再回头抠 `GELU / LayerNorm / gate`
+- 现象：
+  - user-line 与 validation3
+    的 fusion 子阶段 probe
+    都表现出：
+    - 第一大模板化跳变在
+      `fusion.0 Linear`
+    - 第二跳变在
+      `fusion.3 Linear`
+    - `gelu_to_layernorm_template_gap`
+      反而接近 `0` 或略负
+- 风险：
+  - 容易因为
+    `LayerNorm`
+    会改尺度、
+    gate 也会放大听感包络，
+    就继续怀疑：
+    - `LayerNorm` 小参数
+    - `GELU` 细节
+    - gate / OLA 局部语义
+- 正确处理：
+  - 当前更准确的优先级应是：
+    - plain fusion backbone
+      的首层与末层线性投影
+    - 以及结构性替代候选
+  - 在这个阶段继续抠
+    `GELU / LayerNorm / gate`
+    都属于偏离主方向
+
+### 73. 如果更强 backbone 候选已经稳定把 user-line 拉离 plain-fusion 的纯 buzz 坏 manifold，就不要继续把时间花在 plain baseline 局部修补上
+- 现象：
+  - `branch_mean_contrast_residual_v1 + residualshapecond`
+    在 user-line 固定三条 pure buzz
+    上已表现出稳定转移：
+    - `branch_mean_to_fused_template_cosine_gap`
+      `0.073843 -> 0.001379`
+    - `waveform_frame_logits_template_cosine_mean`
+      `0.999641 -> 0.994119`
+    - `decoded_no_gate template`
+      `0.993580 -> 0.984637`
+- 风险：
+  - 可能因为 plain baseline
+    已经研究得很多，
+    就继续在它上面做：
+    - gate tweak
+    - decoder tweak
+    - 小的 normalization patch
+- 正确处理：
+  - 一旦更强候选已经证明
+    能把 user-line 拉离原坏 manifold，
+    主线就应切过去
+  - 下一步应直接研究：
+    - 候选线剩余的
+      `envelope-following`
+    - 而不是继续修
+      已经确认落后的 plain baseline
+
+### 74. 如果候选线的 residual `envelope-following` 已经收敛到 acoustic-state 家族，就不要再回到 conditioning/event 家族做大把零化试错
+- 现象：
+  - 在 user-line 候选线的 family-level handoff probe 上：
+    - `conditioning_family = zero`
+      会把系统直接推向
+      更高频、更失控的坏区
+    - `event_family = zero`
+      会让
+      `activity_corr`
+      更高
+    - `acoustic_state_family = zero`
+      才会把
+      `activity_corr`
+      明显压低
+- 风险：
+  - 因为旧 native probe
+    曾提示
+    `conditioning_zero`
+    影响很强，
+    就继续把 user-line 剩余问题
+    误写成：
+    - conditioning family 主故障
+    - event family 主故障
+- 正确处理：
+  - 当前 user-line 候选线
+    的 residual 主问题
+    应收敛到：
+    - `acoustic_state_family`
+  - 后续若继续零化，
+    也应只在这个家族内部
+    做最小必要拆分
+
+### 75. 如果 `aper / energy` 清零既能压低 `activity_corr`，又会把系统拉回更模板化区域，就不要把下一步误写成“直接去掉这两个控制”
+- 现象：
+  - `aper = zero`
+    会把
+    `decoded_no_gate activity_corr`
+    从
+    `0.519889`
+    拉到
+    `0.217405`
+  - `aper + E_log_rms_norm = zero`
+    还能把它进一步拉到
+    `0.141311`
+  - 但同时：
+    - `decoded_no_gate template`
+      会回升到
+      `0.988699 / 0.988933`
+- 风险：
+  - 很容易把这组结果误解成：
+    - 这两个控制就是坏的
+    - 训练上直接删掉就行
+- 正确处理：
+  - 这组结果更说明：
+    - `aper / energy`
+      同时在承载：
+      - residual envelope-following
+      - 一部分 anti-template 动态
+  - 因而下一步应追求：
+    - 去耦
+  - 而不是：
+    - 直接硬清零
+
+### 76. 如果 `reference_mean` 能压低 `activity_corr`，而 `reference_affine_match` 一保留时间动态就把 `activity_corr` 和 brightness 一起抬回来，就不要把问题继续误写成静态分布失配
+- 现象：
+  - 在候选线 user-line handoff probe 上：
+    - `aper = reference_mean`
+      把
+      `activity_corr`
+      压到
+      `0.297761`
+    - 但
+      `aper = reference_affine_match`
+      又把它抬到
+      `0.535281`
+    - `energy = reference_affine_match`
+      甚至到
+      `0.602283`
+    - `aper + energy = reference_affine_match`
+      到
+      `0.604880`
+- 风险：
+  - 很容易因为
+    `reference_mean`
+    看起来有效，
+    就把下一步误写成：
+    - 调静态均值
+    - 调静态尺度
+    - 做更多 reference replacement
+- 正确处理：
+  - 这组结果更说明：
+    - acoustic-state
+      的时间动态本身
+      在驱动 residual
+      envelope-following
+    - 静态 replacement
+      只是通过抹掉动态
+      暂时压住问题
+  - 因而下一步应优先追：
+    - 动态去耦
+    - 时序形状约束
+  - 而不是继续扩大
+    静态 reference 对照
+
+### 77. 如果 `time_shuffle` 能在保住 anti-template 的同时明显压低 `activity_corr`，就不要再把 residual 主故障写成“需要去掉 acoustic-state”
+- 现象：
+  - 在候选线 user-line handoff probe 上：
+    - `aper = time_shuffle`
+      达到：
+      - `decoded_template = 0.983125`
+      - `activity_corr = 0.259761`
+    - `aper + energy = time_shuffle`
+      达到：
+      - `decoded_template = 0.981053`
+      - `activity_corr = 0.101686`
+  - 而对照组：
+    - `aper + energy = zero`
+      是
+      `0.988933 / 0.141311`
+    - `aper + energy = reference_mean`
+      是
+      `0.990502 / 0.050668`
+- 风险：
+  - 很容易因为
+    `zero / reference_mean`
+    也能压
+    `activity_corr`，
+    就继续把下一步写成：
+    - 去掉 acoustic-state
+    - 或把 acoustic-state 压成静态常量
+- 正确处理：
+  - `time_shuffle`
+    更说明：
+    - 问题核心是
+      `aper / energy`
+      与当前 activity
+      的时间对齐
+    - 不是这些控制本身
+      必须被删除
+  - 因而下一步应优先研究：
+    - 对齐约束
+    - 动态去耦
+    - 而不是控制删除
+
+### 78. 如果 source scaffold 自己就已经在 `energy / aper*energy` 上带有偏高的零延迟 envelope 耦合，就不要再把问题简化成“checkpoint 独自制造了一切”
+- 现象：
+  - 在 user-line vs Stage5 reference 的
+    acoustic temporal alignment probe 上：
+    - `energy -> frame_rms`
+      的 user-line 均值
+      从
+      `0.787623`
+      抬到
+      `0.872423`
+    - `aper*energy -> frame_rms`
+      的 user-line 均值
+      从
+      `-0.317557`
+      推到
+      `-0.030862`
+- 风险：
+  - 很容易因为
+    waveform handoff / decode
+    的坏听感最后出现在
+    checkpoint downstream，
+    就把整个根因都写成：
+    - checkpoint 单独失控
+- 正确处理：
+  - 当前更准确的写法应是：
+    - source-derived scaffold
+      已经把一部分
+      危险的即时 envelope 耦合
+      带高了，
+      尤其是
+      `energy`
+      与
+      `aper*energy`
+    - checkpoint downstream
+      再把这条耦合
+      放大成可听残差
+  - 因而下一步应追：
+    - 上游对齐约束
+    - 而不是只在下游
+      做消费侧补丁
+
+### 79. 如果 `energy = time_shuffle` 只能拿到部分收益，而 `aper + energy = time_shuffle` 明显更强，就不要把下一步误写成“只修 energy 就够了”
+- 现象：
+  - `energy = time_shuffle`
+    只能把
+    `activity_corr`
+    从
+    `0.519889`
+    压到
+    `0.367678`
+  - 但：
+    - `aper = time_shuffle`
+      到
+      `0.259761`
+    - `aper + energy = time_shuffle`
+      到
+      `0.101686`
+- 风险：
+  - 因为 source-vs-reference
+    probe 已经显示
+    `energy`
+    是更稳定的上游异常项，
+    就把下一步直接收缩成：
+    - 只改 energy
+- 正确处理：
+  - 当前更合理的写法应是：
+    - `energy`
+      是优先入口
+    - 但 residual EF
+      的最终主承载
+      仍需要和
+      `aper`
+      联动处理
+  - 所以下一步应追：
+    - `energy`
+      为主、
+      `aper`
+      联动的去耦方案
+
+### 80. 如果 `periodic_E_log_rms_norm` 打断会更坏，而 `noise_E_log_rms_norm` 打断会明显变好，就不要把下一步再泛写成“整条 energy family 约束”
+- 现象：
+  - `periodic_E_log_rms_norm = time_shuffle`
+    会把
+    `activity_corr`
+    从
+    `0.519889`
+    拉到
+    `0.556154`
+  - `noise_E_log_rms_norm = time_shuffle`
+    则把它压到
+    `0.310713`
+  - `aper + noise_E_log_rms_norm = time_shuffle`
+    还能进一步压到
+    `0.012374`
+- 风险：
+  - 很容易因为旧结论里
+    写的是
+    `energy`
+    这个家族名，
+    就把训练候选继续泛写成：
+    - 改 energy family
+    - 周期支和噪声支一起动
+- 正确处理：
+  - 当前应明确区分：
+    - periodic 支能量
+      不是当前优先入口
+    - 真正该优先约束的是：
+      - `noise_E_log_rms_norm`
+  - 所以下一步应直接写成：
+    - `noise energy + aper`
+      联动去耦
+
+### 81. 如果候选已经能被 package 物化并被现有 training loop smoke 跑通，就不要再把它停留在“只有 probe 结论”的状态描述上
+- 现象：
+  - 新命令
+    `materialize-offline-mvp-teacher-first-stage5-input-variant-dataset`
+    已经能物化：
+    - `aper=time_shuffle`
+    - `noise_E_log_rms_norm=time_shuffle`
+  - 且现有
+    `run-offline-mvp-nores-vocoder-dataset-training-loop`
+    已在该变体索引上
+    跑通了
+    `1 step`
+    CPU smoke
+- 风险：
+  - 继续把主线写成：
+    - 还在纯分析阶段
+    - 还没有训练入口
+- 正确处理：
+  - 当前更准确的状态应是：
+    - 候选已进入
+      “可直接发起训练”
+      阶段
+  - 下一步应优先考虑：
+    - 小规模正式训练候选
+    - 而不是继续只做文档化分析
+
+### 82. 如果某个 `time_shuffle` family 在 probe 里显著压低 residual EF，不要直接把它固化成 full-package 训练输入
+- 现象：
+  - `aper + noise_E_log_rms_norm = time_shuffle`
+    在 user-line probe
+    上曾把
+    `activity_corr`
+    压到
+    `0.012374`
+  - 但把这件事
+    直接写成
+    fullsplit package 输入后，
+    正式训练得到的新 checkpoint
+    虽然 validation loss
+    略优，
+    却在：
+    - user-line fixed triplet
+    - 原始 Stage5 native validation3
+    两侧一起回退成
+    更亮、更模板化的明显 buzz
+- 风险：
+  - 容易把
+    probe 中的
+    “打断某个坏耦合”
+    误判成：
+    - 这个打断后的分布
+      就应该成为训练输入真分布
+- 正确处理：
+  - `time_shuffle`
+    目前更适合作为：
+    - 诊断工具
+    - 上限参考
+    - 或训练时的软约束启发
+  - 不应直接被固化成：
+    - 全量 package 输入替换
+    - inference-time 真实语义
+  - 下一步更合理的是：
+    - 保持原始 scaffold
+      分布，
+    - 改做
+      正则化、
+      软扰动、
+      或只作用于内部表示的去耦
+### 2026-03-27 补充坑点：全局 acoustic corrreg 不能因 user-line 局部改善就直接升格
+- 现象：
+  - 在原始 fullsplit 数据集上加入
+    `waveform_frames -> E`
+    和
+    `waveform_frames -> aper*E`
+    的超额零延迟相关正则以后，
+    objective 会变好，
+    user-line 的 `template / activity_corr`
+    也会局部下降。
+- 风险：
+  - 很容易把这类结果误写成
+    “主方向已确定，只差继续调权重”。
+  - 但当前真实回投结果是：
+    - user-line 亮度变坏
+    - Stage5 native validation3 重新回到 `auto_reject 3/3`
+- 正确处理：
+  - 这条线只能保留为“方向性证据”，不能保留为当前主训练路线。
+  - 在大方向未定前，禁止继续围绕
+    `global E / global aper*E corrreg`
+    做局部小 sweep。
+  - 下一步必须上收到
+    `branch-specific / lag-aware / target-relative`
+    级别，而不是继续在全局 zero-lag 权重上抠细节。
