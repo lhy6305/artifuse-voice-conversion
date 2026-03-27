@@ -936,7 +936,12 @@ class AudioAuditApp:
 def resolve_manifest_path(path: Path) -> Path:
     candidate = path.resolve()
     if candidate.is_dir():
-        for filename in ("proxy_audio_export.json", "nores_vocoder_audio_export.json"):
+        for filename in (
+            "proxy_audio_export.json",
+            "nores_vocoder_audio_export.json",
+            "teacher_first_vc_audible_compare_bundle.json",
+            "teacher_first_vc_audible_smoke_bundle.json",
+        ):
             candidate_path = candidate / filename
             if candidate_path.exists():
                 return candidate_path

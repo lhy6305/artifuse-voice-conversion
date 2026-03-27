@@ -2242,3 +2242,54 @@
     应传：
     `--bundle <...>/teacher_first_vc_audible_compare_bundle.json`
   - 不要只传 bundle 目录本身
+
+### 2026-03-27 深夜再次补充坑点：量化改善成“带音调变化的 buzz”时，不能继续把它当可治理主候选
+- 现象：
+  - `output_head_high_band_bhb01`
+    在量化上确实比旧 strongest
+    更暗，
+    也摆脱了直接坏死型 native auto-reject，
+    但人工听审仍明确给出：
+    - 纯 buzz
+    - 只是多了一点明显音调变化
+- 风险：
+  - 因为它相对前序候选
+    的确“看起来更好”，
+    很容易继续沿这条线做：
+    - 同层权重微调
+    - 再发一轮听审
+    - 或默认进入 GUI 打分
+- 正确处理：
+  - 一旦主观结论仍是
+    pure buzz，
+    即使 buzz
+    变成了
+    tonal buzz，
+    也应把这条线记为失败
+  - 下一步应上收到：
+    - 为什么只压亮度，
+      还不够产生人声结构
+    - 为什么 residual jump
+      仍停在
+      `decoder_hidden -> waveform_decoder_base_logits`
+
+### 2026-03-27 深夜再次补充坑点：pure-buzz 判别实验不该默认走 GUI 量化打分
+- 现象：
+  - 本轮这类实验真正需要用户回答的，
+    只是：
+    - 还是不是 pure buzz
+  - 并不需要一套完整的 GUI 分项打分
+- 风险：
+  - 如果默认把这类实验都包装成 GUI 打分，
+    一方面会增加操作成本，
+    另一方面也容易让流程看起来比结论本身更重
+- 正确处理：
+  - 对 pure-buzz / non-pure-buzz
+    的快速门槛判别，
+    默认直接交：
+    - 最小 wav 目录
+    - 简短对比说明
+  - 只有在已经确认
+    “不再是 pure buzz”
+    之后，
+    才值得升级到更细的 GUI 听审

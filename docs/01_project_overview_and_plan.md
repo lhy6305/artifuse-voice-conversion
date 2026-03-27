@@ -1647,3 +1647,46 @@
       `aper * noise_E`
       residual jump
       的更强结构收缩
+## 2026-03-27 深夜再次更新
+- `docs/443_stage5_output_head_high_band_human_audit_fail_and_gui_demote_report.md`
+  已补完
+  `441/442`
+  之后的正式人工听审结论。
+- 当前结论已更新为：
+  - `output_head_high_band_bhb01`
+    虽然量化上相对旧 strongest
+    有明显 anti-brightness 改善，
+    也不再是
+    `440`
+    那种 native 直接坏死路线，
+    但人工听审仍明确判为：
+    - 纯 buzz
+    - 只是变成了
+      带一点明显音调变化的 buzz
+- 因而当前主线再次收紧为：
+  - 不再继续围绕
+    `bhb01`
+    做同层微调或再发一轮同类听审
+  - `high_band` route
+    正式记为：
+    - 量化改善成立
+    - 主观听感失败
+      的候选
+  - 下一步应回到：
+    - 为什么压亮度以后，
+      仍只得到
+      tonal buzz
+    - 以及
+      `aper * noise_E`
+      在
+      `decoder_hidden -> waveform_decoder_base_logits`
+      的残余 jump
+- 听审交付策略也同步更新为：
+  - 对这类
+    pure-buzz / non-pure-buzz
+    快速判别实验，
+    默认直接交：
+    - wav 目录
+  - 不再默认交
+    GUI
+    量化打分

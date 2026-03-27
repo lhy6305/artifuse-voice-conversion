@@ -511,6 +511,7 @@ def run_offline_mvp_nores_vocoder_training_step(
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> None:
@@ -614,6 +615,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
         waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
         waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+        waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
         waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
         frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
     )
@@ -699,6 +701,9 @@ def run_offline_mvp_nores_vocoder_training_step(
             ),
             "waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr": float(
                 waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight
+            ),
+            "waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr": float(
+                waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight
             ),
             "waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr": float(
                 waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight
@@ -806,6 +811,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> None:
@@ -930,6 +936,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
             waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
             waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
             waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
             waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
         )
@@ -1002,6 +1009,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
                 waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
                 waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+                waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
                 waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
                 frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
                 validation_source=(
@@ -1136,6 +1144,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 ),
                 "waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr": float(
                     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight
+                ),
+                "waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr": float(
+                    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight
                 ),
                 "waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr": float(
                     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight
@@ -1512,6 +1523,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
     semantic_supervision_enabled: bool = False,
@@ -1669,6 +1681,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
                 waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
                 waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+                waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
                 waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
                 frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
             )
@@ -1778,12 +1791,13 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
                     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
                     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
-                    waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
-                    waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
-                    waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
-                    waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
-                    frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
-                    semantic_supervision=semantic_supervision,
+                waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+                waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
+                waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+                waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
+                waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
+                frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
+                semantic_supervision=semantic_supervision,
                     validation_source="validation_packages",
                 )
             else:
@@ -1958,6 +1972,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 ),
                 "waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr": float(
                     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight
+                ),
+                "waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr": float(
+                    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight
                 ),
                 "waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr": float(
                     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight
@@ -4388,6 +4405,7 @@ def compute_nores_vocoder_losses(
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> tuple[torch.Tensor, dict[str, float]]:
@@ -4445,6 +4463,7 @@ def compute_nores_vocoder_losses(
     waveform_decoder_base_logits_active_template_loss = harmonic_loss.new_zeros(())
     waveform_decoder_base_logits_aper_abs_zero_lag_corr_loss = harmonic_loss.new_zeros(())
     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_loss = harmonic_loss.new_zeros(())
+    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_loss = harmonic_loss.new_zeros(())
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_loss = harmonic_loss.new_zeros(())
     periodic_waveform_frame_rms_mean = 0.0
     aligned_active_frame_rms_mean = 0.0
@@ -4467,6 +4486,8 @@ def compute_nores_vocoder_losses(
     waveform_decoder_base_logits_to_aper_abs_zero_corr = 0.0
     waveform_decoder_base_logits_to_noise_energy_zero_corr = 0.0
     waveform_decoder_base_logits_to_noise_energy_abs_zero_corr = 0.0
+    waveform_decoder_base_logits_to_aper_noise_energy_zero_corr = 0.0
+    waveform_decoder_base_logits_to_aper_noise_energy_abs_zero_corr = 0.0
     waveform_residual_shape_delta_to_noise_energy_zero_corr = 0.0
     waveform_residual_shape_delta_to_noise_energy_abs_zero_corr = 0.0
     periodic_hidden = outputs.get("periodic_hidden")
@@ -4766,6 +4787,24 @@ def compute_nores_vocoder_losses(
                         waveform_decoder_base_logits_aper_abs_zero_lag_corr_loss.detach().cpu().item()
                     )
                 aper_energy_target = aper_target.to(torch.float32) * energy_alignment_target.to(torch.float32)
+                if (
+                    waveform_decoder_base_logits is not None
+                    and float(waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight) > 0.0
+                ):
+                    (
+                        waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_loss,
+                        waveform_decoder_base_logits_to_aper_noise_energy_zero_corr_tensor,
+                    ) = compute_frame_rms_abs_zero_lag_correlation_loss(
+                        predicted_frames=waveform_decoder_base_logits,
+                        control_target=aper_energy_target,
+                        zero_like=harmonic_loss,
+                    )
+                    waveform_decoder_base_logits_to_aper_noise_energy_zero_corr = float(
+                        waveform_decoder_base_logits_to_aper_noise_energy_zero_corr_tensor.detach().cpu().item()
+                    )
+                    waveform_decoder_base_logits_to_aper_noise_energy_abs_zero_corr = float(
+                        waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_loss.detach().cpu().item()
+                    )
                 (
                     noise_aper_energy_frame_rms_excess_corr_loss,
                     waveform_frame_rms_to_aper_energy_corr_tensor,
@@ -4922,6 +4961,8 @@ def compute_nores_vocoder_losses(
         * float(waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight)
         + waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_loss
         * float(waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight)
+        + waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_loss
+        * float(waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight)
         + waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_loss
         * float(waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight)
     )
@@ -5022,6 +5063,10 @@ def compute_nores_vocoder_losses(
             float(waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_loss.detach().cpu().item()),
             6,
         ),
+        "loss_waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr": round(
+            float(waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_loss.detach().cpu().item()),
+            6,
+        ),
         "loss_waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr": round(
             float(waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_loss.detach().cpu().item()),
             6,
@@ -5072,6 +5117,14 @@ def compute_nores_vocoder_losses(
         ),
         "waveform_decoder_base_logits_to_noise_energy_abs_zero_corr": round(
             waveform_decoder_base_logits_to_noise_energy_abs_zero_corr,
+            6,
+        ),
+        "waveform_decoder_base_logits_to_aper_noise_energy_zero_corr": round(
+            waveform_decoder_base_logits_to_aper_noise_energy_zero_corr,
+            6,
+        ),
+        "waveform_decoder_base_logits_to_aper_noise_energy_abs_zero_corr": round(
+            waveform_decoder_base_logits_to_aper_noise_energy_abs_zero_corr,
             6,
         ),
         "waveform_residual_shape_delta_to_noise_energy_lagcorr": round(
@@ -5137,6 +5190,7 @@ def run_nores_vocoder_validation_pass(
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
 ) -> dict[str, object]:
@@ -5191,6 +5245,7 @@ def run_nores_vocoder_validation_pass(
             waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
             waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
             waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
             waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
         )
@@ -5270,6 +5325,7 @@ def run_nores_vocoder_dataset_validation_pass(
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
     semantic_supervision: dict[str, object] | None = None,
@@ -5337,6 +5393,7 @@ def run_nores_vocoder_dataset_validation_pass(
                 waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
                 waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
                 waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+                waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
                 waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
                 frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
             )
