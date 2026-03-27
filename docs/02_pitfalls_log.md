@@ -2416,3 +2416,69 @@
     且频谱图也显示候选仍是
     稳定直线型 buzz，
     就不再保留该路线
+### 2026-03-27 深夜继续补充坑点：如果 `base_logits_only` 已几乎等于 baseline，就不要继续把 residual-shape 写成当前主承载层
+- 现象：
+  - output-head 子阶段 structure probe
+    已经在 user-line
+    与 native validation3
+    两边都显示：
+    - `waveform_decoder_base_logits_only`
+      与 baseline
+      几乎重合
+    - `waveform_residual_shape_only`
+      则变成更亮、更高频、
+      更模板化的纯 buzz
+- 风险：
+  - 很容易沿着之前
+    `438/444`
+    的定位，
+    继续把问题写成：
+    - residual-shape interface
+      仍是主病灶
+    - 或 residual-shape
+      里也许还藏着没听出来的语音结构
+- 正确处理：
+  - 当前更准确的说法应是：
+    - residual-shape
+      当然还在放大某些坏成分，
+      但它不是当前可听结构的主要承载者
+    - baseline
+      几乎就是
+      `base_logits`
+      本体
+  - 后续主线应转向：
+    - `waveform_decoder(decoder_hidden)`
+      自身为什么只形成
+      tonal/pure buzz
+    - 而不是继续优先修
+      residual-shape
+
+### 2026-03-27 深夜继续补充坑点：如果 `residual_shape_only` 单独听起来是更亮、更直线型的 pure buzz，就不要把它当作“潜在语音结构支”
+- 现象：
+  - 在两侧 structure probe
+    里，
+    `waveform_residual_shape_only`
+    都稳定表现为：
+    - `decoded_template ≈ 0.9998`
+    - `centroid ≈ 11k ~ 12k`
+    - `high_band ≈ 0.81 ~ 0.83`
+  - 这说明它本身更像：
+    - 高频模板化 buzz 支
+  - 而不是：
+    - 被主分支埋住的语音结构支
+- 风险：
+  - 容易因为它名字上像
+    residual shape，
+    就继续假设：
+    - 这里面也许有 formant/noise shape
+    - 只是混合方式不对
+- 正确处理：
+  - 在没有新证据前，
+    不再把当前 residual-shape
+    默认视为潜在的 speech-structure carrier
+  - 若未来还要继续用它，
+    也必须把目标改写成：
+    - 显式 shape-aware
+      结构目标
+  - 而不是继续假设
+    它自己天然就带着语音结构

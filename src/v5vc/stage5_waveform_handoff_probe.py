@@ -235,6 +235,8 @@ def summarize_handoff_stage_metrics(
     noise_hidden: torch.Tensor | None = None,
     branch_mean_hidden: torch.Tensor | None = None,
     fused_hidden: torch.Tensor | None = None,
+    waveform_decoder_base_logits: torch.Tensor | None = None,
+    waveform_residual_shape_delta: torch.Tensor | None = None,
     decoder_hidden: torch.Tensor,
     waveform_frame_logits: torch.Tensor,
     waveform_frames: torch.Tensor,
@@ -248,6 +250,20 @@ def summarize_handoff_stage_metrics(
         metrics.update(prefix_metrics("branch_mean_hidden", summarize_sequence_metrics(branch_mean_hidden)))
     if fused_hidden is not None:
         metrics.update(prefix_metrics("fused_hidden", summarize_sequence_metrics(fused_hidden)))
+    if waveform_decoder_base_logits is not None:
+        metrics.update(
+            prefix_metrics(
+                "waveform_decoder_base_logits",
+                summarize_sequence_metrics(waveform_decoder_base_logits),
+            )
+        )
+    if waveform_residual_shape_delta is not None:
+        metrics.update(
+            prefix_metrics(
+                "waveform_residual_shape_delta",
+                summarize_sequence_metrics(waveform_residual_shape_delta),
+            )
+        )
     metrics.update(prefix_metrics("decoder_hidden", summarize_sequence_metrics(decoder_hidden)))
     metrics.update(prefix_metrics("waveform_frame_logits", summarize_sequence_metrics(waveform_frame_logits)))
     metrics.update(prefix_metrics("waveform_frames", summarize_sequence_metrics(waveform_frames)))

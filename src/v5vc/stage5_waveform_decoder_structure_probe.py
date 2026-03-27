@@ -19,6 +19,7 @@ from v5vc.offline_vocoder_training import (
     load_training_package_payload,
     reconstruct_waveform_from_frames,
 )
+from v5vc.source_acoustic_state_extraction import DEFAULT_VUV_VOICED_FRAME_THRESHOLD
 from v5vc.stage5_low_activity_probe import compute_waveform_spectral_summary
 from v5vc.stage5_speech_emergence_probe import (
     compute_pearson_correlation,
@@ -28,6 +29,7 @@ from v5vc.stage5_speech_emergence_probe import (
     summarize_probe_delta_vs_baseline,
     summarize_scalar_values,
 )
+from v5vc.target_format_recovery import write_waveform_int16
 
 
 STRUCTURE_PROBE_VARIANTS = [
@@ -35,43 +37,557 @@ STRUCTURE_PROBE_VARIANTS = [
         "label": "baseline",
         "description": "Original checkpoint path without any hidden-state intervention.",
         "transforms": [],
+        "waveform_output_mode": "full_output",
+    },
+    {
+        "label": "waveform_decoder_base_logits_only",
+        "description": "Suppress residual-shape injection and listen to raw waveform_decoder(decoder_hidden) output alone.",
+        "transforms": [],
+        "waveform_output_mode": "base_logits_only",
+    },
+    {
+        "label": "waveform_residual_shape_only",
+        "description": "Zero base logits and listen to residual-shape delta alone to test whether the injection branch carries speech-like structure by itself.",
+        "transforms": [],
+        "waveform_output_mode": "residual_shape_only",
     },
     {
         "label": "periodic_hidden_frame_mean",
         "description": "Collapse periodic encoder dynamics to its package-wise frame mean before fusion.",
         "transforms": [("periodic_hidden", "frame_mean")],
+        "waveform_output_mode": "full_output",
     },
     {
         "label": "noise_hidden_frame_mean",
         "description": "Collapse noise encoder dynamics to its package-wise frame mean before fusion.",
         "transforms": [("noise_hidden", "frame_mean")],
+        "waveform_output_mode": "full_output",
     },
     {
         "label": "fused_hidden_frame_mean",
         "description": "Collapse fusion output dynamics to its package-wise frame mean before the waveform decoder.",
         "transforms": [("fused_hidden", "frame_mean")],
+        "waveform_output_mode": "full_output",
     },
     {
         "label": "fused_hidden_zero",
         "description": "Zero the waveform decoder input while leaving branch-side activity gates unchanged.",
         "transforms": [("fused_hidden", "zero")],
+        "waveform_output_mode": "full_output",
     },
     {
         "label": "fused_hidden_from_periodic_hidden",
         "description": "Bypass fusion and feed periodic_hidden directly into the waveform decoder.",
         "transforms": [("fused_hidden", "replace_with_periodic_hidden")],
+        "waveform_output_mode": "full_output",
     },
     {
         "label": "fused_hidden_from_noise_hidden",
         "description": "Bypass fusion and feed noise_hidden directly into the waveform decoder.",
         "transforms": [("fused_hidden", "replace_with_noise_hidden")],
+        "waveform_output_mode": "full_output",
     },
     {
         "label": "fused_hidden_from_branch_mean",
         "description": "Bypass fusion and feed the equal-weight branch mean into the waveform decoder.",
         "transforms": [("fused_hidden", "replace_with_branch_mean")],
+        "waveform_output_mode": "full_output",
     },
 ]
+
+
+def sanitize_record_id(record_id: str) -> str:
+    return str(record_id).replace("::", "__").replace("/", "_").replace("\\", "_")
+
+
+def flatten_control_tensor(control: torch.Tensor | None, frame_count: int) -> torch.Tensor | None:
+    if control is None:
+        return None
+    control_cpu = control.detach().cpu().to(torch.float32)
+    if control_cpu.ndim == 2 and int(control_cpu.shape[-1]) == 1:
+        control_cpu = control_cpu.squeeze(-1)
+    control_cpu = control_cpu.view(-1)
+    if int(control_cpu.shape[0]) < int(frame_count):
+        return None
+    return control_cpu[:frame_count]
+
+
+def resolve_energy_mask_control(
+    *,
+    energy_log_rms_norm_target: torch.Tensor | None,
+    energy_control_target: torch.Tensor | None,
+    frame_count: int,
+) -> torch.Tensor | None:
+    energy_control = flatten_control_tensor(energy_log_rms_norm_target, frame_count)
+    if energy_control is not None:
+        return energy_control.clamp(0.0, 1.0)
+    energy_log = flatten_control_tensor(energy_control_target, frame_count)
+    if energy_log is None:
+        return None
+    return torch.sigmoid((energy_log + 4.0) * 2.0).clamp(0.0, 1.0)
+
+
+def resolve_voicing_mask_control(
+    *,
+    vuv_target: torch.Tensor | None,
+    voiced_proxy_target: torch.Tensor | None,
+    aper_target: torch.Tensor | None,
+    aperiodicity_proxy_target: torch.Tensor | None,
+    frame_count: int,
+) -> tuple[torch.Tensor | None, str]:
+    for control, label in (
+        (vuv_target, "vuv_target"),
+        (voiced_proxy_target, "voiced_proxy_target"),
+    ):
+        flattened = flatten_control_tensor(control, frame_count)
+        if flattened is not None:
+            return flattened.clamp(0.0, 1.0), label
+    for control, label in (
+        (aper_target, "aper_target_inverted"),
+        (aperiodicity_proxy_target, "aperiodicity_proxy_target_inverted"),
+    ):
+        flattened = flatten_control_tensor(control, frame_count)
+        if flattened is not None:
+            return (1.0 - flattened).clamp(0.0, 1.0), label
+    return None, "missing"
+
+
+def resolve_aperiodicity_control(
+    *,
+    aper_target: torch.Tensor | None,
+    aperiodicity_proxy_target: torch.Tensor | None,
+    frame_count: int,
+) -> tuple[torch.Tensor | None, str]:
+    for control, label in (
+        (aper_target, "aper_target"),
+        (aperiodicity_proxy_target, "aperiodicity_proxy_target"),
+    ):
+        flattened = flatten_control_tensor(control, frame_count)
+        if flattened is not None:
+            return flattened.clamp(0.0, 1.0), label
+    return None, "missing"
+
+
+def build_voicing_conditioning_bundle(
+    *,
+    frame_count: int,
+    vuv_target: torch.Tensor | None,
+    voiced_proxy_target: torch.Tensor | None,
+    aper_target: torch.Tensor | None,
+    aperiodicity_proxy_target: torch.Tensor | None,
+    energy_log_rms_norm_target: torch.Tensor | None,
+    energy_control_target: torch.Tensor | None,
+    energy_active_threshold: float = 0.1,
+    voiced_threshold: float = DEFAULT_VUV_VOICED_FRAME_THRESHOLD,
+) -> dict[str, object] | None:
+    voicing_control, voicing_source = resolve_voicing_mask_control(
+        vuv_target=vuv_target,
+        voiced_proxy_target=voiced_proxy_target,
+        aper_target=aper_target,
+        aperiodicity_proxy_target=aperiodicity_proxy_target,
+        frame_count=frame_count,
+    )
+    if voicing_control is None:
+        return None
+    aper_control, aper_source = resolve_aperiodicity_control(
+        aper_target=aper_target,
+        aperiodicity_proxy_target=aperiodicity_proxy_target,
+        frame_count=frame_count,
+    )
+    energy_control = resolve_energy_mask_control(
+        energy_log_rms_norm_target=energy_log_rms_norm_target,
+        energy_control_target=energy_control_target,
+        frame_count=frame_count,
+    )
+    if energy_control is None:
+        active_mask = torch.ones_like(voicing_control, dtype=torch.bool)
+        active_frame_fraction = 1.0
+        energy_source = "missing"
+    else:
+        active_mask = energy_control >= float(energy_active_threshold)
+        active_frame_fraction = float(active_mask.to(torch.float32).mean().item())
+        energy_source = (
+            "energy_log_rms_norm_target"
+            if energy_log_rms_norm_target is not None
+            else "energy_control_target_sigmoid"
+        )
+    voiced_mask = active_mask & (voicing_control >= float(voiced_threshold))
+    unvoiced_mask = active_mask & (~voiced_mask)
+    active_frame_count = int(active_mask.to(torch.int64).sum().item())
+    return {
+        "frame_count": int(frame_count),
+        "voicing_control": voicing_control,
+        "aper_control": aper_control,
+        "energy_control": energy_control,
+        "active_mask": active_mask,
+        "voiced_mask": voiced_mask,
+        "unvoiced_mask": unvoiced_mask,
+        "active_frame_count": active_frame_count,
+        "active_frame_fraction": round(float(active_frame_fraction), 6),
+        "active_voiced_fraction": round(
+            0.0
+            if active_frame_count <= 0
+            else float(voiced_mask.to(torch.float32).sum().item()) / float(active_frame_count),
+            6,
+        ),
+        "active_unvoiced_fraction": round(
+            0.0
+            if active_frame_count <= 0
+            else float(unvoiced_mask.to(torch.float32).sum().item()) / float(active_frame_count),
+            6,
+        ),
+        "voicing_source": voicing_source,
+        "aper_source": aper_source,
+        "energy_source": energy_source,
+    }
+
+
+def summarize_masked_frame_spectral_statistics(
+    *,
+    analysis_frames: torch.Tensor,
+    mask: torch.Tensor,
+    sample_rate: int,
+    high_band_hz: float = 4000.0,
+) -> dict[str, float]:
+    frame_count = int(analysis_frames.shape[0])
+    mask_cpu = mask.detach().cpu().to(torch.bool).view(-1)
+    if int(mask_cpu.shape[0]) != frame_count:
+        raise ValueError(
+            "Mask length does not match analysis frame count for spectral conditioning: "
+            f"{int(mask_cpu.shape[0])} vs {frame_count}"
+        )
+    selected_count = int(mask_cpu.to(torch.int64).sum().item())
+    if selected_count <= 0:
+        return {
+            "frame_count": 0.0,
+            "spectral_centroid_hz_mean": 0.0,
+            "spectral_bandwidth_hz_mean": 0.0,
+            "spectral_rolloff95_hz_mean": 0.0,
+            "spectral_high_band_energy_ratio_mean": 0.0,
+            "frame_rms_mean": 0.0,
+        }
+
+    frames = analysis_frames.detach().cpu().to(torch.float32)[mask_cpu]
+    frame_length = int(frames.shape[-1])
+    window = torch.hann_window(frame_length, dtype=torch.float32)
+    windowed = frames * window.unsqueeze(0)
+    spectrum = torch.fft.rfft(windowed, dim=-1)
+    power = spectrum.abs().pow(2.0)
+    freqs = torch.fft.rfftfreq(frame_length, d=1.0 / float(sample_rate)).to(torch.float32)
+    power_sum = power.sum(dim=-1).clamp_min(1.0e-8)
+    centroid = (power * freqs.unsqueeze(0)).sum(dim=-1) / power_sum
+    centered = freqs.unsqueeze(0) - centroid.unsqueeze(-1)
+    bandwidth = ((power * centered.pow(2.0)).sum(dim=-1) / power_sum).clamp_min(0.0).sqrt()
+    cumulative = power.cumsum(dim=-1)
+    rolloff_threshold = 0.95 * power_sum
+    rolloff_index = (cumulative >= rolloff_threshold.unsqueeze(-1)).to(torch.float32).argmax(dim=-1)
+    rolloff = freqs[rolloff_index]
+    high_band_mask = freqs >= float(high_band_hz)
+    if bool(high_band_mask.any().item()):
+        high_band_ratio = power[:, high_band_mask].sum(dim=-1) / power_sum
+    else:
+        high_band_ratio = torch.zeros_like(power_sum)
+    frame_rms = frames.pow(2.0).mean(dim=-1).sqrt()
+    return {
+        "frame_count": float(selected_count),
+        "spectral_centroid_hz_mean": round(float(centroid.mean().item()), 6),
+        "spectral_bandwidth_hz_mean": round(float(bandwidth.mean().item()), 6),
+        "spectral_rolloff95_hz_mean": round(float(rolloff.mean().item()), 6),
+        "spectral_high_band_energy_ratio_mean": round(float(high_band_ratio.mean().item()), 6),
+        "frame_rms_mean": round(float(frame_rms.mean().item()), 6),
+    }
+
+
+def summarize_sequence_control_coupling_metrics(
+    *,
+    sequence: torch.Tensor,
+    conditioning: dict[str, object] | None,
+) -> tuple[dict[str, float], dict[str, str]]:
+    if conditioning is None:
+        return {}, {}
+    sequence_cpu = sequence.detach().cpu().to(torch.float32)
+    if sequence_cpu.ndim != 2:
+        raise ValueError(f"Expected sequence shape [frames, dims], got {tuple(sequence_cpu.shape)}")
+    frame_count = int(sequence_cpu.shape[0])
+    expected_frame_count = int(conditioning["frame_count"])
+    if frame_count != expected_frame_count:
+        raise ValueError(
+            "Conditioning frame count does not match sequence frame count: "
+            f"{expected_frame_count} vs {frame_count}"
+        )
+    frame_rms = sequence_cpu.pow(2.0).mean(dim=1).sqrt()
+    active_mask = conditioning["active_mask"]
+    voiced_mask = conditioning["voiced_mask"]
+    unvoiced_mask = conditioning["unvoiced_mask"]
+    voicing_control = conditioning["voicing_control"]
+    aper_control = conditioning["aper_control"]
+    energy_control = conditioning["energy_control"]
+    active_frame_count = int(conditioning["active_frame_count"])
+    metrics = {
+        "active_frame_fraction": float(conditioning["active_frame_fraction"]),
+        "active_voiced_fraction": float(conditioning["active_voiced_fraction"]),
+        "active_unvoiced_fraction": float(conditioning["active_unvoiced_fraction"]),
+        "voiced_frame_rms_mean": round(
+            0.0 if not bool(voiced_mask.any().item()) else float(frame_rms[voiced_mask].mean().item()),
+            6,
+        ),
+        "unvoiced_frame_rms_mean": round(
+            0.0 if not bool(unvoiced_mask.any().item()) else float(frame_rms[unvoiced_mask].mean().item()),
+            6,
+        ),
+        "frame_rms_std": round(float(frame_rms.std(unbiased=False).item()), 6),
+        "frame_rms_mean": round(float(frame_rms.mean().item()), 6),
+    }
+    metrics["unvoiced_minus_voiced_frame_rms_mean"] = round(
+        float(metrics["unvoiced_frame_rms_mean"]) - float(metrics["voiced_frame_rms_mean"]),
+        6,
+    )
+    if active_frame_count > 1:
+        metrics["active_frame_rms_to_voicing_corr"] = float(
+            compute_pearson_correlation(frame_rms[active_mask], voicing_control[active_mask])
+        )
+        if energy_control is not None:
+            metrics["active_frame_rms_to_energy_corr"] = float(
+                compute_pearson_correlation(frame_rms[active_mask], energy_control[active_mask])
+            )
+        if aper_control is not None:
+            metrics["active_frame_rms_to_aper_corr"] = float(
+                compute_pearson_correlation(frame_rms[active_mask], aper_control[active_mask])
+            )
+    notes = {
+        "voicing_source": str(conditioning.get("voicing_source", "missing")),
+        "aper_source": str(conditioning.get("aper_source", "missing")),
+        "energy_source": str(conditioning.get("energy_source", "missing")),
+    }
+    return metrics, notes
+
+
+def summarize_sequence_geometry_metrics(sequence: torch.Tensor) -> dict[str, float]:
+    sequence_cpu = sequence.detach().cpu().to(torch.float32)
+    if sequence_cpu.ndim != 2:
+        raise ValueError(f"Expected sequence shape [frames, dims], got {tuple(sequence_cpu.shape)}")
+    frame_count = int(sequence_cpu.shape[0])
+    dim = int(sequence_cpu.shape[1])
+    if frame_count <= 1 or dim <= 0:
+        return {
+            "effective_rank": 0.0,
+            "effective_rank_fraction": 0.0,
+            "top1_variance_ratio": 0.0,
+            "top4_variance_ratio": 0.0,
+            "mean_centered_frame_norm": 0.0,
+        }
+    centered = sequence_cpu - sequence_cpu.mean(dim=0, keepdim=True)
+    covariance = centered.transpose(0, 1).matmul(centered) / max(1, frame_count - 1)
+    eigvals = torch.linalg.eigvalsh(covariance).clamp_min(0.0)
+    total = float(eigvals.sum().item())
+    if total <= 1.0e-12:
+        return {
+            "effective_rank": 0.0,
+            "effective_rank_fraction": 0.0,
+            "top1_variance_ratio": 0.0,
+            "top4_variance_ratio": 0.0,
+            "mean_centered_frame_norm": round(float(centered.norm(dim=1).mean().item()), 6),
+        }
+    probs = eigvals / total
+    positive = probs[probs > 1.0e-12]
+    entropy = float((-(positive * positive.log()).sum()).item())
+    effective_rank = float(torch.exp(torch.tensor(entropy, dtype=torch.float32)).item())
+    sorted_vals = torch.sort(eigvals, descending=True).values
+    top1_ratio = float(sorted_vals[:1].sum().item() / total)
+    top4_ratio = float(sorted_vals[: min(4, int(sorted_vals.shape[0]))].sum().item() / total)
+    return {
+        "effective_rank": round(effective_rank, 6),
+        "effective_rank_fraction": round(effective_rank / float(min(frame_count, dim)), 6),
+        "top1_variance_ratio": round(top1_ratio, 6),
+        "top4_variance_ratio": round(top4_ratio, 6),
+        "mean_centered_frame_norm": round(float(centered.norm(dim=1).mean().item()), 6),
+    }
+
+
+def summarize_sequence_conditioned_cluster_metrics(
+    sequence: torch.Tensor,
+    conditioning: dict[str, object] | None,
+) -> dict[str, float]:
+    if conditioning is None:
+        return {}
+    sequence_cpu = sequence.detach().cpu().to(torch.float32)
+    if sequence_cpu.ndim != 2:
+        raise ValueError(f"Expected sequence shape [frames, dims], got {tuple(sequence_cpu.shape)}")
+    frame_count = int(sequence_cpu.shape[0])
+    if frame_count != int(conditioning["frame_count"]):
+        raise ValueError(
+            "Conditioning frame count does not match sequence frame count: "
+            f"{int(conditioning['frame_count'])} vs {frame_count}"
+        )
+    active_mask = conditioning["active_mask"]
+    voiced_mask = conditioning["voiced_mask"]
+    unvoiced_mask = conditioning["unvoiced_mask"]
+    voiced_count = int(voiced_mask.to(torch.int64).sum().item())
+    unvoiced_count = int(unvoiced_mask.to(torch.int64).sum().item())
+    if voiced_count <= 0 or unvoiced_count <= 0:
+        return {
+            "voiced_frame_count": float(voiced_count),
+            "unvoiced_frame_count": float(unvoiced_count),
+            "voiced_unvoiced_centroid_distance": 0.0,
+            "voiced_unvoiced_centroid_cosine": 0.0,
+            "within_voiced_spread": 0.0,
+            "within_unvoiced_spread": 0.0,
+            "voiced_unvoiced_separation_ratio": 0.0,
+            "active_template_distance_mean": 0.0,
+        }
+    voiced_seq = sequence_cpu[voiced_mask]
+    unvoiced_seq = sequence_cpu[unvoiced_mask]
+    voiced_centroid = voiced_seq.mean(dim=0)
+    unvoiced_centroid = unvoiced_seq.mean(dim=0)
+    centroid_delta = unvoiced_centroid - voiced_centroid
+    centroid_distance = float(centroid_delta.norm().item())
+    voiced_norm = float(voiced_centroid.norm().item())
+    unvoiced_norm = float(unvoiced_centroid.norm().item())
+    denominator = max(1.0e-8, voiced_norm * unvoiced_norm)
+    centroid_cosine = float((voiced_centroid * unvoiced_centroid).sum().item() / denominator)
+    within_voiced = float((voiced_seq - voiced_centroid.unsqueeze(0)).norm(dim=1).mean().item())
+    within_unvoiced = float((unvoiced_seq - unvoiced_centroid.unsqueeze(0)).norm(dim=1).mean().item())
+    active_seq = sequence_cpu[active_mask]
+    active_centroid = active_seq.mean(dim=0)
+    active_template_distance_mean = float((active_seq - active_centroid.unsqueeze(0)).norm(dim=1).mean().item())
+    return {
+        "voiced_frame_count": float(voiced_count),
+        "unvoiced_frame_count": float(unvoiced_count),
+        "voiced_unvoiced_centroid_distance": round(centroid_distance, 6),
+        "voiced_unvoiced_centroid_cosine": round(centroid_cosine, 6),
+        "within_voiced_spread": round(within_voiced, 6),
+        "within_unvoiced_spread": round(within_unvoiced, 6),
+        "voiced_unvoiced_separation_ratio": round(
+            0.0 if (within_voiced + within_unvoiced) <= 1.0e-8 else centroid_distance / (within_voiced + within_unvoiced),
+            6,
+        ),
+        "active_template_distance_mean": round(active_template_distance_mean, 6),
+    }
+
+
+def summarize_voicing_conditioned_waveform_metrics(
+    *,
+    waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    target_frame_count: int,
+    sample_rate: int,
+    vuv_target: torch.Tensor | None = None,
+    voiced_proxy_target: torch.Tensor | None = None,
+    aper_target: torch.Tensor | None = None,
+    aperiodicity_proxy_target: torch.Tensor | None = None,
+    energy_log_rms_norm_target: torch.Tensor | None = None,
+    energy_control_target: torch.Tensor | None = None,
+    energy_active_threshold: float = 0.1,
+    voiced_threshold: float = DEFAULT_VUV_VOICED_FRAME_THRESHOLD,
+) -> tuple[dict[str, float], dict[str, float]]:
+    analysis_frames = frame_waveform_sequence(
+        waveform=waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        target_frame_count=int(target_frame_count),
+    )
+    frame_count = int(analysis_frames.shape[0])
+    conditioning = build_voicing_conditioning_bundle(
+        frame_count=frame_count,
+        vuv_target=vuv_target,
+        voiced_proxy_target=voiced_proxy_target,
+        aper_target=aper_target,
+        aperiodicity_proxy_target=aperiodicity_proxy_target,
+        energy_control_target=energy_control_target,
+        energy_log_rms_norm_target=energy_log_rms_norm_target,
+        energy_active_threshold=float(energy_active_threshold),
+        voiced_threshold=float(voiced_threshold),
+    )
+    if conditioning is None:
+        return {}, {"voicing_source": "missing"}
+
+    voicing_control = conditioning["voicing_control"]
+    energy_control = conditioning["energy_control"]
+    active_mask = conditioning["active_mask"]
+    voiced_mask = conditioning["voiced_mask"]
+    unvoiced_mask = conditioning["unvoiced_mask"]
+    active_frame_count = int(conditioning["active_frame_count"])
+    voiced_stats = summarize_masked_frame_spectral_statistics(
+        analysis_frames=analysis_frames,
+        mask=voiced_mask,
+        sample_rate=int(sample_rate),
+    )
+    unvoiced_stats = summarize_masked_frame_spectral_statistics(
+        analysis_frames=analysis_frames,
+        mask=unvoiced_mask,
+        sample_rate=int(sample_rate),
+    )
+    voiced_frame_fraction = 0.0 if frame_count <= 0 else float(voiced_mask.to(torch.float32).mean().item())
+    unvoiced_frame_fraction = 0.0 if frame_count <= 0 else float(unvoiced_mask.to(torch.float32).mean().item())
+    metrics = {
+        "active_frame_fraction": float(conditioning["active_frame_fraction"]),
+        "voiced_frame_fraction": round(voiced_frame_fraction, 6),
+        "unvoiced_frame_fraction": round(unvoiced_frame_fraction, 6),
+        "active_voiced_fraction": float(conditioning["active_voiced_fraction"]),
+        "active_unvoiced_fraction": float(conditioning["active_unvoiced_fraction"]),
+        "voiced_spectral_centroid_hz_mean": float(voiced_stats["spectral_centroid_hz_mean"]),
+        "unvoiced_spectral_centroid_hz_mean": float(unvoiced_stats["spectral_centroid_hz_mean"]),
+        "unvoiced_minus_voiced_spectral_centroid_hz": round(
+            float(unvoiced_stats["spectral_centroid_hz_mean"])
+            - float(voiced_stats["spectral_centroid_hz_mean"]),
+            6,
+        ),
+        "voiced_spectral_bandwidth_hz_mean": float(voiced_stats["spectral_bandwidth_hz_mean"]),
+        "unvoiced_spectral_bandwidth_hz_mean": float(unvoiced_stats["spectral_bandwidth_hz_mean"]),
+        "unvoiced_minus_voiced_spectral_bandwidth_hz": round(
+            float(unvoiced_stats["spectral_bandwidth_hz_mean"])
+            - float(voiced_stats["spectral_bandwidth_hz_mean"]),
+            6,
+        ),
+        "voiced_spectral_rolloff95_hz_mean": float(voiced_stats["spectral_rolloff95_hz_mean"]),
+        "unvoiced_spectral_rolloff95_hz_mean": float(unvoiced_stats["spectral_rolloff95_hz_mean"]),
+        "unvoiced_minus_voiced_spectral_rolloff95_hz": round(
+            float(unvoiced_stats["spectral_rolloff95_hz_mean"])
+            - float(voiced_stats["spectral_rolloff95_hz_mean"]),
+            6,
+        ),
+        "voiced_spectral_high_band_energy_ratio_mean": float(
+            voiced_stats["spectral_high_band_energy_ratio_mean"]
+        ),
+        "unvoiced_spectral_high_band_energy_ratio_mean": float(
+            unvoiced_stats["spectral_high_band_energy_ratio_mean"]
+        ),
+        "unvoiced_minus_voiced_spectral_high_band_energy_ratio": round(
+            float(unvoiced_stats["spectral_high_band_energy_ratio_mean"])
+            - float(voiced_stats["spectral_high_band_energy_ratio_mean"]),
+            6,
+        ),
+        "voiced_frame_rms_mean": float(voiced_stats["frame_rms_mean"]),
+        "unvoiced_frame_rms_mean": float(unvoiced_stats["frame_rms_mean"]),
+        "unvoiced_minus_voiced_frame_rms_mean": round(
+            float(unvoiced_stats["frame_rms_mean"]) - float(voiced_stats["frame_rms_mean"]),
+            6,
+        ),
+        "voicing_control_mean": round(float(voicing_control.mean().item()), 6),
+        "voicing_control_active_mean": round(
+            0.0 if active_frame_count <= 0 else float(voicing_control[active_mask].mean().item()),
+            6,
+        ),
+    }
+    if energy_control is not None:
+        metrics["energy_control_mean"] = round(float(energy_control.mean().item()), 6)
+        metrics["energy_control_active_mean"] = round(
+            0.0 if active_frame_count <= 0 else float(energy_control[active_mask].mean().item()),
+            6,
+        )
+    if active_frame_count > 0 and energy_control is not None:
+        metrics["active_voicing_energy_corr"] = float(
+            compute_pearson_correlation(
+                voicing_control[active_mask],
+                energy_control[active_mask],
+            )
+        )
+    return metrics, {
+        "voicing_source": str(conditioning.get("voicing_source", "missing")),
+        "aper_source": str(conditioning.get("aper_source", "missing")),
+        "energy_source": str(conditioning.get("energy_source", "missing")),
+    }
 
 
 def analyze_stage5_nores_waveform_decoder_structure(
@@ -126,6 +642,8 @@ def analyze_stage5_nores_waveform_decoder_structure(
     resolved_device = torch.device(device)
     model = model.to(resolved_device)
     model.eval()
+    records_dir = output_dir / "records"
+    records_dir.mkdir(parents=True, exist_ok=True)
 
     per_record_rows: list[dict[str, object]] = []
     with torch.no_grad():
@@ -138,6 +656,8 @@ def analyze_stage5_nores_waveform_decoder_structure(
             variant_rows: list[dict[str, object]] = []
             baseline_waveform = None
             baseline_scalar_metrics = None
+            record_dir = records_dir / sanitize_record_id(str(entry["record_id"]))
+            record_dir.mkdir(parents=True, exist_ok=True)
             for variant in STRUCTURE_PROBE_VARIANTS:
                 scalar_metrics, stage_metrics, decoded_waveform, transform_notes = run_structure_probe_variant(
                     model=model,
@@ -149,16 +669,31 @@ def analyze_stage5_nores_waveform_decoder_structure(
                     predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
                     predicted_activity_gate_apply_mode=resolved_apply_mode,
                     transforms=list(variant["transforms"]),
+                    waveform_output_mode=str(variant.get("waveform_output_mode", "full_output")),
+                )
+                label = str(variant["label"])
+                audio_path = record_dir / f"{sanitize_record_id(label)}.wav"
+                spectrogram_path = record_dir / f"{sanitize_record_id(label)}.linear_spectrogram.png"
+                write_probe_waveform_assets(
+                    waveform=decoded_waveform,
+                    sample_rate=int(runtime["sample_rate"]),
+                    audio_path=audio_path,
+                    spectrogram_path=spectrogram_path,
+                    frame_length=int(runtime["frame_length"]),
+                    hop_length=int(runtime["hop_length"]),
                 )
                 variant_row = {
-                    "label": str(variant["label"]),
+                    "label": label,
                     "description": str(variant["description"]),
+                    "waveform_output_mode": str(variant.get("waveform_output_mode", "full_output")),
                     "transform_notes": transform_notes,
+                    "audio_path": audio_path.as_posix(),
+                    "spectrogram_path": spectrogram_path.as_posix(),
                     "scalar_metrics": scalar_metrics,
                     "stage_metrics": stage_metrics,
                     "_decoded_waveform": decoded_waveform,
                 }
-                if str(variant["label"]) == "baseline":
+                if label == "baseline":
                     baseline_waveform = decoded_waveform
                     baseline_scalar_metrics = scalar_metrics
                 variant_rows.append(variant_row)
@@ -221,11 +756,19 @@ def analyze_stage5_nores_waveform_decoder_structure(
                 "label": str(item["label"]),
                 "description": str(item["description"]),
                 "transforms": [f"{stage}={mode}" for stage, mode in list(item["transforms"])],
+                "waveform_output_mode": str(item.get("waveform_output_mode", "full_output")),
             }
             for item in STRUCTURE_PROBE_VARIANTS
         ],
         "variant_impact_ranking": build_variant_impact_ranking(aggregate_rows),
         "baseline_decoder_collapse_summary": build_baseline_decoder_collapse_summary(aggregate_rows),
+        "baseline_upstream_coupling_localization_summary": build_baseline_upstream_coupling_localization_summary(
+            aggregate_rows
+        ),
+        "baseline_decoder_projection_geometry_summary": build_baseline_decoder_projection_geometry_summary(
+            aggregate_rows
+        ),
+        "voicing_conditioned_shape_summary": build_voicing_conditioned_shape_summary(aggregate_rows),
         "variant_aggregates": aggregate_rows,
         "records": per_record_rows,
         "notes": [
@@ -236,6 +779,7 @@ def analyze_stage5_nores_waveform_decoder_structure(
             "fused_hidden_from_periodic_hidden, fused_hidden_from_noise_hidden, and fused_hidden_from_branch_mean bypass fusion and ask whether the existing waveform decoder can respond if it is fed branch-side hidden dynamics directly.",
             "If fused_hidden remains materially less template-like than waveform_frames on baseline, that is evidence the waveform decoder itself is a collapse site.",
             "If fused_hidden_frame_mean barely changes waveform_frames or decoded metrics, the waveform decoder is acting close to a fixed-template projector around the current operating region.",
+            "decoded_voicing_conditioned and aligned_voicing_conditioned summarize frame-level spectral splits under the same target-side voiced-vs-unvoiced masks, so we can ask whether baseline/base_logits/residual_shape reproduce the target's two-shape contrast instead of only matching global buzz brightness.",
         ],
     }
     json_path = output_dir / "stage5_waveform_decoder_structure_probe.json"
@@ -263,6 +807,7 @@ def run_structure_probe_variant(
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
     transforms: list[tuple[str, str]],
+    waveform_output_mode: str,
 ) -> tuple[dict[str, float], dict[str, dict[str, float]], torch.Tensor, list[str]]:
     periodic_hidden = model.periodic_encoder(
         batch["periodic_branch_features"].to(device=device, dtype=torch.float32)
@@ -296,12 +841,14 @@ def run_structure_probe_variant(
         periodic_hidden=periodic_hidden,
         noise_hidden=noise_hidden,
     )
-    waveform_frames = compute_waveform_frames_for_probe(
+    outputs = compute_waveform_structure_outputs_for_probe(
         model=model,
         periodic_hidden=periodic_hidden,
         noise_hidden=noise_hidden,
         fused_hidden=fused_hidden,
+        waveform_output_mode=waveform_output_mode,
     )
+    waveform_frames = outputs["waveform_frames"]
     periodic_gate = torch.sigmoid(model.periodic_gate(periodic_hidden))
     noise_gate = torch.sigmoid(model.noise_gate(noise_hidden))
     predicted_activity = torch.maximum(periodic_gate, noise_gate)
@@ -318,9 +865,19 @@ def run_structure_probe_variant(
         periodic_hidden=periodic_hidden,
         noise_hidden=noise_hidden,
         fused_hidden=fused_hidden,
+        waveform_decoder_base_logits=outputs["waveform_decoder_base_logits"],
+        waveform_residual_shape_delta=outputs["waveform_residual_shape_delta"],
+        decoder_hidden=outputs["decoder_hidden"],
+        waveform_frame_logits=outputs["waveform_frame_logits"],
         waveform_frames=waveform_frames,
         decoded_waveform=decoded_waveform,
         aligned_waveform=batch.get("aligned_waveform"),
+        vuv_target=batch.get("vuv_target"),
+        voiced_proxy_target=batch.get("voiced_proxy_target"),
+        aper_target=batch.get("aper_target"),
+        aperiodicity_proxy_target=batch.get("aperiodicity_proxy_target"),
+        energy_control_target=batch.get("energy_control_target"),
+        energy_log_rms_norm_target=batch.get("energy_log_rms_norm_target"),
         frame_length=int(runtime["frame_length"]),
         hop_length=int(runtime["hop_length"]),
         sample_rate=int(runtime["sample_rate"]),
@@ -406,13 +963,14 @@ def compute_fused_hidden_for_probe(
     raise ValueError(f"Unsupported fusion_mode in structure probe: {fusion_mode!r}")
 
 
-def compute_waveform_frames_for_probe(
+def compute_waveform_structure_outputs_for_probe(
     *,
     model: torch.nn.Module,
     periodic_hidden: torch.Tensor,
     noise_hidden: torch.Tensor,
     fused_hidden: torch.Tensor,
-) -> torch.Tensor:
+    waveform_output_mode: str = "full_output",
+) -> dict[str, torch.Tensor]:
     waveform_decoder_mode = str(getattr(model, "waveform_decoder_mode", "fused_single"))
     if waveform_decoder_mode != "fused_single":
         raise ValueError(f"Unsupported waveform_decoder_mode in structure probe: {waveform_decoder_mode!r}")
@@ -444,7 +1002,9 @@ def compute_waveform_frames_for_probe(
         branch_condition_gate = torch.sigmoid(decoder_branch_condition_gate(branch_condition_context))
         fused_condition = torch.tanh(decoder_fused_condition_proj(branch_condition_context))
         decoder_hidden = decoder_hidden + branch_condition_gate * fused_condition
-    waveform_frame_logits = waveform_decoder(decoder_hidden)
+    waveform_decoder_base_logits = waveform_decoder(decoder_hidden)
+    waveform_frame_logits = waveform_decoder_base_logits
+    residual_shape_delta = torch.zeros_like(waveform_decoder_base_logits)
     if bool(getattr(model, "use_residual_shape_branch_condition_adapter", False)):
         residual_shape_branch_condition_adapter = getattr(model, "residual_shape_branch_condition_adapter", None)
         residual_shape_branch_condition_gate_head = getattr(model, "residual_shape_branch_condition_gate", None)
@@ -475,13 +1035,84 @@ def compute_waveform_frames_for_probe(
             ),
             mode=str(getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")),
         )
-        waveform_frame_logits = (
-            waveform_frame_logits
-            + float(getattr(model, "residual_shape_branch_condition_scale", 1.0))
+        residual_shape_delta = (
+            float(getattr(model, "residual_shape_branch_condition_scale", 1.0))
             * residual_shape_branch_condition_gate
             * residual_shape_branch_condition_delta
         )
-    return torch.tanh(waveform_frame_logits)
+    resolved_output_mode = str(waveform_output_mode).strip().lower()
+    if resolved_output_mode == "full_output":
+        waveform_frame_logits = waveform_decoder_base_logits + residual_shape_delta
+    elif resolved_output_mode == "base_logits_only":
+        waveform_frame_logits = waveform_decoder_base_logits
+    elif resolved_output_mode == "residual_shape_only":
+        waveform_frame_logits = residual_shape_delta
+    else:
+        raise ValueError(f"Unsupported waveform_output_mode in structure probe: {waveform_output_mode!r}")
+    return {
+        "decoder_hidden": decoder_hidden,
+        "waveform_decoder_base_logits": waveform_decoder_base_logits,
+        "waveform_residual_shape_delta": residual_shape_delta,
+        "waveform_frame_logits": waveform_frame_logits,
+        "waveform_frames": torch.tanh(waveform_frame_logits),
+    }
+
+
+def write_probe_waveform_assets(
+    *,
+    waveform: torch.Tensor,
+    sample_rate: int,
+    audio_path: Path,
+    spectrogram_path: Path,
+    frame_length: int,
+    hop_length: int,
+) -> None:
+    write_waveform_int16(audio_path, waveform, sample_rate=sample_rate)
+    save_linear_spectrogram_png(
+        waveform=waveform,
+        sample_rate=int(sample_rate),
+        output_path=spectrogram_path,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+
+
+def save_linear_spectrogram_png(
+    *,
+    waveform: torch.Tensor,
+    sample_rate: int,
+    output_path: Path,
+    frame_length: int,
+    hop_length: int,
+) -> None:
+    import matplotlib.pyplot as plt
+
+    waveform_cpu = waveform.detach().cpu().to(torch.float32).view(-1)
+    n_fft = 1024
+    win_length = min(int(n_fft), max(256, int(frame_length)))
+    hop = max(1, int(hop_length))
+    window = torch.hann_window(win_length, dtype=torch.float32)
+    spectrogram = torch.stft(
+        waveform_cpu,
+        n_fft=n_fft,
+        hop_length=hop,
+        win_length=win_length,
+        window=window,
+        center=True,
+        return_complex=True,
+    ).abs()
+    if int(spectrogram.numel()) <= 0:
+        image = torch.zeros((1, 1), dtype=torch.float32)
+    else:
+        upper = float(torch.quantile(spectrogram.reshape(-1), 0.995).item())
+        if upper <= 1.0e-8:
+            upper = float(spectrogram.max().item())
+        if upper <= 1.0e-8:
+            image = torch.zeros_like(spectrogram)
+        else:
+            image = (spectrogram / upper).clamp(0.0, 1.0)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    plt.imsave(output_path, image.flip(0).numpy(), cmap="gray", vmin=0.0, vmax=1.0)
 
 
 def apply_structure_transform(
@@ -545,9 +1176,19 @@ def summarize_stage_metrics(
     periodic_hidden: torch.Tensor,
     noise_hidden: torch.Tensor,
     fused_hidden: torch.Tensor,
+    waveform_decoder_base_logits: torch.Tensor,
+    waveform_residual_shape_delta: torch.Tensor,
+    decoder_hidden: torch.Tensor,
+    waveform_frame_logits: torch.Tensor,
     waveform_frames: torch.Tensor,
     decoded_waveform: torch.Tensor,
     aligned_waveform: torch.Tensor | None,
+    vuv_target: torch.Tensor | None,
+    voiced_proxy_target: torch.Tensor | None,
+    aper_target: torch.Tensor | None,
+    aperiodicity_proxy_target: torch.Tensor | None,
+    energy_control_target: torch.Tensor | None,
+    energy_log_rms_norm_target: torch.Tensor | None,
     frame_length: int,
     hop_length: int,
     sample_rate: int,
@@ -580,10 +1221,76 @@ def summarize_stage_metrics(
         aligned_frame_rms = aligned_analysis_frames.pow(2).mean(dim=1).sqrt()
     decoded_spectral = compute_waveform_spectral_summary(decoded_waveform, int(sample_rate))
     decoded_frame_metrics = summarize_representation_metrics(decoded_analysis_frames)
+    conditioning = build_voicing_conditioning_bundle(
+        frame_count=int(waveform_frames_cpu.shape[0]),
+        vuv_target=vuv_target,
+        voiced_proxy_target=voiced_proxy_target,
+        aper_target=aper_target,
+        aperiodicity_proxy_target=aperiodicity_proxy_target,
+        energy_control_target=energy_control_target,
+        energy_log_rms_norm_target=energy_log_rms_norm_target,
+    )
+    decoded_voicing_metrics, decoded_voicing_notes = summarize_voicing_conditioned_waveform_metrics(
+        waveform=decoded_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        target_frame_count=int(waveform_frames_cpu.shape[0]),
+        sample_rate=int(sample_rate),
+        vuv_target=vuv_target,
+        voiced_proxy_target=voiced_proxy_target,
+        aper_target=aper_target,
+        aperiodicity_proxy_target=aperiodicity_proxy_target,
+        energy_log_rms_norm_target=energy_log_rms_norm_target,
+        energy_control_target=energy_control_target,
+    )
     periodic_metrics = summarize_representation_metrics(periodic_hidden_cpu)
     noise_metrics = summarize_representation_metrics(noise_hidden_cpu)
     fused_metrics = summarize_representation_metrics(fused_hidden_cpu)
+    base_logits_metrics = summarize_representation_metrics(
+        waveform_decoder_base_logits.detach().cpu().to(torch.float32)
+    )
+    residual_shape_metrics = summarize_representation_metrics(
+        waveform_residual_shape_delta.detach().cpu().to(torch.float32)
+    )
+    decoder_metrics = summarize_representation_metrics(decoder_hidden.detach().cpu().to(torch.float32))
+    waveform_frame_logits_metrics = summarize_representation_metrics(
+        waveform_frame_logits.detach().cpu().to(torch.float32)
+    )
     waveform_frame_metrics = summarize_representation_metrics(waveform_frames_cpu)
+    fused_control_metrics, fused_control_notes = summarize_sequence_control_coupling_metrics(
+        sequence=fused_hidden_cpu,
+        conditioning=conditioning,
+    )
+    fused_geometry_metrics = summarize_sequence_geometry_metrics(fused_hidden_cpu)
+    fused_cluster_metrics = summarize_sequence_conditioned_cluster_metrics(fused_hidden_cpu, conditioning)
+    decoder_control_metrics, decoder_control_notes = summarize_sequence_control_coupling_metrics(
+        sequence=decoder_hidden.detach().cpu().to(torch.float32),
+        conditioning=conditioning,
+    )
+    decoder_geometry_metrics = summarize_sequence_geometry_metrics(
+        decoder_hidden.detach().cpu().to(torch.float32)
+    )
+    decoder_cluster_metrics = summarize_sequence_conditioned_cluster_metrics(
+        decoder_hidden.detach().cpu().to(torch.float32),
+        conditioning,
+    )
+    base_logits_control_metrics, base_logits_control_notes = summarize_sequence_control_coupling_metrics(
+        sequence=waveform_decoder_base_logits.detach().cpu().to(torch.float32),
+        conditioning=conditioning,
+    )
+    base_logits_geometry_metrics = summarize_sequence_geometry_metrics(
+        waveform_decoder_base_logits.detach().cpu().to(torch.float32)
+    )
+    base_logits_cluster_metrics = summarize_sequence_conditioned_cluster_metrics(
+        waveform_decoder_base_logits.detach().cpu().to(torch.float32),
+        conditioning,
+    )
+    waveform_frame_control_metrics, waveform_frame_control_notes = summarize_sequence_control_coupling_metrics(
+        sequence=waveform_frames_cpu,
+        conditioning=conditioning,
+    )
+    waveform_frame_geometry_metrics = summarize_sequence_geometry_metrics(waveform_frames_cpu)
+    waveform_frame_cluster_metrics = summarize_sequence_conditioned_cluster_metrics(waveform_frames_cpu, conditioning)
     decode_metrics = {
         "decoded_waveform_rms": round(float(decoded_waveform.pow(2).mean().sqrt().item()), 6),
         "decoded_abs_mean": round(float(decoded_waveform.abs().mean().item()), 6),
@@ -625,13 +1332,82 @@ def summarize_stage_metrics(
                 ),
             }
         )
+    aligned_voicing_metrics = {}
+    if aligned_waveform_cpu is not None:
+        aligned_voicing_metrics, _ = summarize_voicing_conditioned_waveform_metrics(
+            waveform=aligned_waveform_cpu,
+            frame_length=int(frame_length),
+            hop_length=int(hop_length),
+            target_frame_count=int(waveform_frames_cpu.shape[0]),
+            sample_rate=int(sample_rate),
+            vuv_target=vuv_target,
+            voiced_proxy_target=voiced_proxy_target,
+            aper_target=aper_target,
+            aperiodicity_proxy_target=aperiodicity_proxy_target,
+            energy_log_rms_norm_target=energy_log_rms_norm_target,
+            energy_control_target=energy_control_target,
+        )
+    control_metrics = {
+        "voicing_control_ready": 0.0 if not decoded_voicing_metrics else 1.0,
+        "voicing_source_is_vuv_target": 1.0 if decoded_voicing_notes.get("voicing_source") == "vuv_target" else 0.0,
+        "voicing_source_is_voiced_proxy_target": (
+            1.0 if decoded_voicing_notes.get("voicing_source") == "voiced_proxy_target" else 0.0
+        ),
+        "voicing_source_is_aper_inversion": (
+            1.0 if str(decoded_voicing_notes.get("voicing_source", "")).endswith("_inverted") else 0.0
+        ),
+        "aper_source_is_aper_target": 1.0 if decoded_voicing_notes.get("aper_source") == "aper_target" else 0.0,
+        "aper_source_is_proxy_target": (
+            1.0 if decoded_voicing_notes.get("aper_source") == "aperiodicity_proxy_target" else 0.0
+        ),
+        "energy_source_is_norm_target": (
+            1.0 if decoded_voicing_notes.get("energy_source") == "energy_log_rms_norm_target" else 0.0
+        ),
+        "energy_source_is_logsig_target": (
+            1.0 if decoded_voicing_notes.get("energy_source") == "energy_control_target_sigmoid" else 0.0
+        ),
+    }
+    if decoded_voicing_metrics and aligned_voicing_metrics:
+        control_metrics.update(
+            {
+                "decoded_vs_aligned_unvoiced_minus_voiced_spectral_centroid_hz_gap": round(
+                    float(decoded_voicing_metrics["unvoiced_minus_voiced_spectral_centroid_hz"])
+                    - float(aligned_voicing_metrics["unvoiced_minus_voiced_spectral_centroid_hz"]),
+                    6,
+                ),
+                "decoded_vs_aligned_unvoiced_minus_voiced_spectral_high_band_energy_ratio_gap": round(
+                    float(decoded_voicing_metrics["unvoiced_minus_voiced_spectral_high_band_energy_ratio"])
+                    - float(aligned_voicing_metrics["unvoiced_minus_voiced_spectral_high_band_energy_ratio"]),
+                    6,
+                ),
+            }
+        )
     return {
         "periodic_hidden": periodic_metrics,
         "noise_hidden": noise_metrics,
         "fused_hidden": fused_metrics,
+        "waveform_decoder_base_logits": base_logits_metrics,
+        "waveform_residual_shape_delta": residual_shape_metrics,
+        "decoder_hidden": decoder_metrics,
+        "waveform_frame_logits": waveform_frame_logits_metrics,
         "waveform_frames": waveform_frame_metrics,
         "decoded_frames": decoded_frame_metrics,
         "decode": decode_metrics,
+        "decoded_voicing_conditioned": decoded_voicing_metrics,
+        "aligned_voicing_conditioned": aligned_voicing_metrics,
+        "voicing_controls": control_metrics,
+        "fused_hidden_control_coupling": fused_control_metrics,
+        "fused_hidden_geometry": fused_geometry_metrics,
+        "fused_hidden_conditioned_clusters": fused_cluster_metrics,
+        "decoder_hidden_control_coupling": decoder_control_metrics,
+        "decoder_hidden_geometry": decoder_geometry_metrics,
+        "decoder_hidden_conditioned_clusters": decoder_cluster_metrics,
+        "waveform_decoder_base_logits_control_coupling": base_logits_control_metrics,
+        "waveform_decoder_base_logits_geometry": base_logits_geometry_metrics,
+        "waveform_decoder_base_logits_conditioned_clusters": base_logits_cluster_metrics,
+        "waveform_frames_control_coupling": waveform_frame_control_metrics,
+        "waveform_frames_geometry": waveform_frame_geometry_metrics,
+        "waveform_frames_conditioned_clusters": waveform_frame_cluster_metrics,
     }
 
 
@@ -829,6 +1605,316 @@ def build_baseline_decoder_collapse_summary(aggregate_rows: list[dict[str, objec
     }
 
 
+def build_voicing_conditioned_shape_summary(aggregate_rows: list[dict[str, object]]) -> list[dict[str, object]]:
+    interesting_labels = {
+        "baseline",
+        "waveform_decoder_base_logits_only",
+        "waveform_residual_shape_only",
+    }
+    rows = []
+    for row in aggregate_rows:
+        label = str(row["label"])
+        if label not in interesting_labels:
+            continue
+        scalar_metrics = dict(row.get("scalar_metrics", {}))
+        rows.append(
+            {
+                "label": label,
+                "record_count": int(row.get("record_count", 0)),
+                "decoded_unvoiced_minus_voiced_spectral_centroid_hz": float(
+                    scalar_metrics.get(
+                        "decoded_voicing_conditioned_unvoiced_minus_voiced_spectral_centroid_hz",
+                        {},
+                    ).get("mean", 0.0)
+                ),
+                "decoded_unvoiced_minus_voiced_spectral_high_band_energy_ratio": float(
+                    scalar_metrics.get(
+                        "decoded_voicing_conditioned_unvoiced_minus_voiced_spectral_high_band_energy_ratio",
+                        {},
+                    ).get("mean", 0.0)
+                ),
+                "aligned_unvoiced_minus_voiced_spectral_centroid_hz": float(
+                    scalar_metrics.get(
+                        "aligned_voicing_conditioned_unvoiced_minus_voiced_spectral_centroid_hz",
+                        {},
+                    ).get("mean", 0.0)
+                ),
+                "aligned_unvoiced_minus_voiced_spectral_high_band_energy_ratio": float(
+                    scalar_metrics.get(
+                        "aligned_voicing_conditioned_unvoiced_minus_voiced_spectral_high_band_energy_ratio",
+                        {},
+                    ).get("mean", 0.0)
+                ),
+                "decoded_vs_aligned_unvoiced_minus_voiced_spectral_centroid_hz_gap": float(
+                    scalar_metrics.get(
+                        "voicing_controls_decoded_vs_aligned_unvoiced_minus_voiced_spectral_centroid_hz_gap",
+                        {},
+                    ).get("mean", 0.0)
+                ),
+                "decoded_vs_aligned_unvoiced_minus_voiced_spectral_high_band_energy_ratio_gap": float(
+                    scalar_metrics.get(
+                        "voicing_controls_decoded_vs_aligned_unvoiced_minus_voiced_spectral_high_band_energy_ratio_gap",
+                        {},
+                    ).get("mean", 0.0)
+                ),
+                "decoded_active_voiced_fraction": float(
+                    scalar_metrics.get("decoded_voicing_conditioned_active_voiced_fraction", {}).get("mean", 0.0)
+                ),
+                "decoded_active_unvoiced_fraction": float(
+                    scalar_metrics.get("decoded_voicing_conditioned_active_unvoiced_fraction", {}).get("mean", 0.0)
+                ),
+            }
+        )
+    order = {"baseline": 0, "waveform_decoder_base_logits_only": 1, "waveform_residual_shape_only": 2}
+    return sorted(rows, key=lambda item: order.get(str(item["label"]), 999))
+
+
+def build_baseline_upstream_coupling_localization_summary(
+    aggregate_rows: list[dict[str, object]],
+) -> dict[str, float | str]:
+    baseline_row = next((row for row in aggregate_rows if str(row.get("label")) == "baseline"), None)
+    if baseline_row is None:
+        return {}
+    scalar_metrics = dict(baseline_row.get("scalar_metrics", {}))
+
+    def mean_metric(key: str) -> float:
+        return float(scalar_metrics.get(key, {}).get("mean", 0.0))
+
+    stages = (
+        "fused_hidden_control_coupling",
+        "decoder_hidden_control_coupling",
+        "waveform_decoder_base_logits_control_coupling",
+        "waveform_frames_control_coupling",
+    )
+    summary: dict[str, float | str] = {}
+    for stage_name in stages:
+        short = stage_name.replace("_control_coupling", "")
+        summary[f"{short}_rms_to_voicing_corr"] = round(
+            mean_metric(f"{stage_name}_active_frame_rms_to_voicing_corr"),
+            6,
+        )
+        summary[f"{short}_rms_to_aper_corr"] = round(
+            mean_metric(f"{stage_name}_active_frame_rms_to_aper_corr"),
+            6,
+        )
+        summary[f"{short}_rms_to_energy_corr"] = round(
+            mean_metric(f"{stage_name}_active_frame_rms_to_energy_corr"),
+            6,
+        )
+        summary[f"{short}_unvoiced_minus_voiced_frame_rms_mean"] = round(
+            mean_metric(f"{stage_name}_unvoiced_minus_voiced_frame_rms_mean"),
+            6,
+        )
+
+    fused_to_decoder_voicing_jump = round(
+        float(summary["decoder_hidden_rms_to_voicing_corr"]) - float(summary["fused_hidden_rms_to_voicing_corr"]),
+        6,
+    )
+    decoder_to_logits_voicing_jump = round(
+        float(summary["waveform_decoder_base_logits_rms_to_voicing_corr"])
+        - float(summary["decoder_hidden_rms_to_voicing_corr"]),
+        6,
+    )
+    logits_to_frames_voicing_jump = round(
+        float(summary["waveform_frames_rms_to_voicing_corr"])
+        - float(summary["waveform_decoder_base_logits_rms_to_voicing_corr"]),
+        6,
+    )
+    fused_to_decoder_aper_jump = round(
+        abs(float(summary["decoder_hidden_rms_to_aper_corr"]))
+        - abs(float(summary["fused_hidden_rms_to_aper_corr"])),
+        6,
+    )
+    decoder_to_logits_aper_jump = round(
+        abs(float(summary["waveform_decoder_base_logits_rms_to_aper_corr"]))
+        - abs(float(summary["decoder_hidden_rms_to_aper_corr"])),
+        6,
+    )
+    logits_to_frames_aper_jump = round(
+        abs(float(summary["waveform_frames_rms_to_aper_corr"]))
+        - abs(float(summary["waveform_decoder_base_logits_rms_to_aper_corr"])),
+        6,
+    )
+    fused_to_decoder_uv_v_rms_jump = round(
+        float(summary["decoder_hidden_unvoiced_minus_voiced_frame_rms_mean"])
+        - float(summary["fused_hidden_unvoiced_minus_voiced_frame_rms_mean"]),
+        6,
+    )
+    decoder_to_logits_uv_v_rms_jump = round(
+        float(summary["waveform_decoder_base_logits_unvoiced_minus_voiced_frame_rms_mean"])
+        - float(summary["decoder_hidden_unvoiced_minus_voiced_frame_rms_mean"]),
+        6,
+    )
+    logits_to_frames_uv_v_rms_jump = round(
+        float(summary["waveform_frames_unvoiced_minus_voiced_frame_rms_mean"])
+        - float(summary["waveform_decoder_base_logits_unvoiced_minus_voiced_frame_rms_mean"]),
+        6,
+    )
+    summary.update(
+        {
+            "fused_to_decoder_voicing_corr_jump": fused_to_decoder_voicing_jump,
+            "decoder_to_base_logits_voicing_corr_jump": decoder_to_logits_voicing_jump,
+            "base_logits_to_frames_voicing_corr_jump": logits_to_frames_voicing_jump,
+            "fused_to_decoder_abs_aper_corr_jump": fused_to_decoder_aper_jump,
+            "decoder_to_base_logits_abs_aper_corr_jump": decoder_to_logits_aper_jump,
+            "base_logits_to_frames_abs_aper_corr_jump": logits_to_frames_aper_jump,
+            "fused_to_decoder_uv_v_rms_jump": fused_to_decoder_uv_v_rms_jump,
+            "decoder_to_base_logits_uv_v_rms_jump": decoder_to_logits_uv_v_rms_jump,
+            "base_logits_to_frames_uv_v_rms_jump": logits_to_frames_uv_v_rms_jump,
+        }
+    )
+
+    jump_candidates = {
+        "fused_to_decoder": max(
+            abs(fused_to_decoder_voicing_jump),
+            abs(fused_to_decoder_aper_jump),
+            abs(fused_to_decoder_uv_v_rms_jump),
+        ),
+        "decoder_to_base_logits": max(
+            abs(decoder_to_logits_voicing_jump),
+            abs(decoder_to_logits_aper_jump),
+            abs(decoder_to_logits_uv_v_rms_jump),
+        ),
+        "base_logits_to_frames": max(
+            abs(logits_to_frames_voicing_jump),
+            abs(logits_to_frames_aper_jump),
+            abs(logits_to_frames_uv_v_rms_jump),
+        ),
+    }
+    strongest_transition = max(jump_candidates.items(), key=lambda item: item[1])
+    summary["strongest_transition"] = str(strongest_transition[0])
+    summary["strongest_transition_score"] = round(float(strongest_transition[1]), 6)
+    if float(strongest_transition[1]) < 0.03:
+        diagnosis = "no_clear_new_stagewise_coupling_jump"
+    elif str(strongest_transition[0]) == "decoder_to_base_logits":
+        diagnosis = "decoder_hidden_to_base_logits_is_main_coupling_amplifier"
+    elif str(strongest_transition[0]) == "base_logits_to_frames":
+        diagnosis = "base_logits_to_waveform_frames_is_main_coupling_amplifier"
+    else:
+        diagnosis = "fused_hidden_to_decoder_hidden_is_main_coupling_amplifier"
+    summary["diagnosis"] = diagnosis
+    return summary
+
+
+def build_baseline_decoder_projection_geometry_summary(
+    aggregate_rows: list[dict[str, object]],
+) -> dict[str, float | str]:
+    baseline_row = next((row for row in aggregate_rows if str(row.get("label")) == "baseline"), None)
+    if baseline_row is None:
+        return {}
+    scalar_metrics = dict(baseline_row.get("scalar_metrics", {}))
+
+    def mean_metric(key: str) -> float:
+        return float(scalar_metrics.get(key, {}).get("mean", 0.0))
+
+    stages = (
+        "fused_hidden",
+        "decoder_hidden",
+        "waveform_decoder_base_logits",
+        "waveform_frames",
+    )
+    summary: dict[str, float | str] = {}
+    for stage in stages:
+        summary[f"{stage}_effective_rank_fraction"] = round(
+            mean_metric(f"{stage}_geometry_effective_rank_fraction"),
+            6,
+        )
+        summary[f"{stage}_top1_variance_ratio"] = round(
+            mean_metric(f"{stage}_geometry_top1_variance_ratio"),
+            6,
+        )
+        summary[f"{stage}_top4_variance_ratio"] = round(
+            mean_metric(f"{stage}_geometry_top4_variance_ratio"),
+            6,
+        )
+        summary[f"{stage}_voiced_unvoiced_separation_ratio"] = round(
+            mean_metric(f"{stage}_conditioned_clusters_voiced_unvoiced_separation_ratio"),
+            6,
+        )
+        summary[f"{stage}_active_template_distance_mean"] = round(
+            mean_metric(f"{stage}_conditioned_clusters_active_template_distance_mean"),
+            6,
+        )
+
+    decoder_to_logits_rank_drop = round(
+        float(summary["decoder_hidden_effective_rank_fraction"])
+        - float(summary["waveform_decoder_base_logits_effective_rank_fraction"]),
+        6,
+    )
+    decoder_to_logits_top1_jump = round(
+        float(summary["waveform_decoder_base_logits_top1_variance_ratio"])
+        - float(summary["decoder_hidden_top1_variance_ratio"]),
+        6,
+    )
+    decoder_to_logits_sep_jump = round(
+        float(summary["waveform_decoder_base_logits_voiced_unvoiced_separation_ratio"])
+        - float(summary["decoder_hidden_voiced_unvoiced_separation_ratio"]),
+        6,
+    )
+    decoder_to_logits_template_drop = round(
+        float(summary["decoder_hidden_active_template_distance_mean"])
+        - float(summary["waveform_decoder_base_logits_active_template_distance_mean"]),
+        6,
+    )
+    logits_to_frames_rank_drop = round(
+        float(summary["waveform_decoder_base_logits_effective_rank_fraction"])
+        - float(summary["waveform_frames_effective_rank_fraction"]),
+        6,
+    )
+    logits_to_frames_top1_jump = round(
+        float(summary["waveform_frames_top1_variance_ratio"])
+        - float(summary["waveform_decoder_base_logits_top1_variance_ratio"]),
+        6,
+    )
+    logits_to_frames_sep_jump = round(
+        float(summary["waveform_frames_voiced_unvoiced_separation_ratio"])
+        - float(summary["waveform_decoder_base_logits_voiced_unvoiced_separation_ratio"]),
+        6,
+    )
+    logits_to_frames_template_drop = round(
+        float(summary["waveform_decoder_base_logits_active_template_distance_mean"])
+        - float(summary["waveform_frames_active_template_distance_mean"]),
+        6,
+    )
+    summary.update(
+        {
+            "decoder_to_base_logits_effective_rank_drop": decoder_to_logits_rank_drop,
+            "decoder_to_base_logits_top1_variance_jump": decoder_to_logits_top1_jump,
+            "decoder_to_base_logits_cluster_separation_jump": decoder_to_logits_sep_jump,
+            "decoder_to_base_logits_template_distance_drop": decoder_to_logits_template_drop,
+            "base_logits_to_frames_effective_rank_drop": logits_to_frames_rank_drop,
+            "base_logits_to_frames_top1_variance_jump": logits_to_frames_top1_jump,
+            "base_logits_to_frames_cluster_separation_jump": logits_to_frames_sep_jump,
+            "base_logits_to_frames_template_distance_drop": logits_to_frames_template_drop,
+        }
+    )
+    jump_candidates = {
+        "decoder_to_base_logits": max(
+            abs(decoder_to_logits_rank_drop),
+            abs(decoder_to_logits_top1_jump),
+            abs(decoder_to_logits_sep_jump),
+            abs(decoder_to_logits_template_drop),
+        ),
+        "base_logits_to_frames": max(
+            abs(logits_to_frames_rank_drop),
+            abs(logits_to_frames_top1_jump),
+            abs(logits_to_frames_sep_jump),
+            abs(logits_to_frames_template_drop),
+        ),
+    }
+    strongest_transition = max(jump_candidates.items(), key=lambda item: item[1])
+    summary["strongest_transition"] = str(strongest_transition[0])
+    summary["strongest_transition_score"] = round(float(strongest_transition[1]), 6)
+    if float(strongest_transition[1]) < 0.03:
+        diagnosis = "no_clear_projection_geometry_jump"
+    elif str(strongest_transition[0]) == "decoder_to_base_logits":
+        diagnosis = "decoder_hidden_to_base_logits_is_main_geometry_collapse"
+    else:
+        diagnosis = "base_logits_to_frames_is_main_geometry_collapse"
+    summary["diagnosis"] = diagnosis
+    return summary
+
+
 def build_markdown(summary: dict[str, object]) -> str:
     lines = [
         "# Stage5 Waveform Decoder Structure Probe",
@@ -843,9 +1929,28 @@ def build_markdown(summary: dict[str, object]) -> str:
         f"- sample_count: {summary['sample_count']}",
         f"- decode_runtime: {json.dumps(summary['decode_runtime'], ensure_ascii=False)}",
         f"- baseline_decoder_collapse_summary: {json.dumps(summary['baseline_decoder_collapse_summary'], ensure_ascii=False)}",
+        f"- baseline_upstream_coupling_localization_summary: {json.dumps(summary.get('baseline_upstream_coupling_localization_summary', {}), ensure_ascii=False)}",
+        f"- baseline_decoder_projection_geometry_summary: {json.dumps(summary.get('baseline_decoder_projection_geometry_summary', {}), ensure_ascii=False)}",
         "",
-        "## Variant Impact Ranking",
+        "## Voicing-Conditioned Shape Summary",
     ]
+    for item in list(summary.get("voicing_conditioned_shape_summary", [])):
+        lines.append(
+            "- "
+            f"{item['label']}: "
+            f"decoded_uv_minus_v_centroid={item['decoded_unvoiced_minus_voiced_spectral_centroid_hz']:.6f}, "
+            f"decoded_uv_minus_v_high_band={item['decoded_unvoiced_minus_voiced_spectral_high_band_energy_ratio']:.6f}, "
+            f"aligned_uv_minus_v_centroid={item['aligned_unvoiced_minus_voiced_spectral_centroid_hz']:.6f}, "
+            f"aligned_uv_minus_v_high_band={item['aligned_unvoiced_minus_voiced_spectral_high_band_energy_ratio']:.6f}, "
+            f"decoded_vs_aligned_centroid_gap={item['decoded_vs_aligned_unvoiced_minus_voiced_spectral_centroid_hz_gap']:.6f}, "
+            f"decoded_vs_aligned_high_band_gap={item['decoded_vs_aligned_unvoiced_minus_voiced_spectral_high_band_energy_ratio_gap']:.6f}"
+        )
+    lines.extend(
+        [
+            "",
+        "## Variant Impact Ranking",
+        ]
+    )
     for item in list(summary.get("variant_impact_ranking", [])):
         lines.append(
             "- "

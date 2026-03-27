@@ -2063,7 +2063,10 @@ def load_source_scaffold_auxiliary_targets(source_scaffold_path: str) -> dict[st
     available_controls = dict(scaffold_payload.get("available_controls", {}))
     auxiliary_targets: dict[str, torch.Tensor] = {}
     for target_name, control_key in (
+        ("vuv_target", "vuv"),
         ("aper_target", "aper"),
+        ("voiced_proxy_target", "voiced_proxy"),
+        ("aperiodicity_proxy_target", "aperiodicity_proxy"),
         ("energy_control_target", "E"),
         ("energy_log_rms_norm_target", "E_log_rms_norm"),
     ):
@@ -2125,10 +2128,13 @@ def extract_training_batch(payload: dict[str, object]) -> dict[str, torch.Tensor
         "aligned_waveform": payload["aligned_waveform"].to(torch.float32),
     }
     for optional_key in (
+        "vuv_target",
         "energy_proxy_target",
         "energy_control_target",
         "energy_log_rms_norm_target",
         "aper_target",
+        "voiced_proxy_target",
+        "aperiodicity_proxy_target",
     ):
         optional_tensor = extract_optional_training_tensor(targets, optional_key)
         if optional_tensor is not None:

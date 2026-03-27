@@ -1812,3 +1812,60 @@
       `aper / noise_E`
       在 output head
       的重新放大
+## 2026-03-27 深夜继续补充
+- `docs/446_stage5_output_head_substage_structure_probe_base_vs_residual_report.md`
+  已把 output-head
+  再拆成：
+  - `baseline_full_output`
+  - `waveform_decoder_base_logits_only`
+  - `waveform_residual_shape_only`
+  并在：
+  - teacher-first 三条 pure-buzz 样本
+  - Stage5 native validation3
+  两侧都跑通了
+  `wav + 线性频谱图`
+  导出。
+- 当前新结论比
+  `445`
+  更进一步：
+  - baseline
+    几乎等于
+    `waveform_decoder_base_logits_only`
+  - `waveform_residual_shape_only`
+    不是隐藏的人声结构，
+    而是更亮、更高频、
+    更模板化的纯 buzz
+- 量化上在 user-line：
+  - baseline：
+    `template / centroid / high_band = 0.887733 / 4163.743652 / 0.197849`
+  - `base_logits_only`：
+    `0.887373 / 4256.501465 / 0.201769`
+  - `residual_shape_only`：
+    `0.999805 / 12338.094727 / 0.833547`
+- native validation3
+  也完全同向：
+  - baseline：
+    `0.824535 / 3407.504639 / 0.151263`
+  - `base_logits_only`：
+    `0.823982 / 3470.388672 / 0.154959`
+  - `residual_shape_only`：
+    `0.999815 / 11351.418945 / 0.815930`
+- 因而当前主线必须再次更新为：
+  - 不再优先围绕
+    `residual_shape`
+    做同层解释和小修
+  - 当前可听输出几乎就是
+    `waveform_decoder_base_logits`
+    本体
+  - 下一步必须转向：
+    - `waveform_decoder(decoder_hidden)`
+      为什么只生成稳定
+      tonal/pure buzz
+    - 而不是继续问
+      residual-shape
+      为什么没把它修好
+- 当前新增 probe 产物目录：
+  - user-line：
+    `reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/rbt_wdsp_outputhead_bpae01_round1_1/`
+  - native validation3：
+    `reports/runtime/stage5_waveform_decoder_structure_probe_headstruct_bhb01_bpae01_validation3_round1_1/`

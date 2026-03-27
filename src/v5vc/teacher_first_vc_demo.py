@@ -58,9 +58,19 @@ from v5vc.stage5_waveform_decoder_structure_probe import (
     STRUCTURE_PROBE_VARIANTS,
     apply_structure_transform,
     build_baseline_decoder_collapse_summary,
+    build_baseline_decoder_projection_geometry_summary,
+    build_baseline_upstream_coupling_localization_summary,
     build_variant_aggregates,
     build_variant_impact_ranking,
+    build_voicing_conditioned_shape_summary,
     compute_fused_hidden_for_probe,
+    compute_waveform_structure_outputs_for_probe,
+    build_voicing_conditioning_bundle,
+    summarize_sequence_conditioned_cluster_metrics,
+    summarize_sequence_geometry_metrics,
+    summarize_sequence_control_coupling_metrics,
+    summarize_voicing_conditioned_waveform_metrics,
+    write_probe_waveform_assets,
 )
 from v5vc.stage5_waveform_handoff_probe import (
     HANDOFF_DECODE_ROUTES,
@@ -5323,11 +5333,19 @@ def analyze_teacher_first_vc_waveform_decoder_structure(
                 "label": str(item["label"]),
                 "description": str(item["description"]),
                 "transforms": [f"{stage}={mode}" for stage, mode in list(item["transforms"])],
+                "waveform_output_mode": str(item.get("waveform_output_mode", "full_output")),
             }
             for item in STRUCTURE_PROBE_VARIANTS
         ],
         "variant_impact_ranking": build_variant_impact_ranking(aggregate_rows),
         "baseline_decoder_collapse_summary": build_baseline_decoder_collapse_summary(aggregate_rows),
+        "baseline_upstream_coupling_localization_summary": build_baseline_upstream_coupling_localization_summary(
+            aggregate_rows
+        ),
+        "baseline_decoder_projection_geometry_summary": build_baseline_decoder_projection_geometry_summary(
+            aggregate_rows
+        ),
+        "voicing_conditioned_shape_summary": build_voicing_conditioned_shape_summary(aggregate_rows),
         "variant_aggregates": aggregate_rows,
         "cases": case_summaries,
         "notes": [
@@ -5335,6 +5353,7 @@ def analyze_teacher_first_vc_waveform_decoder_structure(
             "baseline is decoded from the teacher-first user-line scaffold with the current checkpoint and the requested predicted-activity gate setting.",
             "fused_hidden_from_periodic_hidden, fused_hidden_from_noise_hidden, and fused_hidden_from_branch_mean bypass fusion and test whether the current decoder route can still respond to branch-side hidden dynamics on user-line inputs.",
             "If branch-side bypasses reduce decoded template metrics sharply while baseline remains near-fixed-template, the first collapse is still upstream of the decoder, even on user-line.",
+            "voicing_conditioned_shape_summary reuses scaffold-side voiced/aper/energy controls to measure whether output-head variants form distinct voiced-vs-unvoiced spectral shapes on user-line pure-buzz cases.",
         ],
     }
     (output_dir / "teacher_first_vc_waveform_decoder_structure_probe.json").write_text(
@@ -5510,6 +5529,7 @@ def build_waveform_decoder_structure_case_summary(
     noise_branch_features = branch_scaffold["noise_branch_features"].to(device=device, dtype=torch.float32)
     structure_dir = case_output_dir / TEACHER_FIRST_WAVEFORM_DECODER_STRUCTURE_DIRNAME
     structure_dir.mkdir(parents=True, exist_ok=True)
+    available_controls = dict(scaffold_payload.get("available_controls", {}))
 
     variant_rows: list[dict[str, object]] = []
     baseline_waveform = None
@@ -5551,6 +5571,7 @@ def build_waveform_decoder_structure_case_summary(
                 periodic_hidden=periodic_hidden,
                 noise_hidden=noise_hidden,
                 fused_hidden=fused_hidden,
+                waveform_output_mode=str(variant.get("waveform_output_mode", "full_output")),
             )
             branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
             periodic_gate = torch.sigmoid(model.periodic_gate(periodic_hidden))
@@ -5574,6 +5595,8 @@ def build_waveform_decoder_structure_case_summary(
                 noise_hidden=noise_hidden.detach().cpu().to(torch.float32),
                 branch_mean_hidden=branch_mean_hidden.detach().cpu().to(torch.float32),
                 fused_hidden=fused_hidden.detach().cpu().to(torch.float32),
+                waveform_decoder_base_logits=outputs["waveform_decoder_base_logits"].detach().cpu().to(torch.float32),
+                waveform_residual_shape_delta=outputs["waveform_residual_shape_delta"].detach().cpu().to(torch.float32),
                 decoder_hidden=outputs["decoder_hidden"].detach().cpu().to(torch.float32),
                 waveform_frame_logits=outputs["waveform_frame_logits"].detach().cpu().to(torch.float32),
                 waveform_frames=outputs["waveform_frames"].detach().cpu().to(torch.float32),
@@ -5585,19 +5608,37 @@ def build_waveform_decoder_structure_case_summary(
                 frame_length=int(source_runtime["frame_length"]),
                 hop_length=int(source_runtime["hop_length"]),
                 predicted_activity=predicted_activity.detach().cpu().to(torch.float32),
+                fused_hidden_sequence=fused_hidden.detach().cpu().to(torch.float32),
+                decoder_hidden_sequence=outputs["decoder_hidden"].detach().cpu().to(torch.float32),
+                waveform_decoder_base_logits_sequence=outputs["waveform_decoder_base_logits"].detach().cpu().to(
+                    torch.float32
+                ),
+                waveform_frames_sequence=outputs["waveform_frames"].detach().cpu().to(torch.float32),
+                vuv_target=available_controls.get("vuv"),
+                voiced_proxy_target=available_controls.get("voiced_proxy"),
+                aper_target=available_controls.get("aper"),
+                aperiodicity_proxy_target=available_controls.get("aperiodicity_proxy"),
+                energy_control_target=available_controls.get("E"),
+                energy_log_rms_norm_target=available_controls.get("E_log_rms_norm"),
             )
             label = str(variant["label"])
             audio_path = structure_dir / f"{sanitize_bundle_component(label)}.wav"
-            write_waveform_int16(
-                audio_path,
-                decoded_waveform,
+            spectrogram_path = structure_dir / f"{sanitize_bundle_component(label)}.linear_spectrogram.png"
+            write_probe_waveform_assets(
+                waveform=decoded_waveform,
                 sample_rate=int(source_runtime["sample_rate"]),
+                audio_path=audio_path,
+                spectrogram_path=spectrogram_path,
+                frame_length=int(source_runtime["frame_length"]),
+                hop_length=int(source_runtime["hop_length"]),
             )
             variant_row = {
                 "label": label,
                 "description": str(variant["description"]),
+                "waveform_output_mode": str(variant.get("waveform_output_mode", "full_output")),
                 "transform_notes": transform_notes,
                 "audio_path": audio_path.as_posix(),
+                "spectrogram_path": spectrogram_path.as_posix(),
                 "scalar_metrics": scalar_metrics,
                 "stage_metrics": stage_metrics,
                 "_decoded_waveform": decoded_waveform,
@@ -5650,87 +5691,15 @@ def compute_teacher_first_waveform_structure_outputs(
     periodic_hidden: torch.Tensor,
     noise_hidden: torch.Tensor,
     fused_hidden: torch.Tensor,
+    waveform_output_mode: str = "full_output",
 ) -> dict[str, torch.Tensor]:
-    waveform_decoder_mode = str(getattr(model, "waveform_decoder_mode", "fused_single"))
-    if waveform_decoder_mode != "fused_single":
-        raise ValueError(f"Unsupported waveform_decoder_mode in teacher-first structure probe: {waveform_decoder_mode!r}")
-    waveform_decoder = getattr(model, "waveform_decoder", None)
-    if waveform_decoder is None:
-        raise RuntimeError("waveform_decoder is not initialized for fused_single teacher-first structure probe.")
-    branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
-    decoder_hidden = fused_hidden
-    residual_shape_delta = None
-    if bool(getattr(model, "use_decoder_branch_condition_adapter", False)):
-        decoder_branch_condition_adapter = getattr(model, "decoder_branch_condition_adapter", None)
-        decoder_branch_condition_gate = getattr(model, "decoder_branch_condition_gate", None)
-        decoder_fused_condition_proj = getattr(model, "decoder_fused_condition_proj", None)
-        if (
-            decoder_branch_condition_adapter is None
-            or decoder_branch_condition_gate is None
-            or decoder_fused_condition_proj is None
-        ):
-            raise RuntimeError("Decoder branch-condition adapter modules are not initialized for teacher-first structure probe.")
-        branch_condition_features = torch.cat(
-            [
-                fused_hidden,
-                branch_mean_hidden,
-                fused_hidden - branch_mean_hidden,
-            ],
-            dim=-1,
-        )
-        branch_condition_context = decoder_branch_condition_adapter(branch_condition_features)
-        branch_condition_gate = torch.sigmoid(decoder_branch_condition_gate(branch_condition_context))
-        fused_condition = torch.tanh(decoder_fused_condition_proj(branch_condition_context))
-        decoder_hidden = decoder_hidden + branch_condition_gate * fused_condition
-    waveform_decoder_base_logits = waveform_decoder(decoder_hidden)
-    waveform_frame_logits = waveform_decoder_base_logits
-    if bool(getattr(model, "use_residual_shape_branch_condition_adapter", False)):
-        residual_shape_branch_condition_adapter = getattr(model, "residual_shape_branch_condition_adapter", None)
-        residual_shape_branch_condition_gate_head = getattr(model, "residual_shape_branch_condition_gate", None)
-        residual_shape_branch_condition_proj = getattr(model, "residual_shape_branch_condition_proj", None)
-        if (
-            residual_shape_branch_condition_adapter is None
-            or residual_shape_branch_condition_gate_head is None
-            or residual_shape_branch_condition_proj is None
-        ):
-            raise RuntimeError(
-                "Residual-shape branch-condition adapter modules are not initialized for teacher-first structure probe."
-            )
-        residual_shape_branch_condition_features = torch.cat(
-            [
-                fused_hidden,
-                branch_mean_hidden,
-                fused_hidden - branch_mean_hidden,
-            ],
-            dim=-1,
-        )
-        residual_shape_branch_condition_context = residual_shape_branch_condition_adapter(
-            residual_shape_branch_condition_features
-        )
-        residual_shape_branch_condition_gate = torch.sigmoid(
-            residual_shape_branch_condition_gate_head(residual_shape_branch_condition_context)
-        )
-        residual_shape_branch_condition_delta = resolve_residual_shape_branch_condition_delta(
-            delta=torch.tanh(
-                residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
-            ),
-            mode=str(getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")),
-        )
-        residual_shape_delta = (
-            float(getattr(model, "residual_shape_branch_condition_scale", 1.0))
-            * residual_shape_branch_condition_gate
-            * residual_shape_branch_condition_delta
-        )
-        waveform_frame_logits = waveform_frame_logits + residual_shape_delta
-    if residual_shape_delta is None:
-        residual_shape_delta = torch.zeros_like(waveform_decoder_base_logits)
-    return {
-        "decoder_hidden": decoder_hidden,
-        "waveform_decoder_base_logits": waveform_decoder_base_logits,
-        "waveform_residual_shape_delta": residual_shape_delta,
-        "waveform_frame_logits": waveform_frame_logits,
-        "waveform_frames": torch.tanh(waveform_frame_logits),
-    }
+    return compute_waveform_structure_outputs_for_probe(
+        model=model,
+        periodic_hidden=periodic_hidden,
+        noise_hidden=noise_hidden,
+        fused_hidden=fused_hidden,
+        waveform_output_mode=waveform_output_mode,
+    )
 
 
 def summarize_teacher_first_structure_scalar_metrics(
@@ -5741,6 +5710,16 @@ def summarize_teacher_first_structure_scalar_metrics(
     frame_length: int,
     hop_length: int,
     predicted_activity: torch.Tensor,
+    fused_hidden_sequence: torch.Tensor,
+    decoder_hidden_sequence: torch.Tensor,
+    waveform_decoder_base_logits_sequence: torch.Tensor,
+    waveform_frames_sequence: torch.Tensor,
+    vuv_target: torch.Tensor | None,
+    voiced_proxy_target: torch.Tensor | None,
+    aper_target: torch.Tensor | None,
+    aperiodicity_proxy_target: torch.Tensor | None,
+    energy_control_target: torch.Tensor | None,
+    energy_log_rms_norm_target: torch.Tensor | None,
 ) -> dict[str, float]:
     route_metrics = summarize_teacher_first_handoff_route_metrics(
         waveform=decoded_waveform,
@@ -5791,6 +5770,70 @@ def summarize_teacher_first_structure_scalar_metrics(
         float(scalar_metrics["decoded_frames_adjacent_cosine_mean"])
         - float(scalar_metrics["waveform_frames_adjacent_cosine_mean"]),
         6,
+    )
+    conditioning = build_voicing_conditioning_bundle(
+        frame_count=int(predicted_activity.shape[0]),
+        vuv_target=vuv_target,
+        voiced_proxy_target=voiced_proxy_target,
+        aper_target=aper_target,
+        aperiodicity_proxy_target=aperiodicity_proxy_target,
+        energy_control_target=energy_control_target,
+        energy_log_rms_norm_target=energy_log_rms_norm_target,
+    )
+    for prefix, sequence in (
+        ("fused_hidden_control_coupling", fused_hidden_sequence),
+        ("decoder_hidden_control_coupling", decoder_hidden_sequence),
+        ("waveform_decoder_base_logits_control_coupling", waveform_decoder_base_logits_sequence),
+        ("waveform_frames_control_coupling", waveform_frames_sequence),
+    ):
+        coupling_metrics, _ = summarize_sequence_control_coupling_metrics(
+            sequence=sequence,
+            conditioning=conditioning,
+        )
+        for key, value in coupling_metrics.items():
+            scalar_metrics[f"{prefix}_{key}"] = float(value)
+    for prefix, sequence in (
+        ("fused_hidden_geometry", fused_hidden_sequence),
+        ("decoder_hidden_geometry", decoder_hidden_sequence),
+        ("waveform_decoder_base_logits_geometry", waveform_decoder_base_logits_sequence),
+        ("waveform_frames_geometry", waveform_frames_sequence),
+    ):
+        geometry_metrics = summarize_sequence_geometry_metrics(sequence)
+        for key, value in geometry_metrics.items():
+            scalar_metrics[f"{prefix}_{key}"] = float(value)
+    for prefix, sequence in (
+        ("fused_hidden_conditioned_clusters", fused_hidden_sequence),
+        ("decoder_hidden_conditioned_clusters", decoder_hidden_sequence),
+        ("waveform_decoder_base_logits_conditioned_clusters", waveform_decoder_base_logits_sequence),
+        ("waveform_frames_conditioned_clusters", waveform_frames_sequence),
+    ):
+        cluster_metrics = summarize_sequence_conditioned_cluster_metrics(sequence, conditioning)
+        for key, value in cluster_metrics.items():
+            scalar_metrics[f"{prefix}_{key}"] = float(value)
+    voicing_conditioned_metrics, voicing_notes = summarize_voicing_conditioned_waveform_metrics(
+        waveform=decoded_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+        target_frame_count=int(predicted_activity.shape[0]),
+        sample_rate=int(sample_rate),
+        vuv_target=vuv_target,
+        voiced_proxy_target=voiced_proxy_target,
+        aper_target=aper_target,
+        aperiodicity_proxy_target=aperiodicity_proxy_target,
+        energy_control_target=energy_control_target,
+        energy_log_rms_norm_target=energy_log_rms_norm_target,
+    )
+    for key, value in voicing_conditioned_metrics.items():
+        scalar_metrics[f"decoded_voicing_conditioned_{key}"] = float(value)
+    scalar_metrics["voicing_controls_voicing_control_ready"] = 0.0 if not voicing_conditioned_metrics else 1.0
+    scalar_metrics["voicing_controls_voicing_source_is_vuv_target"] = (
+        1.0 if voicing_notes.get("voicing_source") == "vuv_target" else 0.0
+    )
+    scalar_metrics["voicing_controls_voicing_source_is_voiced_proxy_target"] = (
+        1.0 if voicing_notes.get("voicing_source") == "voiced_proxy_target" else 0.0
+    )
+    scalar_metrics["voicing_controls_voicing_source_is_aper_inversion"] = (
+        1.0 if str(voicing_notes.get("voicing_source", "")).endswith("_inverted") else 0.0
     )
     return scalar_metrics
 
@@ -6909,9 +6952,26 @@ def build_teacher_first_waveform_decoder_structure_probe_markdown(summary: dict[
         f"- checkpoint_path: {summary['checkpoint_path']}",
         f"- decode_runtime: {json.dumps(summary.get('decode_runtime', {}), ensure_ascii=False)}",
         f"- baseline_decoder_collapse_summary: {json.dumps(summary.get('baseline_decoder_collapse_summary', {}), ensure_ascii=False)}",
+        f"- baseline_upstream_coupling_localization_summary: {json.dumps(summary.get('baseline_upstream_coupling_localization_summary', {}), ensure_ascii=False)}",
+        f"- baseline_decoder_projection_geometry_summary: {json.dumps(summary.get('baseline_decoder_projection_geometry_summary', {}), ensure_ascii=False)}",
         "",
-        "## Variant Impact Ranking",
+        "## Voicing-Conditioned Shape Summary",
     ]
+    for item in list(summary.get("voicing_conditioned_shape_summary", [])):
+        lines.append(
+            "- "
+            f"{item['label']}: "
+            f"decoded_uv_minus_v_centroid={item['decoded_unvoiced_minus_voiced_spectral_centroid_hz']:.6f}, "
+            f"decoded_uv_minus_v_high_band={item['decoded_unvoiced_minus_voiced_spectral_high_band_energy_ratio']:.6f}, "
+            f"decoded_active_voiced_fraction={item['decoded_active_voiced_fraction']:.6f}, "
+            f"decoded_active_unvoiced_fraction={item['decoded_active_unvoiced_fraction']:.6f}"
+        )
+    lines.extend(
+        [
+            "",
+        "## Variant Impact Ranking",
+        ]
+    )
     for item in list(summary.get("variant_impact_ranking", [])):
         lines.append(
             "- "
