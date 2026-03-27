@@ -1690,3 +1690,125 @@
   - 不再默认交
     GUI
     量化打分
+## 2026-03-27 深夜继续更新
+- `docs/444_stage5_output_head_bpae01_relocalization_and_minimal_listening_contract_report.md`
+  已补完在
+  `bhb01`
+  基础上继续加入
+  `waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr`
+  的新候选结果。
+- 当前结论更新为：
+  - `bpae01`
+    不是假接线，
+    也不是简单回退：
+    - native validation3
+      仍保持
+      `auto_reject = 0/3`
+    - `decoded_post_ola_gate`
+      的
+      `centroid_gap / high_band_gap`
+      继续从
+      `3211.714111 / 0.198100`
+      改善到
+      `2516.162109 / 0.111581`
+  - 但它也不能升格为新主候选：
+    - user-line
+      `decoded_post_ola_gate template`
+      从
+      `0.870602`
+      回升到
+      `0.887733`
+    - 更像
+      “继续变暗，
+      但没有明确离开
+      tonal pure buzz”
+- stage temporal coupling
+  的正式解释也进一步收紧为：
+  - `aper * noise_E`
+    在
+    `decoder_hidden -> waveform_decoder_base_logits`
+    的旧大 jump
+    已被压平
+  - 但 residual 没有消失，
+    而是重定位到：
+    - `waveform_residual_shape_delta`
+  - 同时
+    `aper`
+    和
+    `noise_E`
+    单项在
+    `waveform_decoder_base_logits`
+    上反而更强
+- 因而当前主线更新为：
+  - 不把
+    `bpae01`
+    直接 promoted
+  - 先做最小
+    wav
+    听审，
+    只判它是否仍在
+    pure-buzz
+    区间
+  - 如果听感仍只是更暗的
+    tonal buzz，
+    下一步就应继续上收到：
+    - residual-shape interface
+    - 与单项
+      `aper / noise_E`
+      在 output head
+      的重新放大
+- 当前已落盘的最小听审入口：
+  - `reports/runtime/offline_mvp_teacher_first_vc_audible_compare_bundle_outputhead_bpae01_vs_bhb01_vs_strongest_round1_1/listening/`
+## 2026-03-27 深夜最终更新
+- `docs/445_stage5_output_head_bpae01_human_audit_fail_and_spectrogram_corroboration_report.md`
+  已补完
+  `bpae01`
+  的人工听审收口。
+- 当前结论再次收紧为：
+  - `bpae01`
+    虽然量化上继续压低 brightness，
+    也压平了旧的
+    `aper * noise_E`
+    base-logits jump，
+    但人工听审已明确：
+    - 与
+      `bhb01`
+      几乎完全一致
+    - `segment_0061`
+      仍完全是 buzz
+    - `peak_011`
+      仍完全是 pure buzz
+- 用户本轮还提供了线性频谱图，
+  并已归档到：
+  - `reports/audio/outputhead_bpae01_human_audit_spectrograms_round1_1/`
+- 当前频谱图层面的辅助结论也与听审一致：
+  - `1 ~ 3`
+    的
+    `bpae01 / bhb01`
+    交替片段仍表现为
+    等距直线型稳定 buzz
+  - 对照 target
+    则明显存在：
+    - unvoice 的宽带砂状区
+    - voice 的低频共振峰
+- 因而当前 output-head 主线应再更新为：
+  - 不再继续围绕
+    `bhb01`
+    或
+    `bpae01`
+    做同层治理
+  - 当前已正式确认：
+    - 仅靠
+      `high-band`
+      压亮度
+      或
+      `aper * noise_E`
+      product penalty
+      压 jump，
+      都只能得到 pure buzz 家族内部的变化
+  - 下一步必须继续上收到：
+    - residual-shape interface
+    - 以及单项
+      `aper / noise_E`
+      在 output head
+      的重新放大

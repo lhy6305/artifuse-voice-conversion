@@ -2293,3 +2293,126 @@
     “不再是 pure buzz”
     之后，
     才值得升级到更细的 GUI 听审
+### 2026-03-27 深夜继续补充坑点：把 `aper * noise_E` 的 base-logits jump 压平，不等于 output-head residual 已被解决
+- 现象：
+  - 新候选
+    `output_head_bpae01`
+    直接在
+    `waveform_decoder_base_logits`
+    上新增
+    `aper * noise_E`
+    的
+    `abs_zero_lag_corr`
+    约束后，
+    旧的 product jump
+    确实被压平了：
+    - `decoder_hidden -> base_logits`
+      从
+      `0.270616 -> 0.696298`
+      变成
+      `0.376493 -> 0.391278`
+- 风险：
+  - 很容易把这个结果误写成：
+    - output-head 主病灶已经修掉
+    - 剩下只是听感收口
+  - 但当前正式 probe 同时显示：
+    - `aper * noise_E`
+      的新峰值转到了
+      `waveform_residual_shape_delta = 0.434913`
+    - `aper`
+      和
+      `noise_E`
+      单项在
+      `waveform_decoder_base_logits`
+      上反而更强
+    - user-line
+      `template`
+      还从
+      `0.870602`
+      回升到
+      `0.887733`
+- 正确处理：
+  - 当前应把这类结果写成：
+    - residual coupling
+      被重分配了，
+      不是被消灭了
+  - 下一步不能直接围绕
+    `bpae01`
+    做 promoted 或 GUI 化，
+    也不能把它当成
+    “只差一点点”的新主候选
+  - 必须继续联合看：
+    - residual-shape interface
+    - 单项
+      `aper / noise_E`
+      在 output head
+      的重新放大
+    - 以及最小人工听感
+      是否仍是
+      pure buzz
+### 2026-03-27 深夜最终补充坑点：如果新候选主观上与已失败候选几乎无差别，就不要因为量化继续变好而保留它
+- 现象：
+  - `output_head_bpae01`
+    相比
+    `bhb01`
+    在量化上继续压低了：
+    - centroid
+    - high-band
+    - native validation3
+      的 brightness gap
+  - 但本轮人工听审已明确给出：
+    - 两者几乎完全一致
+    - `segment_0061`
+      完全是 buzz
+    - `peak_011`
+      完全是 pure buzz
+- 风险：
+  - 很容易因为
+    “数值还在继续变好”
+    就把这类候选继续写成：
+    - 值得 promoted
+    - 值得再听一轮
+    - 或值得继续扫同层权重
+  - 这会让主线长期停留在
+    pure-buzz 家族内部打转
+- 正确处理：
+  - 一旦用户明确给出：
+    - 新旧候选几乎无差别
+    - 且仍然完全是 pure buzz
+  - 就应把该候选直接记为失败，
+    不再因为量化继续改善而保留
+  - 后续应上收到：
+    - 为何这些量化改善
+      不能转化为 voice structure
+    - 而不是继续做
+      same-family
+      微调
+
+### 2026-03-27 深夜最终补充坑点：线性频谱图可作为 pure-buzz 判停的辅证，但不能替代听审
+- 现象：
+  - 本轮用户补充的线性频谱图里，
+    `bpae01 / bhb01`
+    交替播放片段表现为
+    等距直线型稳定结构，
+    而 target
+    明显同时存在：
+    - unvoice 的宽带砂状区
+    - voice 的低频共振峰
+- 风险：
+  - 可能走向两个极端：
+    - 完全不看频谱，
+      失去一种便宜的辅助证据
+    - 或把频谱图当成
+      可以替代听审的最终裁判
+- 正确处理：
+  - 对
+    pure-buzz / non-pure-buzz
+    的快速门槛判别，
+    线性频谱图可以作为：
+    - 听审后的辅助佐证
+  - 但最终 stop/go
+    仍以人工听感为准
+  - 当听感已经明确失败，
+    且频谱图也显示候选仍是
+    稳定直线型 buzz，
+    就不再保留该路线
