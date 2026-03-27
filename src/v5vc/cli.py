@@ -50,6 +50,7 @@ from v5vc.teacher_first_vc_demo import (
     analyze_teacher_first_vc_acoustic_temporal_alignment,
     analyze_teacher_first_vc_applicability,
     analyze_teacher_first_vc_decoder_behavior,
+    analyze_teacher_first_vc_stage_temporal_coupling,
     analyze_teacher_first_vc_waveform_decoder_structure,
     analyze_teacher_first_vc_waveform_handoff,
     build_teacher_first_vc_audible_compare_bundle,
@@ -2496,6 +2497,66 @@ def build_parser() -> argparse.ArgumentParser:
             "Can be passed multiple times."
         ),
     )
+    teacher_first_vc_stage_temporal_coupling_parser = subparsers.add_parser(
+        "analyze-offline-mvp-teacher-first-vc-stage-temporal-coupling",
+        help="Measure how noise-family control timing aligns with internal hidden/logits/frames frame-RMS sequences on the teacher-first user-line path.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--input-audio",
+        dest="input_audio_list",
+        action="append",
+        type=Path,
+        required=True,
+        help="Input wav path to diagnose. Can be passed multiple times.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path(
+            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/stcp"
+        ),
+        help="Directory for per-case runs, scalar series tensors, and stage temporal-coupling summaries.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--vocoder-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit Stage5 no-res vocoder checkpoint override.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--vocoder-checkpoint-selection",
+        type=Path,
+        default=DEFAULT_VOCODER_CHECKPOINT_SELECTION_PATH,
+        help="Checkpoint-selection json used when --vocoder-checkpoint is omitted.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to use when resolving --vocoder-checkpoint-selection: best_validation, stable_late_stop, or best_rms.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Runtime device for the diagnostic case exports. Defaults to cpu.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration to read from each diagnostic input wav.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--chunk-ms",
+        type=float,
+        default=33.333333,
+        help="Teacher runtime chunk window in milliseconds for each diagnostic export.",
+    )
+    teacher_first_vc_stage_temporal_coupling_parser.add_argument(
+        "--max-lag-frames",
+        type=int,
+        default=12,
+        help="Maximum positive/negative lag in frames for the stage-wise correlation sweep.",
+    )
     teacher_first_vc_waveform_decoder_structure_parser = subparsers.add_parser(
         "analyze-offline-mvp-teacher-first-vc-waveform-decoder-structure",
         help="Apply Stage5 hidden-state bypass transforms on teacher-first user-line inputs to localize whether collapse starts before fusion or inside the waveform decoder route.",
@@ -2840,7 +2901,7 @@ def build_parser() -> argparse.ArgumentParser:
     nores_vocoder_train_step_parser.add_argument(
         "--residual-shape-branch-condition-mode",
         default="raw_additive_v1",
-        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1 or shape_only_unit_rms_v1.",
+        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1, shape_only_unit_rms_v1, or shape_only_energy_debiased_v1.",
     )
     nores_vocoder_train_step_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
@@ -2901,6 +2962,54 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family aper*energy control relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-aper-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_decoder_base_logits frame-RMS and the scaffold aper control relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_decoder_base_logits frame-RMS and the scaffold noise_E control relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-residual-shape-delta-noise-energy-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_residual_shape_delta frame-RMS and the scaffold noise_E control relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-high-band-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing high-band energy excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing active-frame template excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-aper-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold aper control.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-residual-shape-delta-noise-energy-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_residual_shape_delta and the scaffold noise_E control.",
     )
     nores_vocoder_train_step_parser.add_argument(
         "--frame-rms-lagcorr-max-lag-frames",
@@ -3097,7 +3206,7 @@ def build_parser() -> argparse.ArgumentParser:
     nores_vocoder_train_loop_parser.add_argument(
         "--residual-shape-branch-condition-mode",
         default="raw_additive_v1",
-        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1 or shape_only_unit_rms_v1.",
+        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1, shape_only_unit_rms_v1, or shape_only_energy_debiased_v1.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
@@ -3158,6 +3267,54 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family aper*energy control relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-aper-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_decoder_base_logits frame-RMS and the scaffold aper control relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_decoder_base_logits frame-RMS and the scaffold noise_E control relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-residual-shape-delta-noise-energy-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_residual_shape_delta frame-RMS and the scaffold noise_E control relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-high-band-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing high-band energy excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing active-frame template excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-aper-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold aper control.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-residual-shape-delta-noise-energy-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_residual_shape_delta and the scaffold noise_E control.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--frame-rms-lagcorr-max-lag-frames",
@@ -3567,7 +3724,7 @@ def build_parser() -> argparse.ArgumentParser:
     nores_vocoder_dataset_loop_parser.add_argument(
         "--residual-shape-branch-condition-mode",
         default="raw_additive_v1",
-        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1 or shape_only_unit_rms_v1.",
+        help="Residual-shape branch-conditioned correction semantics: raw_additive_v1, shape_only_unit_rms_v1, or shape_only_energy_debiased_v1.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
@@ -3628,6 +3785,54 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between decoded waveform_frames frame-RMS and the noise-family aper*energy control relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-aper-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_decoder_base_logits frame-RMS and the scaffold aper control relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_decoder_base_logits frame-RMS and the scaffold noise_E control relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-residual-shape-delta-noise-energy-lagcorr-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing center-weighted lag-profile correlation excess between waveform_residual_shape_delta frame-RMS and the scaffold noise_E control relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-high-band-excess-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing high-band energy excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing active-frame template excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-aper-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold aper control.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-residual-shape-delta-noise-energy-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_residual_shape_delta and the scaffold noise_E control.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--frame-rms-lagcorr-max-lag-frames",
@@ -5626,6 +5831,19 @@ def main(argv: list[str] | None = None) -> int:
             control_family_overrides=list(args.control_family_overrides),
         )
         return 0
+    if args.command == "analyze-offline-mvp-teacher-first-vc-stage-temporal-coupling":
+        analyze_teacher_first_vc_stage_temporal_coupling(
+            input_audio_paths=list(args.input_audio_list),
+            output_dir=args.output_dir,
+            vocoder_checkpoint_path=args.vocoder_checkpoint,
+            vocoder_checkpoint_selection_path=args.vocoder_checkpoint_selection,
+            selection_target=args.selection_target,
+            device=args.device,
+            max_audio_sec=args.max_audio_sec,
+            chunk_ms=args.chunk_ms,
+            max_lag_frames=args.max_lag_frames,
+        )
+        return 0
     if args.command == "analyze-offline-mvp-teacher-first-vc-waveform-decoder-structure":
         analyze_teacher_first_vc_waveform_decoder_structure(
             input_audio_paths=list(args.input_audio_list),
@@ -5704,6 +5922,14 @@ def main(argv: list[str] | None = None) -> int:
             noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
             noise_energy_frame_rms_lagcorr_excess_weight=args.noise_energy_frame_rms_lagcorr_excess_weight,
             noise_aper_energy_frame_rms_lagcorr_excess_weight=args.noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            waveform_decoder_base_logits_high_band_excess_weight=args.waveform_decoder_base_logits_high_band_excess_weight,
+            waveform_decoder_base_logits_aper_lagcorr_excess_weight=args.waveform_decoder_base_logits_aper_lagcorr_excess_weight,
+            waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
+            waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=args.waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
         )
         return 0
@@ -5751,6 +5977,14 @@ def main(argv: list[str] | None = None) -> int:
             noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
             noise_energy_frame_rms_lagcorr_excess_weight=args.noise_energy_frame_rms_lagcorr_excess_weight,
             noise_aper_energy_frame_rms_lagcorr_excess_weight=args.noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            waveform_decoder_base_logits_high_band_excess_weight=args.waveform_decoder_base_logits_high_band_excess_weight,
+            waveform_decoder_base_logits_aper_lagcorr_excess_weight=args.waveform_decoder_base_logits_aper_lagcorr_excess_weight,
+            waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
+            waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=args.waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
         )
         return 0
@@ -5833,6 +6067,14 @@ def main(argv: list[str] | None = None) -> int:
             noise_aper_energy_frame_rms_excess_corr_weight=args.noise_aper_energy_frame_rms_excess_corr_weight,
             noise_energy_frame_rms_lagcorr_excess_weight=args.noise_energy_frame_rms_lagcorr_excess_weight,
             noise_aper_energy_frame_rms_lagcorr_excess_weight=args.noise_aper_energy_frame_rms_lagcorr_excess_weight,
+            waveform_decoder_base_logits_high_band_excess_weight=args.waveform_decoder_base_logits_high_band_excess_weight,
+            waveform_decoder_base_logits_aper_lagcorr_excess_weight=args.waveform_decoder_base_logits_aper_lagcorr_excess_weight,
+            waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
+            waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=args.waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
             semantic_supervision_enabled=bool(args.semantic_supervision_enabled),
         )

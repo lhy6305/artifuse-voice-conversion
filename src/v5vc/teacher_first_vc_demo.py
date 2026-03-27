@@ -109,6 +109,7 @@ TEACHER_FIRST_SCAFFOLD_DIRNAME = "t_scaffold"
 TEACHER_FIRST_TMP_SCAFFOLD_DIRNAME = "_tmp_t_scaffold"
 TEACHER_FIRST_WAVEFORM_HANDOFF_DIRNAME = "whp"
 TEACHER_FIRST_WAVEFORM_DECODER_STRUCTURE_DIRNAME = "wdsp"
+TEACHER_FIRST_STAGE_TEMPORAL_COUPLING_DIRNAME = "stcp"
 HIGH_RISK_SPECTRAL_CENTROID_HZ = 3200.0
 HIGH_RISK_SPECTRAL_ROLLOFF95_HZ = 22000.0
 HIGH_RISK_HIGH_BAND_ENERGY_RATIO = 0.25
@@ -231,6 +232,73 @@ ACOUSTIC_TEMPORAL_ALIGNMENT_PAIR_DEFINITIONS = (
         "label": "aper * E_log_rms_norm -> frame_rms",
         "series_key": "noise.aper_times_E_log_rms_norm",
         "description": "Lagged correlation between the acoustic-state product aper*E and waveform frame RMS.",
+    },
+)
+STAGE_TEMPORAL_COUPLING_CONTROL_DEFINITIONS = (
+    {
+        "control_id": "aper",
+        "label": "aper",
+        "series_key": "noise.aper",
+        "description": "Noise-branch aperiodicity control exported by the teacher-first scaffold.",
+    },
+    {
+        "control_id": "noise_energy",
+        "label": "noise_E_log_rms_norm",
+        "series_key": "noise.E_log_rms_norm",
+        "description": "Noise-branch normalized energy control exported by the teacher-first scaffold.",
+    },
+    {
+        "control_id": "aper_noise_energy",
+        "label": "aper * noise_E_log_rms_norm",
+        "series_key": "noise.aper_times_E_log_rms_norm",
+        "description": "Pointwise product of the noise-branch aper and normalized energy controls.",
+    },
+)
+STAGE_TEMPORAL_COUPLING_STAGE_DEFINITIONS = (
+    {
+        "stage_id": "noise_hidden_frame_rms",
+        "label": "noise_hidden frame_rms",
+        "description": "Per-frame RMS of the noise encoder hidden state.",
+    },
+    {
+        "stage_id": "branch_mean_hidden_frame_rms",
+        "label": "branch_mean_hidden frame_rms",
+        "description": "Per-frame RMS of the equal-weight mean between periodic/noise hidden states.",
+    },
+    {
+        "stage_id": "fused_hidden_frame_rms",
+        "label": "fused_hidden frame_rms",
+        "description": "Per-frame RMS after the fusion block.",
+    },
+    {
+        "stage_id": "decoder_hidden_frame_rms",
+        "label": "decoder_hidden frame_rms",
+        "description": "Per-frame RMS at the waveform decoder input.",
+    },
+    {
+        "stage_id": "waveform_decoder_base_logits_frame_rms",
+        "label": "waveform_decoder_base_logits frame_rms",
+        "description": "Per-frame RMS of the raw waveform head before any residual-shape additive correction.",
+    },
+    {
+        "stage_id": "waveform_residual_shape_delta_frame_rms",
+        "label": "waveform_residual_shape_delta frame_rms",
+        "description": "Per-frame RMS of the gated residual-shape delta added on top of the raw waveform head.",
+    },
+    {
+        "stage_id": "waveform_frame_logits_frame_rms",
+        "label": "waveform_frame_logits frame_rms",
+        "description": "Per-frame RMS of waveform logits before tanh.",
+    },
+    {
+        "stage_id": "waveform_frames_frame_rms",
+        "label": "waveform_frames frame_rms",
+        "description": "Per-frame RMS after tanh but before overlap-add.",
+    },
+    {
+        "stage_id": "decoded_no_gate_frame_rms",
+        "label": "decoded_no_gate frame_rms",
+        "description": "Per-frame RMS of the overlap-add waveform without predicted-activity gating.",
     },
 )
 
@@ -4344,6 +4412,483 @@ def analyze_teacher_first_vc_acoustic_temporal_alignment(
     )
 
 
+def build_stage_scalar_sequence(sequence: torch.Tensor) -> torch.Tensor:
+    sequence_cpu = sequence.detach().cpu().to(torch.float32)
+    if sequence_cpu.ndim == 1:
+        return sequence_cpu.view(-1)
+    if sequence_cpu.ndim < 2:
+        raise ValueError(f"Unsupported stage sequence rank: {tuple(sequence_cpu.shape)}")
+    flattened = sequence_cpu.reshape(int(sequence_cpu.shape[0]), -1)
+    return flattened.pow(2).mean(dim=1).sqrt()
+
+
+def collapse_control_series_to_scalar(sequence: torch.Tensor) -> torch.Tensor:
+    sequence_cpu = sequence.detach().cpu().to(torch.float32)
+    if sequence_cpu.ndim == 1:
+        return sequence_cpu.view(-1)
+    flattened = sequence_cpu.reshape(int(sequence_cpu.shape[0]), -1)
+    if int(flattened.shape[1]) == 1:
+        return flattened.view(-1)
+    return flattened.mean(dim=1)
+
+
+def build_teacher_first_stage_temporal_stage_series_map(
+    *,
+    source_runtime: dict[str, object],
+    outputs: dict[str, torch.Tensor],
+) -> tuple[dict[str, torch.Tensor], torch.Tensor]:
+    waveform_frames = outputs["waveform_frames"].detach().cpu().to(torch.float32)
+    decoded_no_gate = reconstruct_waveform_from_frames(
+        waveform_frames=waveform_frames,
+        frame_length=int(source_runtime["frame_length"]),
+        hop_length=int(source_runtime["hop_length"]),
+        frame_gains=None,
+        frame_gain_floor=0.0,
+        frame_gain_smoothing_frames=0,
+        frame_gain_apply_mode="pre_overlap_add",
+    ).detach().cpu().to(torch.float32)
+    frame_count = int(waveform_frames.shape[0])
+    return (
+        {
+            "noise_hidden_frame_rms": build_stage_scalar_sequence(outputs["noise_hidden"]),
+            "branch_mean_hidden_frame_rms": build_stage_scalar_sequence(outputs["branch_mean_hidden"]),
+            "fused_hidden_frame_rms": build_stage_scalar_sequence(outputs["fused_hidden"]),
+            "decoder_hidden_frame_rms": build_stage_scalar_sequence(outputs["decoder_hidden"]),
+            "waveform_decoder_base_logits_frame_rms": build_stage_scalar_sequence(outputs["waveform_decoder_base_logits"]),
+            "waveform_residual_shape_delta_frame_rms": build_stage_scalar_sequence(outputs["waveform_residual_shape_delta"]),
+            "waveform_frame_logits_frame_rms": build_stage_scalar_sequence(outputs["waveform_frame_logits"]),
+            "waveform_frames_frame_rms": build_stage_scalar_sequence(waveform_frames),
+            "decoded_no_gate_frame_rms": build_frame_rms_sequence(
+                waveform=decoded_no_gate,
+                frame_length=int(source_runtime["frame_length"]),
+                hop_length=int(source_runtime["hop_length"]),
+                target_frame_count=frame_count,
+            ),
+        },
+        decoded_no_gate,
+    )
+
+
+def build_stage_temporal_coupling_pair_summaries(
+    *,
+    control_series_map: dict[str, torch.Tensor],
+    stage_series_map: dict[str, torch.Tensor],
+    max_lag_frames: int,
+) -> list[dict[str, object]]:
+    pair_summaries = []
+    for control_definition in STAGE_TEMPORAL_COUPLING_CONTROL_DEFINITIONS:
+        control_series = control_series_map.get(str(control_definition["series_key"]))
+        if not isinstance(control_series, torch.Tensor):
+            continue
+        source_scalar = collapse_control_series_to_scalar(control_series)
+        for stage_definition in STAGE_TEMPORAL_COUPLING_STAGE_DEFINITIONS:
+            stage_series = stage_series_map.get(str(stage_definition["stage_id"]))
+            if not isinstance(stage_series, torch.Tensor):
+                continue
+            lag_curve = build_lagged_correlation_curve(
+                source=source_scalar,
+                target=stage_series,
+                max_lag_frames=int(max_lag_frames),
+            )
+            best_row = max(lag_curve, key=lambda item: float(item["corr"]))
+            best_abs_row = max(lag_curve, key=lambda item: abs(float(item["corr"])))
+            nonzero_rows = [row for row in lag_curve if int(row["lag_frames"]) != 0]
+            best_nonzero_row = max(nonzero_rows, key=lambda item: float(item["corr"])) if nonzero_rows else best_row
+            best_abs_nonzero_row = (
+                max(nonzero_rows, key=lambda item: abs(float(item["corr"]))) if nonzero_rows else best_abs_row
+            )
+            zero_row = next(row for row in lag_curve if int(row["lag_frames"]) == 0)
+            pair_summaries.append(
+                {
+                    "pair_id": f"{control_definition['control_id']}__{stage_definition['stage_id']}",
+                    "control_id": str(control_definition["control_id"]),
+                    "control_label": str(control_definition["label"]),
+                    "control_description": str(control_definition["description"]),
+                    "stage_id": str(stage_definition["stage_id"]),
+                    "stage_label": str(stage_definition["label"]),
+                    "stage_description": str(stage_definition["description"]),
+                    "zero_lag_corr": round(float(zero_row["corr"]), 6),
+                    "abs_zero_lag_corr": round(abs(float(zero_row["corr"])), 6),
+                    "best_corr": round(float(best_row["corr"]), 6),
+                    "best_lag_frames": int(best_row["lag_frames"]),
+                    "best_abs_corr": round(abs(float(best_abs_row["corr"])), 6),
+                    "best_abs_lag_frames": int(best_abs_row["lag_frames"]),
+                    "best_nonzero_corr": round(float(best_nonzero_row["corr"]), 6),
+                    "best_abs_nonzero_corr": round(abs(float(best_abs_nonzero_row["corr"])), 6),
+                    "zero_minus_best_nonzero_corr": round(
+                        float(zero_row["corr"]) - float(best_nonzero_row["corr"]),
+                        6,
+                    ),
+                    "abs_zero_minus_best_abs_nonzero_corr": round(
+                        abs(float(zero_row["corr"])) - abs(float(best_abs_nonzero_row["corr"])),
+                        6,
+                    ),
+                    "lag_curve": lag_curve,
+                }
+            )
+    return pair_summaries
+
+
+def build_stage_temporal_coupling_pair_aggregates(
+    case_summaries: list[dict[str, object]],
+) -> list[dict[str, object]]:
+    pair_map: dict[str, dict[str, object]] = {}
+    for case_summary in case_summaries:
+        for pair_summary in list(case_summary.get("pair_summaries", [])):
+            pair_id = str(pair_summary["pair_id"])
+            bucket = pair_map.setdefault(
+                pair_id,
+                {
+                    "pair_id": pair_id,
+                    "control_id": str(pair_summary["control_id"]),
+                    "control_label": str(pair_summary["control_label"]),
+                    "stage_id": str(pair_summary["stage_id"]),
+                    "stage_label": str(pair_summary["stage_label"]),
+                    "record_count": 0,
+                    "scalar_metrics": {},
+                    "lag_curve_rows": {},
+                },
+            )
+            bucket["record_count"] = int(bucket["record_count"]) + 1
+            for metric_key in (
+                "zero_lag_corr",
+                "abs_zero_lag_corr",
+                "best_corr",
+                "best_lag_frames",
+                "best_abs_corr",
+                "best_abs_lag_frames",
+                "best_nonzero_corr",
+                "best_abs_nonzero_corr",
+                "zero_minus_best_nonzero_corr",
+                "abs_zero_minus_best_abs_nonzero_corr",
+            ):
+                bucket["scalar_metrics"].setdefault(metric_key, []).append(float(pair_summary.get(metric_key, 0.0)))
+            for row in list(pair_summary.get("lag_curve", [])):
+                lag_frames = int(row["lag_frames"])
+                bucket["lag_curve_rows"].setdefault(lag_frames, []).append(float(row["corr"]))
+
+    control_order = {
+        str(item["control_id"]): index for index, item in enumerate(STAGE_TEMPORAL_COUPLING_CONTROL_DEFINITIONS)
+    }
+    stage_order = {
+        str(item["stage_id"]): index for index, item in enumerate(STAGE_TEMPORAL_COUPLING_STAGE_DEFINITIONS)
+    }
+    aggregates = []
+    for bucket in pair_map.values():
+        aggregates.append(
+            {
+                "pair_id": str(bucket["pair_id"]),
+                "control_id": str(bucket["control_id"]),
+                "control_label": str(bucket["control_label"]),
+                "stage_id": str(bucket["stage_id"]),
+                "stage_label": str(bucket["stage_label"]),
+                "record_count": int(bucket["record_count"]),
+                "scalar_distributions": {
+                    key: summarize_scalar_distribution(values)
+                    for key, values in sorted(dict(bucket["scalar_metrics"]).items())
+                },
+                "lag_curve_aggregates": [
+                    {
+                        "lag_frames": int(lag_frames),
+                        "corr_distribution": summarize_scalar_distribution(values),
+                    }
+                    for lag_frames, values in sorted(dict(bucket["lag_curve_rows"]).items())
+                ],
+            }
+        )
+    return sorted(
+        aggregates,
+        key=lambda item: (
+            control_order.get(str(item["control_id"]), 999),
+            stage_order.get(str(item["stage_id"]), 999),
+        ),
+    )
+
+
+def diagnose_stage_temporal_coupling(
+    pair_aggregates: list[dict[str, object]],
+) -> dict[str, object]:
+    pair_lookup = {
+        (str(item["control_id"]), str(item["stage_id"])): item for item in pair_aggregates
+    }
+    control_rows = []
+    for control_definition in STAGE_TEMPORAL_COUPLING_CONTROL_DEFINITIONS:
+        stage_rows = []
+        for stage_definition in STAGE_TEMPORAL_COUPLING_STAGE_DEFINITIONS:
+            aggregate = pair_lookup.get(
+                (str(control_definition["control_id"]), str(stage_definition["stage_id"]))
+            )
+            scalar_distributions = dict(dict(aggregate or {}).get("scalar_distributions", {}))
+            stage_rows.append(
+                {
+                    "stage_id": str(stage_definition["stage_id"]),
+                    "stage_label": str(stage_definition["label"]),
+                    "zero_lag_corr_mean": float(dict(scalar_distributions.get("zero_lag_corr", {})).get("mean", 0.0)),
+                    "abs_zero_lag_corr_mean": float(
+                        dict(scalar_distributions.get("abs_zero_lag_corr", {})).get("mean", 0.0)
+                    ),
+                    "best_lag_frames_mean": float(
+                        dict(scalar_distributions.get("best_lag_frames", {})).get("mean", 0.0)
+                    ),
+                    "zero_minus_best_nonzero_corr_mean": float(
+                        dict(scalar_distributions.get("zero_minus_best_nonzero_corr", {})).get("mean", 0.0)
+                    ),
+                    "abs_zero_minus_best_abs_nonzero_corr_mean": float(
+                        dict(scalar_distributions.get("abs_zero_minus_best_abs_nonzero_corr", {})).get("mean", 0.0)
+                    ),
+                }
+            )
+
+        largest_zero_lag_jump = {
+            "from_stage_id": None,
+            "to_stage_id": None,
+            "delta": 0.0,
+        }
+        largest_zero_dominance_jump = {
+            "from_stage_id": None,
+            "to_stage_id": None,
+            "delta": 0.0,
+        }
+        for previous_row, current_row in zip(stage_rows[:-1], stage_rows[1:]):
+            zero_delta = round(
+                float(current_row["abs_zero_lag_corr_mean"]) - float(previous_row["abs_zero_lag_corr_mean"]),
+                6,
+            )
+            if zero_delta > float(largest_zero_lag_jump["delta"]):
+                largest_zero_lag_jump = {
+                    "from_stage_id": str(previous_row["stage_id"]),
+                    "to_stage_id": str(current_row["stage_id"]),
+                    "delta": zero_delta,
+                }
+            dominance_delta = round(
+                float(current_row["abs_zero_minus_best_abs_nonzero_corr_mean"])
+                - float(previous_row["abs_zero_minus_best_abs_nonzero_corr_mean"]),
+                6,
+            )
+            if dominance_delta > float(largest_zero_dominance_jump["delta"]):
+                largest_zero_dominance_jump = {
+                    "from_stage_id": str(previous_row["stage_id"]),
+                    "to_stage_id": str(current_row["stage_id"]),
+                    "delta": dominance_delta,
+                }
+
+        peak_zero_row = max(stage_rows, key=lambda item: float(item["abs_zero_lag_corr_mean"]))
+        peak_dominance_row = max(
+            stage_rows, key=lambda item: float(item["abs_zero_minus_best_abs_nonzero_corr_mean"])
+        )
+        control_rows.append(
+            {
+                "control_id": str(control_definition["control_id"]),
+                "control_label": str(control_definition["label"]),
+                "stage_rows": stage_rows,
+                "peak_zero_lag_stage": {
+                    "stage_id": str(peak_zero_row["stage_id"]),
+                    "value": round(float(peak_zero_row["abs_zero_lag_corr_mean"]), 6),
+                },
+                "peak_zero_lag_dominance_stage": {
+                    "stage_id": str(peak_dominance_row["stage_id"]),
+                    "value": round(float(peak_dominance_row["abs_zero_minus_best_abs_nonzero_corr_mean"]), 6),
+                },
+                "largest_zero_lag_jump": largest_zero_lag_jump,
+                "largest_zero_lag_dominance_jump": largest_zero_dominance_jump,
+            }
+        )
+    return {"controls": control_rows}
+
+
+def build_teacher_first_stage_temporal_coupling_case_summary(
+    *,
+    case_id: str,
+    demo_summary: dict[str, object],
+    scaffold_payload: dict[str, object],
+    checkpoint_payload: dict[str, object],
+    device: torch.device,
+    max_lag_frames: int,
+    case_output_dir: Path,
+) -> dict[str, object]:
+    branch_scaffold = dict(scaffold_payload["branch_scaffold"])
+    source_runtime = dict(scaffold_payload["source_runtime"])
+    model = build_vocoder_model_from_runtime_dims(
+        checkpoint_payload=checkpoint_payload,
+        periodic_input_dim=int(branch_scaffold["periodic_branch_features"].shape[-1]),
+        noise_input_dim=int(branch_scaffold["noise_branch_features"].shape[-1]),
+        frame_length=int(source_runtime["frame_length"]),
+    ).to(device)
+    model.eval()
+    with torch.no_grad():
+        outputs = model(
+            periodic_branch_features=branch_scaffold["periodic_branch_features"].to(device=device, dtype=torch.float32),
+            noise_branch_features=branch_scaffold["noise_branch_features"].to(device=device, dtype=torch.float32),
+        )
+        structure_outputs = compute_teacher_first_waveform_structure_outputs(
+            model=model,
+            periodic_hidden=outputs["periodic_hidden"],
+            noise_hidden=outputs["noise_hidden"],
+            fused_hidden=outputs["fused_hidden"],
+        )
+
+    control_series_map = build_scaffold_feature_series_map(
+        periodic_features=branch_scaffold["periodic_branch_features"].to(torch.float32),
+        noise_features=branch_scaffold["noise_branch_features"].to(torch.float32),
+        scaffold_payload=scaffold_payload,
+    )
+    stage_series_map, decoded_no_gate = build_teacher_first_stage_temporal_stage_series_map(
+        source_runtime=source_runtime,
+        outputs={
+            "noise_hidden": outputs["noise_hidden"],
+            "branch_mean_hidden": outputs["branch_mean_hidden"],
+            "fused_hidden": outputs["fused_hidden"],
+            "decoder_hidden": structure_outputs["decoder_hidden"],
+            "waveform_decoder_base_logits": structure_outputs["waveform_decoder_base_logits"],
+            "waveform_residual_shape_delta": structure_outputs["waveform_residual_shape_delta"],
+            "waveform_frame_logits": structure_outputs["waveform_frame_logits"],
+            "waveform_frames": structure_outputs["waveform_frames"],
+        },
+    )
+    pair_summaries = build_stage_temporal_coupling_pair_summaries(
+        control_series_map=control_series_map,
+        stage_series_map=stage_series_map,
+        max_lag_frames=int(max_lag_frames),
+    )
+
+    coupling_dir = case_output_dir / TEACHER_FIRST_STAGE_TEMPORAL_COUPLING_DIRNAME
+    coupling_dir.mkdir(parents=True, exist_ok=True)
+    tensor_payload = {
+        "control_series": {
+            str(control_definition["control_id"]): collapse_control_series_to_scalar(
+                control_series_map[str(control_definition["series_key"])]
+            )
+            for control_definition in STAGE_TEMPORAL_COUPLING_CONTROL_DEFINITIONS
+            if str(control_definition["series_key"]) in control_series_map
+        },
+        "stage_series": {key: value.detach().cpu().to(torch.float32) for key, value in stage_series_map.items()},
+        "decoded_no_gate_waveform": decoded_no_gate,
+    }
+    tensor_path = coupling_dir / "teacher_first_vc_stage_temporal_coupling_tensors.pt"
+    torch.save(tensor_payload, tensor_path)
+
+    return {
+        "case_id": case_id,
+        "input_audio_path": demo_summary.get("input_audio_path"),
+        "main_decoded_audio_path": demo_summary.get("decoded_audio_path"),
+        "coupling_dir": coupling_dir.as_posix(),
+        "tensor_path": tensor_path.as_posix(),
+        "pair_summaries": pair_summaries,
+    }
+
+
+def analyze_teacher_first_vc_stage_temporal_coupling(
+    *,
+    input_audio_paths: list[Path],
+    output_dir: Path,
+    vocoder_checkpoint_path: Path | None,
+    vocoder_checkpoint_selection_path: Path | None,
+    selection_target: str,
+    device: str,
+    max_audio_sec: float | None,
+    chunk_ms: float | None,
+    max_lag_frames: int,
+) -> None:
+    if not input_audio_paths:
+        raise ValueError("Stage temporal coupling probe requires at least one input audio.")
+    if int(max_lag_frames) < 0:
+        raise ValueError("max_lag_frames must be >= 0.")
+
+    resolved_checkpoint_path, selection_summary = resolve_checkpoint_path_from_inputs(
+        checkpoint_path=vocoder_checkpoint_path,
+        checkpoint_selection_path=vocoder_checkpoint_selection_path,
+        selection_target=selection_target,
+    )
+    checkpoint_payload = load_vocoder_checkpoint_payload(resolved_checkpoint_path)
+    resolved_device = resolve_runtime_device(device)
+
+    output_dir = output_dir.resolve()
+    reset_managed_directory(output_dir)
+    cases_dir = output_dir / "cases"
+    cases_dir.mkdir(parents=True, exist_ok=True)
+
+    case_summaries = []
+    for index, input_audio_path in enumerate(input_audio_paths, start=1):
+        case_id = build_review_bundle_case_id(
+            raw_case_id=None,
+            input_audio_path=input_audio_path.resolve(),
+            index=index,
+        )
+        case_output_dir = cases_dir / case_id
+        run_offline_mvp_teacher_first_vc_demo(
+            input_audio_path=input_audio_path,
+            output_dir=case_output_dir,
+            teacher_route_handoff_path=DEFAULT_TEACHER_ROUTE_HANDOFF_PATH,
+            teacher_checkpoint_path=None,
+            calibration_asset_path=DEFAULT_CALIBRATION_ASSET_PATH,
+            vocoder_checkpoint_path=resolved_checkpoint_path,
+            vocoder_checkpoint_selection_path=None,
+            selection_target=selection_target,
+            chunk_samples=None,
+            chunk_ms=chunk_ms,
+            device=str(device),
+            max_audio_sec=max_audio_sec,
+            verify_against_full_pass=False,
+            save_intermediates=True,
+            use_predicted_activity_gate=True,
+            predicted_activity_gate_floor=0.0,
+            predicted_activity_gate_smoothing_frames=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
+            predicted_activity_gate_apply_mode="post_ola_envelope",
+        )
+        demo_summary = load_teacher_first_vc_demo_summary(case_output_dir / "teacher_first_vc_demo.json")
+        scaffold_payload = torch.load(
+            get_teacher_scaffold_tensor_path(case_output_dir),
+            map_location="cpu",
+            weights_only=False,
+        )
+        if not isinstance(scaffold_payload, dict):
+            raise TypeError(f"Unsupported scaffold payload type: {type(scaffold_payload)!r}")
+        case_summaries.append(
+            build_teacher_first_stage_temporal_coupling_case_summary(
+                case_id=case_id,
+                demo_summary=demo_summary,
+                scaffold_payload=scaffold_payload,
+                checkpoint_payload=checkpoint_payload,
+                device=resolved_device,
+                max_lag_frames=int(max_lag_frames),
+                case_output_dir=case_output_dir,
+            )
+        )
+
+    pair_aggregates = build_stage_temporal_coupling_pair_aggregates(case_summaries)
+    diagnosis = diagnose_stage_temporal_coupling(pair_aggregates)
+    summary = {
+        "generated_at": datetime.now().isoformat(timespec="seconds"),
+        "mode": "teacher_first_single_target_vc_stage_temporal_coupling_probe_v1",
+        "output_dir": output_dir.as_posix(),
+        "device": str(device),
+        "max_audio_sec": max_audio_sec,
+        "chunk_ms": chunk_ms,
+        "max_lag_frames": int(max_lag_frames),
+        "checkpoint_path": resolved_checkpoint_path.as_posix(),
+        "selected_checkpoint_summary": selection_summary,
+        "case_count": len(case_summaries),
+        "pair_aggregates": pair_aggregates,
+        "diagnosis": diagnosis,
+        "cases": case_summaries,
+        "notes": [
+            "This probe projects the current teacher-first user-line scaffold through one Stage5 forward pass, then measures how noise-family control timing aligns with successive internal stage frame-RMS sequences.",
+            "It is intentionally stage-local and does not introduce new inference overrides, so the goal is only to localize where zero-lag acoustic-state coupling is amplified.",
+            "decoded_no_gate_frame_rms is included as the final heard route without predicted-activity gating so the internal trajectory can be compared against the audible residual envelope-following endpoint.",
+        ],
+    }
+    (output_dir / "teacher_first_vc_stage_temporal_coupling_probe.json").write_text(
+        json.dumps(summary, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+        newline="\n",
+    )
+    (output_dir / "teacher_first_vc_stage_temporal_coupling_probe.md").write_text(
+        build_teacher_first_stage_temporal_coupling_markdown(summary),
+        encoding="utf-8",
+        newline="\n",
+    )
+
+
 def analyze_teacher_first_vc_decoder_behavior(
     *,
     input_audio_paths: list[Path],
@@ -5114,6 +5659,7 @@ def compute_teacher_first_waveform_structure_outputs(
         raise RuntimeError("waveform_decoder is not initialized for fused_single teacher-first structure probe.")
     branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
     decoder_hidden = fused_hidden
+    residual_shape_delta = None
     if bool(getattr(model, "use_decoder_branch_condition_adapter", False)):
         decoder_branch_condition_adapter = getattr(model, "decoder_branch_condition_adapter", None)
         decoder_branch_condition_gate = getattr(model, "decoder_branch_condition_gate", None)
@@ -5136,7 +5682,8 @@ def compute_teacher_first_waveform_structure_outputs(
         branch_condition_gate = torch.sigmoid(decoder_branch_condition_gate(branch_condition_context))
         fused_condition = torch.tanh(decoder_fused_condition_proj(branch_condition_context))
         decoder_hidden = decoder_hidden + branch_condition_gate * fused_condition
-    waveform_frame_logits = waveform_decoder(decoder_hidden)
+    waveform_decoder_base_logits = waveform_decoder(decoder_hidden)
+    waveform_frame_logits = waveform_decoder_base_logits
     if bool(getattr(model, "use_residual_shape_branch_condition_adapter", False)):
         residual_shape_branch_condition_adapter = getattr(model, "residual_shape_branch_condition_adapter", None)
         residual_shape_branch_condition_gate_head = getattr(model, "residual_shape_branch_condition_gate", None)
@@ -5169,14 +5716,18 @@ def compute_teacher_first_waveform_structure_outputs(
             ),
             mode=str(getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")),
         )
-        waveform_frame_logits = (
-            waveform_frame_logits
-            + float(getattr(model, "residual_shape_branch_condition_scale", 1.0))
+        residual_shape_delta = (
+            float(getattr(model, "residual_shape_branch_condition_scale", 1.0))
             * residual_shape_branch_condition_gate
             * residual_shape_branch_condition_delta
         )
+        waveform_frame_logits = waveform_frame_logits + residual_shape_delta
+    if residual_shape_delta is None:
+        residual_shape_delta = torch.zeros_like(waveform_decoder_base_logits)
     return {
         "decoder_hidden": decoder_hidden,
+        "waveform_decoder_base_logits": waveform_decoder_base_logits,
+        "waveform_residual_shape_delta": residual_shape_delta,
         "waveform_frame_logits": waveform_frame_logits,
         "waveform_frames": torch.tanh(waveform_frame_logits),
     }
@@ -6274,6 +6825,70 @@ def build_teacher_first_waveform_handoff_probe_markdown(summary: dict[str, objec
                 "  "
                 f"{route.get('label')}: audio_path={route.get('audio_path')} "
                 f"metrics={json.dumps(route.get('metrics', {}), ensure_ascii=False)}"
+            )
+    lines.extend(["", "## Notes"])
+    for note in list(summary.get("notes", [])):
+        lines.append(f"- {note}")
+    return "\n".join(lines) + "\n"
+
+
+def build_teacher_first_stage_temporal_coupling_markdown(summary: dict[str, object]) -> str:
+    lines = [
+        "# Teacher-First VC Stage Temporal Coupling Probe",
+        "",
+        f"- generated_at: {summary['generated_at']}",
+        f"- mode: {summary['mode']}",
+        f"- output_dir: {summary['output_dir']}",
+        f"- device: {summary['device']}",
+        f"- max_audio_sec: {summary['max_audio_sec']}",
+        f"- chunk_ms: {summary['chunk_ms']}",
+        f"- max_lag_frames: {summary['max_lag_frames']}",
+        f"- checkpoint_path: {summary['checkpoint_path']}",
+        "",
+        "## Diagnosis",
+    ]
+    for control_row in list(dict(summary.get("diagnosis", {})).get("controls", [])):
+        lines.append(
+            "- "
+            f"{control_row.get('control_label')}: "
+            f"peak_zero_lag_stage={json.dumps(control_row.get('peak_zero_lag_stage', {}), ensure_ascii=False)}, "
+            f"peak_zero_lag_dominance_stage={json.dumps(control_row.get('peak_zero_lag_dominance_stage', {}), ensure_ascii=False)}, "
+            f"largest_zero_lag_jump={json.dumps(control_row.get('largest_zero_lag_jump', {}), ensure_ascii=False)}, "
+            f"largest_zero_lag_dominance_jump={json.dumps(control_row.get('largest_zero_lag_dominance_jump', {}), ensure_ascii=False)}"
+        )
+    lines.extend(["", "## Pair Aggregates"])
+    for aggregate in list(summary.get("pair_aggregates", [])):
+        scalar_distributions = dict(aggregate.get("scalar_distributions", {}))
+        lines.append(
+            "- "
+            f"{aggregate.get('control_label')} -> {aggregate.get('stage_label')}: "
+            f"zero_lag_mean={dict(scalar_distributions.get('zero_lag_corr', {})).get('mean', 0.0)}, "
+            f"abs_zero_lag_mean={dict(scalar_distributions.get('abs_zero_lag_corr', {})).get('mean', 0.0)}, "
+            f"best_lag_mean={dict(scalar_distributions.get('best_lag_frames', {})).get('mean', 0.0)}, "
+            f"zero_minus_best_nonzero_mean={dict(scalar_distributions.get('zero_minus_best_nonzero_corr', {})).get('mean', 0.0)}, "
+            f"abs_zero_minus_best_abs_nonzero_mean={dict(scalar_distributions.get('abs_zero_minus_best_abs_nonzero_corr', {})).get('mean', 0.0)}"
+        )
+    lines.extend(["", "## Cases"])
+    for case in list(summary.get("cases", [])):
+        lines.extend(
+            [
+                f"- case_id: {case.get('case_id')}",
+                f"  input_audio_path: {case.get('input_audio_path')}",
+                f"  main_decoded_audio_path: {case.get('main_decoded_audio_path')}",
+                f"  coupling_dir: {case.get('coupling_dir')}",
+                f"  tensor_path: {case.get('tensor_path')}",
+            ]
+        )
+        for pair_summary in list(case.get("pair_summaries", [])):
+            lines.append(
+                "  "
+                f"{pair_summary.get('control_label')} -> {pair_summary.get('stage_label')}: "
+                f"zero_lag_corr={pair_summary.get('zero_lag_corr')} "
+                f"abs_zero_lag_corr={pair_summary.get('abs_zero_lag_corr')} "
+                f"best_corr={pair_summary.get('best_corr')} "
+                f"best_lag_frames={pair_summary.get('best_lag_frames')} "
+                f"zero_minus_best_nonzero_corr={pair_summary.get('zero_minus_best_nonzero_corr')} "
+                f"abs_zero_minus_best_abs_nonzero_corr={pair_summary.get('abs_zero_minus_best_abs_nonzero_corr')}"
             )
     lines.extend(["", "## Notes"])
     for note in list(summary.get("notes", [])):

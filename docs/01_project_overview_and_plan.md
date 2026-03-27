@@ -1512,3 +1512,138 @@
   - 下一步必须继续上收到：
     - 更贴近 noise-family 内部表示 / decoder interface 的约束
     - 或更强的 `shape-aware / substage-aware` temporal target
+## 2026-03-27 再补充更新
+- `docs/438_teacher_first_stage_temporal_coupling_output_head_localization_report.md`
+  已补完 strongest candidate 的更上游 stage-wise temporal coupling 定位。
+- 新 probe：
+  - `analyze-offline-mvp-teacher-first-vc-stage-temporal-coupling`
+  - 已在 fixed pure buzz triplet 上跑通：
+    - `reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/rbt_stcp_fbmc_rs/`
+- 当前结论是：
+  - 剩余 `envelope-following`
+    的主放大点已经不在
+    `noise_hidden -> branch_mean -> fused -> decoder_hidden`
+    这条上游链路。
+  - 三个 noise-family controls
+    的最大绝对零延迟耦合跳变，
+    都主要落在：
+    - `decoder_hidden -> waveform_decoder_base_logits`
+  - 再拆 output head 后可以更准确地写成：
+    - `aper`
+      和
+      `aper * noise_E`
+      更像 raw waveform head 自身在放大
+    - `noise_E_log_rms_norm`
+      的峰值则更高地落在
+      `waveform_residual_shape_delta`
+- 因而当前主线再次更新为：
+  - 不再回到：
+    - fusion regularizer
+    - `decoder_hidden` 之前的局部小修
+    - output-side `frame_rms corrreg`
+  - 下一步应直接转向：
+    - output head / residual-shape injection interface
+    - 也就是
+      `waveform_decoder(decoder_hidden)`
+      与
+      `residual_shape_branch_condition_delta`
+      这两个子阶段的结构约束或训练目标
+## 2026-03-27 晚间补充更新
+- `docs/440_stage5_output_head_headstruct_raw_edb_dual_route_rejection_report.md`
+  已补完 interruption 前未落盘的 stronger headstruct 双候选结果。
+- 当前结论是：
+  - 在 `docs/439`
+    否决较弱的
+    output-head lagcorr route
+    后，
+    已实际跑过更强的：
+    - active-template
+    - base_logits `aper/noise_E` abs-zero-lag corr
+    - residual-shape `noise_E` abs-zero-lag corr
+  - 同时比较了：
+    - `raw_additive_v1`
+    - `shape_only_energy_debiased_v1`
+  - 这两条 stronger headstruct route
+    都已完成：
+    - smoke
+    - fullsplit24
+    - user-line 回投
+    - native validation3 回投
+  - 且都被正式否决：
+    - native 仍是 `auto_reject = 3/3`
+    - `shape_only_energy_debiased_v1`
+      比 raw 版更差
+- `docs/441_stage5_output_head_headstruct_high_band_candidate_breakthrough_report.md`
+  已补完下一条显式 anti-brightness 候选。
+- 当前结论更新为：
+  - 已补齐
+    `waveform_decoder_base_logits_high_band_excess_weight`
+    的 CLI 接线
+  - 新候选：
+    - 保持 raw headstruct 路线
+    - 在 `waveform_decoder_base_logits`
+      上新增直接
+      `high_band_excess`
+  - 当前结果和 `439/440`
+    已有本质差异：
+    - native validation3
+      从
+      `auto_reject = 3/3`
+      恢复到
+      `0/3`
+    - `centroid_gap / high_band_gap`
+      已显著优于旧 strongest candidate
+    - `waveform_handoff`
+      首次显示：
+      - `likely_failure_already_present_by_frames_before_gate = false`
+  - 因而当前主线再次更新为：
+    - `headstruct + base_logits high_band_excess`
+      升格为新的可继续治理主候选
+    - 下一步优先：
+      - 人工听审治理
+      - 与继续收缩
+        `aper * noise_E`
+        在
+        `decoder_hidden -> waveform_decoder_base_logits`
+        的残余 jump
+## 2026-03-27 深夜补充更新
+- `docs/442_teacher_first_output_head_high_band_compare_bundle_and_audio_audit_contract_report.md`
+  已把
+  `441`
+  的新主候选整理成正式人工听审交付物。
+- 当前已固定的主听审对比为：
+  - 旧 strongest native candidate
+  - 对比
+  - 新 `output_head_high_band_bhb01`
+- 已落盘的正式入口：
+  - compare bundle：
+    `reports/runtime/offline_mvp_teacher_first_vc_audible_compare_bundle_outputhead_highband_vs_strongest_round1_1/`
+  - 主听 wav 目录：
+    `reports/runtime/offline_mvp_teacher_first_vc_audible_compare_bundle_outputhead_highband_vs_strongest_round1_1/listening/`
+  - GUI 输出目录：
+    `reports/audio/audio_audit_gui_outputhead_highband_vs_strongest_round1_1/`
+- 当前 bundle
+  已验证：
+  - `case_count = 3`
+  - `variant_count = 2`
+  - `variant_runs_succeeded = 6 / 6`
+  - `positive_controls_ready = 3 / 3`
+- GUI
+  也已通过一次自动关闭 smoke，
+  因而当前状态不是
+  “理论上可听审”，
+  而是：
+  - 命令
+  - bundle
+  - GUI 入口
+  都已实际跑通
+- 当前下一步维持不变：
+  - 先拿这份 bundle
+    做人工听审收口
+  - 再根据听感决定：
+    - 继续保留
+      `high_band` 主线并治理
+    - 还是回到
+      `aper * noise_E`
+      residual jump
+      的更强结构收缩

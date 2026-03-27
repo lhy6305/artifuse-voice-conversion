@@ -33,6 +33,7 @@ SUPPORTED_FUSION_MODES = {
 SUPPORTED_RESIDUAL_SHAPE_BRANCH_CONDITION_MODES = {
     "raw_additive_v1",
     "shape_only_unit_rms_v1",
+    "shape_only_energy_debiased_v1",
 }
 
 
@@ -448,11 +449,8 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             residual_shape_branch_condition_gate = torch.sigmoid(
                 self.residual_shape_branch_condition_gate(residual_shape_branch_condition_context)
             )
-            residual_shape_branch_condition_delta = resolve_residual_shape_branch_condition_delta(
-                delta=torch.tanh(
-                    self.residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
-                ),
-                mode=self.residual_shape_branch_condition_mode,
+            residual_shape_branch_condition_delta = torch.tanh(
+                self.residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
             )
         outputs = {
             "periodic_hidden": periodic_hidden,
@@ -482,14 +480,27 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         if self.waveform_decoder_mode == "fused_single":
             if self.waveform_decoder is None:
                 raise RuntimeError("waveform_decoder is not initialized for fused_single mode.")
-            waveform_frame_logits = self.waveform_decoder(decoder_hidden)
+            waveform_decoder_base_logits = self.waveform_decoder(decoder_hidden)
+            residual_shape_branch_condition_delta = resolve_residual_shape_branch_condition_delta(
+                delta=residual_shape_branch_condition_delta,
+                reference_frames=waveform_decoder_base_logits,
+                mode=self.residual_shape_branch_condition_mode,
+            )
+            waveform_frame_logits = waveform_decoder_base_logits
             if residual_shape_branch_condition_gate is not None and residual_shape_branch_condition_delta is not None:
-                waveform_frame_logits = (
-                    waveform_frame_logits
-                    + float(self.residual_shape_branch_condition_scale)
+                waveform_residual_shape_delta = (
+                    float(self.residual_shape_branch_condition_scale)
                     * residual_shape_branch_condition_gate
                     * residual_shape_branch_condition_delta
                 )
+                waveform_frame_logits = (
+                    waveform_frame_logits
+                    + waveform_residual_shape_delta
+                )
+                outputs["waveform_residual_shape_delta"] = waveform_residual_shape_delta
+            else:
+                outputs["waveform_residual_shape_delta"] = torch.zeros_like(waveform_decoder_base_logits)
+            outputs["waveform_decoder_base_logits"] = waveform_decoder_base_logits
             outputs["waveform_frame_logits"] = waveform_frame_logits
             outputs["waveform_frames"] = torch.tanh(waveform_frame_logits)
             return outputs
@@ -1020,14 +1031,33 @@ def normalize_residual_shape_branch_condition_mode(mode: str) -> str:
     return resolved
 
 
-def resolve_residual_shape_branch_condition_delta(*, delta: torch.Tensor, mode: str) -> torch.Tensor:
+def resolve_residual_shape_branch_condition_delta(
+    *,
+    delta: torch.Tensor | None,
+    mode: str,
+    reference_frames: torch.Tensor | None = None,
+) -> torch.Tensor | None:
+    if delta is None:
+        return None
     resolved_mode = normalize_residual_shape_branch_condition_mode(mode)
     if resolved_mode == "raw_additive_v1":
         return delta
     if resolved_mode == "shape_only_unit_rms_v1":
-        centered = delta.to(torch.float32) - delta.to(torch.float32).mean(dim=-1, keepdim=True)
-        frame_rms = centered.pow(2).mean(dim=-1, keepdim=True).sqrt().clamp_min(0.25)
-        return torch.tanh(centered / frame_rms)
+        delta_float = delta.to(torch.float32)
+        centered = delta_float - delta_float.mean(dim=-1, keepdim=True)
+        frame_rms = centered.pow(2).mean(dim=-1, keepdim=True).clamp_min(0.25**2).sqrt()
+        return torch.tanh(centered / frame_rms).to(delta.dtype)
+    if resolved_mode == "shape_only_energy_debiased_v1":
+        delta_float = delta.to(torch.float32)
+        centered_delta = delta_float - delta_float.mean(dim=-1, keepdim=True)
+        if reference_frames is not None:
+            reference_tensor = reference_frames.detach().to(torch.float32)
+            centered_reference = reference_tensor - reference_tensor.mean(dim=-1, keepdim=True)
+            reference_norm = centered_reference.pow(2).sum(dim=-1, keepdim=True).clamp_min(1.0e-6)
+            projection_scale = (centered_delta * centered_reference).sum(dim=-1, keepdim=True) / reference_norm
+            centered_delta = centered_delta - projection_scale * centered_reference
+        frame_rms = centered_delta.pow(2).mean(dim=-1, keepdim=True).clamp_min(0.25**2).sqrt()
+        return torch.tanh(centered_delta / frame_rms).to(delta.dtype)
     raise RuntimeError(f"Unsupported residual_shape_branch_condition_mode at runtime: {resolved_mode!r}")
 
 

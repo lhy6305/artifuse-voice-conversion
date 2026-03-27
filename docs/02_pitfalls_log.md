@@ -2078,3 +2078,167 @@
     - noise-family 内部表示
     - decoder interface / handoff substage
     - 或更强的 `shape-aware / substage-aware` temporal target
+### 2026-03-27 补充坑点：不要把剩余 envelope-following 继续归因到 fusion 或 decoder_hidden 之前
+- 现象：
+  - strongest candidate 上新补的
+    `stage temporal coupling probe`
+    已经把 noise-family controls
+    沿着：
+    - `noise_hidden`
+    - `branch_mean_hidden`
+    - `fused_hidden`
+    - `decoder_hidden`
+    - `waveform_decoder_base_logits`
+    - `waveform_residual_shape_delta`
+    - `waveform_frame_logits`
+    - `waveform_frames`
+    - `decoded_no_gate`
+    做了统一的绝对零延迟耦合定位。
+  - 当前最大 jump
+    已稳定落在：
+    - `decoder_hidden -> waveform_decoder_base_logits`
+  - 其中：
+    - `aper` / `aper * noise_E`
+      更像 raw waveform head 自身在放大
+    - `noise_E`
+      的峰值则更高地落在
+      `waveform_residual_shape_delta`
+- 风险：
+  - 如果还把剩余故障继续写成：
+    - fusion 残留没修干净
+    - `decoder_hidden` manifold 本体还在主导
+    - 或 output-side `frame_rms corrreg` 再调一下就能解决
+  - 后续实验就会重新退回：
+    - 上游小修
+    - 末端输出损失小 sweep
+    - 而错过真正的 output-head / residual-shape 接口
+- 正确处理：
+  - 当前应把主落点更新为：
+    - `waveform_decoder(decoder_hidden)`
+    - `residual_shape_branch_condition_delta`
+  - 后续训练/结构实验要优先围绕：
+    - output head 自身的 acoustic-state 放大
+    - residual-shape delta 对 `noise_E`
+      的进一步峰值放大
+  - 在没有新证据前，禁止再把主时间花回
+    `fusion`、`decoder_hidden` 之前，
+    或最终输出上的 corrreg 小权重扫描。
+### 2026-03-27 晚间补充坑点：更强的 output-head active-template 与 abs-zero-lag 约束，不等于已经补上 anti-brightness
+- 现象：
+  - 在 `docs/439`
+    否决较弱的
+    output-head lagcorr route
+    之后，
+    已继续跑过更强的
+    headstruct 候选：
+    - `waveform_decoder_base_logits_active_template`
+    - `waveform_decoder_base_logits_aper_abs_zero_lag_corr`
+    - `waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr`
+    - `waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr`
+  - 但无论是：
+    - `raw_additive_v1`
+    还是：
+    - `shape_only_energy_debiased_v1`
+    最终都仍然回到
+    native `auto_reject = 3/3`
+- 风险：
+  - 很容易把“已经直接约束到 output head”
+    误写成：
+    - 这条线只差再调点权重
+  - 但当前事实是：
+    - 如果没有显式 anti-brightness，
+      它仍然会以别的形态坏掉
+- 正确处理：
+  - 当前不能继续围绕
+    `active-template`
+    与
+    `abs-zero-lag`
+    单独做小 sweep
+  - 下一步必须显式补上：
+    - brightness / high-band
+      这类直接 target
+
+### 2026-03-27 晚间补充坑点：`shape_only_energy_debiased_v1` 不是当前 residual-shape consumer 的默认优选
+- 现象：
+  - 在完全相同的 stronger headstruct loss 组合下，
+    把 residual-shape consumer
+    从：
+    - `raw_additive_v1`
+    换成：
+    - `shape_only_energy_debiased_v1`
+    并没有转正，
+    反而让：
+    - user-line
+    - native validation3
+    一起更差
+- 风险：
+  - 因为它名字上更像“更受限、更合理”，
+    很容易被写成默认更优结构
+- 正确处理：
+  - 在没有新证据前，
+    不要再把
+    `shape_only_energy_debiased_v1`
+    当成当前 output-head 主线的默认 consumer
+  - 当前更合理的策略是：
+    - 回到 raw 版
+    - 再补更直接的
+      anti-brightness target
+
+### 2026-03-27 晚间补充坑点：当 decode 默认已经提升为 `post_ola_envelope` 时，不要只看 `decoded_no_gate` 就匆忙否决候选
+- 现象：
+  - 新的
+    `headstruct + base_logits high_band_excess`
+    候选上，
+    `decoded_no_gate`
+    仍然不是最终听感等价物，
+    但：
+    - native validation3
+      已从
+      `auto_reject = 3/3`
+      恢复到
+      `0/3`
+    - `waveform_handoff`
+      也首次显示：
+      - `likely_failure_already_present_by_frames_before_gate = false`
+- 风险：
+  - 如果还沿用旧阶段那种
+    “先看 no-gate，
+    no-gate 不顺眼就直接否掉”
+    的习惯，
+    会把已经进入可治理状态的候选
+    过早丢掉
+- 正确处理：
+  - 在当前 promoted decode 语义下，
+    需要联合看：
+    - `decoded_post_ola_gate`
+    - native `auto_reject`
+    - `waveform_handoff diagnosis`
+  - 只有当这些信号一起坏时，
+    才应直接否决
+
+### 2026-03-27 深夜补充坑点：`launch-audio-audit-gui` 对 compare bundle 不能只传目录，必须传 summary json
+- 现象：
+  - 本轮给
+    `launch-audio-audit-gui`
+    直接传：
+    `reports/runtime/offline_mvp_teacher_first_vc_audible_compare_bundle_outputhead_highband_vs_strongest_round1_1/`
+    时，
+    GUI
+    会去找：
+    `proxy_audio_export.json`
+    并直接报错
+  - 但把参数改成：
+    `teacher_first_vc_audible_compare_bundle.json`
+    本体后，
+    GUI
+    可以正常启动并完成 smoke
+- 风险：
+  - 很容易误把这个现象写成：
+    - compare bundle
+      不支持 GUI
+    - 或当前听审入口损坏
+- 正确处理：
+  - 对 teacher-first audible compare bundle，
+    应传：
+    `--bundle <...>/teacher_first_vc_audible_compare_bundle.json`
+  - 不要只传 bundle 目录本身
