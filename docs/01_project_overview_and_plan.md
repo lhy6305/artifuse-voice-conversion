@@ -35,6 +35,9 @@
 - The old `Stage5 no-res downstream` route is no longer the default route worth re-running by inertia.
 - The `student_control_packet -> minimal Stage5 adapter` path already reached real `decoded.wav` smoke level, but obvious buzz already gave a harder fail-fast negative conclusion.
 - Stage3 now has a formal packet-aware checkpoint selector, and Stage3 checkpoint choice must no longer collapse training-trajectory validation, post-hoc full-checkpoint evaluation, and packet-aware screening into one "best checkpoint" label.
+- The Stage3 post-hoc teacher-loss selector now has an explicit preferred CLI name, while the older `select-streaming-student-best-checkpoint` command remains only as a legacy alias.
+- Stage3 also now has a combined selector-comparison CLI, so future checkpoint-family reviews can materialize selector disagreement directly instead of stitching two selector directories by hand.
+- The combined selector-comparison artifact now also emits a decision summary that separates teacher-loss reference choice, handoff-facing packet candidate choice, and the conservative route-opening conclusion.
 - The active corrected-manifold Stage5 winner is now `wfta003`, and it should not be retired by broad anti-thrash wording that was meant for already dead pure-buzz families.
 - Paired Stage3 still lacks a valid frame bridge and alignment contract, so paired training cannot be treated as ready.
 
@@ -54,8 +57,13 @@
   - `proxy-acoustic / proxy-audio` cheap screen
   - named-control readiness negative gate
 - For Stage3 checkpoint choice inside this line:
+  - keep the incumbent packet-facing reference at `vuvbalancedgate24.step24`
+  - keep `warm6_18.step15` as the current packet-aware next-best non-reference candidate and teacher-loss leader in the current two-way role-aware comparison
   - use packet-aware selection for downstream packet and handoff screening
   - keep post-hoc full-checkpoint teacher-loss evaluation as a separate signal
+  - prefer the explicit `posthoc-teacher-loss` selector name in new reports and commands
+  - use the combined selector-comparison command when the checkpoint-family decision depends on reconciling both signals
+  - cite the combined `decision_summary` block first when the conclusion needs a teacher-loss reference, a handoff-facing candidate, and a route-opening recommendation
 - Current gate reading:
   - `e_evt / z_art` are ready
   - `F0 / vuv / aper / E` are still not handoff-ready
@@ -71,6 +79,7 @@
 - Active documents must stay in English ASCII.
 - All repository text files must stay UTF-8 without BOM on disk.
 - Use only `.\python.exe ...` for Python commands.
+- Keep managed output paths inside the current Windows-safe path budget and prefer compact `ss_*` artifact roots for new Stage3 selector outputs.
 - Long historical context belongs in `docs/archive/`, not back in active docs.
 - Enable `skip_existing` only after verifying artifact identity and reuse safety.
 - Important experiment and asset changes must land in traceable summary artifacts such as final summaries and machine-readable JSON.
@@ -96,3 +105,9 @@
 - `docs/475_stage5_corrected_manifold_vnc01_maskfix_wfta003_followup_report.md`
 - `docs/476_root_1md_strategy_memo_independent_assessment.md`
 - `docs/477_stage3_packet_aware_checkpoint_selector_integration_and_selection_drift_report.md`
+- `docs/478_stage3_selector_naming_hardening_and_legacy_alias_report.md`
+- `docs/479_stage3_selector_comparison_cli_and_divergence_materialization_report.md`
+- `docs/480_stage3_selector_comparison_decision_summary_hardening_report.md`
+- `docs/481_stage3_packet_reference_vs_warm6_candidate_role_aware_comparison_report.md`
+- `docs/482_windows_path_budget_and_artifact_naming_policy.md`
+- `docs/483_stage3_selector_output_path_budget_remediation_report.md`

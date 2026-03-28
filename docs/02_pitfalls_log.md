@@ -82,6 +82,38 @@
 - These selectors can disagree on the same checkpoint set without any single one being the only truth.
 - Always state which selection objective produced the ranking before promoting or retiring a checkpoint family.
 
+### 17. Do not keep using the legacy Stage3 selector name as if it were objective-neutral
+- `select-streaming-student-best-checkpoint` is backward-compatible, but its name is historically ambiguous.
+- For new work, prefer the explicit post-hoc teacher-loss selector naming in commands and reports.
+- If the legacy name is used, the report must still state that the selector objective is post-hoc teacher-supervised loss.
+
+### 18. Do not discuss Stage3 selector disagreement from memory when a combined comparison artifact can be generated
+- If a checkpoint-family decision depends on both post-hoc teacher-loss ranking and packet-aware ranking, run the combined selector-comparison command first.
+- Otherwise the discussion easily drifts into hand-written summaries that omit rank gaps, objective labels, or the actual top-1 disagreement status.
+- The comparison artifact should be the first citation when explaining why two selector outputs disagree.
+
+### 19. Do not stop at raw selector disagreement when the actual decision is role-splitting
+- In the current mainline pattern, the practical decision is often:
+  - one checkpoint as teacher-loss reference
+  - another checkpoint as handoff-facing packet candidate
+  - no unified best checkpoint
+- When that happens, cite the comparison `decision_summary` directly instead of forcing a fake single-winner conclusion.
+
+### 20. Do not let family-local packet-aware wins overwrite the incumbent global packet-facing reference by scope drift
+- A checkpoint can be the packet-aware best inside one candidate family without displacing the current packet-facing reference across families.
+- The current concrete example is:
+  - `warm6_18.step15` as the next-best non-reference candidate
+  - while `vuvbalancedgate24.step24` still holds the packet-facing reference role
+- If the report scope is cross-family, use a role-aware comparison with an explicit packet reference checkpoint.
+
+### 21. Do not treat Windows long-path warnings as harmless filesystem noise
+- If a managed artifact path starts tripping sandbox or Win32-style path limits, fix the writer immediately.
+- Shorten:
+  - output root leaves
+  - nested subdirectory names
+  - repeated experiment-id path components
+- Then regenerate or relocate the artifact and update the citing docs.
+
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
 - If it is only a local experiment conclusion, keep it in the corresponding numbered report.
@@ -97,3 +129,9 @@
 - `docs/475_stage5_corrected_manifold_vnc01_maskfix_wfta003_followup_report.md`
 - `docs/476_root_1md_strategy_memo_independent_assessment.md`
 - `docs/477_stage3_packet_aware_checkpoint_selector_integration_and_selection_drift_report.md`
+- `docs/478_stage3_selector_naming_hardening_and_legacy_alias_report.md`
+- `docs/479_stage3_selector_comparison_cli_and_divergence_materialization_report.md`
+- `docs/480_stage3_selector_comparison_decision_summary_hardening_report.md`
+- `docs/481_stage3_packet_reference_vs_warm6_candidate_role_aware_comparison_report.md`
+- `docs/482_windows_path_budget_and_artifact_naming_policy.md`
+- `docs/483_stage3_selector_output_path_budget_remediation_report.md`

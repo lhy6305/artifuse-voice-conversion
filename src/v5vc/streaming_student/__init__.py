@@ -1,6 +1,9 @@
 from v5vc.streaming_student.calibration_assets import build_streaming_student_calibration_assets
 from v5vc.streaming_student.calibration_estimator import estimate_streaming_student_calibration
 from v5vc.streaming_student.checkpoint_eval_entry import evaluate_streaming_student_checkpoint
+from v5vc.streaming_student.checkpoint_selector_comparison_entry import (
+    compare_streaming_student_checkpoint_selectors,
+)
 from v5vc.streaming_student.checkpoint_selection_entry import select_streaming_student_best_checkpoint
 from v5vc.streaming_student.downstream_control_packet import (
     export_streaming_student_downstream_control_packet,
@@ -25,6 +28,7 @@ __all__ = [
     "build_streaming_student_calibration_assets",
     "estimate_streaming_student_calibration",
     "evaluate_streaming_student_checkpoint",
+    "compare_streaming_student_checkpoint_selectors",
     "select_streaming_student_best_checkpoint",
     "select_streaming_student_packet_aware_checkpoint",
     "export_streaming_student_downstream_control_packet",

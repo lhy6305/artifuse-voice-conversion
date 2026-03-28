@@ -7,6 +7,7 @@ from time import perf_counter
 
 import torch
 
+from v5vc.managed_paths import resolve_managed_output_dir
 from v5vc.streaming_student.checkpoint_eval_entry import evaluate_split
 from v5vc.streaming_student.data import (
     load_streaming_student_conditioning_asset,
@@ -14,6 +15,9 @@ from v5vc.streaming_student.data import (
 )
 from v5vc.streaming_student.losses import resolve_semantic_supervision_config
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+
+
+POSTHOC_TEACHER_LOSS_SELECTOR_VERSION = "stage3_posthoc_teacher_loss_checkpoint_selector_v1"
 
 
 def select_streaming_student_best_checkpoint(
@@ -27,7 +31,11 @@ def select_streaming_student_best_checkpoint(
 ) -> None:
     run_started_at = datetime.now()
     run_started_perf = perf_counter()
-    output_dir = output_dir.resolve()
+    requested_output_dir = output_dir.resolve()
+    output_dir = resolve_managed_output_dir(
+        requested_output_dir,
+        default_stem="ss_ckpt_sel_posthoc",
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     resolved_checkpoint_paths = [path.resolve() for path in checkpoint_paths]
     if not resolved_checkpoint_paths:
@@ -110,6 +118,10 @@ def select_streaming_student_best_checkpoint(
     duration_sec = perf_counter() - run_started_perf
     summary = {
         "generated_at": run_ended_at.isoformat(timespec="seconds"),
+        "selector_version": POSTHOC_TEACHER_LOSS_SELECTOR_VERSION,
+        "selection_objective": "posthoc_teacher_supervised_loss",
+        "requested_output_dir": requested_output_dir.as_posix(),
+        "output_dir": output_dir.as_posix(),
         "checkpoint_paths": [path.as_posix() for path in resolved_checkpoint_paths],
         "teacher_label_index_path": Path(teacher_label_index_path).resolve().as_posix(),
         "calibration_asset_path": Path(calibration_asset_path).resolve().as_posix(),
@@ -125,13 +137,17 @@ def select_streaming_student_best_checkpoint(
             if not include_special_eval
             else "lexicographic(min_target_validation_loss_total, min_target_special_eval_loss_total)"
         ),
+        "include_special_eval": bool(include_special_eval),
         "evaluations": evaluations,
         "ranking": ranked,
+        "best_checkpoint_by_posthoc_teacher_loss": None if not ranked else ranked[0],
         "best_checkpoint": None if not ranked else ranked[0],
         "notes": [
-            "This report compares already-produced Stage3 checkpoints using fuller teacher-supervised checkpoint evaluation.",
+            "This report compares already-produced Stage3 checkpoints using post-hoc full-slice teacher-supervised checkpoint evaluation.",
+            "The ranking objective is posthoc_teacher_supervised_loss, not packet-aware downstream screening and not the in-loop training trajectory validation record.",
             "The current ranking rule is validation-first; special_eval is a tiebreaker when requested.",
             "These are still proxy losses and should be interpreted as checkpoint-selection aids, not final user-facing quality conclusions.",
+            "best_checkpoint is kept as a legacy alias for best_checkpoint_by_posthoc_teacher_loss.",
         ],
     }
 
@@ -181,12 +197,15 @@ def rank_checkpoint_evaluations(
 
 def build_markdown(summary: dict[str, object]) -> str:
     lines = [
-        "# Stage3 Streaming Student Checkpoint Selection",
+        "# Stage3 Streaming Student Post-Hoc Teacher-Loss Checkpoint Selection",
         "",
         f"- generated_at: {summary['generated_at']}",
+        f"- selector_version: {summary['selector_version']}",
+        f"- selection_objective: {summary['selection_objective']}",
         f"- checkpoint_paths: {summary['checkpoint_paths']}",
+        f"- include_special_eval: {summary['include_special_eval']}",
         f"- selection_rule: {summary['selection_rule']}",
-        f"- best_checkpoint: {json.dumps(summary['best_checkpoint'], ensure_ascii=False)}",
+        f"- best_checkpoint_by_posthoc_teacher_loss: {json.dumps(summary['best_checkpoint_by_posthoc_teacher_loss'], ensure_ascii=False)}",
         "",
         "## Ranking",
     ]

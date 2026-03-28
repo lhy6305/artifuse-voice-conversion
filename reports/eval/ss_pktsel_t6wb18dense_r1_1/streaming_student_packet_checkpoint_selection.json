@@ -1,0 +1,414 @@
+{
+  "generated_at": "2026-03-29T00:57:38",
+  "selector_version": "stage3_packet_aware_checkpoint_selector_v1",
+  "selection_objective": "packet_aware_downstream_screen",
+  "requested_output_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1",
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1",
+  "checkpoint_paths": [
+    "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step12.pt",
+    "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step15.pt",
+    "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step18.pt"
+  ],
+  "teacher_label_index_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl",
+  "calibration_asset_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json",
+  "split_dir": null,
+  "split_name": "target_validation",
+  "sample_count": 3,
+  "target_record_ids": null,
+  "max_audio_sec": null,
+  "timing": {
+    "started_at": "2026-03-29T00:57:28",
+    "ended_at": "2026-03-29T00:57:38",
+    "duration_sec": 10.352508
+  },
+  "selection_rule": "packet_facing_lexicographic(min_auto_reject_count, max_all_core_controls_ready_count, max_vuv_ready_count, max_f0_ready_count, max_aper_ready_count, max_energy_ready_count, min_avg_vuv_reference_mae, min_avg_aper_calibrated_reference_mae, min_avg_energy_stage5_norm_calibrated_reference_mae, max_avg_f0_proxy_reference_corr, min_avg_f0_calibrated_log2_mae, min_step)",
+  "evaluations": [
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step12.pt",
+      "step": 12,
+      "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+      "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0012_streaming_student_und1_1_7e54a2",
+      "packet_summary_path": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0012_streaming_student_und1_1_7e54a2/streaming_student_downstream_control_packet.json",
+      "packet_ready_count": 3,
+      "named_control_readiness_summary": {
+        "gate_version": "stage3_student_control_readiness_gate_v1",
+        "negative_gate_only": true,
+        "record_count": 3,
+        "e_evt_exported_count": 3,
+        "f0_ready_count": 0,
+        "vuv_ready_count": 1,
+        "aper_ready_count": 3,
+        "energy_ready_count": 1,
+        "all_core_controls_ready_count": 0,
+        "auto_reject_count": 3,
+        "review_required_count": 0,
+        "all_records_auto_reject": true,
+        "all_records_core_controls_ready": false
+      },
+      "averages": {
+        "avg_f0_proxy_reference_corr": 0.377539,
+        "avg_f0_calibrated_log2_mae": 0.342035,
+        "avg_vuv_reference_mae": 0.200297,
+        "avg_aper_calibrated_reference_mae": 0.118257,
+        "avg_energy_stage5_norm_calibrated_reference_mae": 0.154887
+      },
+      "record_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "f0_proxy_reference_corr": 0.429911,
+          "f0_calibrated_log2_mae": 0.185516,
+          "vuv_reference_mae": 0.115915,
+          "aper_calibrated_reference_mae": 0.093152,
+          "energy_stage5_norm_calibrated_reference_mae": 0.114621,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "review_required",
+            "aper_status": "review_required",
+            "energy_status": "review_required",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_138",
+          "f0_proxy_reference_corr": 0.153672,
+          "f0_calibrated_log2_mae": 0.431375,
+          "vuv_reference_mae": 0.22176,
+          "aper_calibrated_reference_mae": 0.138684,
+          "energy_stage5_norm_calibrated_reference_mae": 0.156808,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "auto_reject_not_ready",
+            "aper_status": "review_required",
+            "energy_status": "auto_reject_not_ready",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_106",
+          "f0_proxy_reference_corr": 0.549034,
+          "f0_calibrated_log2_mae": 0.409214,
+          "vuv_reference_mae": 0.263216,
+          "aper_calibrated_reference_mae": 0.122934,
+          "energy_stage5_norm_calibrated_reference_mae": 0.193231,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "auto_reject_not_ready",
+            "aper_status": "review_required",
+            "energy_status": "auto_reject_not_ready",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        }
+      ]
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step15.pt",
+      "step": 15,
+      "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+      "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0015_streaming_student_und1_1_7e54a2",
+      "packet_summary_path": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0015_streaming_student_und1_1_7e54a2/streaming_student_downstream_control_packet.json",
+      "packet_ready_count": 3,
+      "named_control_readiness_summary": {
+        "gate_version": "stage3_student_control_readiness_gate_v1",
+        "negative_gate_only": true,
+        "record_count": 3,
+        "e_evt_exported_count": 3,
+        "f0_ready_count": 0,
+        "vuv_ready_count": 1,
+        "aper_ready_count": 3,
+        "energy_ready_count": 2,
+        "all_core_controls_ready_count": 0,
+        "auto_reject_count": 3,
+        "review_required_count": 0,
+        "all_records_auto_reject": true,
+        "all_records_core_controls_ready": false
+      },
+      "averages": {
+        "avg_f0_proxy_reference_corr": 0.416655,
+        "avg_f0_calibrated_log2_mae": 0.329577,
+        "avg_vuv_reference_mae": 0.18271,
+        "avg_aper_calibrated_reference_mae": 0.118447,
+        "avg_energy_stage5_norm_calibrated_reference_mae": 0.143582
+      },
+      "record_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "f0_proxy_reference_corr": 0.475353,
+          "f0_calibrated_log2_mae": 0.177929,
+          "vuv_reference_mae": 0.10272,
+          "aper_calibrated_reference_mae": 0.095828,
+          "energy_stage5_norm_calibrated_reference_mae": 0.106424,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "review_required",
+            "aper_status": "review_required",
+            "energy_status": "review_required",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_138",
+          "f0_proxy_reference_corr": 0.177461,
+          "f0_calibrated_log2_mae": 0.4318,
+          "vuv_reference_mae": 0.201397,
+          "aper_calibrated_reference_mae": 0.137165,
+          "energy_stage5_norm_calibrated_reference_mae": 0.140262,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "auto_reject_not_ready",
+            "aper_status": "review_required",
+            "energy_status": "review_required",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_106",
+          "f0_proxy_reference_corr": 0.59715,
+          "f0_calibrated_log2_mae": 0.379002,
+          "vuv_reference_mae": 0.244014,
+          "aper_calibrated_reference_mae": 0.122349,
+          "energy_stage5_norm_calibrated_reference_mae": 0.184059,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "auto_reject_not_ready",
+            "aper_status": "review_required",
+            "energy_status": "auto_reject_not_ready",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        }
+      ]
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step18.pt",
+      "step": 18,
+      "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+      "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0018_streaming_student_und1_1_7e54a2",
+      "packet_summary_path": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0018_streaming_student_und1_1_7e54a2/streaming_student_downstream_control_packet.json",
+      "packet_ready_count": 3,
+      "named_control_readiness_summary": {
+        "gate_version": "stage3_student_control_readiness_gate_v1",
+        "negative_gate_only": true,
+        "record_count": 3,
+        "e_evt_exported_count": 3,
+        "f0_ready_count": 0,
+        "vuv_ready_count": 1,
+        "aper_ready_count": 3,
+        "energy_ready_count": 2,
+        "all_core_controls_ready_count": 0,
+        "auto_reject_count": 3,
+        "review_required_count": 0,
+        "all_records_auto_reject": true,
+        "all_records_core_controls_ready": false
+      },
+      "averages": {
+        "avg_f0_proxy_reference_corr": 0.445955,
+        "avg_f0_calibrated_log2_mae": 0.320489,
+        "avg_vuv_reference_mae": 0.19273,
+        "avg_aper_calibrated_reference_mae": 0.118431,
+        "avg_energy_stage5_norm_calibrated_reference_mae": 0.138791
+      },
+      "record_metrics": [
+        {
+          "record_id": "target::chapter3_3_firefly_162",
+          "f0_proxy_reference_corr": 0.514897,
+          "f0_calibrated_log2_mae": 0.171179,
+          "vuv_reference_mae": 0.107733,
+          "aper_calibrated_reference_mae": 0.093091,
+          "energy_stage5_norm_calibrated_reference_mae": 0.103581,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "review_required",
+            "aper_status": "review_required",
+            "energy_status": "review_required",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        },
+        {
+          "record_id": "target::chapter3_3_firefly_138",
+          "f0_proxy_reference_corr": 0.199807,
+          "f0_calibrated_log2_mae": 0.432085,
+          "vuv_reference_mae": 0.220604,
+          "aper_calibrated_reference_mae": 0.13834,
+          "energy_stage5_norm_calibrated_reference_mae": 0.13516,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "auto_reject_not_ready",
+            "aper_status": "review_required",
+            "energy_status": "review_required",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        },
+        {
+          "record_id": "target::chapter3_4_firefly_106",
+          "f0_proxy_reference_corr": 0.62316,
+          "f0_calibrated_log2_mae": 0.358203,
+          "vuv_reference_mae": 0.249854,
+          "aper_calibrated_reference_mae": 0.123861,
+          "energy_stage5_norm_calibrated_reference_mae": 0.177631,
+          "named_control_readiness": {
+            "gate_version": "stage3_student_control_readiness_gate_v1",
+            "negative_gate_only": true,
+            "packet_ready_for_named_e_evt_handoff": true,
+            "e_evt_status": "analysis_only_exported",
+            "z_art_status": "analysis_only_exported",
+            "f0_status": "auto_reject_not_ready",
+            "vuv_status": "auto_reject_not_ready",
+            "aper_status": "review_required",
+            "energy_status": "auto_reject_not_ready",
+            "all_core_controls_ready": false,
+            "route_open_recommended": false,
+            "assessment": "auto_reject_named_control_incomplete"
+          }
+        }
+      ]
+    }
+  ],
+  "ranking": [
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step15.pt",
+      "step": 15,
+      "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+      "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0015_streaming_student_und1_1_7e54a2",
+      "auto_reject_count": 3,
+      "all_core_controls_ready_count": 0,
+      "vuv_ready_count": 1,
+      "f0_ready_count": 0,
+      "aper_ready_count": 3,
+      "energy_ready_count": 2,
+      "avg_vuv_reference_mae": 0.18271,
+      "avg_aper_calibrated_reference_mae": 0.118447,
+      "avg_energy_stage5_norm_calibrated_reference_mae": 0.143582,
+      "avg_f0_proxy_reference_corr": 0.416655,
+      "avg_f0_calibrated_log2_mae": 0.329577
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step18.pt",
+      "step": 18,
+      "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+      "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0018_streaming_student_und1_1_7e54a2",
+      "auto_reject_count": 3,
+      "all_core_controls_ready_count": 0,
+      "vuv_ready_count": 1,
+      "f0_ready_count": 0,
+      "aper_ready_count": 3,
+      "energy_ready_count": 2,
+      "avg_vuv_reference_mae": 0.19273,
+      "avg_aper_calibrated_reference_mae": 0.118431,
+      "avg_energy_stage5_norm_calibrated_reference_mae": 0.138791,
+      "avg_f0_proxy_reference_corr": 0.445955,
+      "avg_f0_calibrated_log2_mae": 0.320489
+    },
+    {
+      "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step12.pt",
+      "step": 12,
+      "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+      "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0012_streaming_student_und1_1_7e54a2",
+      "auto_reject_count": 3,
+      "all_core_controls_ready_count": 0,
+      "vuv_ready_count": 1,
+      "f0_ready_count": 0,
+      "aper_ready_count": 3,
+      "energy_ready_count": 1,
+      "avg_vuv_reference_mae": 0.200297,
+      "avg_aper_calibrated_reference_mae": 0.118257,
+      "avg_energy_stage5_norm_calibrated_reference_mae": 0.154887,
+      "avg_f0_proxy_reference_corr": 0.377539,
+      "avg_f0_calibrated_log2_mae": 0.342035
+    }
+  ],
+  "best_checkpoint_by_packet_screen": {
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step15.pt",
+    "step": 15,
+    "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+    "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0015_streaming_student_und1_1_7e54a2",
+    "auto_reject_count": 3,
+    "all_core_controls_ready_count": 0,
+    "vuv_ready_count": 1,
+    "f0_ready_count": 0,
+    "aper_ready_count": 3,
+    "energy_ready_count": 2,
+    "avg_vuv_reference_mae": 0.18271,
+    "avg_aper_calibrated_reference_mae": 0.118447,
+    "avg_energy_stage5_norm_calibrated_reference_mae": 0.143582,
+    "avg_f0_proxy_reference_corr": 0.416655,
+    "avg_f0_calibrated_log2_mae": 0.329577
+  },
+  "best_checkpoint": {
+    "checkpoint_path": "F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step15.pt",
+    "step": 15,
+    "experiment_id": "streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1",
+    "packet_export_dir": "F:/proj_dev/tmp/workdir4/reports/eval/ss_pktsel_t6wb18dense_r1_1/pkt_exp/s0015_streaming_student_und1_1_7e54a2",
+    "auto_reject_count": 3,
+    "all_core_controls_ready_count": 0,
+    "vuv_ready_count": 1,
+    "f0_ready_count": 0,
+    "aper_ready_count": 3,
+    "energy_ready_count": 2,
+    "avg_vuv_reference_mae": 0.18271,
+    "avg_aper_calibrated_reference_mae": 0.118447,
+    "avg_energy_stage5_norm_calibrated_reference_mae": 0.143582,
+    "avg_f0_proxy_reference_corr": 0.416655,
+    "avg_f0_calibrated_log2_mae": 0.329577
+  },
+  "notes": [
+    "This report ranks Stage3 checkpoints using downstream packet cheap-screen behavior rather than teacher-supervised validation only.",
+    "The rule is packet-facing and negative-gate oriented: it can help choose the least-bad handoff candidate, but it does not prove Stage5 readiness.",
+    "Use this selection together with validation summaries, not as a replacement for them.",
+    "best_checkpoint is kept as a legacy alias for best_checkpoint_by_packet_screen."
+  ]
+}

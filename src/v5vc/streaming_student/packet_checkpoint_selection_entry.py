@@ -7,15 +7,13 @@ from time import perf_counter
 
 import torch
 
+from v5vc.managed_paths import compact_path_component, resolve_managed_output_dir
 from v5vc.streaming_student.downstream_control_packet import (
     export_streaming_student_downstream_control_packet,
 )
 
 
-def sanitize_experiment_id_for_filename(value: str) -> str:
-    sanitized = "".join(character if character not in '<>:"/\\|?*' else "_" for character in value)
-    sanitized = sanitized.strip().strip(".")
-    return sanitized or "streaming_student_packet_checkpoint_selection"
+PACKET_AWARE_SELECTOR_VERSION = "stage3_packet_aware_checkpoint_selector_v1"
 
 
 def select_streaming_student_packet_aware_checkpoint(
@@ -31,13 +29,17 @@ def select_streaming_student_packet_aware_checkpoint(
 ) -> None:
     run_started_at = datetime.now()
     run_started_perf = perf_counter()
-    output_dir = output_dir.resolve()
+    requested_output_dir = output_dir.resolve()
+    output_dir = resolve_managed_output_dir(
+        requested_output_dir,
+        default_stem="ss_ckpt_sel_pkt",
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     resolved_checkpoint_paths = [path.resolve() for path in checkpoint_paths]
     if not resolved_checkpoint_paths:
         raise ValueError("At least one checkpoint path is required.")
 
-    packet_exports_dir = output_dir / "packet_exports"
+    packet_exports_dir = output_dir / "pkt_exp"
     packet_exports_dir.mkdir(parents=True, exist_ok=True)
 
     evaluations: list[dict[str, object]] = []
@@ -45,7 +47,8 @@ def select_streaming_student_packet_aware_checkpoint(
         payload = torch.load(checkpoint_path, map_location="cpu", weights_only=False)
         step = int(payload.get("step", 0))
         experiment_id = str(payload.get("experiment_id", checkpoint_path.stem))
-        export_dir = packet_exports_dir / f"step{step:04d}_{sanitize_experiment_id_for_filename(experiment_id)}"
+        compact_experiment_id = compact_path_component(experiment_id, max_length=32)
+        export_dir = packet_exports_dir / f"s{step:04d}_{compact_experiment_id}"
         packet_summary = export_streaming_student_downstream_control_packet(
             checkpoint_path=checkpoint_path,
             output_dir=export_dir,
@@ -73,6 +76,10 @@ def select_streaming_student_packet_aware_checkpoint(
     duration_sec = perf_counter() - run_started_perf
     summary = {
         "generated_at": run_ended_at.isoformat(timespec="seconds"),
+        "selector_version": PACKET_AWARE_SELECTOR_VERSION,
+        "selection_objective": "packet_aware_downstream_screen",
+        "requested_output_dir": requested_output_dir.as_posix(),
+        "output_dir": output_dir.as_posix(),
         "checkpoint_paths": [path.as_posix() for path in resolved_checkpoint_paths],
         "teacher_label_index_path": Path(teacher_label_index_path).resolve().as_posix(),
         "calibration_asset_path": Path(calibration_asset_path).resolve().as_posix(),
@@ -104,11 +111,13 @@ def select_streaming_student_packet_aware_checkpoint(
         ),
         "evaluations": evaluations,
         "ranking": ranked,
+        "best_checkpoint_by_packet_screen": None if not ranked else ranked[0],
         "best_checkpoint": None if not ranked else ranked[0],
         "notes": [
             "This report ranks Stage3 checkpoints using downstream packet cheap-screen behavior rather than teacher-supervised validation only.",
             "The rule is packet-facing and negative-gate oriented: it can help choose the least-bad handoff candidate, but it does not prove Stage5 readiness.",
             "Use this selection together with validation summaries, not as a replacement for them.",
+            "best_checkpoint is kept as a legacy alias for best_checkpoint_by_packet_screen.",
         ],
     }
 
@@ -252,13 +261,15 @@ def build_markdown(summary: dict[str, object]) -> str:
         "# Stage3 Streaming Student Packet-Aware Checkpoint Selection",
         "",
         f"- generated_at: {summary['generated_at']}",
+        f"- selector_version: {summary['selector_version']}",
+        f"- selection_objective: {summary['selection_objective']}",
         f"- checkpoint_paths: {summary['checkpoint_paths']}",
         f"- split_name: {summary['split_name']}",
         f"- sample_count: {summary['sample_count']}",
         f"- target_record_ids: {summary['target_record_ids']}",
         f"- max_audio_sec: {summary['max_audio_sec']}",
         f"- selection_rule: {summary['selection_rule']}",
-        f"- best_checkpoint: {json.dumps(summary['best_checkpoint'], ensure_ascii=False)}",
+        f"- best_checkpoint_by_packet_screen: {json.dumps(summary['best_checkpoint_by_packet_screen'], ensure_ascii=False)}",
         "",
         "## Ranking",
     ]

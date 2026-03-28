@@ -34,7 +34,7 @@
     - `step15`
     - `step18`
   - output:
-    - `reports/eval/streaming_student_packet_checkpoint_selection_timingfocus6warm_baseline18_denseckpt_round1_1/`
+    - `reports/eval/ss_pktsel_t6wb18dense_r1_1/`
 - Result:
   - command completed successfully
   - best checkpoint:
@@ -121,9 +121,9 @@
 
 ## Key Artifacts
 - Packet-aware selector output:
-  - `reports/eval/streaming_student_packet_checkpoint_selection_timingfocus6warm_baseline18_denseckpt_round1_1/streaming_student_packet_checkpoint_selection.json`
+  - `reports/eval/ss_pktsel_t6wb18dense_r1_1/streaming_student_packet_checkpoint_selection.json`
 - Validation-first selector output after repair:
-  - `reports/eval/streaming_student_checkpoint_selection_timingfocus6warm_baseline18_denseckpt_round1_1_recheck/streaming_student_checkpoint_selection.json`
+  - `reports/eval/ss_posthoc_t6wb18dense_r1_1/streaming_student_checkpoint_selection.json`
 - Historical comparison context:
   - `docs/453_stage3_warm6_dense_checkpoint_packetaware_selection_report.md`
   - `docs/459_stage3_targetblend_earlystop_and_checkpoint_average_probe_report.md`

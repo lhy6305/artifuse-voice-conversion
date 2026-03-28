@@ -102,6 +102,7 @@ from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_w
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
     build_streaming_student_calibration_assets,
+    compare_streaming_student_checkpoint_selectors,
     export_streaming_student_downstream_control_packet,
     build_streaming_student_eval_bridge,
     build_streaming_student_teacher_labels,
@@ -1004,7 +1005,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     streaming_student_checkpoint_select_parser = subparsers.add_parser(
         "select-streaming-student-best-checkpoint",
-        help="Rank multiple Stage3 checkpoints using fuller checkpoint evaluation.",
+        help="Legacy name: rank multiple Stage3 checkpoints using post-hoc full teacher-loss evaluation.",
     )
     streaming_student_checkpoint_select_parser.add_argument(
         "--checkpoints",
@@ -1034,16 +1035,64 @@ def build_parser() -> argparse.ArgumentParser:
     streaming_student_checkpoint_select_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/eval/streaming_student_checkpoint_selection"),
-        help="Directory for Stage3 checkpoint selection summaries.",
+        default=Path("reports/eval/ss_ckpt_sel_posthoc"),
+        help="Directory for post-hoc teacher-loss Stage3 checkpoint selection summaries.",
     )
     streaming_student_checkpoint_select_parser.add_argument(
         "--batch-size",
         type=int,
         default=6,
-        help="Batch size used for fuller checkpoint comparison.",
+        help="Batch size used for post-hoc full-slice checkpoint comparison.",
     )
     add_student_route_guard_argument(streaming_student_checkpoint_select_parser)
+
+    streaming_student_posthoc_checkpoint_select_parser = subparsers.add_parser(
+        "select-streaming-student-posthoc-teacher-loss-checkpoint",
+        help="Rank multiple Stage3 checkpoints using post-hoc full teacher-loss evaluation.",
+    )
+    streaming_student_posthoc_checkpoint_select_parser.add_argument(
+        "--checkpoints",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more Stage3 checkpoint paths to compare.",
+    )
+    streaming_student_posthoc_checkpoint_select_parser.add_argument(
+        "--teacher-label-index",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl"),
+        help="Teacher-label index jsonl exported for Stage3.",
+    )
+    streaming_student_posthoc_checkpoint_select_parser.add_argument(
+        "--calibration-asset",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"),
+        help="Calibration asset consumed as global conditioning for Stage3 batches.",
+    )
+    streaming_student_posthoc_checkpoint_select_parser.add_argument(
+        "--split-dir",
+        type=Path,
+        default=None,
+        help="Optional split directory override. Defaults to data.split_dir from config.",
+    )
+    streaming_student_posthoc_checkpoint_select_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/eval/ss_ckpt_sel_posthoc"),
+        help="Directory for post-hoc teacher-loss Stage3 checkpoint selection summaries.",
+    )
+    streaming_student_posthoc_checkpoint_select_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=6,
+        help="Batch size used for post-hoc full-slice checkpoint comparison.",
+    )
+    streaming_student_posthoc_checkpoint_select_parser.add_argument(
+        "--skip-special-eval",
+        action="store_true",
+        help="Evaluate target_validation only.",
+    )
+    add_student_route_guard_argument(streaming_student_posthoc_checkpoint_select_parser)
 
     streaming_student_packet_checkpoint_select_parser = subparsers.add_parser(
         "select-streaming-student-packet-aware-checkpoint",
@@ -1083,7 +1132,7 @@ def build_parser() -> argparse.ArgumentParser:
     streaming_student_packet_checkpoint_select_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/eval/streaming_student_packet_checkpoint_selection"),
+        default=Path("reports/eval/ss_ckpt_sel_pkt"),
         help="Directory for packet-aware Stage3 checkpoint selection summaries.",
     )
     streaming_student_packet_checkpoint_select_parser.add_argument(
@@ -1105,6 +1154,84 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional max duration for each exported audio item.",
     )
     add_student_route_guard_argument(streaming_student_packet_checkpoint_select_parser)
+
+    streaming_student_checkpoint_compare_parser = subparsers.add_parser(
+        "compare-streaming-student-checkpoint-selectors",
+        help="Run post-hoc teacher-loss and packet-aware Stage3 selectors on the same checkpoint set.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--checkpoints",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more Stage3 checkpoint paths to compare.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--teacher-label-index",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl"),
+        help="Teacher-label index jsonl exported for Stage3.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--calibration-asset",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"),
+        help="Calibration asset consumed as global conditioning for Stage3 batches.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--packet-reference-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional incumbent packet-reference checkpoint among --checkpoints for role-aware comparison output.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--split-dir",
+        type=Path,
+        default=None,
+        help="Optional split directory override. Defaults to data.split_dir from config.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/eval/ss_ckpt_sel_cmp"),
+        help="Directory for combined Stage3 selector-comparison summaries.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--batch-size",
+        type=int,
+        default=6,
+        help="Batch size used for post-hoc full-slice checkpoint comparison.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--skip-special-eval",
+        action="store_true",
+        help="Evaluate target_validation only for the post-hoc teacher-loss selector.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--split-name",
+        default="target_validation",
+        choices=["target_train", "target_validation", "target_special_eval"],
+        help="Target split to sample for packet-aware Stage3 checkpoint selection.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=3,
+        help="Number of evenly spaced records to export when target_record_ids are omitted.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--target-record-ids",
+        nargs="+",
+        default=None,
+        help="Optional explicit target record_ids to export instead of evenly spaced sampling.",
+    )
+    streaming_student_checkpoint_compare_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration for each exported audio item.",
+    )
+    add_student_route_guard_argument(streaming_student_checkpoint_compare_parser)
     streaming_student_proxy_audio_parser = subparsers.add_parser(
         "export-streaming-student-proxy-audio",
         help="Export Stage3 input, teacher proxy, and student proxy audio for structural listening audits.",
@@ -5717,7 +5844,10 @@ def main(argv: list[str] | None = None) -> int:
             include_special_eval=not args.skip_special_eval,
         )
         return 0
-    if args.command == "select-streaming-student-best-checkpoint":
+    if args.command in {
+        "select-streaming-student-best-checkpoint",
+        "select-streaming-student-posthoc-teacher-loss-checkpoint",
+    }:
         require_student_route_explicit_ack(
             args.command,
             args.allow_student_line_while_teacher_unsatisfied,
@@ -5743,6 +5873,26 @@ def main(argv: list[str] | None = None) -> int:
             teacher_label_index_path=args.teacher_label_index,
             calibration_asset_path=args.calibration_asset,
             split_dir=args.split_dir,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            max_audio_sec=args.max_audio_sec,
+        )
+        return 0
+    if args.command == "compare-streaming-student-checkpoint-selectors":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
+        compare_streaming_student_checkpoint_selectors(
+            checkpoint_paths=args.checkpoints,
+            output_dir=args.output_dir,
+            teacher_label_index_path=args.teacher_label_index,
+            calibration_asset_path=args.calibration_asset,
+            packet_reference_checkpoint_path=args.packet_reference_checkpoint,
+            split_dir=args.split_dir,
+            batch_size=args.batch_size,
+            include_special_eval=not args.skip_special_eval,
             split_name=args.split_name,
             sample_count=args.sample_count,
             target_record_ids=args.target_record_ids,
