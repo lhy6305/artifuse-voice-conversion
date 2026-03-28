@@ -12,6 +12,7 @@ from v5vc.streaming_student.data import (
     load_streaming_student_conditioning_asset,
     load_streaming_student_target_records_by_split,
 )
+from v5vc.streaming_student.losses import resolve_semantic_supervision_config
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
 
 
@@ -60,6 +61,9 @@ def select_streaming_student_best_checkpoint(
             for key, value in dict(training_summary.get("loss_weights", {})).items()
         }
         use_teacher_confidence = bool(training_summary.get("use_teacher_confidence", True))
+        semantic_supervision = resolve_semantic_supervision_config(
+            config=training_summary.get("semantic_supervision", checkpoint_config.get("semantic_supervision")),
+        )
 
         model = instantiate_streaming_student_scaffold(model_config=dict(checkpoint_config["model"]))
         model.load_state_dict(payload["model_state_dict"])
@@ -71,6 +75,7 @@ def select_streaming_student_best_checkpoint(
                 conditioning_asset=conditioning_asset,
                 loss_weights=loss_weights,
                 use_teacher_confidence=use_teacher_confidence,
+                semantic_supervision=semantic_supervision,
                 batch_size=batch_size,
             )
             special_summary = None
@@ -81,6 +86,7 @@ def select_streaming_student_best_checkpoint(
                     conditioning_asset=conditioning_asset,
                     loss_weights=loss_weights,
                     use_teacher_confidence=use_teacher_confidence,
+                    semantic_supervision=semantic_supervision,
                     batch_size=batch_size,
                 )
         step = int(payload.get("step", 0))
@@ -91,6 +97,7 @@ def select_streaming_student_best_checkpoint(
                 "training": {
                     "use_teacher_confidence": use_teacher_confidence,
                     "loss_weights": loss_weights,
+                    "semantic_supervision": semantic_supervision,
                     "loss_weight_overrides_path": training_summary.get("loss_weight_overrides_path"),
                 },
                 "target_validation": validation_summary,

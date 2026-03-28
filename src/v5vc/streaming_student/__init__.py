@@ -7,6 +7,9 @@ from v5vc.streaming_student.downstream_control_packet import (
 )
 from v5vc.streaming_student.eval_bridge import build_streaming_student_eval_bridge
 from v5vc.streaming_student.model import StreamingStudentScaffold
+from v5vc.streaming_student.packet_checkpoint_selection_entry import (
+    select_streaming_student_packet_aware_checkpoint,
+)
 from v5vc.streaming_student.plan_entry import prepare_streaming_student_stage
 from v5vc.streaming_student.proxy_audio_export import export_streaming_student_proxy_audio
 from v5vc.streaming_student.supervision_entry import prepare_streaming_student_supervision
@@ -23,6 +26,7 @@ __all__ = [
     "estimate_streaming_student_calibration",
     "evaluate_streaming_student_checkpoint",
     "select_streaming_student_best_checkpoint",
+    "select_streaming_student_packet_aware_checkpoint",
     "export_streaming_student_downstream_control_packet",
     "build_streaming_student_eval_bridge",
     "build_streaming_student_teacher_labels",

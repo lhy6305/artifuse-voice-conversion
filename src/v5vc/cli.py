@@ -115,6 +115,7 @@ from v5vc.streaming_student import (
     run_streaming_student_training_loop,
     run_streaming_student_training_step,
     select_streaming_student_best_checkpoint,
+    select_streaming_student_packet_aware_checkpoint,
 )
 from v5vc.streaming_student.stage5_handoff import build_streaming_student_stage5_dataset_packages
 from v5vc.target_special_supervision import analyze_round1_target_special_supervision
@@ -1043,6 +1044,67 @@ def build_parser() -> argparse.ArgumentParser:
         help="Batch size used for fuller checkpoint comparison.",
     )
     add_student_route_guard_argument(streaming_student_checkpoint_select_parser)
+
+    streaming_student_packet_checkpoint_select_parser = subparsers.add_parser(
+        "select-streaming-student-packet-aware-checkpoint",
+        help="Rank multiple Stage3 checkpoints using downstream packet cheap-screen behavior.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--checkpoints",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more Stage3 checkpoint paths to compare.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--teacher-label-index",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl"),
+        help="Teacher-label index jsonl exported for Stage3.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--calibration-asset",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_calibration/streaming_student_calibration_asset_estimated.json"),
+        help="Calibration asset consumed as global conditioning for Stage3 batches.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--split-dir",
+        type=Path,
+        default=None,
+        help="Optional split directory override. Defaults to data.split_dir from checkpoint config.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--split-name",
+        default="target_validation",
+        choices=["target_train", "target_validation", "target_special_eval"],
+        help="Target split to sample for packet-aware Stage3 checkpoint selection.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/eval/streaming_student_packet_checkpoint_selection"),
+        help="Directory for packet-aware Stage3 checkpoint selection summaries.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=3,
+        help="Number of evenly spaced records to export when target_record_ids are omitted.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--target-record-ids",
+        nargs="+",
+        default=None,
+        help="Optional explicit target record_ids to export instead of evenly spaced sampling.",
+    )
+    streaming_student_packet_checkpoint_select_parser.add_argument(
+        "--max-audio-sec",
+        type=float,
+        default=None,
+        help="Optional max duration for each exported audio item.",
+    )
+    add_student_route_guard_argument(streaming_student_packet_checkpoint_select_parser)
     streaming_student_proxy_audio_parser = subparsers.add_parser(
         "export-streaming-student-proxy-audio",
         help="Export Stage3 input, teacher proxy, and student proxy audio for structural listening audits.",
@@ -5668,6 +5730,23 @@ def main(argv: list[str] | None = None) -> int:
             split_dir=args.split_dir,
             batch_size=args.batch_size,
             include_special_eval=not args.skip_special_eval,
+        )
+        return 0
+    if args.command == "select-streaming-student-packet-aware-checkpoint":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
+        select_streaming_student_packet_aware_checkpoint(
+            checkpoint_paths=args.checkpoints,
+            output_dir=args.output_dir,
+            teacher_label_index_path=args.teacher_label_index,
+            calibration_asset_path=args.calibration_asset,
+            split_dir=args.split_dir,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            max_audio_sec=args.max_audio_sec,
         )
         return 0
     if args.command == "export-streaming-student-proxy-audio":

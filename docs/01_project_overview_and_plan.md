@@ -1,75 +1,90 @@
-# 项目总览与实施计划
+# Project Overview and Execution Plan
 
-## 文档定位
-- 本文档只保留当前接班所需的项目目标、阶段判断、主线和下一步。
-- 详细实验流水、逐轮追记、旧阶段长历史不再继续堆进这里。
-- 当前归档快照：
+## Document Role
+- This file keeps only the project goal, stage judgment, active lines of work, and next steps needed for takeover.
+- Detailed per-round experiment logs and old long-form history should not keep flowing back into this file.
+- Current archive snapshots:
   - `docs/archive/01_project_overview_and_plan_snapshot_20260326.md`
   - `docs/archive/01_project_overview_and_plan_snapshot_20260328.md`
 
-## 项目目标摘要
-- 基于 `initial_design.md`，当前目标仍是构建兼顾离线高质量与在线低延迟的工业化变声系统。
-- 核心控制链设计态为：`z_art`、`e_evt`、`F0 / vuv / aper / E`，以及被严格限权的 `r_res`。
-- 当前原则不变：
-  - 无残差主干必须先成立。
-  - 不允许把系统做成披着可解释外壳的神经编解码器。
-  - 在线流式闭环晚于离线主干验证。
+## Project Goal Summary
+- Based on `initial_design.md`, the project goal remains an industrial voice-conversion system that balances high offline quality with low online latency.
+- The core control-chain design state remains:
+  - `z_art`
+  - `e_evt`
+  - `F0 / vuv / aper / E`
+  - tightly constrained `r_res`
+- The main principles are unchanged:
+  - the no-residual backbone must stand on its own first
+  - the system must not collapse into a neural codec hidden behind an interpretable shell
+  - streaming end-to-end closure comes after offline backbone validation
 
-## 当前仓库结构
-- `initial_design.md`：主设计稿。
-- `initial_design_judg.md`：风险与去魅评估。
-- `manage.py`：统一命令入口。
-- `python.exe`：项目固定解释器。
-- `src/v5vc/`：项目源码，覆盖 Stage3 / Stage5 / teacher-first / streaming_student 主线实现。
-- `configs/`：配置与模板。
-- `reports/`：训练、评估、导出产物，以及实验结论对应的结构化报告。
-- `docs/`：主文档与编号报告。
-- `docs/archive/`：旧阶段快照归档。
+## Current Repository Layout
+- `initial_design.md`: primary design document
+- `initial_design_judg.md`: risk and de-romanticization review
+- `manage.py`: unified command entry
+- `python.exe`: fixed project interpreter
+- `src/v5vc/`: main source tree for Stage3, Stage5, teacher-first, and streaming-student work
+- `configs/`: configuration files and templates
+- `reports/`: training, evaluation, export artifacts, and structured experiment outputs
+- `docs/`: active docs and numbered reports
+- `docs/archive/`: archived snapshots from older stages
 
-## 当前阶段总判断
-- Stage3 generation-side 当前最新、最强的 reference 是 `acoustic_directional_targetstate_bridge_v1`。
-- 旧 `Stage5 no-res downstream` 已不再是值得继续默认回流的 Stage5 candidate 承接 route。
-- `student_control_packet -> minimal Stage5 adapter` 已经跑到真实 `decoded.wav` 级别 smoke，但 obvious-buzz 已给出更硬的 fail-fast 负结论。
-- paired Stage3 仍缺 frame bridge / alignment contract，当前不能直接开 paired 训练。
+## Current Stage Assessment
+- The strongest current Stage3 reference remains generation-side work around `acoustic_directional_targetstate_bridge_v1`.
+- The old `Stage5 no-res downstream` route is no longer the default route worth re-running by inertia.
+- The `student_control_packet -> minimal Stage5 adapter` path already reached real `decoded.wav` smoke level, but obvious buzz already gave a harder fail-fast negative conclusion.
+- Stage3 now has a formal packet-aware checkpoint selector, and Stage3 checkpoint choice must no longer collapse training-trajectory validation, post-hoc full-checkpoint evaluation, and packet-aware screening into one "best checkpoint" label.
+- The active corrected-manifold Stage5 winner is now `wfta003`, and it should not be retired by broad anti-thrash wording that was meant for already dead pure-buzz families.
+- Paired Stage3 still lacks a valid frame bridge and alignment contract, so paired training cannot be treated as ready.
 
-## 当前主线
-### 主线 A：继续做 teacher-label / target-state generation-side completion
-- 当前 reference：`acoustic_directional_targetstate_bridge_v1`
-- 当前动作：
-  - 继续做 generation-side bridge / target-state completion
-  - 不回头扫旧 `acoustic_contextual` 小 patch
-  - 不回头扫 loss-side imitation 微调，也不把 loss 下降误写成 readiness 提升
+## Current Main Lines
 
-### 主线 B：重新识别 handoff family，而不是继续回流旧 Stage5 route
-- 当前最高优先级候选是 `Stage3 student-control packet v1`。
-- 进入新的 Stage5 route 前，先过：
+### Line A: Continue teacher-label and target-state generation-side completion
+- Current reference:
+  - `acoustic_directional_targetstate_bridge_v1`
+- Current action:
+  - continue generation-side bridge and target-state completion
+  - do not go back to old `acoustic_contextual` micro-patches
+  - do not overinterpret loss-side imitation improvements as readiness improvements
+
+### Line B: Re-identify the correct handoff family instead of recycling the old Stage5 route
+- The highest-priority current candidate is still `Stage3 student-control packet v1`.
+- Before opening a new Stage5 route, require:
   - `proxy-acoustic / proxy-audio` cheap screen
-  - `named-control readiness negative gate`
-- 当前 gate 结论是：
-  - `e_evt / z_art` 已 ready
-  - `F0 / vuv / aper / E` 仍未 handoff-ready
+  - named-control readiness negative gate
+- For Stage3 checkpoint choice inside this line:
+  - use packet-aware selection for downstream packet and handoff screening
+  - keep post-hoc full-checkpoint teacher-loss evaluation as a separate signal
+- Current gate reading:
+  - `e_evt / z_art` are ready
+  - `F0 / vuv / aper / E` are still not handoff-ready
 
-### 主线 C：paired Stage3 先补齐接线与对齐前提
-- 当前前置条件包括：
-  - `source_semantic_parity_sidecar` 需要 `source_record_id` attach
-  - target teacher label 需要 formal split 对齐约束
-- 当前关键限制是：
-  - source waveform 与 target teacher frame 不天然对齐
+### Line C: Finish paired Stage3 wiring and alignment prerequisites before paired training
+- Current prerequisites include:
+  - `source_semantic_parity_sidecar` must attach `source_record_id`
+  - target teacher labels must obey formal split alignment constraints
+- Current hard limitation:
+  - source waveform and target teacher frame sequences are not naturally aligned
 
-## 当前维护规则
-- 全部文档保持 `UTF-8`。
-- 统一使用 `python.exe manage.py ...` 作为命令入口。
-- 历史长上下文进入 `docs/archive/`，不再回流主文档。
-- `skip_existing` 只在确认复用身份正确时启用，避免静默复用旧产物。
-- 关键实验与资产变更必须能在最终 summary/json 等可追溯产物中落点。
+## Current Maintenance Rules
+- Active documents must stay in English ASCII.
+- All repository text files must stay UTF-8 without BOM on disk.
+- Use only `.\python.exe ...` for Python commands.
+- Long historical context belongs in `docs/archive/`, not back in active docs.
+- Enable `skip_existing` only after verifying artifact identity and reuse safety.
+- Important experiment and asset changes must land in traceable summary artifacts such as final summaries and machine-readable JSON.
 
-## 当前推荐下一步
-1. 围绕 `acoustic_directional_targetstate_bridge_v1` 继续做 generation-side completion。
-2. 先把 handoff candidate 的 cheap screen 和 readiness gate 做硬，再决定是否进入新的 Stage5 adapter。
-3. 在 paired Stage3 上先补 frame bridge / alignment contract，再决定是否开启 paired 训练。
-4. 继续把长期有效结论写回 `01/02`，把局部实验细节留在编号报告。
+## Current Recommended Next Steps
+1. Continue generation-side completion around `acoustic_directional_targetstate_bridge_v1`.
+2. Keep handoff candidates behind cheap screen and readiness gate before opening a new Stage5 adapter route.
+3. Keep the current `wfta003` corrected-manifold line active, but only for a clearly different localization-oriented probe rather than more blind same-family weight shrinking.
+4. Finish frame bridge and alignment contract work before any paired Stage3 training decision.
+5. Treat `C-prime / v2-core` as a strategic contract backlog, while keeping the immediate named-control blocker statement focused on `F0 / vuv / aper / E`.
+6. Use the new packet-aware selector for downstream-facing Stage3 checkpoint ranking, and label post-hoc full-checkpoint eval results explicitly instead of calling every selector output the same "best checkpoint".
+7. Keep writing long-lived conclusions back to `docs/01_project_overview_and_plan.md` and `docs/02_pitfalls_log.md`, while leaving local experiment detail in numbered reports.
 
-## 关键参考报告
+## Key Reference Reports
 - `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
 - `docs/371_stage3_student_control_packet_v1_bootstrap_and_proxy_screen_smoke_report.md`
 - `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
@@ -78,3 +93,6 @@
 - `docs/376_stage3_teacher_eevt_directional_targetstate_bridge_ab_and_readiness_report.md`
 - `docs/389_stage3_student_packet_minimal_stage5_adapter_and_decoded_smoke_fail_report.md`
 - `docs/447_repo_health_and_compliance_audit_20260328.md`
+- `docs/475_stage5_corrected_manifold_vnc01_maskfix_wfta003_followup_report.md`
+- `docs/476_root_1md_strategy_memo_independent_assessment.md`
+- `docs/477_stage3_packet_aware_checkpoint_selector_integration_and_selection_drift_report.md`

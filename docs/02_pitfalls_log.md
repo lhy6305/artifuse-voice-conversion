@@ -1,70 +1,99 @@
-# 开发踩坑记录
+# Active Pitfalls Log
 
-## 文档定位
-- 本文档只保留当前阶段仍然高频、仍然会误导决策的活跃坑点。
-- 历史长版快照已归档：
+## Document Role
+- This file keeps only the active pitfalls that still show up often and still distort decisions.
+- Long historical snapshots are archived at:
   - `docs/archive/02_pitfalls_log_snapshot_20260326.md`
   - `docs/archive/02_pitfalls_log_snapshot_20260328.md`
-- 新坑点若只是某一轮实验的局部细节，应优先写入对应编号报告；只有会持续影响后续判断的，才进入这里。
+- If a new issue is only a local detail from one experiment round, write it into the numbered report instead of this file.
 
-## 当前高优先级坑点
-### 1. 不能把 Stage3 正向直接外推成当前旧 Stage5 route 也值得重跑
-- Stage3 当前最有信息量的层仍是 generation-side。
-- 旧 `Stage5 no-res downstream` 已正式停线，不再作为默认回流路线。
+## Current High-Priority Pitfalls
 
-### 2. 不能把旧 Stage5 route 停线误写成停止 Stage5 fail-fast
-- 停止的是当前默认旧 route，不是停止一切 Stage5 验证。
-- 只有真正不同的 handoff family，才值得继续做新的 Stage5 fail-fast。
+### 1. PowerShell text IO can silently corrupt active UTF-8 documents
+- If content encoding is omitted, PowerShell text reads can fall back to GBK and produce mojibake.
+- Even when UTF-8 is requested, common PowerShell write paths may add a BOM header.
+- The repository standard is UTF-8 without BOM on disk.
+- For active documents, use `apply_patch` or `.\python.exe` with explicit UTF-8 handling instead of default PowerShell text IO.
 
-### 3. contract 接通、summary 有字段，不等于实验已经有效
-- 先确认参数和 metadata 是否真实透传到底。
-- 解释结果前必须核对最终 package / dataset index / summary。
+### 2. Do not extrapolate Stage3 progress into "the old Stage5 route is worth rerunning"
+- The most informative current Stage3 layer is still generation-side.
+- The old `Stage5 no-res downstream` route is formally retired as the default fallback route.
 
-### 4. machine gate 只能做 negative gate，不能证明成功
-- `review_required` 或“没被 auto reject”都不等于已经成功。
-- machine gate 只负责自动否定，不负责证明路线成立。
+### 3. Do not rewrite retirement of the old Stage5 route as "stop all Stage5 fail-fast work"
+- What stopped is the default old route, not all Stage5 validation.
+- Only genuinely different handoff families are worth new Stage5 fail-fast work.
 
-### 5. 人工听审一旦确认 buzz，就必须停掉同层微调线
-- 纯 buzz / pure fuzz / 无人声结构不能靠继续扫小参数解决。
-- 已被人工定性为错误解收敛的同层路线应立即停线。
+### 4. A wired contract or a populated summary field does not prove the experiment is valid
+- First verify that parameters and metadata really propagate to the final artifact.
+- Before interpreting results, verify the final package, dataset index, and summary objects.
 
-### 6. hidden / fused-hidden imitation loss 自己下降，不等于主线更好
-- 不能只看局部 imitation 指标下降。
-- 必须同时检查 `loss_total`、`loss_total_semantic_disabled_reference`、`loss_teacher_event`、`loss_teacher_event_prior`。
+### 5. Machine gate is only a negative gate, not proof of success
+- `review_required` or "not auto rejected" does not mean success.
+- Machine gate can automatically reject, but it cannot prove that a route is valid.
 
-### 7. paired source-target 不能先验当作可直接逐帧监督
-- source waveform 与 target teacher frame 不天然对齐。
-- 没有 frame bridge / alignment contract 前，不开 paired Stage3 训练。
+### 6. Once listening review confirms buzz, stop same-layer micro-tuning
+- Pure buzz, pure fuzz, or no-voice structure cannot be fixed by endless small parameter scans.
+- If a same-layer route is already identified by listening review as the wrong basin, retire it immediately.
 
-### 8. 新语义资产必须先完成 metadata / package / index plumbing，再谈 consumer 训练
-- plumbing 不清楚时，失败后无法区分接线问题和模型问题。
-- 先接 metadata，再做最小 consumer / supervision 验证。
+### 7. A falling hidden or fused-hidden imitation loss does not prove the main route improved
+- Do not look only at local imitation metrics.
+- Also inspect global or route-relevant metrics such as:
+  - `loss_total`
+  - `loss_total_semantic_disabled_reference`
+  - `loss_teacher_event`
+  - `loss_teacher_event_prior`
 
-### 9. `student_control_packet_v1` 不能误写成已完成的 Stage5-ready named-control contract
-- 当前只有 `e_evt / z_art` 可以按 ready 口径对待。
-- `F0 / vuv / aper / E` 仍是 proxy/control status，不能误写成 handoff-ready contract。
+### 8. Paired source-target data is not automatically valid frame-wise supervision
+- Source waveform and target teacher frames are not naturally aligned.
+- Do not open paired Stage3 training before a valid frame bridge and alignment contract exists.
 
-### 10. cheap screen 的“基本持平”不能被拔高成“已经值得开新 Stage5 route”
-- packet ready 和 loss 改善不等于承接证据已经足够硬。
-- 先做 packet/control calibration 与 readiness gate，再决定是否进入新的 Stage5 adapter。
+### 9. New semantic assets need metadata, package, and index plumbing before consumer training
+- If plumbing is unclear, later failures cannot be separated into wiring failures versus model failures.
+- Connect metadata first, then run a minimal consumer or supervision validation.
 
-### 11. 不能让 `skip_existing` 的静默复用掩盖真实产物变化
-- formal split、packet、audio、checkpoint、calibration、semantic/timing/parity sidecar 都可能受到旧产物复用污染。
-- 任何 reuse 都必须先核对身份指纹，不能把旧结果当成本轮新结果。
+### 10. `student_control_packet_v1` is not yet a Stage5-ready named-control contract
+- Only `e_evt / z_art` can currently be treated as ready.
+- `F0 / vuv / aper / E` are still proxy or control status, not handoff-ready contract fields.
 
-### 12. 详细实验追记不应再回流进 `01/02`
-- `01/02` 只保留持续影响后续判断的索引结论。
-- 详细历史继续放在 `docs/archive/` 与对应编号报告。
+### 11. "Roughly flat" cheap-screen results do not mean "ready to open a new Stage5 route"
+- Packet readiness and a small loss improvement do not mean the handoff evidence is strong enough.
+- Run packet or control calibration and readiness gate first, then decide on a new Stage5 adapter.
 
-## 当前维护规则
-- 新增坑点前先判断它是否会持续影响未来多轮决策。
-- 若只是局部实验结论，写入对应编号报告，不进入本文档。
-- 若本文档再次显著膨胀，继续做快照归档，不回到单文件堆历史的模式。
+### 12. Silent reuse through `skip_existing` can hide real artifact changes
+- Formal split outputs, packets, audio, checkpoints, calibration assets, and semantic or timing sidecars can all be contaminated by stale reuse.
+- Any reuse must verify identity fingerprints before old outputs are treated as current outputs.
 
-## 关键参考报告
+### 13. Detailed experiment journaling must not flow back into `docs/01` or `docs/02`
+- `docs/01` and `docs/02` should keep only conclusions that still affect future decisions.
+- Detailed history belongs in `docs/archive/` and the numbered reports.
+
+### 14. Do not rewrite "stop low-value micro-tuning" into retirement of the active `wfta003` corrected-manifold line
+- The valid stop rule is:
+  - retire already dead pure-buzz families
+  - keep materially different localization probes on the current active anchor
+- `472` to `475` show that targeted localization pressure still produced real Stage5 gains inside the current corrected-manifold branch.
+
+### 15. Do not restate `C-prime / v2-core` as if `e_evt` were the only immediate blocker
+- Historical `C-prime` docs remain useful strategic context, but later readiness-gate evidence is more specific.
+- The current immediate blocker for opening a new handoff route is still `F0 / vuv / aper / E`, not an abstract re-statement of `e_evt` alone.
+
+### 16. Do not collapse different Stage3 checkpoint-selection objectives into one "best checkpoint"
+- In-loop training validation, post-hoc full-checkpoint teacher-loss evaluation, and packet-aware downstream screening answer different questions.
+- These selectors can disagree on the same checkpoint set without any single one being the only truth.
+- Always state which selection objective produced the ranking before promoting or retiring a checkpoint family.
+
+## Current Maintenance Rules
+- Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
+- If it is only a local experiment conclusion, keep it in the corresponding numbered report.
+- If this file grows too much again, archive a new snapshot instead of turning it back into a giant history file.
+
+## Key Reference Reports
 - `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
 - `docs/371_stage3_student_control_packet_v1_bootstrap_and_proxy_screen_smoke_report.md`
 - `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
 - `docs/374_stage3_student_control_packet_readiness_gate_report.md`
 - `docs/389_stage3_student_packet_minimal_stage5_adapter_and_decoded_smoke_fail_report.md`
 - `docs/447_repo_health_and_compliance_audit_20260328.md`
+- `docs/475_stage5_corrected_manifold_vnc01_maskfix_wfta003_followup_report.md`
+- `docs/476_root_1md_strategy_memo_independent_assessment.md`
+- `docs/477_stage3_packet_aware_checkpoint_selector_integration_and_selection_drift_report.md`
