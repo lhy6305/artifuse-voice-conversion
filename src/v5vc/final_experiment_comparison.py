@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from pathlib import Path
 
 from v5vc.anchor_selection_analysis import load_anchor_candidate, round_anchor
@@ -30,11 +31,6 @@ def compare_offline_mvp_final_experiments(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def load_route_context(route_selection_path: Path | None) -> dict[str, object] | None:

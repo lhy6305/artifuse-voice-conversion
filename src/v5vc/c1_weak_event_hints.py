@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from collections import Counter
 from pathlib import Path
 
@@ -52,11 +53,6 @@ def build_c1_weak_event_hints(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_hint_row(

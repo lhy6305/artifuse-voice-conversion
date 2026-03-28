@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
 import math
-import shutil
 from pathlib import Path
 
 import torch
@@ -131,11 +132,6 @@ def export_offline_mvp_proxy_audio(
     )
     return result
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def resolve_source_manifest(

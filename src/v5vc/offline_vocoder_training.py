@@ -14,6 +14,12 @@ import torch
 import torch.nn.functional as F
 from torch.nn.utils import clip_grad_norm_
 
+from v5vc.artifact_reuse import (
+    build_file_fingerprint,
+    build_mapping_fingerprint,
+    build_optional_file_fingerprint,
+    load_json_dict_if_exists,
+)
 from v5vc.event_semantics import TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1
 from v5vc.event_semantics import TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1
 from v5vc.manifest_builder import load_jsonl
@@ -56,6 +62,7 @@ DEFAULT_STAGE5_SEMANTIC_PACKAGE_ALPHA = 0.2
 DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE = "none"
 DEFAULT_STAGE5_TARGET_CONTRACT_MODE = "legacy_proxy"
 DEFAULT_STAGE5_SPECTRAL_TARGET_MODE = "legacy_halfsplit"
+STAGE5_TRAINING_PACKAGE_REUSE_SIGNATURE_VERSION = "stage5_training_package_reuse_signature_v1"
 SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
     "none",
     "target_sidecar_broadcast_v1",
@@ -3331,7 +3338,11 @@ def log_stage5_dataset_package_progress(
 def should_reuse_existing_stage5_training_package(
     *,
     package_path: Path,
+    signature_path: Path,
     skip_existing: bool,
+    expected_signature: dict[str, object],
+    source_audio_path: Path,
+    target_audio_path: Path,
     target_event_semantic_sidecar: dict[str, object] | None,
     target_event_timing_semantic_sidecar: dict[str, object] | None,
     source_semantic_parity_sidecar: dict[str, object] | None,
@@ -3341,10 +3352,42 @@ def should_reuse_existing_stage5_training_package(
     teacher_e_evt_bridge_mode: str,
     teacher_e_evt_target_shaping_mode: str,
 ) -> bool:
-    package_reused = bool(skip_existing and package_path.exists())
-    if not package_reused:
+    if not bool(skip_existing and package_path.exists()):
         return False
-    existing_payload = load_training_package_payload(package_path)
+    existing_signature = load_json_dict_if_exists(signature_path)
+    if existing_signature != expected_signature:
+        return False
+    try:
+        existing_payload = load_training_package_payload(package_path)
+    except Exception:
+        return False
+    if str(existing_payload.get("source_audio_path", "")) != source_audio_path.as_posix():
+        return False
+    if str(existing_payload.get("target_audio_path", "")) != target_audio_path.as_posix():
+        return False
+    source_scaffold_path = existing_payload.get("source_scaffold_path")
+    if not isinstance(source_scaffold_path, str) or not source_scaffold_path:
+        return False
+    if not Path(source_scaffold_path).exists():
+        return False
+    if build_mapping_fingerprint(target_event_semantic_sidecar) != build_mapping_fingerprint(
+        existing_payload.get("target_event_semantic_sidecar")
+        if isinstance(existing_payload.get("target_event_semantic_sidecar"), dict)
+        else None
+    ):
+        return False
+    if build_mapping_fingerprint(target_event_timing_semantic_sidecar) != build_mapping_fingerprint(
+        existing_payload.get("target_event_timing_semantic_sidecar")
+        if isinstance(existing_payload.get("target_event_timing_semantic_sidecar"), dict)
+        else None
+    ):
+        return False
+    if build_mapping_fingerprint(source_semantic_parity_sidecar) != build_mapping_fingerprint(
+        existing_payload.get("source_semantic_parity_sidecar")
+        if isinstance(existing_payload.get("source_semantic_parity_sidecar"), dict)
+        else None
+    ):
+        return False
     if (
         isinstance(target_event_semantic_sidecar, dict)
         and not isinstance(existing_payload.get("target_event_semantic_sidecar"), dict)
@@ -3398,6 +3441,46 @@ def should_reuse_existing_stage5_training_package(
     return True
 
 
+def build_stage5_training_package_reuse_signature(
+    *,
+    record_id: str,
+    source_record_id: str,
+    target_record_id: str,
+    source_audio_path: Path,
+    target_audio_path: Path,
+    route_handoff_path: Path | None,
+    checkpoint_path: Path | None,
+    calibration_asset_path: Path | None,
+    target_event_semantic_sidecar: dict[str, object] | None,
+    target_event_timing_semantic_sidecar: dict[str, object] | None,
+    source_semantic_parity_sidecar: dict[str, object] | None,
+    semantic_consumer_mode: str,
+    target_contract_mode: str,
+    spectral_target_mode: str,
+    teacher_e_evt_bridge_mode: str,
+    teacher_e_evt_target_shaping_mode: str,
+) -> dict[str, object]:
+    return {
+        "signature_version": STAGE5_TRAINING_PACKAGE_REUSE_SIGNATURE_VERSION,
+        "record_id": str(record_id),
+        "source_record_id": str(source_record_id),
+        "target_record_id": str(target_record_id),
+        "source_audio_file": build_file_fingerprint(source_audio_path),
+        "target_audio_file": build_file_fingerprint(target_audio_path),
+        "route_handoff_file": build_optional_file_fingerprint(route_handoff_path),
+        "checkpoint_file": build_optional_file_fingerprint(checkpoint_path),
+        "calibration_asset_file": build_optional_file_fingerprint(calibration_asset_path),
+        "target_event_semantic_sidecar": build_mapping_fingerprint(target_event_semantic_sidecar),
+        "target_event_timing_semantic_sidecar": build_mapping_fingerprint(target_event_timing_semantic_sidecar),
+        "source_semantic_parity_sidecar": build_mapping_fingerprint(source_semantic_parity_sidecar),
+        "semantic_consumer_mode": str(semantic_consumer_mode),
+        "target_contract_mode": str(target_contract_mode),
+        "spectral_target_mode": str(spectral_target_mode),
+        "teacher_e_evt_bridge_mode": str(teacher_e_evt_bridge_mode),
+        "teacher_e_evt_target_shaping_mode": str(teacher_e_evt_target_shaping_mode),
+    }
+
+
 def build_dataset_package_for_record(task: dict[str, object]) -> dict[str, object]:
     record_started_perf = perf_counter()
     record = dict(task["record"])
@@ -3415,9 +3498,36 @@ def build_dataset_package_for_record(task: dict[str, object]) -> dict[str, objec
     scaffold_dir = record_dir / "scaffold"
     targets_dir = record_dir / "train_targets"
     package_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.pt"
+    signature_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.reuse_signature.json"
+    source_record_id = str(resolved_paths.get("source_record_id") or record_id)
+    target_record_id = str(resolved_paths.get("target_record_id") or record_id)
+    expected_signature = build_stage5_training_package_reuse_signature(
+        record_id=record_id,
+        source_record_id=source_record_id,
+        target_record_id=target_record_id,
+        source_audio_path=source_audio_path,
+        target_audio_path=target_audio_path,
+        route_handoff_path=None if route_handoff_path is None else Path(str(route_handoff_path)).resolve(),
+        checkpoint_path=None if checkpoint_path is None else Path(str(checkpoint_path)).resolve(),
+        calibration_asset_path=(
+            None if calibration_asset_path is None else Path(str(calibration_asset_path)).resolve()
+        ),
+        target_event_semantic_sidecar=task.get("target_event_semantic_sidecar"),
+        target_event_timing_semantic_sidecar=task.get("target_event_timing_semantic_sidecar"),
+        source_semantic_parity_sidecar=task.get("source_semantic_parity_sidecar"),
+        semantic_consumer_mode=str(task["semantic_consumer_mode"]),
+        target_contract_mode=str(task["target_contract_mode"]),
+        spectral_target_mode=str(task["spectral_target_mode"]),
+        teacher_e_evt_bridge_mode=str(task["teacher_e_evt_bridge_mode"]),
+        teacher_e_evt_target_shaping_mode=str(task["teacher_e_evt_target_shaping_mode"]),
+    )
     package_reused = should_reuse_existing_stage5_training_package(
         package_path=package_path,
+        signature_path=signature_path,
         skip_existing=bool(task["skip_existing"]),
+        expected_signature=expected_signature,
+        source_audio_path=source_audio_path,
+        target_audio_path=target_audio_path,
         target_event_semantic_sidecar=task.get("target_event_semantic_sidecar"),
         target_event_timing_semantic_sidecar=task.get("target_event_timing_semantic_sidecar"),
         source_semantic_parity_sidecar=task.get("source_semantic_parity_sidecar"),
@@ -3467,6 +3577,11 @@ def build_dataset_package_for_record(task: dict[str, object]) -> dict[str, objec
             target_contract_mode=str(task["target_contract_mode"]),
             spectral_target_mode=str(task["spectral_target_mode"]),
         )
+        signature_path.write_text(
+            json.dumps(expected_signature, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+            newline="\n",
+        )
     package_payload = load_training_package_payload(package_path)
     package_build_sec = perf_counter() - record_started_perf
     package_size_bytes = compute_path_size_bytes(record_dir)
@@ -3477,8 +3592,8 @@ def build_dataset_package_for_record(task: dict[str, object]) -> dict[str, objec
             "audio_path": target_audio_path.as_posix(),
             "source_audio_path": source_audio_path.as_posix(),
             "target_audio_path": target_audio_path.as_posix(),
-            "source_record_id": resolved_paths.get("source_record_id"),
-            "target_record_id": resolved_paths.get("target_record_id") or record_id,
+            "source_record_id": source_record_id,
+            "target_record_id": target_record_id,
             "record_mode": str(resolved_paths.get("record_mode", "unknown")),
             "duration_sec": resolve_dataset_record_duration_sec(record),
             "split_name": split_name,

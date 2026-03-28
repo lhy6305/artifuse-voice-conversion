@@ -367,6 +367,22 @@ def attach_teacher_label_index(
     return attached_records
 
 
+def resolve_expected_teacher_split_name_for_paired_split(split_name: str) -> str:
+    normalized_split_name = str(split_name).strip().lower()
+    split_map = {
+        "train": "target_train",
+        "validation": "target_validation",
+        "special_eval": "target_special_eval",
+        "target_train": "target_train",
+        "target_validation": "target_validation",
+        "target_special_eval": "target_special_eval",
+    }
+    expected_split_name = split_map.get(normalized_split_name)
+    if expected_split_name is None:
+        raise ValueError(f"Unsupported paired Stage3 split_name for teacher-label matching: {split_name!r}")
+    return expected_split_name
+
+
 def attach_streaming_student_paired_contract_metadata(
     records: list[dict[str, object]],
     teacher_index_map: dict[str, dict[str, object]],
@@ -376,6 +392,8 @@ def attach_streaming_student_paired_contract_metadata(
 ) -> list[dict[str, object]]:
     attached_records: list[dict[str, object]] = []
     missing_target_ids: list[str] = []
+    split_mismatch_ids: list[str] = []
+    expected_teacher_split_name = resolve_expected_teacher_split_name_for_paired_split(split_name)
     for record in records:
         target_record_id = str(record.get("target_record_id", ""))
         if not target_record_id:
@@ -383,6 +401,10 @@ def attach_streaming_student_paired_contract_metadata(
         teacher_row = teacher_index_map.get(target_record_id)
         if teacher_row is None:
             missing_target_ids.append(target_record_id)
+            continue
+        teacher_split_name = str(teacher_row.get("split_name", ""))
+        if teacher_split_name != expected_teacher_split_name:
+            split_mismatch_ids.append(f"{target_record_id}:{teacher_split_name or 'missing'}")
             continue
         updated = dict(record)
         updated["teacher_label_index"] = teacher_row
@@ -399,6 +421,12 @@ def attach_streaming_student_paired_contract_metadata(
         raise ValueError(
             "Teacher-label index missing paired target records "
             f"for {split_name}: count={len(missing_target_ids)} preview={preview}"
+        )
+    if split_mismatch_ids:
+        preview = ", ".join(split_mismatch_ids[:8])
+        raise ValueError(
+            "Teacher-label split mismatch for paired target records "
+            f"in {split_name}: expected={expected_teacher_split_name} count={len(split_mismatch_ids)} preview={preview}"
         )
     return attached_records
 

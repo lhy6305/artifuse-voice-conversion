@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import shutil
+from v5vc.managed_paths import reset_managed_directory
+
 from datetime import datetime
 from pathlib import Path
 
@@ -51,11 +52,6 @@ def build_offline_mvp_route_handoff(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_handoff_summary(

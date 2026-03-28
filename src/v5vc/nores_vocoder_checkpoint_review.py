@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from pathlib import Path
 
 from v5vc.data_scan import write_json
@@ -50,11 +51,6 @@ def review_offline_mvp_nores_vocoder_checkpoints(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_checkpoint_rows(validation_history: list[dict[str, object]]) -> list[dict[str, object]]:

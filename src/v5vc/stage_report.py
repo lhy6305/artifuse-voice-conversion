@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -35,11 +36,6 @@ def materialize_offline_mvp_stage_report(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_stage_report_payload(

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import math
-import shutil
 from pathlib import Path
 
 from v5vc.ablation_eval import load_experiment_metrics_payload
@@ -60,11 +61,6 @@ def analyze_offline_mvp_checkpoint_selection(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def analyze_single_experiment(

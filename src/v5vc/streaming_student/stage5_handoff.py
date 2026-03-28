@@ -7,6 +7,10 @@ from time import perf_counter
 
 import torch
 
+from v5vc.artifact_reuse import (
+    build_file_fingerprint,
+    load_json_dict_if_exists,
+)
 from v5vc.offline_vocoder_training import (
     DEFAULT_STAGE5_TARGET_CONTRACT_MODE,
     DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE,
@@ -20,6 +24,9 @@ from v5vc.offline_vocoder_training import (
 
 STREAMING_STUDENT_VOCODER_INPUT_SCAFFOLD_VERSION = "streaming_student_vocoder_input_scaffold_v1"
 STREAMING_STUDENT_STAGE5_DATASET_INDEX_VERSION = "streaming_student_stage5_dataset_index_v1"
+STREAMING_STUDENT_STAGE5_PACKAGE_REUSE_SIGNATURE_VERSION = (
+    "streaming_student_stage5_package_reuse_signature_v1"
+)
 SUPPORTED_STAGE5_NOISE_EVENT_FAMILIES = {
     "e_evt",
     "legacy_event_probs",
@@ -67,7 +74,24 @@ def build_streaming_student_stage5_dataset_packages(
         scaffold_dir = record_dir / "scaffold"
         targets_dir = record_dir / "train_targets"
         package_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.pt"
-        package_reused = bool(skip_existing and package_path.exists())
+        signature_path = targets_dir / "offline_mvp_nores_vocoder_train_targets.reuse_signature.json"
+        expected_signature = build_streaming_student_stage5_package_reuse_signature(
+            record_id=record_id,
+            packet_path=packet_path,
+            target_audio_path=target_audio_path,
+            semantic_consumer_mode=str(semantic_consumer_mode),
+            target_contract_mode=str(target_contract_mode),
+            noise_event_family=resolved_noise_event_family,
+        )
+        package_reused = should_reuse_existing_streaming_student_stage5_package(
+            package_path=package_path,
+            signature_path=signature_path,
+            skip_existing=skip_existing,
+            expected_signature=expected_signature,
+            target_audio_path=target_audio_path,
+            semantic_consumer_mode=str(semantic_consumer_mode),
+            target_contract_mode=str(target_contract_mode),
+        )
         if not package_reused:
             build_streaming_student_vocoder_input_scaffold(
                 packet_path=packet_path,
@@ -88,6 +112,11 @@ def build_streaming_student_stage5_dataset_packages(
                 source_semantic_parity_sidecar=None,
                 semantic_consumer_mode=semantic_consumer_mode,
                 target_contract_mode=target_contract_mode,
+            )
+            signature_path.write_text(
+                json.dumps(expected_signature, ensure_ascii=False, indent=2),
+                encoding="utf-8",
+                newline="\n",
             )
         package_payload = load_training_package_payload(package_path)
         package_entries.append(
@@ -376,6 +405,61 @@ def select_packet_export_records(
     return list(records[: int(sample_count)])
 
 
+def build_streaming_student_stage5_package_reuse_signature(
+    *,
+    record_id: str,
+    packet_path: Path,
+    target_audio_path: Path,
+    semantic_consumer_mode: str,
+    target_contract_mode: str,
+    noise_event_family: str,
+) -> dict[str, object]:
+    return {
+        "signature_version": STREAMING_STUDENT_STAGE5_PACKAGE_REUSE_SIGNATURE_VERSION,
+        "record_id": str(record_id),
+        "packet_file": build_file_fingerprint(packet_path),
+        "target_audio_file": build_file_fingerprint(target_audio_path),
+        "semantic_consumer_mode": str(semantic_consumer_mode),
+        "target_contract_mode": str(target_contract_mode),
+        "noise_event_family": str(noise_event_family),
+    }
+
+
+def should_reuse_existing_streaming_student_stage5_package(
+    *,
+    package_path: Path,
+    signature_path: Path,
+    skip_existing: bool,
+    expected_signature: dict[str, object],
+    target_audio_path: Path,
+    semantic_consumer_mode: str,
+    target_contract_mode: str,
+) -> bool:
+    if not bool(skip_existing and package_path.exists()):
+        return False
+    existing_signature = load_json_dict_if_exists(signature_path)
+    if existing_signature != expected_signature:
+        return False
+    try:
+        existing_payload = load_training_package_payload(package_path)
+    except Exception:
+        return False
+    if str(existing_payload.get("source_audio_path", "")) != target_audio_path.as_posix():
+        return False
+    if str(existing_payload.get("target_audio_path", "")) != target_audio_path.as_posix():
+        return False
+    existing_semantic_consumer = dict(existing_payload.get("semantic_consumer", {}))
+    if str(existing_semantic_consumer.get("semantic_consumer_mode", "none")) != str(semantic_consumer_mode):
+        return False
+    existing_target_contract = dict(existing_payload.get("target_contract", {}))
+    if (
+        str(existing_target_contract.get("target_contract_mode", DEFAULT_STAGE5_TARGET_CONTRACT_MODE))
+        != str(target_contract_mode)
+    ):
+        return False
+    return True
+
+
 def resolve_duration_sec(packet_payload: dict[str, object]) -> float:
     frame_count = int(packet_payload.get("frame_count", 0))
     hop_length = int(packet_payload.get("hop_length", 0))
@@ -413,6 +497,9 @@ def build_scaffold_markdown(summary: dict[str, object]) -> str:
 
 def build_dataset_markdown(summary: dict[str, object]) -> str:
     package_summary = dict(summary["summary"])
+    normalized_split_name = str(summary.get("split_name", "")).strip().lower()
+    active_split_key = "validation" if normalized_split_name == "validation" else "train"
+    active_split_summary = dict(package_summary.get(active_split_key, {}))
     return "\n".join(
         [
             "# Streaming Student Stage5 Dataset Index",
@@ -423,9 +510,10 @@ def build_dataset_markdown(summary: dict[str, object]) -> str:
             f"- semantic_consumer_mode: {summary['semantic_consumer_mode']}",
             f"- target_contract_mode: {summary['target_contract_mode']}",
             f"- noise_event_family: {summary['noise_event_family']}",
+            f"- active_split_key: {active_split_key}",
             f"- validation_package_count: {len(summary['validation_packages'])}",
-            f"- periodic_input_dims: {json.dumps(package_summary['validation']['periodic_input_dims'], ensure_ascii=False)}",
-            f"- noise_input_dims: {json.dumps(package_summary['validation']['noise_input_dims'], ensure_ascii=False)}",
+            f"- periodic_input_dims: {json.dumps(active_split_summary.get('periodic_input_dims', []), ensure_ascii=False)}",
+            f"- noise_input_dims: {json.dumps(active_split_summary.get('noise_input_dims', []), ensure_ascii=False)}",
             "",
             "## Notes",
             *[f"- {line}" for line in summary["notes"]],

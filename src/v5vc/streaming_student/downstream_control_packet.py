@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
 import math
-import shutil
 from pathlib import Path
 
 import torch
@@ -371,11 +372,6 @@ def export_streaming_student_downstream_control_packet(
     )
     return summary
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def select_target_records(

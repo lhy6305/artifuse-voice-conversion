@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
 import math
 import re
-import shutil
 import unicodedata
 import wave
 from array import array
@@ -65,11 +66,6 @@ def run_preprocessing(
     write_json(report_output_dir / "preprocess_summary.json", summary)
     write_markdown_summary(report_output_dir / "preprocess_summary.md", summary, target_report, source_report)
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def preprocess_firefly_dataset(dataset_dir: Path, output_dir: Path, config: dict[str, object]) -> dict[str, object]:

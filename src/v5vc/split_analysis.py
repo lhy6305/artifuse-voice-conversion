@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
 import math
 import random
-import shutil
 import statistics
 from collections import Counter
 from pathlib import Path
@@ -68,11 +69,6 @@ def analyze_round1_split_options(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_candidate_options(

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import shutil
+from v5vc.managed_paths import reset_managed_directory
+
 from pathlib import Path
 
 from v5vc.anchor_selection_analysis import build_summary, load_anchor_candidate
@@ -28,11 +29,6 @@ def analyze_offline_mvp_anchor_routes(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_route_summary(selection_summary: dict[str, object]) -> dict[str, object]:

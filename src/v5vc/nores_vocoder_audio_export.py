@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 from datetime import datetime
 import json
 import math
-import shutil
 from pathlib import Path
 
 import torch
@@ -777,11 +778,6 @@ def build_model_from_checkpoint(
     model.load_state_dict(state_dict)
     return model
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def sanitize_filename(value: str) -> str:

@@ -1741,7 +1741,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_demo_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/runtime/offline_mvp_teacher_first_vc_demo"),
+        default=Path("reports/runtime/tfd_demo"),
         help="Directory for the decoded wav, summary, and optional intermediates.",
     )
     teacher_first_vc_demo_parser.add_argument(
@@ -1941,7 +1941,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_review_bundle_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/runtime/offline_mvp_teacher_first_vc_demo_review_bundle"),
+        default=Path("reports/runtime/tfd_review_bundle"),
         help="Directory for bundle summaries, per-case runs, and flattened listening wav files.",
     )
     teacher_first_vc_review_bundle_parser.add_argument(
@@ -2002,7 +2002,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_audible_smoke_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/runtime/offline_mvp_teacher_first_vc_audible_smoke_bundle"),
+        default=Path("reports/runtime/tfd_smoke_bundle"),
         help="Directory for per-case runs, positive-control audio, and the aggregate audible smoke summary.",
     )
     teacher_first_vc_audible_smoke_parser.add_argument(
@@ -2081,7 +2081,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_audible_compare_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/runtime/offline_mvp_teacher_first_vc_audible_compare_bundle"),
+        default=Path("reports/runtime/tfd_compare_bundle"),
         help="Directory for per-case runs, shared positive-control audio, per-variant decoded wavs, and the aggregate compare summary.",
     )
     teacher_first_vc_audible_compare_parser.add_argument(
@@ -2165,7 +2165,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_applicability_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path("reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe"),
+        default=Path("reports/runtime/tfd_app_probe"),
         help="Directory for per-case runs and applicability summaries.",
     )
     teacher_first_vc_applicability_parser.add_argument(
@@ -2214,9 +2214,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_decoder_behavior_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/dbp"
-        ),
+        default=Path("reports/runtime/tfd_app_probe/dbp"),
         help="Directory for per-case runs and decoder-behavior summaries.",
     )
     teacher_first_vc_decoder_behavior_parser.add_argument(
@@ -2323,9 +2321,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/atap"
-        ),
+        default=Path("reports/runtime/tfd_app_probe/atap"),
         help="Directory for per-case scaffold exports and temporal-alignment summaries.",
     )
     teacher_first_vc_acoustic_temporal_alignment_parser.add_argument(
@@ -2420,9 +2416,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_waveform_handoff_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/whp"
-        ),
+        default=Path("reports/runtime/tfd_app_probe/whp"),
         help="Directory for per-case runs, handoff tensors, and staged waveform exports.",
     )
     teacher_first_vc_waveform_handoff_parser.add_argument(
@@ -2512,9 +2506,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_stage_temporal_coupling_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/stcp"
-        ),
+        default=Path("reports/runtime/tfd_app_probe/stcp"),
         help="Directory for per-case runs, scalar series tensors, and stage temporal-coupling summaries.",
     )
     teacher_first_vc_stage_temporal_coupling_parser.add_argument(
@@ -2572,9 +2564,7 @@ def build_parser() -> argparse.ArgumentParser:
     teacher_first_vc_waveform_decoder_structure_parser.add_argument(
         "--output-dir",
         type=Path,
-        default=Path(
-            "reports/runtime/offline_mvp_teacher_first_vc_demo_applicability_probe/wdsp"
-        ),
+        default=Path("reports/runtime/tfd_app_probe/wdsp"),
         help="Directory for per-case runs, structure-bypass audios, and summary outputs.",
     )
     teacher_first_vc_waveform_decoder_structure_parser.add_argument(

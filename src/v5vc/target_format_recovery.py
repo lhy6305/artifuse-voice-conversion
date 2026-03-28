@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
 import shutil
 import wave
@@ -89,11 +91,6 @@ def load_jsonl(path: Path) -> list[dict[str, object]]:
             records.append(json.loads(line))
     return records
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def copy_existing_labels(source_dir: Path, target_dir: Path) -> None:

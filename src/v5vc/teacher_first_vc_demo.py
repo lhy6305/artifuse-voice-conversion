@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 from datetime import datetime
 import hashlib
 import json
@@ -956,11 +958,6 @@ def load_vocoder_checkpoint_payload(checkpoint_path: Path) -> dict[str, object]:
         )
     return checkpoint_payload
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def export_teacher_contract_with_stage_tracking(

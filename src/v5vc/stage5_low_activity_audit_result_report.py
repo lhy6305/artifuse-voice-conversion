@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from collections import Counter
 from datetime import datetime
 from pathlib import Path
@@ -50,11 +51,6 @@ def materialize_stage5_low_activity_audit_result_report(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_audit_result_report_payload(

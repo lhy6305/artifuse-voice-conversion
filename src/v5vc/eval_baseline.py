@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from pathlib import Path
 
 from v5vc.data_scan import summarize_numeric, write_json
@@ -35,11 +36,6 @@ def evaluate_round1_baseline(
     if experiment_metrics_path is not None:
         update_experiment_metrics(experiment_metrics_path.resolve(), result)
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_baseline_result(

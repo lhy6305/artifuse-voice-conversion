@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from pathlib import Path
 
 from v5vc.data_scan import summarize_numeric, write_json
@@ -50,11 +51,6 @@ def check_round1_data(
     write_json(report_output_dir / "integrity_summary.json", summary)
     write_markdown_summary(report_output_dir / "integrity_summary.md", summary)
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def validate_target_records(records: list[dict[str, object]]) -> dict[str, object]:

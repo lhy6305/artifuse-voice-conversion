@@ -1,8 +1,9 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import argparse
 import json
-import shutil
 from datetime import datetime
 from pathlib import Path
 
@@ -54,11 +55,6 @@ def materialize_stage5_nores_milestone_acceptance_report(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_stage5_nores_milestone_acceptance_report(

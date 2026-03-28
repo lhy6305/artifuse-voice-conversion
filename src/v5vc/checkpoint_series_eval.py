@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from pathlib import Path
 
 from v5vc.ablation_eval import (
@@ -72,11 +73,6 @@ def evaluate_offline_mvp_checkpoint_series(
 
     update_experiment_metrics(experiment_metrics_path, summary)
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def resolve_checkpoint_paths(metrics_payload: dict[str, object]) -> list[Path]:

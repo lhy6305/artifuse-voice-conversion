@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import shutil
+from v5vc.managed_paths import reset_managed_directory
+
 from pathlib import Path
 
 from v5vc.ablation_eval import load_experiment_metrics_payload
@@ -27,11 +28,6 @@ def analyze_offline_mvp_anchor_selection(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def load_anchor_candidate(experiment_metrics_path: Path) -> dict[str, object]:

@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from collections import Counter
 from pathlib import Path
 import wave
@@ -1098,11 +1099,6 @@ def build_paired_parallel_source_semantic_parity_sidecar(
     )
     return summary
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_target_event_semantic_row(

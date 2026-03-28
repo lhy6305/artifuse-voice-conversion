@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
-import shutil
 from pathlib import Path
 
 from v5vc.data_scan import summarize_numeric, write_json, write_manifest
@@ -36,11 +37,6 @@ def build_round1_manifests(
     write_json(report_output_dir / "manifest_summary.json", summary)
     write_markdown_summary(report_output_dir / "manifest_summary.md", summary)
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def build_target_records(firefly_dir: Path) -> list[dict[str, object]]:

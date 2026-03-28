@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 import json
 import math
 import re
-import shutil
 from pathlib import Path
 
 from v5vc.data_scan import write_json
@@ -208,11 +209,6 @@ def select_offline_mvp_nores_vocoder_checkpoint(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def load_low_activity_probe_analysis(

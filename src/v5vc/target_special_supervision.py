@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-import shutil
+from v5vc.managed_paths import reset_managed_directory
+
 import statistics
 from collections import Counter
 from pathlib import Path
@@ -107,11 +108,6 @@ def analyze_round1_target_special_supervision(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def load_merged_target_rows(

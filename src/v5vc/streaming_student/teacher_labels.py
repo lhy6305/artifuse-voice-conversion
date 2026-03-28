@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from v5vc.managed_paths import reset_managed_directory
+
 from collections import Counter
 from datetime import datetime
 import json
-import shutil
 from pathlib import Path
 
 import torch
@@ -196,11 +197,6 @@ def build_streaming_student_teacher_labels(
         newline="\n",
     )
 
-
-def reset_managed_directory(path: Path) -> None:
-    if path.exists():
-        shutil.rmtree(path)
-    path.mkdir(parents=True, exist_ok=True)
 
 
 def resolve_teacher_source(
