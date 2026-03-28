@@ -35,12 +35,16 @@ TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TRANSITION_BRIDGE_V1 = (
 TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1 = (
     "acoustic_directional_targetstate_bridge_v1"
 )
+TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_REBALANCE_V1 = (
+    "acoustic_directional_targetstate_rebalance_v1"
+)
 TEACHER_E_EVT_BRIDGE_MODE_CHOICES = {
     TEACHER_E_EVT_BRIDGE_MODE_LEGACY_EVENT_PROBS_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_GUIDED_EVENT_BRIDGE_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_CONTEXTUAL_EVENT_BRIDGE_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TRANSITION_BRIDGE_V1,
     TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1,
+    TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_REBALANCE_V1,
 }
 TEACHER_E_EVT_TARGET_SHAPING_MODE_HARD_BOX_V1 = "hard_box_v1"
 TEACHER_E_EVT_TARGET_SHAPING_MODE_CENTER_WEIGHTED_FINAL_RAMP_V1 = (
@@ -424,13 +428,20 @@ def build_teacher_e_evt_acoustic_bridge_dims(
     zero_cross = teacher_acoustic_target[:, 2:3].clamp(0.0, 1.0)
     delta_energy = teacher_acoustic_target[:, 3:4]
     if (
-        bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1
+        bridge_mode
+        in {
+            TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1,
+            TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_REBALANCE_V1,
+        }
         and teacher_target_state is None
     ):
         raise ValueError(
-            "teacher_e_evt_bridge_mode=acoustic_directional_targetstate_bridge_v1 requires teacher_target_state."
+            f"teacher_e_evt_bridge_mode={bridge_mode} requires teacher_target_state."
         )
-    if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1:
+    if bridge_mode in {
+        TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1,
+        TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_REBALANCE_V1,
+    }:
         energy = teacher_target_state["energy"]
     energy_norm = torch.sigmoid((energy + 4.0) * 2.0)
     low_zero_cross_strength = torch.sigmoid((0.11 - zero_cross) * 18.0)
@@ -604,7 +615,10 @@ def build_teacher_e_evt_acoustic_bridge_dims(
         * (0.3 + 0.7 * past_closure_support)
         * (0.45 + 0.55 * future_energy_support)
     ).clamp(0.0, 1.0)
-    if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1:
+    if bridge_mode in {
+        TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_BRIDGE_V1,
+        TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_REBALANCE_V1,
+    }:
         target_vuv = teacher_target_state["vuv"].clamp(0.0, 1.0)
         target_aper = teacher_target_state["aper"].clamp(0.0, 1.0)
         target_f0_hz = teacher_target_state["f0_hz"].clamp_min(0.0)
@@ -626,6 +640,31 @@ def build_teacher_e_evt_acoustic_bridge_dims(
             * (0.5 + 0.5 * target_aper_blend)
             * (0.75 + 0.25 * (1.0 - target_voicing))
         ).clamp(0.0, 1.0)
+        if bridge_mode == TEACHER_E_EVT_BRIDGE_MODE_ACOUSTIC_DIRECTIONAL_TARGETSTATE_REBALANCE_V1:
+            # Rebalance the first 5 design-state dims so Stage3 does not collapse too hard into
+            # the voiced/aper pair while under-shooting frication / closure / burst.
+            target_voicing = (
+                0.82 * target_voicing
+                + 0.18 * contextual_voicing * (0.85 + 0.15 * energy_norm)
+            ).clamp(0.0, 1.0)
+            target_aper_blend = (
+                0.8 * target_aper_blend
+                + 0.2 * contextual_aper * (0.8 + 0.2 * (1.0 - target_voicing))
+            ).clamp(0.0, 1.0)
+            target_frication = (
+                target_frication
+                * (0.92 + 0.08 * (1.0 - target_voicing))
+                * (0.88 + 0.12 * torch.maximum(target_aper_blend, high_zero_cross_strength))
+                + 0.12 * frication_context * (1.0 - 0.5 * target_voicing)
+            ).clamp(0.0, 1.0)
+            target_closure = (
+                target_closure * (0.86 + 0.14 * (1.0 - target_voicing))
+                + 0.08 * closure_region * torch.maximum(future_burst_support, past_quiet_support)
+            ).clamp(0.0, 1.0)
+            target_burst = (
+                target_burst * (0.84 + 0.16 * (1.0 - target_voicing))
+                + 0.08 * burst_region * torch.maximum(past_closure_support, future_energy_support)
+            ).clamp(0.0, 1.0)
         return (
             target_frication,
             target_closure,
