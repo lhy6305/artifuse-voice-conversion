@@ -1,0 +1,30 @@
+{
+  "loss_weights": {
+    "teacher_coarse_f0_state": 0.05,
+    "teacher_f0_state": 0.02
+  },
+  "loss_weight_schedule": {
+    "teacher_coarse_f0_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    },
+    "teacher_f0_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 6
+    }
+  },
+  "semantic_supervision": {
+    "named_control_proxy_target_family": "teacher_e_evt_v1_balanced_vuv_gate_v1",
+    "event_channel_weight_overrides": {
+      "0": 1.2,
+      "1": 1.15,
+      "2": 1.15,
+      "3": 0.9,
+      "4": 0.85,
+      "5": 1.1,
+      "7": 1.15
+    }
+  }
+}

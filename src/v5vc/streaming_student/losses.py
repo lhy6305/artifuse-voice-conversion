@@ -95,6 +95,7 @@ def build_default_semantic_supervision_config() -> dict[str, object]:
         "enabled": False,
         "event_target_family": "teacher_e_evt_v1",
         "event_projection_mode": "full_e_evt",
+        "event_channel_weight_overrides": {},
         "named_control_proxy_target_family": "teacher_e_evt_v1",
         "f0_supervision_mask_family": "hard_voiced_v1",
         "required_contract_version": "target_event_semantic_sidecar_v1",
@@ -168,6 +169,23 @@ def resolve_semantic_supervision_config(
             "required_timing_contract_version",
         }:
             effective[normalized_key] = None if value in {None, ""} else str(value)
+        elif normalized_key == "event_channel_weight_overrides":
+            if value is None or value == "":
+                effective[normalized_key] = {}
+            elif not isinstance(value, Mapping):
+                raise ValueError(
+                    "Stage3 semantic supervision event_channel_weight_overrides must be a mapping object."
+                )
+            else:
+                normalized_overrides: dict[str, float] = {}
+                for raw_dim, raw_weight in value.items():
+                    normalized_dim = str(raw_dim).strip()
+                    if not normalized_dim:
+                        raise ValueError(
+                            "Stage3 semantic supervision event_channel_weight_overrides keys must be non-empty."
+                        )
+                    normalized_overrides[normalized_dim] = float(raw_weight)
+                effective[normalized_key] = normalized_overrides
         else:
             effective[normalized_key] = float(value)
     event_target_family = str(effective["event_target_family"]).strip().lower()
@@ -208,6 +226,12 @@ def resolve_semantic_supervision_config(
         raise ValueError("Stage3 semantic supervision min_multiplier must be > 0.")
     if float(effective["max_multiplier"]) < float(effective["min_multiplier"]):
         raise ValueError("Stage3 semantic supervision max_multiplier must be >= min_multiplier.")
+    event_channel_weight_overrides = effective.get("event_channel_weight_overrides", {})
+    if not isinstance(event_channel_weight_overrides, dict):
+        raise ValueError(
+            "Stage3 semantic supervision event_channel_weight_overrides must resolve to a dict."
+        )
+    effective["event_channel_weight_overrides"] = event_channel_weight_overrides
     return effective
 
 
@@ -270,6 +294,46 @@ def resolve_teacher_event_supervision_targets(
         event_channel_weight[..., 5:8] = 0.0
         excluded_dims = ["p_pause_boundary", "p_terminal_boundary", "p_final_clause"]
 
+    raw_channel_weight_overrides = semantic_supervision.get("event_channel_weight_overrides", {})
+    if raw_channel_weight_overrides not in ({}, None, ""):
+        if not isinstance(raw_channel_weight_overrides, Mapping):
+            raise ValueError(
+                "Stage3 semantic supervision event_channel_weight_overrides must be a mapping object."
+            )
+        for raw_dim, raw_weight in raw_channel_weight_overrides.items():
+            dim_key = str(raw_dim).strip()
+            if not dim_key:
+                raise ValueError(
+                    "Stage3 semantic supervision event_channel_weight_overrides keys must be non-empty."
+                )
+            try:
+                dim_index = int(dim_key)
+            except ValueError as exc:
+                raise ValueError(
+                    "Stage3 semantic supervision event_channel_weight_overrides keys must be integer indices."
+                ) from exc
+            if dim_index < 0 or dim_index >= event_dim:
+                raise ValueError(
+                    "Stage3 semantic supervision event_channel_weight_overrides index out of range: "
+                    f"{dim_index} for event_dim={event_dim}."
+                )
+            weight_value = float(raw_weight)
+            if weight_value < 0.0:
+                raise ValueError(
+                    "Stage3 semantic supervision event_channel_weight_overrides must be >= 0."
+                )
+            event_channel_weight[..., dim_index] = weight_value
+
+    event_channel_weight_values = [
+        round(float(value), 6)
+        for value in event_channel_weight.detach().cpu().reshape(-1).tolist()
+    ]
+    event_channel_weight_override_items = [
+        f"{index}:{weight}"
+        for index, weight in enumerate(event_channel_weight_values)
+        if abs(weight - 1.0) > 1e-6
+    ]
+
     if event_target_family == "teacher_e_evt_v1":
         return {
             "event_target_family": "teacher_e_evt_v1",
@@ -285,6 +349,8 @@ def resolve_teacher_event_supervision_targets(
             "proxy_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
             "main_supervised_dim_count": int((event_channel_weight > 0).to(torch.long).sum().item()),
             "excluded_main_dims": excluded_dims,
+            "event_channel_weight_values": event_channel_weight_values,
+            "event_channel_weight_override_items": event_channel_weight_override_items,
         }
     if event_target_family == "legacy_event_probs":
         if event_projection_mode != "full_e_evt":
@@ -305,6 +371,8 @@ def resolve_teacher_event_supervision_targets(
             "proxy_label_space_version": DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
             "main_supervised_dim_count": int((event_channel_weight > 0).to(torch.long).sum().item()),
             "excluded_main_dims": excluded_dims,
+            "event_channel_weight_values": event_channel_weight_values,
+            "event_channel_weight_override_items": event_channel_weight_override_items,
         }
     raise ValueError(
         "Unsupported Stage3 event_target_family resolved at loss time: "
@@ -830,6 +898,12 @@ def compute_streaming_student_teacher_supervision_loss(
         "teacher_event_main_supervised_dim_count": int(event_target_bundle["main_supervised_dim_count"]),
         "teacher_event_main_excluded_dims": ",".join(
             list(event_target_bundle.get("excluded_main_dims", []))
+        ),
+        "teacher_event_channel_weight_values": ",".join(
+            str(value) for value in list(event_target_bundle.get("event_channel_weight_values", []))
+        ),
+        "teacher_event_channel_weight_override_items": ",".join(
+            list(event_target_bundle.get("event_channel_weight_override_items", []))
         ),
         "teacher_event_proxy_target_family": str(event_target_bundle["proxy_target_family"]),
         "teacher_event_proxy_contract_version": str(event_target_bundle["proxy_contract_version"]),
