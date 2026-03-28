@@ -518,7 +518,9 @@ def run_offline_mvp_nores_vocoder_training_step(
     waveform_decoder_base_logits_aper_lagcorr_excess_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight: float = 0.0,
+    waveform_frames_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
+    waveform_decoder_base_logits_voicing_negative_corr_weight: float = 0.0,
     waveform_decoder_base_logits_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_noise_focus_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_frame_adjacent_cosine_weight: float = 0.0,
@@ -596,6 +598,9 @@ def run_offline_mvp_nores_vocoder_training_step(
         energy_proxy_target=training_batch.get("energy_proxy_target"),
         energy_log_rms_norm_target=training_batch.get("energy_log_rms_norm_target"),
         aper_target=training_batch.get("aper_target"),
+        vuv_target=training_batch.get("vuv_target"),
+        voiced_proxy_target=training_batch.get("voiced_proxy_target"),
+        aperiodicity_proxy_target=training_batch.get("aperiodicity_proxy_target"),
         sample_rate=int(runtime["sample_rate"]),
         frame_length=int(runtime["frame_length"]),
         hop_length=int(runtime["hop_length"]),
@@ -627,7 +632,9 @@ def run_offline_mvp_nores_vocoder_training_step(
         waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
         waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
         waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+        waveform_frames_active_template_weight=waveform_frames_active_template_weight,
         waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+        waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
         waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
         waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
             waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -719,8 +726,14 @@ def run_offline_mvp_nores_vocoder_training_step(
             "waveform_residual_shape_delta_noise_energy_lagcorr_excess": float(
                 waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight
             ),
+            "waveform_frames_active_template": float(
+                waveform_frames_active_template_weight
+            ),
             "waveform_decoder_base_logits_active_template": float(
                 waveform_decoder_base_logits_active_template_weight
+            ),
+            "waveform_decoder_base_logits_voicing_negative_corr": float(
+                waveform_decoder_base_logits_voicing_negative_corr_weight
             ),
             "waveform_decoder_base_logits_frame_delta": float(
                 waveform_decoder_base_logits_frame_delta_weight
@@ -849,7 +862,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
     waveform_decoder_base_logits_aper_lagcorr_excess_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight: float = 0.0,
+    waveform_frames_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
+    waveform_decoder_base_logits_voicing_negative_corr_weight: float = 0.0,
     waveform_decoder_base_logits_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_noise_focus_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_frame_adjacent_cosine_weight: float = 0.0,
@@ -948,6 +963,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
             energy_proxy_target=training_batch.get("energy_proxy_target"),
             energy_log_rms_norm_target=training_batch.get("energy_log_rms_norm_target"),
             aper_target=training_batch.get("aper_target"),
+            vuv_target=training_batch.get("vuv_target"),
+            voiced_proxy_target=training_batch.get("voiced_proxy_target"),
+            aperiodicity_proxy_target=training_batch.get("aperiodicity_proxy_target"),
             sample_rate=int(training_runtime["sample_rate"]),
             frame_length=int(training_runtime["frame_length"]),
             hop_length=int(training_runtime["hop_length"]),
@@ -979,7 +997,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
             waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_frames_active_template_weight=waveform_frames_active_template_weight,
             waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
             waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
             waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                 waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -1063,7 +1083,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
                 waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
                 waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+                waveform_frames_active_template_weight=waveform_frames_active_template_weight,
                 waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+                waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
                 waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
                 waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                     waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -1204,8 +1226,14 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "waveform_residual_shape_delta_noise_energy_lagcorr_excess": float(
                     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight
                 ),
+                "waveform_frames_active_template": float(
+                    waveform_frames_active_template_weight
+                ),
                 "waveform_decoder_base_logits_active_template": float(
                     waveform_decoder_base_logits_active_template_weight
+                ),
+                "waveform_decoder_base_logits_voicing_negative_corr": float(
+                    waveform_decoder_base_logits_voicing_negative_corr_weight
                 ),
                 "waveform_decoder_base_logits_frame_delta": float(
                     waveform_decoder_base_logits_frame_delta_weight
@@ -1604,7 +1632,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     waveform_decoder_base_logits_aper_lagcorr_excess_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight: float = 0.0,
+    waveform_frames_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
+    waveform_decoder_base_logits_voicing_negative_corr_weight: float = 0.0,
     waveform_decoder_base_logits_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_noise_focus_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_frame_adjacent_cosine_weight: float = 0.0,
@@ -1769,6 +1799,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 energy_proxy_target=batch.get("energy_proxy_target"),
                 energy_log_rms_norm_target=batch.get("energy_log_rms_norm_target"),
                 aper_target=batch.get("aper_target"),
+                vuv_target=batch.get("vuv_target"),
+                voiced_proxy_target=batch.get("voiced_proxy_target"),
+                aperiodicity_proxy_target=batch.get("aperiodicity_proxy_target"),
                 sample_rate=int(runtime["sample_rate"]),
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
@@ -1803,7 +1836,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
                 waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
                 waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+                waveform_frames_active_template_weight=waveform_frames_active_template_weight,
                 waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+                waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
                 waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
                 waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                     waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -1927,7 +1962,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
                     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
                     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+                    waveform_frames_active_template_weight=waveform_frames_active_template_weight,
                     waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+                    waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
                     waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
                     waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                         waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -1985,7 +2022,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
                     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
                     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+                    waveform_frames_active_template_weight=waveform_frames_active_template_weight,
                     waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+                    waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
                     waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
                     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
                     waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_active_weight=(
@@ -2120,8 +2159,14 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "waveform_residual_shape_delta_noise_energy_lagcorr_excess": float(
                     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight
                 ),
+                "waveform_frames_active_template": float(
+                    waveform_frames_active_template_weight
+                ),
                 "waveform_decoder_base_logits_active_template": float(
                     waveform_decoder_base_logits_active_template_weight
+                ),
+                "waveform_decoder_base_logits_voicing_negative_corr": float(
+                    waveform_decoder_base_logits_voicing_negative_corr_weight
                 ),
                 "waveform_decoder_base_logits_frame_delta": float(
                     waveform_decoder_base_logits_frame_delta_weight
@@ -4354,6 +4399,92 @@ def compute_frame_rms_abs_zero_lag_correlation_loss(
     return predicted_corr.abs(), predicted_corr
 
 
+def compute_frame_rms_negative_zero_lag_correlation_loss(
+    *,
+    predicted_frames: torch.Tensor,
+    control_target: torch.Tensor,
+    frame_weights: torch.Tensor | None = None,
+    zero_like: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    predicted_frame_rms = compute_centered_frame_rms(predicted_frames).clamp_min(1.0e-6)
+    resolved_control_target = control_target.to(predicted_frame_rms.device, dtype=predicted_frame_rms.dtype).view(-1)
+    if frame_weights is not None:
+        resolved_frame_weights = frame_weights.to(
+            predicted_frame_rms.device,
+            dtype=predicted_frame_rms.dtype,
+        ).view(-1).clamp(0.0, 1.0)
+        effective_count = min(
+            int(predicted_frame_rms.shape[0]),
+            int(resolved_control_target.shape[0]),
+            int(resolved_frame_weights.shape[0]),
+        )
+        predicted_frame_rms = predicted_frame_rms[:effective_count]
+        resolved_control_target = resolved_control_target[:effective_count]
+        resolved_frame_weights = resolved_frame_weights[:effective_count]
+        active_mask = resolved_frame_weights > 1.0e-4
+        if not bool(active_mask.any()):
+            zero_source = predicted_frames if zero_like is None else zero_like
+            zero = zero_source.new_zeros(())
+            return zero, zero
+        # For signed-correlation supervision, frame_activity is only a support mask.
+        # Multiplying both sequences by the weights can flip the correlation sign
+        # and hide the exact inversion this loss is meant to catch.
+        predicted_frame_rms = predicted_frame_rms[active_mask]
+        resolved_control_target = resolved_control_target[active_mask]
+    predicted_corr = compute_zero_lag_sequence_correlation(
+        predicted_frame_rms,
+        resolved_control_target,
+        zero_like=zero_like if zero_like is not None else predicted_frames,
+    )
+    return (-predicted_corr).clamp_min(0.0), predicted_corr
+
+
+def flatten_optional_control_tensor(
+    control: torch.Tensor | None,
+    *,
+    frame_count: int,
+) -> torch.Tensor | None:
+    if control is None:
+        return None
+    control_tensor = control.detach().to(torch.float32)
+    if control_tensor.ndim == 2 and int(control_tensor.shape[-1]) == 1:
+        control_tensor = control_tensor.squeeze(-1)
+    control_tensor = control_tensor.view(-1)
+    if int(control_tensor.shape[0]) < int(frame_count):
+        return None
+    return control_tensor[:frame_count]
+
+
+def resolve_voicing_supervision_control(
+    *,
+    frame_count: int,
+    periodic_gate_target: torch.Tensor,
+    vuv_target: torch.Tensor | None,
+    voiced_proxy_target: torch.Tensor | None,
+    aper_target: torch.Tensor | None,
+    aperiodicity_proxy_target: torch.Tensor | None,
+) -> tuple[torch.Tensor, str]:
+    for control, label in (
+        (vuv_target, "vuv_target"),
+        (voiced_proxy_target, "voiced_proxy_target"),
+    ):
+        flattened = flatten_optional_control_tensor(control, frame_count=frame_count)
+        if flattened is not None:
+            return flattened.clamp(0.0, 1.0), label
+    for control, label in (
+        (aper_target, "aper_target_inverted"),
+        (aperiodicity_proxy_target, "aperiodicity_proxy_target_inverted"),
+    ):
+        flattened = flatten_optional_control_tensor(control, frame_count=frame_count)
+        if flattened is not None:
+            return (1.0 - flattened).clamp(0.0, 1.0), label
+    fallback = flatten_optional_control_tensor(periodic_gate_target, frame_count=frame_count)
+    if fallback is None:
+        zero = periodic_gate_target.new_zeros((int(frame_count),), dtype=torch.float32)
+        return zero, "missing"
+    return fallback.clamp(0.0, 1.0), "periodic_gate_target"
+
+
 def compute_minmax_normalized_sequence_weights(
     sequence: torch.Tensor,
     *,
@@ -4745,6 +4876,9 @@ def compute_nores_vocoder_losses(
     energy_proxy_target: torch.Tensor | None,
     energy_log_rms_norm_target: torch.Tensor | None,
     aper_target: torch.Tensor | None,
+    vuv_target: torch.Tensor | None,
+    voiced_proxy_target: torch.Tensor | None,
+    aperiodicity_proxy_target: torch.Tensor | None,
     sample_rate: int | None,
     frame_length: int | None,
     hop_length: int | None,
@@ -4779,7 +4913,9 @@ def compute_nores_vocoder_losses(
     waveform_decoder_base_logits_aper_lagcorr_excess_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight: float = 0.0,
+    waveform_frames_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
+    waveform_decoder_base_logits_voicing_negative_corr_weight: float = 0.0,
     waveform_decoder_base_logits_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_noise_focus_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_frame_adjacent_cosine_weight: float = 0.0,
@@ -4842,7 +4978,9 @@ def compute_nores_vocoder_losses(
     waveform_decoder_base_logits_aper_lagcorr_excess_loss = harmonic_loss.new_zeros(())
     waveform_decoder_base_logits_noise_energy_lagcorr_excess_loss = harmonic_loss.new_zeros(())
     waveform_residual_shape_delta_noise_energy_lagcorr_excess_loss = harmonic_loss.new_zeros(())
+    waveform_frames_active_template_loss = harmonic_loss.new_zeros(())
     waveform_decoder_base_logits_active_template_loss = harmonic_loss.new_zeros(())
+    waveform_decoder_base_logits_voicing_negative_corr_loss = harmonic_loss.new_zeros(())
     waveform_decoder_base_logits_frame_delta_loss = harmonic_loss.new_zeros(())
     waveform_decoder_base_logits_noise_focus_frame_delta_loss = harmonic_loss.new_zeros(())
     waveform_decoder_base_logits_frame_adjacent_cosine_loss = harmonic_loss.new_zeros(())
@@ -4875,6 +5013,7 @@ def compute_nores_vocoder_losses(
     waveform_decoder_base_logits_to_noise_energy_abs_zero_corr = 0.0
     waveform_decoder_base_logits_to_noise_energy_active_zero_corr = 0.0
     waveform_decoder_base_logits_to_noise_energy_active_abs_zero_corr = 0.0
+    waveform_decoder_base_logits_to_voicing_active_zero_corr = 0.0
     waveform_decoder_base_logits_to_residual_shape_delta_noise_focus_zero_corr = 0.0
     waveform_decoder_base_logits_to_residual_shape_delta_noise_focus_abs_zero_corr = 0.0
     waveform_decoder_base_logits_to_aper_noise_energy_zero_corr = 0.0
@@ -4917,7 +5056,9 @@ def compute_nores_vocoder_losses(
         or float(waveform_decoder_base_logits_aper_lagcorr_excess_weight) > 0.0
         or float(waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight) > 0.0
         or float(waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight) > 0.0
+        or float(waveform_frames_active_template_weight) > 0.0
         or float(waveform_decoder_base_logits_active_template_weight) > 0.0
+        or float(waveform_decoder_base_logits_voicing_negative_corr_weight) > 0.0
         or float(waveform_decoder_base_logits_frame_delta_weight) > 0.0
         or float(waveform_decoder_base_logits_noise_focus_frame_delta_weight) > 0.0
         or float(waveform_decoder_base_logits_frame_adjacent_cosine_weight) > 0.0
@@ -4934,6 +5075,19 @@ def compute_nores_vocoder_losses(
         waveform_frames = outputs.get("waveform_frames")
         if waveform_frames is None:
             raise ValueError("Model did not emit waveform_frames while waveform/structure losses are enabled.")
+        if float(waveform_frames_active_template_weight) > 0.0:
+            (
+                waveform_frames_active_template_loss,
+                _waveform_frames_frame_delta_loss,
+                _waveform_frames_frame_adjacent_cosine_loss,
+                _waveform_frames_zero_target_flux_jitter_loss,
+            ) = compute_frame_structure_losses_against_aligned_target(
+                predicted_frames=waveform_frames,
+                aligned_waveform=aligned_waveform,
+                frame_length=int(frame_length),
+                hop_length=int(hop_length),
+                zero_like=harmonic_loss,
+            )
         decoded_waveform = reconstruct_waveform_from_frames(
             waveform_frames=waveform_frames,
             frame_length=int(frame_length),
@@ -4983,6 +5137,7 @@ def compute_nores_vocoder_losses(
             waveform_decoder_base_logits is not None
             and (
                 float(waveform_decoder_base_logits_active_template_weight) > 0.0
+                or float(waveform_decoder_base_logits_voicing_negative_corr_weight) > 0.0
                 or float(waveform_decoder_base_logits_frame_delta_weight) > 0.0
                 or float(waveform_decoder_base_logits_noise_focus_frame_delta_weight) > 0.0
                 or float(waveform_decoder_base_logits_frame_adjacent_cosine_weight) > 0.0
@@ -5019,6 +5174,27 @@ def compute_nores_vocoder_losses(
                     hop_length=int(hop_length),
                     frame_weights=noise_focus_frame_weights,
                     zero_like=harmonic_loss,
+                )
+            if float(waveform_decoder_base_logits_voicing_negative_corr_weight) > 0.0:
+                voicing_supervision_target, _voicing_supervision_source = resolve_voicing_supervision_control(
+                    frame_count=int(waveform_decoder_base_logits.shape[0]),
+                    periodic_gate_target=periodic_gate_target,
+                    vuv_target=vuv_target,
+                    voiced_proxy_target=voiced_proxy_target,
+                    aper_target=aper_target,
+                    aperiodicity_proxy_target=aperiodicity_proxy_target,
+                )
+                (
+                    waveform_decoder_base_logits_voicing_negative_corr_loss,
+                    waveform_decoder_base_logits_to_voicing_active_zero_corr_tensor,
+                ) = compute_frame_rms_negative_zero_lag_correlation_loss(
+                    predicted_frames=waveform_decoder_base_logits,
+                    control_target=voicing_supervision_target,
+                    frame_weights=frame_activity_target,
+                    zero_like=harmonic_loss,
+                )
+                waveform_decoder_base_logits_to_voicing_active_zero_corr = float(
+                    waveform_decoder_base_logits_to_voicing_active_zero_corr_tensor.detach().cpu().item()
                 )
         if (
             waveform_decoder_base_logits is not None
@@ -5423,7 +5599,10 @@ def compute_nores_vocoder_losses(
         * float(waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight)
         + waveform_residual_shape_delta_noise_energy_lagcorr_excess_loss
         * float(waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight)
+        + waveform_frames_active_template_loss * float(waveform_frames_active_template_weight)
         + waveform_decoder_base_logits_active_template_loss * float(waveform_decoder_base_logits_active_template_weight)
+        + waveform_decoder_base_logits_voicing_negative_corr_loss
+        * float(waveform_decoder_base_logits_voicing_negative_corr_weight)
         + waveform_decoder_base_logits_frame_delta_loss * float(waveform_decoder_base_logits_frame_delta_weight)
         + waveform_decoder_base_logits_noise_focus_frame_delta_loss
         * float(waveform_decoder_base_logits_noise_focus_frame_delta_weight)
@@ -5527,8 +5706,16 @@ def compute_nores_vocoder_losses(
             float(waveform_residual_shape_delta_noise_energy_lagcorr_excess_loss.detach().cpu().item()),
             6,
         ),
+        "loss_waveform_frames_active_template_excess_relu_0p02": round(
+            float(waveform_frames_active_template_loss.detach().cpu().item()),
+            6,
+        ),
         "loss_waveform_decoder_base_logits_active_template_excess_relu_0p02": round(
             float(waveform_decoder_base_logits_active_template_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_waveform_decoder_base_logits_voicing_negative_corr_relu": round(
+            float(waveform_decoder_base_logits_voicing_negative_corr_loss.detach().cpu().item()),
             6,
         ),
         "loss_waveform_decoder_base_logits_frame_delta_unit_rms_l1": round(
@@ -5627,6 +5814,10 @@ def compute_nores_vocoder_losses(
             waveform_decoder_base_logits_to_noise_energy_active_abs_zero_corr,
             6,
         ),
+        "waveform_decoder_base_logits_to_voicing_active_zero_corr": round(
+            waveform_decoder_base_logits_to_voicing_active_zero_corr,
+            6,
+        ),
         "waveform_decoder_base_logits_to_residual_shape_delta_noise_focus_zero_corr": round(
             waveform_decoder_base_logits_to_residual_shape_delta_noise_focus_zero_corr,
             6,
@@ -5703,7 +5894,9 @@ def run_nores_vocoder_validation_pass(
     waveform_decoder_base_logits_aper_lagcorr_excess_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight: float = 0.0,
+    waveform_frames_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
+    waveform_decoder_base_logits_voicing_negative_corr_weight: float = 0.0,
     waveform_decoder_base_logits_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_noise_focus_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_frame_adjacent_cosine_weight: float = 0.0,
@@ -5732,6 +5925,9 @@ def run_nores_vocoder_validation_pass(
             energy_proxy_target=validation_batch.get("energy_proxy_target"),
             energy_log_rms_norm_target=validation_batch.get("energy_log_rms_norm_target"),
             aper_target=validation_batch.get("aper_target"),
+            vuv_target=validation_batch.get("vuv_target"),
+            voiced_proxy_target=validation_batch.get("voiced_proxy_target"),
+            aperiodicity_proxy_target=validation_batch.get("aperiodicity_proxy_target"),
             sample_rate=int(sample_rate),
             frame_length=int(frame_length),
             hop_length=int(hop_length),
@@ -5763,7 +5959,9 @@ def run_nores_vocoder_validation_pass(
             waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_frames_active_template_weight=waveform_frames_active_template_weight,
             waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
             waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
             waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                 waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -5854,7 +6052,9 @@ def run_nores_vocoder_dataset_validation_pass(
     waveform_decoder_base_logits_aper_lagcorr_excess_weight: float = 0.0,
     waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight: float = 0.0,
+    waveform_frames_active_template_weight: float = 0.0,
     waveform_decoder_base_logits_active_template_weight: float = 0.0,
+    waveform_decoder_base_logits_voicing_negative_corr_weight: float = 0.0,
     waveform_decoder_base_logits_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_noise_focus_frame_delta_weight: float = 0.0,
     waveform_decoder_base_logits_frame_adjacent_cosine_weight: float = 0.0,
@@ -5893,6 +6093,9 @@ def run_nores_vocoder_dataset_validation_pass(
                 energy_proxy_target=batch.get("energy_proxy_target"),
                 energy_log_rms_norm_target=batch.get("energy_log_rms_norm_target"),
                 aper_target=batch.get("aper_target"),
+                vuv_target=batch.get("vuv_target"),
+                voiced_proxy_target=batch.get("voiced_proxy_target"),
+                aperiodicity_proxy_target=batch.get("aperiodicity_proxy_target"),
                 sample_rate=int(runtime["sample_rate"]),
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
@@ -5927,7 +6130,9 @@ def run_nores_vocoder_dataset_validation_pass(
                 waveform_decoder_base_logits_aper_lagcorr_excess_weight=waveform_decoder_base_logits_aper_lagcorr_excess_weight,
                 waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
                 waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+                waveform_frames_active_template_weight=waveform_frames_active_template_weight,
                 waveform_decoder_base_logits_active_template_weight=waveform_decoder_base_logits_active_template_weight,
+                waveform_decoder_base_logits_voicing_negative_corr_weight=waveform_decoder_base_logits_voicing_negative_corr_weight,
                 waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
                 waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                     waveform_decoder_base_logits_noise_focus_frame_delta_weight

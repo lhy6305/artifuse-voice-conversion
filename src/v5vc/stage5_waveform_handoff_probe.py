@@ -59,6 +59,7 @@ def analyze_stage5_nores_waveform_handoff(
     device: str,
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
+    decoder_branch_mean_mix_alpha: float = 0.0,
 ) -> None:
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -107,7 +108,11 @@ def analyze_stage5_nores_waveform_handoff(
             periodic_branch_features = batch["periodic_branch_features"].to(device=resolved_device, dtype=torch.float32)
             noise_branch_features = batch["noise_branch_features"].to(device=resolved_device, dtype=torch.float32)
             aligned_waveform = batch["aligned_waveform"].detach().cpu().to(torch.float32).view(-1)
-            outputs = model(periodic_branch_features, noise_branch_features)
+            outputs = model(
+                periodic_branch_features,
+                noise_branch_features,
+                decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
+            )
             predicted_activity = torch.maximum(outputs["periodic_gate"], outputs["noise_gate"]).detach().cpu().to(
                 torch.float32
             )
@@ -191,6 +196,7 @@ def analyze_stage5_nores_waveform_handoff(
             "device": str(resolved_device),
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
+            "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
             "fusion_mode": str(getattr(model, "fusion_mode", "plain")),
             "waveform_decoder_mode": str(getattr(model, "waveform_decoder_mode", "unknown")),
             "use_decoder_branch_condition_adapter": bool(

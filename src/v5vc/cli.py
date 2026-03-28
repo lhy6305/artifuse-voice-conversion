@@ -2990,10 +2990,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for suppressing high-band energy excess directly on waveform_decoder_base_logits relative to the aligned target.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--waveform-frames-active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing active-frame template excess directly on waveform_frames relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--waveform-decoder-base-logits-active-template-weight",
         type=float,
         default=0.0,
         help="Optional loss weight for suppressing active-frame template excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-voicing-negative-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing negative active-frame zero-lag RMS correlation between waveform_decoder_base_logits and the target voicing control.",
     )
     nores_vocoder_train_step_parser.add_argument(
         "--waveform-decoder-base-logits-aper-abs-zero-lag-corr-weight",
@@ -3331,10 +3343,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for suppressing high-band energy excess directly on waveform_decoder_base_logits relative to the aligned target.",
     )
     nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-frames-active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing active-frame template excess directly on waveform_frames relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
         "--waveform-decoder-base-logits-active-template-weight",
         type=float,
         default=0.0,
         help="Optional loss weight for suppressing active-frame template excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-voicing-negative-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing negative active-frame zero-lag RMS correlation between waveform_decoder_base_logits and the target voicing control.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--waveform-decoder-base-logits-aper-abs-zero-lag-corr-weight",
@@ -3891,10 +3915,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for suppressing high-band energy excess directly on waveform_decoder_base_logits relative to the aligned target.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-frames-active-template-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing active-frame template excess directly on waveform_frames relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
         "--waveform-decoder-base-logits-active-template-weight",
         type=float,
         default=0.0,
         help="Optional loss weight for suppressing active-frame template excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-voicing-negative-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing negative active-frame zero-lag RMS correlation between waveform_decoder_base_logits and the target voicing control.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--waveform-decoder-base-logits-aper-abs-zero-lag-corr-weight",
@@ -4484,6 +4520,12 @@ def build_parser() -> argparse.ArgumentParser:
         type=int,
         default=DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES,
         help="Moving-average radius for predicted activity gate smoothing across neighboring frames.",
+    )
+    stage5_waveform_handoff_parser.add_argument(
+        "--decoder-branch-mean-mix-alpha",
+        type=float,
+        default=0.0,
+        help="Optional inference-time branch-mean mix alpha applied to decoder_hidden for fused_single waveform decoders.",
     )
     stage5_waveform_objective_collapse_parser = subparsers.add_parser(
         "analyze-stage5-nores-waveform-objective-collapse",
@@ -6044,7 +6086,9 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_base_logits_aper_lagcorr_excess_weight=args.waveform_decoder_base_logits_aper_lagcorr_excess_weight,
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_frames_active_template_weight=args.waveform_frames_active_template_weight,
             waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_voicing_negative_corr_weight=args.waveform_decoder_base_logits_voicing_negative_corr_weight,
             waveform_decoder_base_logits_frame_delta_weight=args.waveform_decoder_base_logits_frame_delta_weight,
             waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                 args.waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -6109,7 +6153,9 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_base_logits_aper_lagcorr_excess_weight=args.waveform_decoder_base_logits_aper_lagcorr_excess_weight,
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_frames_active_template_weight=args.waveform_frames_active_template_weight,
             waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_voicing_negative_corr_weight=args.waveform_decoder_base_logits_voicing_negative_corr_weight,
             waveform_decoder_base_logits_frame_delta_weight=args.waveform_decoder_base_logits_frame_delta_weight,
             waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                 args.waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -6210,7 +6256,9 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_base_logits_aper_lagcorr_excess_weight=args.waveform_decoder_base_logits_aper_lagcorr_excess_weight,
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
+            waveform_frames_active_template_weight=args.waveform_frames_active_template_weight,
             waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_voicing_negative_corr_weight=args.waveform_decoder_base_logits_voicing_negative_corr_weight,
             waveform_decoder_base_logits_frame_delta_weight=args.waveform_decoder_base_logits_frame_delta_weight,
             waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
                 args.waveform_decoder_base_logits_noise_focus_frame_delta_weight
@@ -6338,6 +6386,7 @@ def main(argv: list[str] | None = None) -> int:
             device=args.device,
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
+            decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
         )
         return 0
     if args.command == "analyze-stage5-nores-waveform-objective-collapse":

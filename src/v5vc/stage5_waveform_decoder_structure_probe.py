@@ -322,6 +322,9 @@ def summarize_sequence_control_coupling_metrics(
     voicing_control = conditioning["voicing_control"]
     aper_control = conditioning["aper_control"]
     energy_control = conditioning["energy_control"]
+    aper_energy_product_control = None
+    if aper_control is not None and energy_control is not None:
+        aper_energy_product_control = aper_control * energy_control
     active_frame_count = int(conditioning["active_frame_count"])
     metrics = {
         "active_frame_fraction": float(conditioning["active_frame_fraction"]),
@@ -353,6 +356,10 @@ def summarize_sequence_control_coupling_metrics(
         if aper_control is not None:
             metrics["active_frame_rms_to_aper_corr"] = float(
                 compute_pearson_correlation(frame_rms[active_mask], aper_control[active_mask])
+            )
+        if aper_energy_product_control is not None:
+            metrics["active_frame_rms_to_aper_energy_product_corr"] = float(
+                compute_pearson_correlation(frame_rms[active_mask], aper_energy_product_control[active_mask])
             )
     notes = {
         "voicing_source": str(conditioning.get("voicing_source", "missing")),
@@ -1719,6 +1726,10 @@ def build_baseline_upstream_coupling_localization_summary(
             mean_metric(f"{stage_name}_active_frame_rms_to_energy_corr"),
             6,
         )
+        summary[f"{short}_rms_to_aper_energy_product_corr"] = round(
+            mean_metric(f"{stage_name}_active_frame_rms_to_aper_energy_product_corr"),
+            6,
+        )
         summary[f"{short}_unvoiced_minus_voiced_frame_rms_mean"] = round(
             mean_metric(f"{stage_name}_unvoiced_minus_voiced_frame_rms_mean"),
             6,
@@ -1753,6 +1764,21 @@ def build_baseline_upstream_coupling_localization_summary(
         - abs(float(summary["waveform_decoder_base_logits_rms_to_aper_corr"])),
         6,
     )
+    fused_to_decoder_aper_energy_product_jump = round(
+        abs(float(summary["decoder_hidden_rms_to_aper_energy_product_corr"]))
+        - abs(float(summary["fused_hidden_rms_to_aper_energy_product_corr"])),
+        6,
+    )
+    decoder_to_logits_aper_energy_product_jump = round(
+        abs(float(summary["waveform_decoder_base_logits_rms_to_aper_energy_product_corr"]))
+        - abs(float(summary["decoder_hidden_rms_to_aper_energy_product_corr"])),
+        6,
+    )
+    logits_to_frames_aper_energy_product_jump = round(
+        abs(float(summary["waveform_frames_rms_to_aper_energy_product_corr"]))
+        - abs(float(summary["waveform_decoder_base_logits_rms_to_aper_energy_product_corr"])),
+        6,
+    )
     fused_to_decoder_uv_v_rms_jump = round(
         float(summary["decoder_hidden_unvoiced_minus_voiced_frame_rms_mean"])
         - float(summary["fused_hidden_unvoiced_minus_voiced_frame_rms_mean"]),
@@ -1776,6 +1802,9 @@ def build_baseline_upstream_coupling_localization_summary(
             "fused_to_decoder_abs_aper_corr_jump": fused_to_decoder_aper_jump,
             "decoder_to_base_logits_abs_aper_corr_jump": decoder_to_logits_aper_jump,
             "base_logits_to_frames_abs_aper_corr_jump": logits_to_frames_aper_jump,
+            "fused_to_decoder_abs_aper_energy_product_corr_jump": fused_to_decoder_aper_energy_product_jump,
+            "decoder_to_base_logits_abs_aper_energy_product_corr_jump": decoder_to_logits_aper_energy_product_jump,
+            "base_logits_to_frames_abs_aper_energy_product_corr_jump": logits_to_frames_aper_energy_product_jump,
             "fused_to_decoder_uv_v_rms_jump": fused_to_decoder_uv_v_rms_jump,
             "decoder_to_base_logits_uv_v_rms_jump": decoder_to_logits_uv_v_rms_jump,
             "base_logits_to_frames_uv_v_rms_jump": logits_to_frames_uv_v_rms_jump,
@@ -1786,16 +1815,19 @@ def build_baseline_upstream_coupling_localization_summary(
         "fused_to_decoder": max(
             abs(fused_to_decoder_voicing_jump),
             abs(fused_to_decoder_aper_jump),
+            abs(fused_to_decoder_aper_energy_product_jump),
             abs(fused_to_decoder_uv_v_rms_jump),
         ),
         "decoder_to_base_logits": max(
             abs(decoder_to_logits_voicing_jump),
             abs(decoder_to_logits_aper_jump),
+            abs(decoder_to_logits_aper_energy_product_jump),
             abs(decoder_to_logits_uv_v_rms_jump),
         ),
         "base_logits_to_frames": max(
             abs(logits_to_frames_voicing_jump),
             abs(logits_to_frames_aper_jump),
+            abs(logits_to_frames_aper_energy_product_jump),
             abs(logits_to_frames_uv_v_rms_jump),
         ),
     }
