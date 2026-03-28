@@ -3006,6 +3006,36 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-abs-zero-lag-corr-active-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control only on active frames.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for matching frame-to-frame unit-RMS deltas directly on waveform_decoder_base_logits against the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-focus-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for matching frame-to-frame unit-RMS deltas on waveform_decoder_base_logits only in active, high-noise regions of the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-frame-adjacent-cosine-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing adjacent-frame cosine excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-base-logits-residual-shape-delta-noise-focus-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing active, noise-focused zero-lag frame-RMS correlation between waveform_decoder_base_logits and waveform_residual_shape_delta so the residual branch does not simply mirror the base branch on high-noise frames.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--waveform-decoder-base-logits-aper-noise-energy-abs-zero-lag-corr-weight",
         type=float,
         default=0.0,
@@ -3315,6 +3345,36 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-abs-zero-lag-corr-active-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control only on active frames.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for matching frame-to-frame unit-RMS deltas directly on waveform_decoder_base_logits against the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-focus-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for matching frame-to-frame unit-RMS deltas on waveform_decoder_base_logits only in active, high-noise regions of the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-frame-adjacent-cosine-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing adjacent-frame cosine excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_train_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-residual-shape-delta-noise-focus-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing active, noise-focused zero-lag frame-RMS correlation between waveform_decoder_base_logits and waveform_residual_shape_delta so the residual branch does not simply mirror the base branch on high-noise frames.",
     )
     nores_vocoder_train_loop_parser.add_argument(
         "--waveform-decoder-base-logits-aper-noise-energy-abs-zero-lag-corr-weight",
@@ -3839,6 +3899,36 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-energy-abs-zero-lag-corr-active-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing the absolute zero-lag frame-RMS correlation between waveform_decoder_base_logits and the scaffold noise_E control only on active frames.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for matching frame-to-frame unit-RMS deltas directly on waveform_decoder_base_logits against the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-noise-focus-frame-delta-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for matching frame-to-frame unit-RMS deltas on waveform_decoder_base_logits only in active, high-noise regions of the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-frame-adjacent-cosine-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for suppressing adjacent-frame cosine excess directly on waveform_decoder_base_logits relative to the aligned target.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--waveform-decoder-base-logits-residual-shape-delta-noise-focus-abs-zero-lag-corr-weight",
+        type=float,
+        default=0.0,
+        help="Optional loss weight for penalizing active, noise-focused zero-lag frame-RMS correlation between waveform_decoder_base_logits and waveform_residual_shape_delta so the residual branch does not simply mirror the base branch on high-noise frames.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
         "--waveform-decoder-base-logits-aper-noise-energy-abs-zero-lag-corr-weight",
@@ -5945,8 +6035,17 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
             waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_frame_delta_weight=args.waveform_decoder_base_logits_frame_delta_weight,
+            waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
+                args.waveform_decoder_base_logits_noise_focus_frame_delta_weight
+            ),
+            waveform_decoder_base_logits_frame_adjacent_cosine_weight=args.waveform_decoder_base_logits_frame_adjacent_cosine_weight,
             waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
             waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_active_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_active_weight,
+            waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight=(
+                args.waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight
+            ),
             waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
             waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=args.waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
@@ -6001,8 +6100,17 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
             waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_frame_delta_weight=args.waveform_decoder_base_logits_frame_delta_weight,
+            waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
+                args.waveform_decoder_base_logits_noise_focus_frame_delta_weight
+            ),
+            waveform_decoder_base_logits_frame_adjacent_cosine_weight=args.waveform_decoder_base_logits_frame_adjacent_cosine_weight,
             waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
             waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_active_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_active_weight,
+            waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight=(
+                args.waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight
+            ),
             waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
             waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=args.waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
@@ -6092,8 +6200,17 @@ def main(argv: list[str] | None = None) -> int:
             waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight=args.waveform_decoder_base_logits_noise_energy_lagcorr_excess_weight,
             waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight=args.waveform_residual_shape_delta_noise_energy_lagcorr_excess_weight,
             waveform_decoder_base_logits_active_template_weight=args.waveform_decoder_base_logits_active_template_weight,
+            waveform_decoder_base_logits_frame_delta_weight=args.waveform_decoder_base_logits_frame_delta_weight,
+            waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
+                args.waveform_decoder_base_logits_noise_focus_frame_delta_weight
+            ),
+            waveform_decoder_base_logits_frame_adjacent_cosine_weight=args.waveform_decoder_base_logits_frame_adjacent_cosine_weight,
             waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_abs_zero_lag_corr_weight,
             waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_weight,
+            waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_active_weight=args.waveform_decoder_base_logits_noise_energy_abs_zero_lag_corr_active_weight,
+            waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight=(
+                args.waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight
+            ),
             waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=args.waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
             waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=args.waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
