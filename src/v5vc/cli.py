@@ -940,6 +940,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional JSON file that overrides part of the default Stage3 loss weight table.",
     )
+    streaming_student_train_loop_parser.add_argument(
+        "--init-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional Stage3 checkpoint used only to initialize model weights before the new loop starts.",
+    )
     add_student_route_guard_argument(streaming_student_train_loop_parser)
 
     streaming_student_checkpoint_eval_parser = subparsers.add_parser(
@@ -5551,6 +5557,7 @@ def main(argv: list[str] | None = None) -> int:
             experiment_id=args.experiment_id,
             use_teacher_confidence=not args.disable_teacher_confidence,
             loss_weight_overrides_path=args.loss_weight_overrides,
+            init_checkpoint_path=args.init_checkpoint,
         )
         return 0
     if args.command == "run-streaming-student-training-loop":
@@ -5576,6 +5583,7 @@ def main(argv: list[str] | None = None) -> int:
             experiment_id=args.experiment_id,
             use_teacher_confidence=not args.disable_teacher_confidence,
             loss_weight_overrides_path=args.loss_weight_overrides,
+            init_checkpoint_path=args.init_checkpoint,
         )
         return 0
     if args.command == "evaluate-streaming-student-checkpoint":

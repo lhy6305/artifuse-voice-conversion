@@ -44,6 +44,7 @@ def run_streaming_student_training_loop(
     experiment_id: str,
     use_teacher_confidence: bool,
     loss_weight_overrides_path: Path | None,
+    init_checkpoint_path: Path | None,
 ) -> None:
     run_started_at = datetime.now()
     run_started_perf = perf_counter()
@@ -61,6 +62,10 @@ def run_streaming_student_training_loop(
     resolved_loss_weight_overrides_path = None
     if loss_weight_overrides_path is not None:
         resolved_loss_weight_overrides_path = loss_weight_overrides_path.resolve()
+    resolved_init_checkpoint_path = None
+    init_checkpoint_step = 0
+    if init_checkpoint_path is not None:
+        resolved_init_checkpoint_path = init_checkpoint_path.resolve()
 
     config = json.loads(config_path.read_text(encoding="utf-8"))
     torch.manual_seed(int(config.get("training", {}).get("seed", 20260317)))
@@ -83,6 +88,13 @@ def run_streaming_student_training_loop(
     )
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
+    if resolved_init_checkpoint_path is not None:
+        init_payload = torch.load(resolved_init_checkpoint_path, map_location="cpu", weights_only=False)
+        init_model_state_dict = init_payload.get("model_state_dict")
+        if not isinstance(init_model_state_dict, dict):
+            raise ValueError(f"Init checkpoint missing model_state_dict: {resolved_init_checkpoint_path}")
+        model.load_state_dict(init_model_state_dict)
+        init_checkpoint_step = int(init_payload.get("step", 0))
 
     step_history: list[dict[str, object]] = []
     validation_history: list[dict[str, object]] = []
@@ -221,6 +233,12 @@ def run_streaming_student_training_loop(
                             if resolved_loss_weight_overrides_path is None
                             else resolved_loss_weight_overrides_path.as_posix()
                         ),
+                        "init_checkpoint_path": (
+                            None
+                            if resolved_init_checkpoint_path is None
+                            else resolved_init_checkpoint_path.as_posix()
+                        ),
+                        "init_checkpoint_step": int(init_checkpoint_step),
                     },
                     "step_metrics": step_payload,
                     "validation_metrics": None if not validation_history else validation_history[-1],
@@ -261,6 +279,10 @@ def run_streaming_student_training_loop(
             "loss_weight_overrides_path": (
                 None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
             ),
+            "init_checkpoint_path": (
+                None if resolved_init_checkpoint_path is None else resolved_init_checkpoint_path.as_posix()
+            ),
+            "init_checkpoint_step": int(init_checkpoint_step),
         },
         "step_history": step_history,
         "validation_history": validation_history,
