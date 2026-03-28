@@ -208,11 +208,17 @@ def resolve_semantic_supervision_config(
     if named_control_proxy_target_family not in {
         "teacher_e_evt_v1",
         "teacher_e_evt_v1_balanced_vuv_gate_v1",
+        "teacher_e_evt_v1_balanced_vuv_target_blend_v1",
+        "teacher_e_evt_v1_balanced_vuv_transition_weight_v1",
+        "teacher_e_evt_v1_balanced_vuv_transition_blend_v1",
         "deterministic_target_state_v1",
     }:
         raise ValueError(
             "Stage3 semantic supervision named_control_proxy_target_family must be one of: "
-            "teacher_e_evt_v1, teacher_e_evt_v1_balanced_vuv_gate_v1, deterministic_target_state_v1."
+            "teacher_e_evt_v1, teacher_e_evt_v1_balanced_vuv_gate_v1, "
+            "teacher_e_evt_v1_balanced_vuv_target_blend_v1, "
+            "teacher_e_evt_v1_balanced_vuv_transition_weight_v1, "
+            "teacher_e_evt_v1_balanced_vuv_transition_blend_v1, deterministic_target_state_v1."
         )
     effective["named_control_proxy_target_family"] = named_control_proxy_target_family
     f0_supervision_mask_family = str(effective["f0_supervision_mask_family"]).strip().lower()
@@ -438,6 +444,148 @@ def resolve_named_control_proxy_targets(
             "vuv_target": voiced_gate,
             "vuv_frame_weight": normalized_vuv_frame_weight,
             "vuv_unvoiced_boost_mean": float(unvoiced_boost.mean().item()),
+            "aper_target": teacher_e_evt[..., 4:5].clamp(0.0, 1.0),
+        }
+    if named_control_proxy_target_family == "teacher_e_evt_v1_balanced_vuv_target_blend_v1":
+        if int(teacher_e_evt.shape[-1]) < 5:
+            raise ValueError(
+                "teacher_e_evt_v1_balanced_vuv_target_blend_v1 requires at least 5 dims in teacher_e_evt."
+            )
+        valid_mask = teacher_frame_mask.to(torch.float32).unsqueeze(-1)
+        hard_voiced_gate = (
+            (teacher_target_vuv >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD))
+            & (teacher_target_f0_hz > 0.0)
+        ).to(torch.float32)
+        deterministic_vuv = teacher_target_vuv.clamp(0.0, 1.0).to(torch.float32)
+        valid_count = valid_mask.sum(dim=1, keepdim=True).clamp_min(1.0)
+        voiced_count = (hard_voiced_gate * valid_mask).sum(dim=1, keepdim=True)
+        unvoiced_count = ((1.0 - hard_voiced_gate) * valid_mask).sum(dim=1, keepdim=True).clamp_min(1.0)
+        unvoiced_boost = (voiced_count / unvoiced_count).clamp(1.0, 6.0)
+        raw_vuv_frame_weight = torch.where(
+            hard_voiced_gate > 0.5,
+            torch.ones_like(hard_voiced_gate),
+            unvoiced_boost,
+        )
+        raw_vuv_frame_weight = torch.where(
+            valid_mask > 0.0,
+            raw_vuv_frame_weight,
+            torch.zeros_like(raw_vuv_frame_weight),
+        )
+        normalized_vuv_frame_weight = raw_vuv_frame_weight / (
+            (raw_vuv_frame_weight * valid_mask).sum(dim=1, keepdim=True) / valid_count
+        ).clamp_min(1.0e-6)
+        blended_vuv_target = (deterministic_vuv * 0.8 + hard_voiced_gate * 0.2).clamp(0.0, 1.0)
+        return {
+            "named_control_proxy_target_family": "teacher_e_evt_v1_balanced_vuv_target_blend_v1",
+            "vuv_target": blended_vuv_target,
+            "vuv_frame_weight": normalized_vuv_frame_weight,
+            "vuv_unvoiced_boost_mean": float(unvoiced_boost.mean().item()),
+            "vuv_transition_frame_ratio": 0.0,
+            "vuv_transition_boost_mean": 1.0,
+            "vuv_target_blend_alpha": 0.8,
+            "aper_target": teacher_e_evt[..., 4:5].clamp(0.0, 1.0),
+        }
+    if named_control_proxy_target_family == "teacher_e_evt_v1_balanced_vuv_transition_weight_v1":
+        if int(teacher_e_evt.shape[-1]) < 5:
+            raise ValueError(
+                "teacher_e_evt_v1_balanced_vuv_transition_weight_v1 requires at least 5 dims in teacher_e_evt."
+            )
+        valid_mask = teacher_frame_mask.to(torch.float32).unsqueeze(-1)
+        hard_voiced_gate = (
+            (teacher_target_vuv >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD))
+            & (teacher_target_f0_hz > 0.0)
+        ).to(torch.float32)
+        deterministic_vuv = teacher_target_vuv.clamp(0.0, 1.0).to(torch.float32)
+        valid_count = valid_mask.sum(dim=1, keepdim=True).clamp_min(1.0)
+        voiced_count = (hard_voiced_gate * valid_mask).sum(dim=1, keepdim=True)
+        unvoiced_count = ((1.0 - hard_voiced_gate) * valid_mask).sum(dim=1, keepdim=True).clamp_min(1.0)
+        unvoiced_boost = (voiced_count / unvoiced_count).clamp(1.0, 6.0)
+
+        transition_prev = torch.zeros_like(deterministic_vuv)
+        transition_next = torch.zeros_like(deterministic_vuv)
+        transition_prev[:, 1:, :] = (deterministic_vuv[:, 1:, :] - deterministic_vuv[:, :-1, :]).abs()
+        transition_next[:, :-1, :] = (deterministic_vuv[:, 1:, :] - deterministic_vuv[:, :-1, :]).abs()
+        transition_strength = torch.maximum(transition_prev, transition_next)
+        transition_boost = 1.0 + transition_strength.clamp(0.0, 1.0) * 1.5
+
+        raw_vuv_frame_weight = torch.where(
+            hard_voiced_gate > 0.5,
+            torch.ones_like(hard_voiced_gate),
+            unvoiced_boost,
+        ) * transition_boost
+        raw_vuv_frame_weight = torch.where(
+            valid_mask > 0.0,
+            raw_vuv_frame_weight,
+            torch.zeros_like(raw_vuv_frame_weight),
+        )
+        normalized_vuv_frame_weight = raw_vuv_frame_weight / (
+            (raw_vuv_frame_weight * valid_mask).sum(dim=1, keepdim=True) / valid_count
+        ).clamp_min(1.0e-6)
+        global_valid_count = valid_count.sum().clamp_min(1.0)
+        return {
+            "named_control_proxy_target_family": "teacher_e_evt_v1_balanced_vuv_transition_weight_v1",
+            "vuv_target": hard_voiced_gate,
+            "vuv_frame_weight": normalized_vuv_frame_weight,
+            "vuv_unvoiced_boost_mean": float(unvoiced_boost.mean().item()),
+            "vuv_transition_frame_ratio": float(
+                (((transition_strength >= 0.15).to(torch.float32) * valid_mask).sum() / global_valid_count).item()
+            ),
+            "vuv_transition_boost_mean": float(
+                ((transition_boost * valid_mask).sum() / global_valid_count).item()
+            ),
+            "vuv_target_blend_alpha": 0.0,
+            "aper_target": teacher_e_evt[..., 4:5].clamp(0.0, 1.0),
+        }
+    if named_control_proxy_target_family == "teacher_e_evt_v1_balanced_vuv_transition_blend_v1":
+        if int(teacher_e_evt.shape[-1]) < 5:
+            raise ValueError(
+                "teacher_e_evt_v1_balanced_vuv_transition_blend_v1 requires at least 5 dims in teacher_e_evt."
+            )
+        valid_mask = teacher_frame_mask.to(torch.float32).unsqueeze(-1)
+        hard_voiced_gate = (
+            (teacher_target_vuv >= float(DEFAULT_VUV_VOICED_FRAME_THRESHOLD))
+            & (teacher_target_f0_hz > 0.0)
+        ).to(torch.float32)
+        deterministic_vuv = teacher_target_vuv.clamp(0.0, 1.0).to(torch.float32)
+        valid_count = valid_mask.sum(dim=1, keepdim=True).clamp_min(1.0)
+        voiced_count = (hard_voiced_gate * valid_mask).sum(dim=1, keepdim=True)
+        unvoiced_count = ((1.0 - hard_voiced_gate) * valid_mask).sum(dim=1, keepdim=True).clamp_min(1.0)
+        unvoiced_boost = (voiced_count / unvoiced_count).clamp(1.0, 6.0)
+
+        transition_prev = torch.zeros_like(deterministic_vuv)
+        transition_next = torch.zeros_like(deterministic_vuv)
+        transition_prev[:, 1:, :] = (deterministic_vuv[:, 1:, :] - deterministic_vuv[:, :-1, :]).abs()
+        transition_next[:, :-1, :] = (deterministic_vuv[:, 1:, :] - deterministic_vuv[:, :-1, :]).abs()
+        transition_strength = torch.maximum(transition_prev, transition_next)
+        transition_boost = 1.0 + transition_strength.clamp(0.0, 1.0) * 1.5
+
+        raw_vuv_frame_weight = torch.where(
+            hard_voiced_gate > 0.5,
+            torch.ones_like(hard_voiced_gate),
+            unvoiced_boost,
+        ) * transition_boost
+        raw_vuv_frame_weight = torch.where(
+            valid_mask > 0.0,
+            raw_vuv_frame_weight,
+            torch.zeros_like(raw_vuv_frame_weight),
+        )
+        normalized_vuv_frame_weight = raw_vuv_frame_weight / (
+            (raw_vuv_frame_weight * valid_mask).sum(dim=1, keepdim=True) / valid_count
+        ).clamp_min(1.0e-6)
+        blended_vuv_target = (deterministic_vuv * 0.8 + hard_voiced_gate * 0.2).clamp(0.0, 1.0)
+        global_valid_count = valid_count.sum().clamp_min(1.0)
+        return {
+            "named_control_proxy_target_family": "teacher_e_evt_v1_balanced_vuv_transition_blend_v1",
+            "vuv_target": blended_vuv_target,
+            "vuv_frame_weight": normalized_vuv_frame_weight,
+            "vuv_unvoiced_boost_mean": float(unvoiced_boost.mean().item()),
+            "vuv_transition_frame_ratio": float(
+                (((transition_strength >= 0.15).to(torch.float32) * valid_mask).sum() / global_valid_count).item()
+            ),
+            "vuv_transition_boost_mean": float(
+                ((transition_boost * valid_mask).sum() / global_valid_count).item()
+            ),
+            "vuv_target_blend_alpha": 0.8,
             "aper_target": teacher_e_evt[..., 4:5].clamp(0.0, 1.0),
         }
     if named_control_proxy_target_family == "deterministic_target_state_v1":
@@ -915,6 +1063,18 @@ def compute_streaming_student_teacher_supervision_loss(
         ),
         "teacher_vuv_proxy_unvoiced_boost_mean": round(
             float(named_control_proxy_target_bundle.get("vuv_unvoiced_boost_mean", 1.0)),
+            6,
+        ),
+        "teacher_vuv_proxy_transition_frame_ratio": round(
+            float(named_control_proxy_target_bundle.get("vuv_transition_frame_ratio", 0.0)),
+            6,
+        ),
+        "teacher_vuv_proxy_transition_boost_mean": round(
+            float(named_control_proxy_target_bundle.get("vuv_transition_boost_mean", 1.0)),
+            6,
+        ),
+        "teacher_vuv_proxy_target_blend_alpha": round(
+            float(named_control_proxy_target_bundle.get("vuv_target_blend_alpha", 0.0)),
             6,
         ),
         "teacher_f0_supervision_mask_family": str(

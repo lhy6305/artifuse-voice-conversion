@@ -378,7 +378,8 @@ def summarize_sequence_geometry_metrics(sequence: torch.Tensor) -> dict[str, flo
         }
     centered = sequence_cpu - sequence_cpu.mean(dim=0, keepdim=True)
     covariance = centered.transpose(0, 1).matmul(centered) / max(1, frame_count - 1)
-    eigvals = torch.linalg.eigvalsh(covariance).clamp_min(0.0)
+    covariance = 0.5 * (covariance + covariance.transpose(0, 1))
+    eigvals = stable_covariance_eigvalsh(covariance).clamp_min(0.0)
     total = float(eigvals.sum().item())
     if total <= 1.0e-12:
         return {
@@ -402,6 +403,23 @@ def summarize_sequence_geometry_metrics(sequence: torch.Tensor) -> dict[str, flo
         "top4_variance_ratio": round(top4_ratio, 6),
         "mean_centered_frame_norm": round(float(centered.norm(dim=1).mean().item()), 6),
     }
+
+
+def stable_covariance_eigvalsh(covariance: torch.Tensor) -> torch.Tensor:
+    diagonal = torch.eye(
+        int(covariance.shape[0]),
+        dtype=covariance.dtype,
+        device=covariance.device,
+    )
+    jitter = 0.0
+    for _ in range(5):
+        try:
+            target = covariance if jitter <= 0.0 else covariance + diagonal * jitter
+            return torch.linalg.eigvalsh(target)
+        except torch._C._LinAlgError:
+            jitter = 1.0e-8 if jitter <= 0.0 else jitter * 10.0
+    singular_values = torch.linalg.svdvals(covariance)
+    return torch.sort(singular_values.square(), descending=False).values
 
 
 def summarize_sequence_conditioned_cluster_metrics(

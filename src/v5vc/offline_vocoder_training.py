@@ -41,7 +41,10 @@ from v5vc.offline_teacher_vocoder_input_scaffold import (
     build_offline_mvp_teacher_vocoder_input_scaffold,
     normalize_energy_log_rms_for_stage5,
 )
-from v5vc.offline_vocoder_scaffold import NoResidualSourceFilterVocoderScaffold
+from v5vc.offline_vocoder_scaffold import (
+    NoResidualSourceFilterVocoderScaffold,
+    build_nores_vocoder_scaffold_from_state_dict,
+)
 from v5vc.source_acoustic_state_extraction import DEFAULT_VUV_VOICED_FRAME_THRESHOLD
 
 DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE = "pre_overlap_add"
@@ -1551,6 +1554,7 @@ def build_offline_mvp_nores_vocoder_dataset_packages(
 def run_offline_mvp_nores_vocoder_dataset_training_loop(
     dataset_index_path: Path,
     output_dir: Path,
+    init_checkpoint_path: Path | None,
     device: str,
     num_steps: int,
     packages_per_step: int,
@@ -1616,6 +1620,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
+    resolved_init_checkpoint_path = None if init_checkpoint_path is None else init_checkpoint_path.resolve()
     resolved_device = resolve_runtime_device(device)
     reproducibility = set_training_seed(
         int(seed),
@@ -1658,21 +1663,56 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         extract_training_batch(initial_payload),
         resolved_device,
     )
-    model = NoResidualSourceFilterVocoderScaffold(
-        periodic_input_dim=int(initial_batch["periodic_branch_features"].shape[-1]),
-        noise_input_dim=int(initial_batch["noise_branch_features"].shape[-1]),
-        hidden_dim=int(hidden_dim),
-        harmonic_bins=int(initial_batch["harmonic_target"].shape[-1]),
-        noise_bins=int(initial_batch["noise_target"].shape[-1]),
-        frame_length=int(initial_runtime["frame_length"]),
-        fusion_mode=fusion_mode,
-        waveform_decoder_mode=waveform_decoder_mode,
-        use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
-        use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
-        residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
-        residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
-    ).to(resolved_device)
+    if resolved_init_checkpoint_path is None:
+        model = NoResidualSourceFilterVocoderScaffold(
+            periodic_input_dim=int(initial_batch["periodic_branch_features"].shape[-1]),
+            noise_input_dim=int(initial_batch["noise_branch_features"].shape[-1]),
+            hidden_dim=int(hidden_dim),
+            harmonic_bins=int(initial_batch["harmonic_target"].shape[-1]),
+            noise_bins=int(initial_batch["noise_target"].shape[-1]),
+            frame_length=int(initial_runtime["frame_length"]),
+            fusion_mode=fusion_mode,
+            waveform_decoder_mode=waveform_decoder_mode,
+            use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
+            use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
+            residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
+            residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+        ).to(resolved_device)
+    else:
+        init_checkpoint_payload = torch.load(resolved_init_checkpoint_path, map_location="cpu", weights_only=False)
+        init_state_dict = dict(init_checkpoint_payload["model_state_dict"])
+        init_model_config = (
+            dict(init_checkpoint_payload.get("model_config", {}))
+            if isinstance(init_checkpoint_payload.get("model_config"), dict)
+            else {}
+        )
+        model = build_nores_vocoder_scaffold_from_state_dict(
+            state_dict=init_state_dict,
+            periodic_input_dim=int(initial_batch["periodic_branch_features"].shape[-1]),
+            noise_input_dim=int(initial_batch["noise_branch_features"].shape[-1]),
+            frame_length=int(initial_runtime["frame_length"]),
+            residual_shape_branch_condition_scale=float(
+                init_model_config.get("residual_shape_branch_condition_scale", 1.0)
+            ),
+            residual_shape_branch_condition_mode=str(
+                init_model_config.get("residual_shape_branch_condition_mode", "raw_additive_v1")
+            ),
+        ).to(resolved_device)
+        model.load_state_dict(init_state_dict)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
+    if resolved_init_checkpoint_path is not None:
+        init_checkpoint_payload = torch.load(resolved_init_checkpoint_path, map_location="cpu", weights_only=False)
+        optimizer_state_dict = init_checkpoint_payload.get("optimizer_state_dict")
+        if isinstance(optimizer_state_dict, dict):
+            optimizer.load_state_dict(optimizer_state_dict)
+            for state in optimizer.state.values():
+                if not isinstance(state, dict):
+                    continue
+                for key, value in list(state.items()):
+                    if isinstance(value, torch.Tensor):
+                        state[key] = value.to(resolved_device)
+        for param_group in optimizer.param_groups:
+            param_group["lr"] = float(learning_rate)
 
     effective_num_steps = max(1, int(num_steps))
     effective_packages_per_step = max(1, int(packages_per_step))
@@ -1995,6 +2035,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     summary = {
         "generated_at": run_ended_at.isoformat(timespec="seconds"),
         "dataset_index_path": dataset_index_path.as_posix(),
+        "init_checkpoint_path": (
+            None if resolved_init_checkpoint_path is None else resolved_init_checkpoint_path.as_posix()
+        ),
         "timing": {
             "started_at": run_started_at.isoformat(timespec="seconds"),
             "ended_at": run_ended_at.isoformat(timespec="seconds"),

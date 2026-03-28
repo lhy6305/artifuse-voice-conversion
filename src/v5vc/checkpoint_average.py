@@ -28,7 +28,7 @@ def average_offline_mvp_checkpoints(
 
     output_checkpoint_path = (output_dir / f"{output_name}.pt").resolve()
     output_payload = {
-        "experiment_id": f"averaged::{output_name}",
+        "experiment_id": f"averaged__{output_name}",
         "model_state_dict": averaged_state_dict,
         "config": loaded_checkpoints[0].get("config"),
         "step": None if any(step is None for step in step_values) else int(sum(step_values) / len(step_values)),

@@ -834,6 +834,12 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional JSON file that overrides part of the default Stage3 loss weight table.",
     )
+    streaming_student_train_step_parser.add_argument(
+        "--init-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional Stage3 checkpoint used only to initialize model weights before the new step starts.",
+    )
     add_student_route_guard_argument(streaming_student_train_step_parser)
 
     streaming_student_train_loop_parser = subparsers.add_parser(
@@ -3591,6 +3597,12 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory for dataset-level no-residual vocoder loop outputs.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
+        "--init-checkpoint",
+        type=Path,
+        default=None,
+        help="Optional existing Stage5 no-residual vocoder checkpoint used to initialize a finetune run.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
         "--device",
         default="auto",
         help="Training device. Use auto, cpu, cuda, or cuda:0.",
@@ -6148,6 +6160,7 @@ def main(argv: list[str] | None = None) -> int:
         run_offline_mvp_nores_vocoder_dataset_training_loop(
             dataset_index_path=args.dataset_index,
             output_dir=args.output_dir,
+            init_checkpoint_path=args.init_checkpoint,
             device=args.device,
             num_steps=args.num_steps,
             packages_per_step=args.packages_per_step,

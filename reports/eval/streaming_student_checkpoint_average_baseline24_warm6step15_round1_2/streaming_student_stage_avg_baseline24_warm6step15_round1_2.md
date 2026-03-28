@@ -1,0 +1,14 @@
+# offline MVP checkpoint averaging
+
+- output_checkpoint_path: F:/proj_dev/tmp/workdir4/reports/eval/streaming_student_checkpoint_average_baseline24_warm6step15_round1_2/streaming_student_stage_avg_baseline24_warm6step15_round1_2.pt
+- checkpoint_count: 2
+- source_steps: [24, 15]
+- mode: uniform_mean
+
+## source checkpoints
+- F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_vuvbalancedgate24_round1_1/checkpoints/streaming_student_stage_loop_vuvbalancedgate24_round1_1.step24.pt
+- F:/proj_dev/tmp/workdir4/reports/training/streaming_student_loop_timingfocus6warm_baseline18_denseckpt_round1_1/checkpoints/streaming_student_stage_loop_timingfocus6warm_baseline18_denseckpt_round1_1.step15.pt
+
+## notes
+- Floating-point tensors are averaged elementwise across checkpoints.
+- Non-floating tensors and non-tensor metadata are copied from the first checkpoint after equality validation.

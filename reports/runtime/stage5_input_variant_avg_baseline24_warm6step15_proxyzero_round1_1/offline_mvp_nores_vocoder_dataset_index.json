@@ -1,0 +1,396 @@
+{
+  "dataset_index_version": "offline_mvp_nores_vocoder_dataset_index_v1",
+  "generated_at": "2026-03-28T14:00:03",
+  "mode": "teacher_first_stage5_input_variant_dataset_v1",
+  "source_dataset_index_path": "F:/proj_dev/tmp/workdir4/reports/runtime/streaming_student_stage5_dataset_packages_avg_baseline24_warm6step15_contractv2_normfix_validation3_round1_2/streaming_student_stage5_dataset_index.json",
+  "output_dir": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_input_variant_avg_baseline24_warm6step15_proxyzero_round1_1",
+  "control_family_overrides": [
+    {
+      "family": "proxy_family",
+      "mode": "zero",
+      "targets": [
+        "periodic.voiced_proxy",
+        "periodic.energy_proxy",
+        "noise.aperiodicity_proxy",
+        "noise.event_presence_proxy",
+        "noise.energy_change_proxy",
+        "noise.energy_proxy"
+      ]
+    }
+  ],
+  "max_train_packages": null,
+  "max_validation_packages": 3,
+  "train_package_count": 0,
+  "validation_package_count": 3,
+  "train_packages": [],
+  "validation_packages": [
+    {
+      "record_id": "target::chapter3_3_firefly_162",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/firefly_mainstream/audio/chapter3_3_firefly_162.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/firefly_mainstream/audio/chapter3_3_firefly_162.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_prep/round1_1/firefly_mainstream/audio/chapter3_3_firefly_162.wav",
+      "source_record_id": "target::chapter3_3_firefly_162",
+      "target_record_id": "target::chapter3_3_firefly_162",
+      "record_mode": "stage3_student_target_self_decode",
+      "duration_sec": 0.0,
+      "split_name": "validation",
+      "packet_path": "F:/proj_dev/tmp/workdir4/reports/runtime/streaming_student_downstream_control_packet_avg_baseline24_warm6step15_round1_2/records/target__chapter3_3_firefly_162.pt",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_input_variant_avg_baseline24_warm6step15_proxyzero_round1_1/packages/validation/target_chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "streaming_student_vocoder_input_scaffold_v1",
+      "target_event_semantic_sidecar_present": false,
+      "target_semantic_overview": {
+        "semantic_source": "missing",
+        "semantic_contract_version": null,
+        "semantic_label_space_version": null,
+        "semantic_inventory_status": "missing",
+        "semantic_label_status": "missing",
+        "semantic_utterance_structure_type": "unknown",
+        "semantic_final_terminal_type": "unknown",
+        "semantic_clause_count": 0,
+        "semantic_pause_boundary_count": 0,
+        "semantic_terminal_boundary_count": 0,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": false,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "target_event_timing_semantic_sidecar_present": false,
+      "target_timing_semantic_overview": {
+        "timing_source": "missing",
+        "timing_contract_version": null,
+        "timing_label_space_version": null,
+        "timing_inventory_status": "missing",
+        "timing_alignment_type": null,
+        "timing_label_status": "missing",
+        "timeline_event_count": 0,
+        "clause_region_count": 0,
+        "pause_boundary_event_count": 0,
+        "terminal_boundary_event_count": 0,
+        "weak_time_alignment_ready_for_target_side_bootstrap": false
+      },
+      "source_semantic_parity_sidecar_present": false,
+      "source_semantic_parity_overview": {
+        "parity_source": "missing",
+        "parity_contract_version": null,
+        "parity_label_space_version": null,
+        "parity_status": "missing",
+        "parity_transfer_type": null,
+        "parity_label_status": "missing",
+        "parity_utterance_structure_type": "unknown",
+        "parity_clause_count": 0,
+        "parity_pause_boundary_count": 0,
+        "parity_terminal_boundary_count": 0,
+        "semantic_ready_for_source_side_bootstrap": false,
+        "native_source_semantic_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "none",
+        "semantic_tag": "target_semantic_consumer_none",
+        "feature_dim": 0,
+        "feature_names": [],
+        "semantic_sidecar_present": false,
+        "timing_semantic_sidecar_present": false,
+        "source_semantic_parity_sidecar_present": false,
+        "feature_source": "disabled",
+        "feature_values": []
+      },
+      "target_contract": {
+        "target_contract_mode": "legacy_proxy",
+        "contract_family": "legacy_proxy_v2",
+        "has_v2_core": true,
+        "uses_explicit_e_evt": false,
+        "e_evt_boundary_source": "streaming_student_predicted_packet",
+        "periodic_gate_formula": "vuv",
+        "noise_gate_formula": "max(aper * E_log_rms_norm, event_presence_proxy)",
+        "excluded_e_evt_dimensions": [],
+        "teacher_e_evt_bridge_mode": "legacy_event_probs_v1",
+        "teacher_e_evt_target_shaping_mode": "hard_box_v1"
+      },
+      "frame_count": 167,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 299207,
+      "package_build_sec": 0.027638,
+      "package_status": "built_now",
+      "input_variant": {
+        "control_family_overrides": [
+          {
+            "family": "proxy_family",
+            "mode": "zero",
+            "targets": [
+              "periodic.voiced_proxy",
+              "periodic.energy_proxy",
+              "noise.aperiodicity_proxy",
+              "noise.event_presence_proxy",
+              "noise.energy_change_proxy",
+              "noise.energy_proxy"
+            ]
+          }
+        ],
+        "transform_summary": {
+          "transformations": [],
+          "control_family_overrides": [
+            {
+              "family": "proxy_family",
+              "mode": "zero",
+              "targets": []
+            }
+          ]
+        },
+        "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/streaming_student_stage5_dataset_packages_avg_baseline24_warm6step15_contractv2_normfix_validation3_round1_2/packages/validation/target__chapter3_3_firefly_162/train_targets/offline_mvp_nores_vocoder_train_targets.pt"
+      }
+    },
+    {
+      "record_id": "target::chapter3_3_firefly_138",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_3_firefly_138.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_3_firefly_138.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_3_firefly_138.wav",
+      "source_record_id": "target::chapter3_3_firefly_138",
+      "target_record_id": "target::chapter3_3_firefly_138",
+      "record_mode": "stage3_student_target_self_decode",
+      "duration_sec": 0.0,
+      "split_name": "validation",
+      "packet_path": "F:/proj_dev/tmp/workdir4/reports/runtime/streaming_student_downstream_control_packet_avg_baseline24_warm6step15_round1_2/records/target__chapter3_3_firefly_138.pt",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_input_variant_avg_baseline24_warm6step15_proxyzero_round1_1/packages/validation/target_chapter3_3_firefly_138/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "streaming_student_vocoder_input_scaffold_v1",
+      "target_event_semantic_sidecar_present": false,
+      "target_semantic_overview": {
+        "semantic_source": "missing",
+        "semantic_contract_version": null,
+        "semantic_label_space_version": null,
+        "semantic_inventory_status": "missing",
+        "semantic_label_status": "missing",
+        "semantic_utterance_structure_type": "unknown",
+        "semantic_final_terminal_type": "unknown",
+        "semantic_clause_count": 0,
+        "semantic_pause_boundary_count": 0,
+        "semantic_terminal_boundary_count": 0,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": false,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "target_event_timing_semantic_sidecar_present": false,
+      "target_timing_semantic_overview": {
+        "timing_source": "missing",
+        "timing_contract_version": null,
+        "timing_label_space_version": null,
+        "timing_inventory_status": "missing",
+        "timing_alignment_type": null,
+        "timing_label_status": "missing",
+        "timeline_event_count": 0,
+        "clause_region_count": 0,
+        "pause_boundary_event_count": 0,
+        "terminal_boundary_event_count": 0,
+        "weak_time_alignment_ready_for_target_side_bootstrap": false
+      },
+      "source_semantic_parity_sidecar_present": false,
+      "source_semantic_parity_overview": {
+        "parity_source": "missing",
+        "parity_contract_version": null,
+        "parity_label_space_version": null,
+        "parity_status": "missing",
+        "parity_transfer_type": null,
+        "parity_label_status": "missing",
+        "parity_utterance_structure_type": "unknown",
+        "parity_clause_count": 0,
+        "parity_pause_boundary_count": 0,
+        "parity_terminal_boundary_count": 0,
+        "semantic_ready_for_source_side_bootstrap": false,
+        "native_source_semantic_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "none",
+        "semantic_tag": "target_semantic_consumer_none",
+        "feature_dim": 0,
+        "feature_names": [],
+        "semantic_sidecar_present": false,
+        "timing_semantic_sidecar_present": false,
+        "source_semantic_parity_sidecar_present": false,
+        "feature_source": "disabled",
+        "feature_values": []
+      },
+      "target_contract": {
+        "target_contract_mode": "legacy_proxy",
+        "contract_family": "legacy_proxy_v2",
+        "has_v2_core": true,
+        "uses_explicit_e_evt": false,
+        "e_evt_boundary_source": "streaming_student_predicted_packet",
+        "periodic_gate_formula": "vuv",
+        "noise_gate_formula": "max(aper * E_log_rms_norm, event_presence_proxy)",
+        "excluded_e_evt_dimensions": [],
+        "teacher_e_evt_bridge_mode": "legacy_event_probs_v1",
+        "teacher_e_evt_target_shaping_mode": "hard_box_v1"
+      },
+      "frame_count": 1379,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 2233944,
+      "package_build_sec": 0.027247,
+      "package_status": "built_now",
+      "input_variant": {
+        "control_family_overrides": [
+          {
+            "family": "proxy_family",
+            "mode": "zero",
+            "targets": [
+              "periodic.voiced_proxy",
+              "periodic.energy_proxy",
+              "noise.aperiodicity_proxy",
+              "noise.event_presence_proxy",
+              "noise.energy_change_proxy",
+              "noise.energy_proxy"
+            ]
+          }
+        ],
+        "transform_summary": {
+          "transformations": [],
+          "control_family_overrides": [
+            {
+              "family": "proxy_family",
+              "mode": "zero",
+              "targets": []
+            }
+          ]
+        },
+        "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/streaming_student_stage5_dataset_packages_avg_baseline24_warm6step15_contractv2_normfix_validation3_round1_2/packages/validation/target__chapter3_3_firefly_138/train_targets/offline_mvp_nores_vocoder_train_targets.pt"
+      }
+    },
+    {
+      "record_id": "target::chapter3_4_firefly_106",
+      "audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_4_firefly_106.wav",
+      "source_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_4_firefly_106.wav",
+      "target_audio_path": "F:/proj_dev/tmp/workdir4/data_convert/dataset_firefly_raw/chapter3_4_firefly_106.wav",
+      "source_record_id": "target::chapter3_4_firefly_106",
+      "target_record_id": "target::chapter3_4_firefly_106",
+      "record_mode": "stage3_student_target_self_decode",
+      "duration_sec": 0.0,
+      "split_name": "validation",
+      "packet_path": "F:/proj_dev/tmp/workdir4/reports/runtime/streaming_student_downstream_control_packet_avg_baseline24_warm6step15_round1_2/records/target__chapter3_4_firefly_106.pt",
+      "training_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/stage5_input_variant_avg_baseline24_warm6step15_proxyzero_round1_1/packages/validation/target_chapter3_4_firefly_106/train_targets/offline_mvp_nores_vocoder_train_targets.pt",
+      "training_package_version": "offline_mvp_nores_vocoder_train_targets_v2",
+      "source_scaffold_version": "streaming_student_vocoder_input_scaffold_v1",
+      "target_event_semantic_sidecar_present": false,
+      "target_semantic_overview": {
+        "semantic_source": "missing",
+        "semantic_contract_version": null,
+        "semantic_label_space_version": null,
+        "semantic_inventory_status": "missing",
+        "semantic_label_status": "missing",
+        "semantic_utterance_structure_type": "unknown",
+        "semantic_final_terminal_type": "unknown",
+        "semantic_clause_count": 0,
+        "semantic_pause_boundary_count": 0,
+        "semantic_terminal_boundary_count": 0,
+        "semantic_nonverbal_only": false,
+        "semantic_clean_text_available": false,
+        "semantic_phone_sequence_available": false,
+        "semantic_manner_sequence_available": false,
+        "semantic_place_sequence_available": false,
+        "semantic_forced_alignment_available": false
+      },
+      "target_event_timing_semantic_sidecar_present": false,
+      "target_timing_semantic_overview": {
+        "timing_source": "missing",
+        "timing_contract_version": null,
+        "timing_label_space_version": null,
+        "timing_inventory_status": "missing",
+        "timing_alignment_type": null,
+        "timing_label_status": "missing",
+        "timeline_event_count": 0,
+        "clause_region_count": 0,
+        "pause_boundary_event_count": 0,
+        "terminal_boundary_event_count": 0,
+        "weak_time_alignment_ready_for_target_side_bootstrap": false
+      },
+      "source_semantic_parity_sidecar_present": false,
+      "source_semantic_parity_overview": {
+        "parity_source": "missing",
+        "parity_contract_version": null,
+        "parity_label_space_version": null,
+        "parity_status": "missing",
+        "parity_transfer_type": null,
+        "parity_label_status": "missing",
+        "parity_utterance_structure_type": "unknown",
+        "parity_clause_count": 0,
+        "parity_pause_boundary_count": 0,
+        "parity_terminal_boundary_count": 0,
+        "semantic_ready_for_source_side_bootstrap": false,
+        "native_source_semantic_available": false
+      },
+      "semantic_consumer": {
+        "semantic_consumer_mode": "none",
+        "semantic_tag": "target_semantic_consumer_none",
+        "feature_dim": 0,
+        "feature_names": [],
+        "semantic_sidecar_present": false,
+        "timing_semantic_sidecar_present": false,
+        "source_semantic_parity_sidecar_present": false,
+        "feature_source": "disabled",
+        "feature_values": []
+      },
+      "target_contract": {
+        "target_contract_mode": "legacy_proxy",
+        "contract_family": "legacy_proxy_v2",
+        "has_v2_core": true,
+        "uses_explicit_e_evt": false,
+        "e_evt_boundary_source": "streaming_student_predicted_packet",
+        "periodic_gate_formula": "vuv",
+        "noise_gate_formula": "max(aper * E_log_rms_norm, event_presence_proxy)",
+        "excluded_e_evt_dimensions": [],
+        "teacher_e_evt_bridge_mode": "legacy_event_probs_v1",
+        "teacher_e_evt_target_shaping_mode": "hard_box_v1"
+      },
+      "frame_count": 5815,
+      "periodic_input_dim": 36,
+      "noise_input_dim": 36,
+      "harmonic_target_dim": 32,
+      "noise_target_dim": 32,
+      "package_size_bytes": 9313496,
+      "package_build_sec": 0.038158,
+      "package_status": "built_now",
+      "input_variant": {
+        "control_family_overrides": [
+          {
+            "family": "proxy_family",
+            "mode": "zero",
+            "targets": [
+              "periodic.voiced_proxy",
+              "periodic.energy_proxy",
+              "noise.aperiodicity_proxy",
+              "noise.event_presence_proxy",
+              "noise.energy_change_proxy",
+              "noise.energy_proxy"
+            ]
+          }
+        ],
+        "transform_summary": {
+          "transformations": [],
+          "control_family_overrides": [
+            {
+              "family": "proxy_family",
+              "mode": "zero",
+              "targets": []
+            }
+          ]
+        },
+        "source_package_path": "F:/proj_dev/tmp/workdir4/reports/runtime/streaming_student_stage5_dataset_packages_avg_baseline24_warm6step15_contractv2_normfix_validation3_round1_2/packages/validation/target__chapter3_4_firefly_106/train_targets/offline_mvp_nores_vocoder_train_targets.pt"
+      }
+    }
+  ],
+  "notes": [
+    "This command rewrites Stage5 training packages by applying probe-style input-control transforms directly to package inputs.",
+    "It is intended to bridge user-line diagnostics into a reusable training-dataset candidate without modifying the baseline training loop.",
+    "Only zero/time_roll_half/time_shuffle are supported here because reference-backed replacements need external reference statistics and are probe-only."
+  ]
+}

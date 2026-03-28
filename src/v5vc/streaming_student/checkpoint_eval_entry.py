@@ -22,6 +22,12 @@ from v5vc.streaming_student.losses import (
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
 
 
+def sanitize_experiment_id_for_filename(value: str) -> str:
+    sanitized = "".join(character if character not in '<>:"/\\|?*' else "_" for character in value)
+    sanitized = sanitized.strip().strip(".")
+    return sanitized or "streaming_student_checkpoint_eval"
+
+
 def evaluate_streaming_student_checkpoint(
     checkpoint_path: Path,
     output_dir: Path,
@@ -110,8 +116,9 @@ def evaluate_streaming_student_checkpoint(
         ],
     }
 
-    json_path = output_dir / f"{experiment_id}.checkpoint_eval.json"
-    md_path = output_dir / f"{experiment_id}.checkpoint_eval.md"
+    filename_stem = sanitize_experiment_id_for_filename(experiment_id)
+    json_path = output_dir / f"{filename_stem}.checkpoint_eval.json"
+    md_path = output_dir / f"{filename_stem}.checkpoint_eval.md"
     json_path.write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
         encoding="utf-8",
