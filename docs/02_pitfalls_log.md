@@ -114,6 +114,35 @@
   - repeated experiment-id path components
 - Then regenerate or relocate the artifact and update the citing docs.
 
+
+### 22. Do not run further F0 loss-weight or temporal-loss probes without a structural model change
+- Systematic testing (484-486) confirmed: coarse_log_f0 collapses to near-constant output (span 0.06 octaves vs target 2.6 octaves) in the explicit_named_control_family_v1 architecture.
+- This is invariant across: loss weight scaling (0.05 to 0.15), temporal loss addition, correlation loss addition.
+- The root cause is that the waveform frontend cannot extract meaningful F0 dynamics from raw audio frames without an explicit pitch feature input.
+- Probes already confirmed no-go: corrfocus_v1, unbounded_log_v1 (has unit mismatch bug), f0boost, f0mid, f0temporal.
+- Do not retry any of these. The next valid probe requires a structural model change.
+
+### 23. unbounded_log_v1 F0 parameterization has a unit mismatch bug
+- The loss function computes target_log_f0 = torch.log2(teacher_target_f0_hz) which is in log2 scale (range 7-9).
+- The unbounded_log_v1 head outputs in natural log / linear scale (range 4-5 after training).
+- MSE between these is always large (~12) and gradients point in wrong directions.
+- Do not use unbounded_log_v1 for F0 without first fixing the loss unit to match.
+
+### 24. When comparing Stage3 probes, always verify the model config matches the baseline
+- The streaming_student_stage_template.json defaults differ from the controlfamily config used for vuvbalancedgate runs.
+- Using the template produces a different architecture (shared_student_v1 + unbounded_log_v1) vs the baseline (explicit_named_control_family_v1 + bounded_log2_hz_v1).
+- Always specify --config configs/streaming_student_stage_parallel_control_branch_controlfamily_v1.json for Stage3 probes that intend to compare against vuvbalancedgate runs.
+
+### 25. Do not treat waveform-only implicit F0 discovery as an architectural requirement
+- The current Stage3 failure is evidence against the present waveform-only route, not evidence that explicit external pitch signals are invalid.
+- External specialist pitch extraction is a legitimate engineering choice for a realtime-capable system.
+- Once the current frontend route is structurally blocked, the next valid move is a provider-side structural probe, not more loss micro-tuning.
+
+### 26. Do not keep third-party reference repositories mixed into the main project root after extraction of lessons
+- Reference repos can be useful for short-lived code reading.
+- They should not remain as long-term root-level project directories once the relevant ideas are captured in formal docs.
+- If retention is still useful, move them into a clearly marked reference location such as `tmp/reference_repos/` instead of leaving them mixed with the main repo structure.
+
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
 - If it is only a local experiment conclusion, keep it in the corresponding numbered report.
@@ -135,3 +164,7 @@
 - `docs/481_stage3_packet_reference_vs_warm6_candidate_role_aware_comparison_report.md`
 - `docs/482_windows_path_budget_and_artifact_naming_policy.md`
 - `docs/483_stage3_selector_output_path_budget_remediation_report.md`
+- `docs/484_stage3_f0_corrfocus_nogo_and_sigmoid_collapse_diagnosis_report.md`
+- `docs/485_stage3_f0_unboundedf0_unit_mismatch_and_corrected_root_cause_report.md`
+- `docs/486_stage3_f0_sigmoid_collapse_systematic_diagnosis_and_structural_escalation_report.md`
+- `docs/487_stage3_rvc_reference_review_and_rmvpe_sidecar_plan_report.md`

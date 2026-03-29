@@ -34,6 +34,7 @@ def run_streaming_student_training_step(
     experiment_id: str,
     use_teacher_confidence: bool,
     loss_weight_overrides_path: Path | None,
+    init_checkpoint_path: Path | None = None,
 ) -> None:
     run_started_at = datetime.now()
     run_started_perf = perf_counter()
@@ -96,6 +97,10 @@ def run_streaming_student_training_step(
     )
 
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
+    resolved_init_checkpoint_path = None if init_checkpoint_path is None else init_checkpoint_path.resolve()
+    if resolved_init_checkpoint_path is not None:
+        init_payload = torch.load(resolved_init_checkpoint_path, map_location='cpu', weights_only=False)
+        model.load_state_dict(init_payload['model_state_dict'])
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
 
     model.train()

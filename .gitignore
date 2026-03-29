@@ -95,3 +95,6 @@ reports/runtime/**/packages/**
 !reports/runtime/**/teacher_runtime_summary.md
 !reports/runtime/**/checkpoints/
 !reports/runtime/**/checkpoints/*.pt
+
+# RVC Repo
+Retrieval-based-Voice-Conversion-WebUI-7ef1986/*

@@ -40,6 +40,12 @@
 - The combined selector-comparison artifact now also emits a decision summary that separates teacher-loss reference choice, handoff-facing packet candidate choice, and the conservative route-opening conclusion.
 - The active corrected-manifold Stage5 winner is now `wfta003`, and it should not be retired by broad anti-thrash wording that was meant for already dead pure-buzz families.
 - Paired Stage3 still lacks a valid frame bridge and alignment contract, so paired training cannot be treated as ready.
+- Stage3 F0 representation is confirmed structurally blocked: coarse_log_f0 collapses to near-constant output in the current explicit_named_control_family_v1 architecture regardless of loss weight tuning. A structural decision is required before F0 can become a genuine handoff control.
+- External reference review now supports a concrete recovery route:
+  - do not insist on waveform-only implicit F0 discovery
+  - formalize a Stage3 pitch-provider interface
+  - integrate the in-repo deterministic extractor first
+  - evaluate RMVPE second behind the same contract
 
 ## Current Main Lines
 
@@ -66,7 +72,13 @@
   - cite the combined `decision_summary` block first when the conclusion needs a teacher-loss reference, a handoff-facing candidate, and a route-opening recommendation
 - Current gate reading:
   - `e_evt / z_art` are ready
-  - `F0 / vuv / aper / E` are still not handoff-ready
+  - `vuv / aper / E` are not handoff-ready
+  - `F0` is structurally blocked in the current architecture: `coarse_log_f0` collapses to near-constant output (span 0.06 octaves vs target 2.6 octaves) regardless of loss weight or temporal loss tuning
+  - Do not run further F0 loss-weight or temporal-loss probes without a structural model change
+- Current preferred structural recovery route for `F0`:
+  - Step A: formalize the in-repo deterministic acoustic-state extractor as the first Stage3 pitch provider
+  - Step B: add RMVPE as the second Stage3 pitch provider
+  - keep both providers behind one shared Stage3 contract for fair comparison
 
 ### Line C: Finish paired Stage3 wiring and alignment prerequisites before paired training
 - Current prerequisites include:
@@ -89,9 +101,13 @@
 2. Keep handoff candidates behind cheap screen and readiness gate before opening a new Stage5 adapter route.
 3. Keep the current `wfta003` corrected-manifold line active, but only for a clearly different localization-oriented probe rather than more blind same-family weight shrinking.
 4. Finish frame bridge and alignment contract work before any paired Stage3 training decision.
-5. Treat `C-prime / v2-core` as a strategic contract backlog, while keeping the immediate named-control blocker statement focused on `F0 / vuv / aper / E`.
+5. Treat `C-prime / v2-core` as a strategic contract backlog. The immediate named-control blocker is now split: `vuv / aper / E` are training-addressable; `F0` requires a structural decision (explicit pitch feature input vs accepting permanent gate closure).
 6. Use the new packet-aware selector for downstream-facing Stage3 checkpoint ranking, and label post-hoc full-checkpoint eval results explicitly instead of calling every selector output the same "best checkpoint".
 7. Keep writing long-lived conclusions back to `docs/01_project_overview_and_plan.md` and `docs/02_pitfalls_log.md`, while leaving local experiment detail in numbered reports.
+8. For the current `F0` recovery route, implement and compare pitch providers in this order:
+   - in-repo deterministic extractor
+   - RMVPE sidecar
+9. Do not keep third-party reference repositories as permanent root-level directories once their design lessons are captured on disk.
 
 ## Key Reference Reports
 - `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
@@ -111,3 +127,7 @@
 - `docs/481_stage3_packet_reference_vs_warm6_candidate_role_aware_comparison_report.md`
 - `docs/482_windows_path_budget_and_artifact_naming_policy.md`
 - `docs/483_stage3_selector_output_path_budget_remediation_report.md`
+- `docs/484_stage3_f0_corrfocus_nogo_and_sigmoid_collapse_diagnosis_report.md`
+- `docs/485_stage3_f0_unboundedf0_unit_mismatch_and_corrected_root_cause_report.md`
+- `docs/486_stage3_f0_sigmoid_collapse_systematic_diagnosis_and_structural_escalation_report.md`
+- `docs/487_stage3_rvc_reference_review_and_rmvpe_sidecar_plan_report.md`
