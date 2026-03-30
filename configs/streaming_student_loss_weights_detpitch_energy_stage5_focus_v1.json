@@ -1,0 +1,20 @@
+{
+  "name": "streaming_student_loss_weights_detpitch_energy_stage5_focus_v1",
+  "notes": [
+    "Use with deterministic pitch-provider nof0corr energy-adapter probes.",
+    "Route more energy supervision onto the same stage5-normalized scale used by the packet readiness gate.",
+    "Keep the isolated energy branch setup and avoid changing F0 or APER supervision."
+  ],
+  "loss_weights": {
+    "teacher_energy_proxy": 0.1,
+    "teacher_energy_state": 0.02,
+    "teacher_energy_stage5_state": 0.1
+  },
+  "loss_weight_schedule": {
+    "teacher_energy_stage5_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 2
+    }
+  }
+}

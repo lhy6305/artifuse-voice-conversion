@@ -101,6 +101,7 @@ from v5vc.stage5_waveform_handoff_probe import analyze_stage5_nores_waveform_han
 from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_waveform_objective_collapse
 from v5vc.stage_report import materialize_offline_mvp_stage_report
 from v5vc.streaming_student import (
+    audit_streaming_student_pitch_provider,
     build_streaming_student_calibration_assets,
     compare_streaming_student_checkpoint_selectors,
     export_streaming_student_downstream_control_packet,
@@ -767,6 +768,73 @@ def build_parser() -> argparse.ArgumentParser:
         default=None,
         help="Optional JSON file that overrides part of the default Stage3 loss weight table.",
     )
+
+    streaming_student_pitch_provider_audit_parser = subparsers.add_parser(
+        "audit-streaming-student-pitch-provider",
+        help="Audit raw Stage3 pitch-provider alignment against teacher F0/VUV without student correction.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--config",
+        type=Path,
+        default=Path("configs/streaming_student_stage_template.json"),
+        help="Stage3 scaffold config template path.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--teacher-label-index",
+        type=Path,
+        default=Path("data_prep/round1_1/streaming_student_teacher_labels/teacher_label_index.jsonl"),
+        help="Teacher-label index jsonl exported for Stage3.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--split-dir",
+        type=Path,
+        default=None,
+        help="Optional split directory override. Defaults to data.split_dir from config.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        default=Path("reports/runtime/streaming_student_pitch_provider_audit"),
+        help="Directory for raw pitch-provider audit outputs.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--split-name",
+        default="target_validation",
+        choices=("target_train", "target_validation", "target_special_eval"),
+        help="Target split to audit.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=8,
+        help="Number of records to audit when target_record_ids is omitted.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to audit instead of sampled records.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--lag-radius-frames",
+        type=int,
+        default=8,
+        help="For RMVPE, sweep lag candidates in [-radius, +radius] frames around the current contract.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--rmvpe-voicing-thresholds",
+        type=float,
+        nargs="*",
+        default=None,
+        help="Optional RMVPE voicing thresholds to sweep for current-contract calibration diagnostics.",
+    )
+    streaming_student_pitch_provider_audit_parser.add_argument(
+        "--rmvpe-vuv-postprocess-presets",
+        nargs="*",
+        default=None,
+        help="Optional RMVPE VUV postprocess presets such as raw, fill1, fill2, min2_fill1, min2_fill2.",
+    )
+    add_student_route_guard_argument(streaming_student_pitch_provider_audit_parser)
 
     streaming_student_train_step_parser = subparsers.add_parser(
         "run-streaming-student-training-step",
@@ -5781,6 +5849,24 @@ def main(argv: list[str] | None = None) -> int:
             batch_size=args.batch_size,
             use_teacher_confidence=not args.disable_teacher_confidence,
             loss_weight_overrides_path=args.loss_weight_overrides,
+        )
+        return 0
+    if args.command == "audit-streaming-student-pitch-provider":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
+        audit_streaming_student_pitch_provider(
+            config_path=args.config,
+            output_dir=args.output_dir,
+            teacher_label_index_path=args.teacher_label_index,
+            split_dir=args.split_dir,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            lag_radius_frames=args.lag_radius_frames,
+            rmvpe_voicing_thresholds=args.rmvpe_voicing_thresholds,
+            rmvpe_vuv_postprocess_presets=args.rmvpe_vuv_postprocess_presets,
         )
         return 0
     if args.command == "run-streaming-student-training-step":

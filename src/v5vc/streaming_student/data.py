@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 import json
 from pathlib import Path
@@ -26,6 +27,9 @@ from v5vc.offline_mvp.data import (
     load_waveform,
 )
 from v5vc.source_acoustic_state_extraction import extract_source_acoustic_state
+from v5vc.streaming_student.pitch_provider import (
+    compute_stage3_pitch_provider_tensors_for_example,
+)
 from v5vc.train_entry import load_training_split
 
 
@@ -56,6 +60,10 @@ class StreamingStudentTargetExample:
     target_vuv: torch.Tensor | None = None
     target_aper: torch.Tensor | None = None
     target_energy: torch.Tensor | None = None
+    pitch_provider_f0_hz: torch.Tensor | None = None
+    pitch_provider_log2_f0: torch.Tensor | None = None
+    pitch_provider_vuv: torch.Tensor | None = None
+    pitch_provider_confidence: torch.Tensor | None = None
 
 
 @dataclass
@@ -437,6 +445,7 @@ def load_streaming_student_target_examples_from_records(
     frame_length: int | None = None,
     hop_length: int | None = None,
     include_target_acoustic_state: bool = False,
+    pitch_provider_request: Mapping[str, object] | None = None,
 ) -> list[StreamingStudentTargetExample]:
     examples: list[StreamingStudentTargetExample] = []
     for record in records:
@@ -462,7 +471,21 @@ def load_streaming_student_target_examples_from_records(
         target_vuv = None
         target_aper = None
         target_energy = None
-        if include_target_acoustic_state:
+        pitch_provider_mode = (
+            "none"
+            if pitch_provider_request is None
+            else str(pitch_provider_request.get("mode", "none"))
+        )
+        need_target_state_for_provider = pitch_provider_mode == "deterministic_extractor_v1"
+        valid_frame_count = int(teacher_payload["frame_mask"].to(torch.bool).sum().item())
+        frame_start_samples = None
+        if include_target_acoustic_state or need_target_state_for_provider or pitch_provider_mode == "rmvpe_v1":
+            if frame_length is None or hop_length is None:
+                raise ValueError(
+                    "Stage3 explicit target state or pitch provider requires frame_length and hop_length."
+                )
+            frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
+        if include_target_acoustic_state or need_target_state_for_provider:
             cached_target_f0_hz = teacher_payload.get("target_f0_hz")
             cached_target_vuv = teacher_payload.get("target_vuv")
             cached_target_aper = teacher_payload.get("target_aper")
@@ -478,12 +501,6 @@ def load_streaming_student_target_examples_from_records(
                 target_aper = cached_target_aper.to(torch.float32)
                 target_energy = cached_target_energy.to(torch.float32)
             else:
-                if frame_length is None or hop_length is None:
-                    raise ValueError(
-                        "include_target_acoustic_state=True requires frame_length and hop_length."
-                    )
-                valid_frame_count = int(teacher_payload["frame_mask"].to(torch.bool).sum().item())
-                frame_start_samples = torch.arange(valid_frame_count, dtype=torch.long) * int(hop_length)
                 target_state = extract_source_acoustic_state(
                     waveform=waveform,
                     sample_rate=int(sample_rate),
@@ -494,6 +511,20 @@ def load_streaming_student_target_examples_from_records(
                 target_vuv = target_state["vuv"].to(torch.float32)
                 target_aper = target_state["aper"].to(torch.float32)
                 target_energy = target_state["E"].to(torch.float32)
+        example_pitch_provider = compute_stage3_pitch_provider_tensors_for_example(
+            pitch_provider_request=pitch_provider_request,
+            record_id=record_id,
+            audio_path=Path(record["audio_path"]),
+            waveform=waveform,
+            sample_rate=int(sample_rate),
+            frame_start_samples=(
+                torch.zeros((0,), dtype=torch.long)
+                if frame_start_samples is None
+                else frame_start_samples
+            ),
+            target_f0_hz=target_f0_hz,
+            target_vuv=target_vuv,
+        )
         examples.append(
             StreamingStudentTargetExample(
                 record_id=record_id,
@@ -521,6 +552,22 @@ def load_streaming_student_target_examples_from_records(
                 target_vuv=target_vuv,
                 target_aper=target_aper,
                 target_energy=target_energy,
+                pitch_provider_f0_hz=(
+                    None if example_pitch_provider is None else example_pitch_provider["pitch_provider_f0_hz"]
+                ),
+                pitch_provider_log2_f0=(
+                    None
+                    if example_pitch_provider is None
+                    else example_pitch_provider["pitch_provider_log2_f0"]
+                ),
+                pitch_provider_vuv=(
+                    None if example_pitch_provider is None else example_pitch_provider["pitch_provider_vuv"]
+                ),
+                pitch_provider_confidence=(
+                    None
+                    if example_pitch_provider is None
+                    else example_pitch_provider.get("pitch_provider_confidence")
+                ),
             )
         )
     return examples
@@ -681,6 +728,11 @@ def collate_streaming_student_batch(
     teacher_target_vuv = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
     teacher_target_aper = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
     teacher_target_energy = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    pitch_provider_f0_hz = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    pitch_provider_log2_f0 = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    pitch_provider_vuv = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    pitch_provider_confidence = torch.zeros((len(examples), max_teacher_frames, 1), dtype=torch.float32)
+    pitch_provider_available = torch.zeros((len(examples),), dtype=torch.bool)
 
     for index, example in enumerate(examples):
         frame_count = int(example.teacher_frame_mask.sum().item())
@@ -701,6 +753,17 @@ def collate_streaming_student_batch(
             teacher_target_aper[index, :frame_count] = example.target_aper[:frame_count]
         if isinstance(example.target_energy, torch.Tensor):
             teacher_target_energy[index, :frame_count] = example.target_energy[:frame_count]
+        if (
+            isinstance(example.pitch_provider_f0_hz, torch.Tensor)
+            and isinstance(example.pitch_provider_log2_f0, torch.Tensor)
+            and isinstance(example.pitch_provider_vuv, torch.Tensor)
+        ):
+            pitch_provider_f0_hz[index, :frame_count] = example.pitch_provider_f0_hz[:frame_count]
+            pitch_provider_log2_f0[index, :frame_count] = example.pitch_provider_log2_f0[:frame_count]
+            pitch_provider_vuv[index, :frame_count] = example.pitch_provider_vuv[:frame_count]
+            if isinstance(example.pitch_provider_confidence, torch.Tensor):
+                pitch_provider_confidence[index, :frame_count] = example.pitch_provider_confidence[:frame_count]
+            pitch_provider_available[index] = True
 
     speaker_embedding = conditioning_asset["speaker_embedding"].to(torch.float32)
     geom_embedding = conditioning_asset["geom_embedding"].to(torch.float32)
@@ -729,6 +792,11 @@ def collate_streaming_student_batch(
         "teacher_target_vuv": teacher_target_vuv,
         "teacher_target_aper": teacher_target_aper,
         "teacher_target_energy": teacher_target_energy,
+        "pitch_provider_f0_hz": pitch_provider_f0_hz,
+        "pitch_provider_log2_f0": pitch_provider_log2_f0,
+        "pitch_provider_vuv": pitch_provider_vuv,
+        "pitch_provider_confidence": pitch_provider_confidence,
+        "pitch_provider_available": pitch_provider_available,
         "teacher_confidence_means": torch.tensor(
             [example.teacher_confidence_mean for example in examples],
             dtype=torch.float32,

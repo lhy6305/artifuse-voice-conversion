@@ -1,0 +1,32 @@
+{
+  "name": "streaming_student_loss_weights_detpitch_energy_stage5shape_v1",
+  "notes": [
+    "Use with deterministic pitch-provider nof0corr dedicated-energy-branch probes.",
+    "Target the current packet-facing energy failure mode where predicted stage5 energy has very low dynamic range.",
+    "Add stage5-normalized temporal and correlation pressure instead of only per-frame level matching."
+  ],
+  "loss_weights": {
+    "teacher_energy_proxy": 0.08,
+    "teacher_energy_state": 0.02,
+    "teacher_energy_stage5_state": 0.05,
+    "teacher_energy_stage5_temporal": 0.08,
+    "teacher_energy_stage5_correlation": 0.08
+  },
+  "loss_weight_schedule": {
+    "teacher_energy_stage5_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_temporal": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_correlation": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    }
+  }
+}

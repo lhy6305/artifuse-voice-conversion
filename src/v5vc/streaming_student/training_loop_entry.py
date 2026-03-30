@@ -16,6 +16,9 @@ from v5vc.streaming_student.data import (
     select_streaming_student_batch_records,
     slice_streaming_student_batch_records,
 )
+from v5vc.streaming_student.checkpoint_init import (
+    load_streaming_student_init_checkpoint,
+)
 from v5vc.streaming_student.losses import (
     apply_teacher_supervision_weight_schedule,
     compute_streaming_student_teacher_supervision_loss,
@@ -24,6 +27,13 @@ from v5vc.streaming_student.losses import (
     resolve_teacher_supervision_weights,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+from v5vc.streaming_student.pitch_provider import (
+    build_stage3_pitch_provider_model_inputs_from_batch,
+    resolve_stage3_pitch_provider_request,
+)
+from v5vc.streaming_student.training_freeze import (
+    apply_streaming_student_training_freeze,
+)
 
 
 def run_streaming_student_training_loop(
@@ -87,14 +97,23 @@ def run_streaming_student_training_loop(
         overrides_path=resolved_loss_weight_overrides_path,
     )
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
-    optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
+    pitch_provider_request = resolve_stage3_pitch_provider_request(
+        dict(config["model"]),
+        config_path=config_path,
+    )
+    init_checkpoint_summary = None
     if resolved_init_checkpoint_path is not None:
-        init_payload = torch.load(resolved_init_checkpoint_path, map_location="cpu", weights_only=False)
-        init_model_state_dict = init_payload.get("model_state_dict")
-        if not isinstance(init_model_state_dict, dict):
-            raise ValueError(f"Init checkpoint missing model_state_dict: {resolved_init_checkpoint_path}")
-        model.load_state_dict(init_model_state_dict)
+        init_payload, init_checkpoint_summary = load_streaming_student_init_checkpoint(
+            model=model,
+            checkpoint_path=resolved_init_checkpoint_path,
+            allow_partial=bool(config.get("training", {}).get("allow_partial_init_checkpoint", False)),
+        )
         init_checkpoint_step = int(init_payload.get("step", 0))
+    trainable_parameters, training_freeze_summary = apply_streaming_student_training_freeze(
+        model=model,
+        training_config=config.get("training"),
+    )
+    optimizer = torch.optim.Adam(trainable_parameters, lr=float(learning_rate))
 
     step_history: list[dict[str, object]] = []
     validation_history: list[dict[str, object]] = []
@@ -127,10 +146,18 @@ def run_streaming_student_training_loop(
             frame_length=int(config["model"]["frame_length"]),
             hop_length=int(config["model"]["hop_length"]),
             include_target_acoustic_state=True,
+            pitch_provider_request=pitch_provider_request,
         )
         train_batch = collate_streaming_student_batch(
             examples=train_examples,
             conditioning_asset=conditioning_asset,
+        )
+        train_pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+            train_batch,
+            pitch_provider_mode=config["model"].get("pitch_provider_mode"),
+            audio_lengths=train_batch["audio_lengths"],
+            frame_length=int(config["model"]["frame_length"]),
+            hop_length=int(config["model"]["hop_length"]),
         )
 
         model.train()
@@ -139,6 +166,7 @@ def run_streaming_student_training_loop(
             lengths=train_batch["audio_lengths"],
             speaker_embedding=train_batch["speaker_embedding"],
             geom_embedding=train_batch["geom_embedding"],
+            **train_pitch_provider_inputs,
         )
         train_loss, train_metrics = compute_streaming_student_teacher_supervision_loss(
             outputs=train_outputs,
@@ -149,7 +177,7 @@ def run_streaming_student_training_loop(
         )
         optimizer.zero_grad(set_to_none=True)
         train_loss.backward()
-        grad_norm = float(clip_grad_norm_(model.parameters(), float(max_grad_norm)).item())
+        grad_norm = float(clip_grad_norm_(trainable_parameters, float(max_grad_norm)).item())
         optimizer.step()
 
         step_ended_at = datetime.now()
@@ -200,6 +228,7 @@ def run_streaming_student_training_loop(
                 validation_batches=effective_validation_batches,
                 validation_mode=effective_validation_mode,
                 step=current_step,
+                pitch_provider_request=pitch_provider_request,
             )
             validation_history.append(validation_payload)
 
@@ -233,6 +262,7 @@ def run_streaming_student_training_loop(
                             if resolved_loss_weight_overrides_path is None
                             else resolved_loss_weight_overrides_path.as_posix()
                         ),
+                        "training_freeze": training_freeze_summary,
                         "init_checkpoint_path": (
                             None
                             if resolved_init_checkpoint_path is None
@@ -279,6 +309,8 @@ def run_streaming_student_training_loop(
             "loss_weight_overrides_path": (
                 None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
             ),
+            "init_checkpoint": init_checkpoint_summary,
+            "training_freeze": training_freeze_summary,
             "init_checkpoint_path": (
                 None if resolved_init_checkpoint_path is None else resolved_init_checkpoint_path.as_posix()
             ),
@@ -347,6 +379,7 @@ def run_validation_pass(
     validation_batches: int,
     validation_mode: str,
     step: int,
+    pitch_provider_request: dict[str, object],
 ) -> dict[str, object]:
     model.eval()
     batch_metrics: list[dict[str, float]] = []
@@ -379,16 +412,25 @@ def run_validation_pass(
                 frame_length=int(frame_length),
                 hop_length=int(hop_length),
                 include_target_acoustic_state=True,
+                pitch_provider_request=pitch_provider_request,
             )
             batch = collate_streaming_student_batch(
                 examples=examples,
                 conditioning_asset=conditioning_asset,
+            )
+            pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+                batch,
+                pitch_provider_mode=model.frontend.pitch_provider_mode,
+                audio_lengths=batch["audio_lengths"],
+                frame_length=int(model.frontend.frame_length),
+                hop_length=int(model.frontend.hop_length),
             )
             outputs = model(
                 waveform=batch["waveform"],
                 lengths=batch["audio_lengths"],
                 speaker_embedding=batch["speaker_embedding"],
                 geom_embedding=batch["geom_embedding"],
+                **pitch_provider_inputs,
             )
             effective_loss_weights = apply_teacher_supervision_weight_schedule(
                 base_weights=base_loss_weights,

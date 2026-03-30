@@ -143,6 +143,268 @@
 - They should not remain as long-term root-level project directories once the relevant ideas are captured in formal docs.
 - If retention is still useful, move them into a clearly marked reference location such as `tmp/reference_repos/` instead of leaving them mixed with the main repo structure.
 
+### 27. Do not overread deterministic pitch-provider smoke metrics as proof that Stage3 F0 is solved
+- The new `deterministic_extractor_v1` route is a contract bootstrap and plumbing validation step.
+- It intentionally feeds explicit F0 and VUV information derived from the in-repo acoustic-state extraction family.
+- Therefore very strong smoke-level F0 agreement is expected and does not by itself prove external-sidecar readiness or final online deployment suitability.
+- Use Step A to validate the shared provider contract, then compare RMVPE against the same contract in Step B.
+
+### 28. Do not assume an external specialist model automatically fits the current Stage3 target contract
+- Step B confirmed that RMVPE can be wired into the Stage3 provider interface.
+- Step B also confirmed that naive direct RMVPE injection can still fail badly on the current packet screen.
+- "external expert exists" and "current contract is compatible with that expert output" are different questions.
+- Diagnose provider-to-contract mismatch before promoting RMVPE as the new default route.
+
+### 29. Do not keep treating RMVPE mismatch as a simple lag problem after provider-only audit says otherwise
+- Provider-only audit now has a deterministic positive control and an RMVPE negative result on the same Stage3 contract.
+- Deterministic provider reaches exact teacher agreement, so the audit path and teacher target contract are not the root cause.
+- RMVPE remains `ready_like = 0/8` on the validation audit slice even after anchor `{start, center, end}` and lag `[-8, +8]` sweeps.
+- Aggregate RMVPE current-contract metrics are still poor:
+  - `avg_voiced_log2_mae = 1.608832`
+  - `avg_voiced_corr = -0.430655`
+  - `avg_vuv_f1 = 0.852326`
+- Best-correlation sweeping improves aggregate correlation only to about `-0.13859`, which is still not usable.
+- Therefore the next valid diagnostic is contract decomposition:
+  - `rmvpe_f0 + deterministic_vuv`
+  - voiced-intersection F0 analysis
+  - octave and affine probes on voiced intersections
+- Do not spend more time on lag-only sweeps or longer training runs with unchanged raw RMVPE injection.
+
+### 30. Do not read negative reference-voiced RMVPE F0 metrics as proof that the jointly voiced F0 is bad
+- The enriched RMVPE audit shows a strong gap between full reference-voiced metrics and jointly voiced metrics.
+- Aggregate example:
+  - full reference-voiced `avg_voiced_corr = -0.430655`
+  - jointly voiced `avg_joint_voiced_corr = 0.547401`
+  - jointly voiced `avg_joint_voiced_log2_mae = 0.1088`
+- Hybrid `rmvpe_f0 + deterministic_vuv` also proves that fixing VUV alone does not automatically clear readiness, but it removes VUV as the only explanation.
+- The current evidence says:
+  - RMVPE often has usable F0 on frames where it agrees with the teacher that voicing exists
+  - the dominant remaining mismatch is voiced-support drift
+  - octave shift is not the main failure mode on the audited slice because joint octave probing keeps selecting shift `0`
+- Therefore the next valid RMVPE probe is provider-side VUV calibration, not more octave debugging or more F0-loss training.
+
+### 31. Do not keep spending time on threshold and simple binary VUV cleanup once the RMVPE calibration sweep is flat
+- The provider-side RMVPE calibration sweep tested:
+  - thresholds `0.01, 0.02, 0.03, 0.05, 0.08`
+  - postprocess presets `raw, fill1, fill2, min2_fill1, min2_fill2`
+- No variant achieved `ready_like > 0`.
+- The best swept variant was only a mild tradeoff improvement:
+  - `thr0.010_raw`
+  - `avg_voiced_corr = -0.422858`
+  - `avg_voiced_log2_mae = 1.547794`
+- Simple postprocess presets were effectively no-ops on the audited slice.
+- This means the current thresholded RMVPE route is not going to be rescued by more small threshold or gap-fill tuning.
+- If RMVPE work continues, the next valid escalation requires richer provider information such as confidence-aware or salience-aware voicing, not more binary postprocess tweaks.
+- Do not open a new packet-smoke cycle for the current thresholded RMVPE route.
+
+### 32. Do not overread the confidence-aware RMVPE bootstrap as if it already solved the packet gate
+- `rmvpe_confidence_v1` is a meaningful structural improvement over the old thresholded RMVPE route:
+  - it keeps unthresholded sampled F0
+  - it exposes sampled confidence instead of collapsing everything into `f0_hz > 0`
+- But the first one-step packet smoke still lands at:
+  - `f0_ready_count = 0/3`
+  - `auto_reject_count = 3/3`
+- Therefore:
+  - the confidence-aware branch is worth keeping as a live experiment
+  - but it is still not valid to promote it as the new Stage3 F0 solution
+- If this branch continues, the next valid test is a short controlled training loop, not more threshold tweaking and not a premature route-opening claim.
+
+### 33. Do not read short-loop loss improvement on `rmvpe_confidence_v1` as packet-gate progress
+- The short controlled loop did improve sampled validation loss:
+  - step `2`: `4.434691`
+  - step `4`: `2.72968`
+  - step `6`: `2.861254`
+- But packet-aware screening across all six checkpoints still found:
+  - `f0_ready_count = 0/3`
+  - `auto_reject_count = 3/3`
+- The packet-aware selector picked step `3`, while sampled validation preferred step `4`.
+- This does not mean the branch is close to opening.
+- It means:
+  - teacher-loss improvement and packet-facing readiness remain separate objectives
+  - the current confidence-aware consumer is still below the `F0` handoff bar
+- Do not keep extending the same short-loop pattern by inertia.
+- If RMVPE work continues from here, require a richer provider-consumer contract change rather than more copies of the same training loop.
+
+### 34. Do not assume that simply separating RMVPE confidence from hard `VUV` is enough to rescue the current consumer
+- The `rmvpe_split_confidence_v1` probe explicitly stopped overloading sampled confidence as `VUV`.
+- It kept:
+  - unthresholded RMVPE `F0`
+  - hard thresholded `VUV`
+  - separate sampled confidence as an extra Stage3 input
+- This did improve some affine-calibrated `F0` MAE values on sample3.
+- But it still produced:
+  - `f0_ready_count = 0/3`
+  - `auto_reject_count = 3/3`
+- Aggregate sample3 tradeoff was:
+  - slightly better `avg_f0_calibrated_log2_mae`
+  - slightly worse `avg_vuv_reference_mae`
+  - no meaningful `F0` correlation rescue
+- So the current blocker is not just that confidence and `VUV` were conflated.
+- The remaining problem is deeper consumer-side inability to exploit the richer RMVPE contract.
+- Do not keep running more consumer-preserving RMVPE probes unless the next step changes:
+  - explicit voiced-support modeling
+  - confidence-aware or salience-aware correction logic
+  - or the `F0` supervision and calibration objective itself
+
+### 35. Do not mistake smaller RMVPE correction magnitude for actual packet-gate rescue
+- The gated consumer probe introduced:
+  - `provider_confidence_gate_mode = hard_vuv_times_confidence_v1`
+- It did what it was supposed to do locally:
+  - `loss_log_f0_correction_l1` dropped from `0.099057` to `0.047207`
+  - sample packet `log_f0_correction` magnitude also dropped substantially
+- But the packet result still stayed at:
+  - `f0_ready_count = 0/3`
+  - `auto_reject_count = 3/3`
+- This means:
+  - "correction head too active" was a real sub-issue
+  - but it was not the main route-opening blocker
+- Do not continue the current RMVPE Stage3 family with more same-style gates, small correction tweaks, or more one-step packet smokes.
+- If RMVPE is revisited later, require a larger redesign than the current correction contract.
+
+### 36. Do not keep scalar energy reweighting on the deterministic nof0corr scaffold as if it were already a joint-control solution
+- The deterministic explicit-provider nof0corr reference is now strong enough to localize the remaining blocker:
+  - best packet checkpoint reaches `f0_ready_count = 3/3`
+  - best packet checkpoint reaches `vuv_ready_count = 3/3`
+  - best packet checkpoint reaches `aper_ready_count = 2/3`
+  - but `energy_ready_count` stays `0/3`
+- Energy-focused scalar reweighting does move `ENERGY`, but only with a tradeoff:
+  - scratch energy-focus later reaches `energy_ready_count = 2/3`
+  - but the same checkpoints drop to `f0_ready_count = 1/3` and `aper_ready_count = 0/3`
+- Warm-starting from the packet-best deterministic checkpoint does not rescue this:
+  - packet-best warm-start checkpoint already falls to `f0_ready_count = 0/3`
+  - later warm-start checkpoints still follow the same pattern of better `ENERGY` with worse `F0 / APER`
+- Sampled validation also improves during warm-start, so this is not a case where bad teacher loss simply hid the answer.
+- The real lesson is:
+  - the current scalar objective family can trade controls against each other
+  - but it cannot protect the already-open `F0 / VUV / APER` state while improving `ENERGY`
+- Do not continue more same-family scalar scans or short warm-start retries by inertia.
+- The next valid move requires a structural optimization change such as:
+  - energy-isolated optimization
+  - stagewise freeze
+  - or another objective split that preserves already-open controls
+
+### 37. Do not overread strict stagewise freeze as if preserving `F0 / VUV / APER` automatically means `ENERGY` will now improve
+- The new energy-freeze probe explicitly trained only:
+  - `frontend.energy_head`
+  - `student.energy_branch_delta_head`
+- It did remove the earlier forgetting failure:
+  - all screened checkpoints stayed at `f0_ready_count = 3/3`
+  - all screened checkpoints stayed at `vuv_ready_count = 3/3`
+  - all screened checkpoints stayed at `aper_ready_count = 2/3`
+- But `ENERGY` still did not move:
+  - all screened checkpoints stayed at `energy_ready_count = 0/3`
+  - `avg_energy_stage5_norm_calibrated_reference_mae` stayed pinned at `0.707125`
+- So the remaining blocker is not only shared-update interference.
+- It is also that the current isolated energy-only heads are too weak to change packet-facing `ENERGY` on their own.
+- Do not keep repeating the same two-head freeze loop by inertia.
+- The next valid escalation requires new isolated energy-specific capacity, not just stronger patience with the current isolated heads.
+
+### 38. Do not overread isolated `ENERGY` metric improvement as if the named-control route is now open
+- The dedicated energy-adapter probe is the first isolated deterministic energy probe that improves packet-facing `ENERGY` error while preserving:
+  - `f0_ready_count = 3/3`
+  - `vuv_ready_count = 3/3`
+  - `aper_ready_count = 2/3`
+- Packet-best `avg_energy_stage5_norm_calibrated_reference_mae` improves from `0.707125` to `0.550192`.
+- But the actual route-opening outcome does not change:
+  - `energy_ready_count = 0/3`
+  - `all_core_controls_ready_count = 0/3`
+  - `auto_reject_count = 3/3`
+- This means the new isolated branch direction is structurally better than the old two-head freeze.
+- It does not mean the deterministic line is ready to hand off.
+- Do not turn "sub-threshold energy improvement" into a readiness claim.
+- If this line continues, the next valid move is stronger isolated `ENERGY` capacity or energy-specific objective routing, not celebratory route-opening language.
+
+### 39. Do not assume that supervising `ENERGY` on the packet-gate normalization scale is enough by itself
+- The new `teacher_energy_stage5_state` loss directly aligns Stage3 `ENERGY` supervision with the packet gate's `stage5_norm` scale.
+- This wiring is valid and low-risk.
+- But the packet-best result only moved from:
+  - `avg_energy_stage5_norm_calibrated_reference_mae = 0.550192`
+  - to `0.550175`
+- Readiness stayed unchanged:
+  - `energy_ready_count = 0/3`
+  - `all_core_controls_ready_count = 0/3`
+- So the current bottleneck is not just a mismatch between training scale and gate scale.
+- Do not spend more cycles on same-family `ENERGY` weight nudging framed as "better scale alignment".
+- If this line continues, the next valid move is stronger isolated capacity or a more direct packet-facing energy objective than the current per-frame MSE family.
+
+### 40. Do not treat naive widening of the isolated energy branch as the default next escalation
+- The widened dedicated energy-branch probe kept the deterministic nof0corr scaffold and doubled:
+  - `energy_control_branch_hidden_dim` from `96` to `192`
+- It preserved:
+  - `f0_ready_count = 3/3`
+  - `vuv_ready_count = 3/3`
+  - `aper_ready_count = 2/3`
+- But it did not improve packet-facing `ENERGY`:
+  - widened-family best `avg_energy_stage5_norm_calibrated_reference_mae = 0.550949`
+  - previous dedicated-branch best was `0.550192`
+- The widened family also shows an unstable short-loop pattern:
+  - early step retains partial improvement
+  - later steps fall back to `0.707125`
+- So "more width" is not a good default continuation on this line.
+- If this line continues, prefer more structured isolated capacity or more direct packet-facing objectives instead of naive width scaling.
+
+### 41. Do not assume generic Stage5 temporal and correlation shaping will fix packet-facing energy collapse
+- The new Stage5-shape probe added:
+  - `teacher_energy_stage5_temporal`
+  - `teacher_energy_stage5_correlation`
+- These losses were active and the short warm-start loop was healthy:
+  - training loss fell across steps `1` to `4`
+  - sampled validation still chose a real checkpoint
+- But packet-facing `ENERGY` did not improve at all:
+  - all screened checkpoints stayed at `energy_ready_count = 0/3`
+  - all screened checkpoints stayed at `avg_energy_stage5_norm_calibrated_reference_mae = 0.707125`
+- This is worse than the earlier dedicated energy-branch best `0.550192`.
+- So the current blocker is not solved by generic trajectory pressure on normalized energy.
+- If this line continues, the next valid move should target the observed failure mode more directly:
+  - centered energy shape
+  - dynamic-range or variance matching
+  - or a more calibration-aware packet-facing objective
+
+### 42. Do not mistake the first small dynamic-range win for actual energy readiness
+- The direct dynamic-range probe added:
+  - `teacher_energy_stage5_centered_state`
+  - `teacher_energy_stage5_std`
+- This is the first packet-facing objective that slightly beats the earlier dedicated energy-branch best:
+  - previous best `avg_energy_stage5_norm_calibrated_reference_mae = 0.550192`
+  - new best `avg_energy_stage5_norm_calibrated_reference_mae = 0.550066`
+- But the route is still not open:
+  - `energy_ready_count = 0/3`
+  - `all_core_controls_ready_count = 0/3`
+- Representative packet diagnostics still show severe compression:
+  - proxy std stays near `0.01`
+  - reference std is still about `0.35`
+- So this result should be read as:
+  - the direct dynamic-range family is more promising than generic shape losses
+  - but the current gain is only a small positive signal, not a readiness milestone
+- If this line continues, keep pushing more explicit dynamic-range or calibration-aware objectives rather than declaring victory or falling back to the old generic losses.
+
+### 43. Do not let packet-selector top-1 rank hide the real winner inside the deterministic energy family
+- The new affine-calibrated probe improves the true `ENERGY` best value to:
+  - `avg_energy_stage5_norm_calibrated_reference_mae = 0.547625`
+- But the packet-aware selector still ranks a worse checkpoint first because the lexicographic rule prioritizes:
+  - readiness counts
+  - then `VUV`
+  - then `F0`
+  - then `APER`
+  - only then `ENERGY`
+- In this concrete family:
+  - step `2` is the true `ENERGY` best checkpoint
+  - step `3` is the selector top-1
+  - but step `3` already regresses `ENERGY` back to `0.707125`
+- Therefore, when the active question is specifically deterministic isolated `ENERGY`, do not quote selector top-1 alone.
+- Always read:
+  - the ranking
+  - the best raw `avg_energy_stage5_norm_calibrated_reference_mae`
+  - and whether the energy-best checkpoint is different from the lexicographic top-1
+
+### 44. Do not assume a lower learning rate will automatically stabilize the new affine-calibrated energy family
+- After the affine-calibrated probe showed the strongest `ENERGY` result so far, a direct follow-up halved learning rate from `5.0e-4` to `2.5e-4`.
+- This did not help:
+  - best visible `ENERGY` values became `0.550892` and `0.550539`
+  - both are worse than the original affine-calibrated run best `0.547625`
+- So the current next move is not "blindly lower the learning rate and retry".
+- The active positive signal is still the calibration-aware objective family itself, not the lr-half variant.
+
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
 - If it is only a local experiment conclusion, keep it in the corresponding numbered report.
@@ -168,3 +430,20 @@
 - `docs/485_stage3_f0_unboundedf0_unit_mismatch_and_corrected_root_cause_report.md`
 - `docs/486_stage3_f0_sigmoid_collapse_systematic_diagnosis_and_structural_escalation_report.md`
 - `docs/487_stage3_rvc_reference_review_and_rmvpe_sidecar_plan_report.md`
+- `docs/488_stage3_deterministic_pitch_provider_bootstrap_and_smoke_report.md`
+- `docs/489_stage3_rmvpe_provider_bootstrap_and_contract_mismatch_smoke_report.md`
+- `docs/490_stage3_provider_only_audit_and_rmvpe_contract_diagnosis_report.md`
+- `docs/491_stage3_rmvpe_voiced_intersection_and_hybrid_vuv_diagnosis_report.md`
+- `docs/492_stage3_rmvpe_voicing_threshold_and_vuv_postprocess_calibration_report.md`
+- `docs/493_stage3_rmvpe_confidence_provider_bootstrap_and_packet_smoke_report.md`
+- `docs/494_stage3_rmvpe_confidence_short_loop_and_packet_selector_report.md`
+- `docs/495_stage3_rmvpe_split_confidence_probe_report.md`
+- `docs/496_stage3_rmvpe_splitconf_gated_correction_probe_report.md`
+- `docs/497_stage3_detpitch_nof0corr_energy_tradeoff_and_warmstart_nogo_report.md`
+- `docs/498_stage3_detpitch_energyfreeze_isolation_probe_report.md`
+- `docs/499_stage3_detpitch_energy_adapter_freeze_probe_report.md`
+- `docs/500_stage3_detpitch_energy_stage5_objective_routing_probe_report.md`
+- `docs/501_stage3_detpitch_energy_adapter_widening_probe_report.md`
+- `docs/502_stage3_detpitch_energy_stage5_shape_objective_probe_report.md`
+- `docs/503_stage3_detpitch_energy_stage5_dynamic_range_objective_probe_report.md`
+- `docs/504_stage3_detpitch_energy_stage5_affine_calibrated_objective_and_lrhalf_followup_report.md`

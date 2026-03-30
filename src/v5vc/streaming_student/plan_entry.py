@@ -13,6 +13,10 @@ from v5vc.offline_mvp.data import (
     infer_target_event_timing_semantic_sidecar_path,
 )
 from v5vc.streaming_student.model import StreamingStudentScaffold
+from v5vc.streaming_student.pitch_provider import (
+    DEFAULT_STAGE3_PITCH_PROVIDER_MODE,
+    compute_stage3_frame_lengths,
+)
 from v5vc.train_entry import load_training_split, resolve_experiment_metrics_path
 
 
@@ -95,14 +99,39 @@ def prepare_streaming_student_stage(
     lengths = torch.full((synthetic_batch_size,), synthetic_waveform_length, dtype=torch.long)
     speaker_embedding = torch.randn(synthetic_batch_size, int(model_config["speaker_embed_dim"]))
     geom_embedding = torch.randn(synthetic_batch_size, int(model_config["geom_embed_dim"]))
+    pitch_provider_mode = str(
+        model_config.get("pitch_provider_mode", DEFAULT_STAGE3_PITCH_PROVIDER_MODE)
+    )
 
     model = instantiate_streaming_student_scaffold(model_config=model_config)
+    synthetic_pitch_provider_inputs: dict[str, torch.Tensor | None] = {
+        "pitch_provider_log2_f0": None,
+        "pitch_provider_vuv": None,
+        "pitch_provider_confidence": None,
+    }
+    if pitch_provider_mode != DEFAULT_STAGE3_PITCH_PROVIDER_MODE:
+        frame_lengths = compute_stage3_frame_lengths(
+            lengths,
+            frame_length=int(model_config["frame_length"]),
+            hop_length=int(model_config["hop_length"]),
+        )
+        max_frames = int(frame_lengths.max().item())
+        synthetic_pitch_provider_inputs = {
+            "pitch_provider_log2_f0": torch.zeros((synthetic_batch_size, max_frames, 1), dtype=torch.float32),
+            "pitch_provider_vuv": torch.zeros((synthetic_batch_size, max_frames, 1), dtype=torch.float32),
+            "pitch_provider_confidence": (
+                torch.zeros((synthetic_batch_size, max_frames, 1), dtype=torch.float32)
+                if pitch_provider_mode == "rmvpe_split_confidence_v1"
+                else None
+            ),
+        }
     with torch.no_grad():
         outputs = model(
             waveform=waveform,
             lengths=lengths,
             speaker_embedding=speaker_embedding,
             geom_embedding=geom_embedding,
+            **synthetic_pitch_provider_inputs,
         )
 
     run_ended_at = datetime.now()
@@ -282,6 +311,9 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
         ),
         f0_floor_hz=float(model_config.get("f0_floor_hz", 50.0)),
         f0_ceil_hz=float(model_config.get("f0_ceil_hz", 550.0)),
+        pitch_provider_mode=str(
+            model_config.get("pitch_provider_mode", DEFAULT_STAGE3_PITCH_PROVIDER_MODE)
+        ),
         f0_control_branch_mode=str(
             model_config.get("f0_control_branch_mode", "shared_student_v1")
         ),
@@ -290,10 +322,26 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
             if model_config.get("f0_control_branch_layers") in {None, ""}
             else int(model_config.get("f0_control_branch_layers"))
         ),
+        energy_control_branch_mode=str(
+            model_config.get("energy_control_branch_mode", "shared_f0_branch_v1")
+        ),
+        energy_control_branch_layers=(
+            None
+            if model_config.get("energy_control_branch_layers") in {None, ""}
+            else int(model_config.get("energy_control_branch_layers"))
+        ),
+        energy_control_branch_hidden_dim=(
+            None
+            if model_config.get("energy_control_branch_hidden_dim") in {None, ""}
+            else int(model_config.get("energy_control_branch_hidden_dim"))
+        ),
         f0_correction_parameterization_mode=str(
             model_config.get("f0_correction_parameterization_mode", "linear_unbounded_v1")
         ),
         f0_correction_limit_log2=float(model_config.get("f0_correction_limit_log2", 0.5)),
+        provider_confidence_gate_mode=str(
+            model_config.get("provider_confidence_gate_mode", "none")
+        ),
     )
 
 
@@ -320,6 +368,24 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
                 "f0_floor_hz": float(model_config.get("f0_floor_hz", 50.0)),
                 "f0_ceil_hz": float(model_config.get("f0_ceil_hz", 550.0)),
             },
+            "pitch_provider": {
+                "mode": str(
+                    model_config.get("pitch_provider_mode", DEFAULT_STAGE3_PITCH_PROVIDER_MODE)
+                ),
+                "provided_features": (
+                    [
+                        "pitch_provider_f0_hz",
+                        "pitch_provider_log2_f0",
+                        "pitch_provider_vuv",
+                        "pitch_provider_confidence",
+                    ]
+                    if str(
+                        model_config.get("pitch_provider_mode", DEFAULT_STAGE3_PITCH_PROVIDER_MODE)
+                    ).strip().lower()
+                    == "rmvpe_split_confidence_v1"
+                    else ["pitch_provider_f0_hz", "pitch_provider_log2_f0", "pitch_provider_vuv"]
+                ),
+            },
             "f0_control_branch": {
                 "mode": str(model_config.get("f0_control_branch_mode", "shared_student_v1")),
                 "branch_layers": (
@@ -332,6 +398,28 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
                     model_config.get("f0_correction_parameterization_mode", "linear_unbounded_v1")
                 ),
                 "correction_limit_log2": float(model_config.get("f0_correction_limit_log2", 0.5)),
+                "provider_confidence_gate_mode": str(
+                    model_config.get("provider_confidence_gate_mode", "none")
+                ),
+            },
+            "energy_control_branch": {
+                "mode": str(model_config.get("energy_control_branch_mode", "shared_f0_branch_v1")),
+                "branch_layers": (
+                    int(model_config.get("energy_control_branch_layers", model_config["student_layers"]))
+                    if str(model_config.get("energy_control_branch_mode", "shared_f0_branch_v1"))
+                    .strip()
+                    .lower()
+                    == "dedicated_energy_branch_v1"
+                    else 0
+                ),
+                "hidden_dim": (
+                    int(model_config.get("energy_control_branch_hidden_dim", model_config["student_dim"]))
+                    if str(model_config.get("energy_control_branch_mode", "shared_f0_branch_v1"))
+                    .strip()
+                    .lower()
+                    == "dedicated_energy_branch_v1"
+                    else 0
+                ),
             },
             "vuv_logits": {"feature_dim": 1},
             "aperiodicity": {"feature_dim": 1},
@@ -361,12 +449,42 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
             "event_logits": {"feature_dim": int(model_config["event_dim"])},
             "r_res": {"feature_dim": 0 if not bool(model_config.get("r_res_enabled", False)) else int(model_config["r_res_dim"])},
             "log_f0_correction": {"feature_dim": 1 if bool(model_config.get("f0_correction_enabled", True)) else 0},
+            "f0_correction_gate": {
+                "feature_dim": (
+                    1
+                    if str(model_config.get("provider_confidence_gate_mode", "none")).strip().lower()
+                    != "none"
+                    else 0
+                )
+            },
             "aper_correction": {"feature_dim": 1 if bool(model_config.get("aper_correction_enabled", True)) else 0},
+            "energy_branch_hidden": {
+                "feature_dim": (
+                    int(model_config.get("energy_control_branch_hidden_dim", model_config["student_dim"]))
+                    if str(model_config.get("energy_control_branch_mode", "shared_f0_branch_v1"))
+                    .strip()
+                    .lower()
+                    == "dedicated_energy_branch_v1"
+                    else 0
+                )
+            },
         },
         "conditioning_inputs": {
             "speaker_embedding": {"feature_dim": int(model_config["speaker_embed_dim"])},
             "geom_embedding": {"feature_dim": int(model_config["geom_embed_dim"])},
             "conditioning_hidden": {"feature_dim": int(model_config["conditioning_dim"])},
+            "pitch_provider_log2_f0": {"feature_dim": 1},
+            "pitch_provider_vuv": {"feature_dim": 1},
+            "pitch_provider_confidence": {
+                "feature_dim": (
+                    1
+                    if str(
+                        model_config.get("pitch_provider_mode", DEFAULT_STAGE3_PITCH_PROVIDER_MODE)
+                    ).strip().lower()
+                    == "rmvpe_split_confidence_v1"
+                    else 0
+                )
+            },
         },
         "offline_mvp_eval_bridge": {
             "stable_keys": [

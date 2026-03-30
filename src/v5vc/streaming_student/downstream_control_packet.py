@@ -20,12 +20,17 @@ from v5vc.source_acoustic_state_extraction import (
     extract_source_acoustic_state,
 )
 from v5vc.streaming_student.data import (
+    collate_streaming_student_batch,
     load_streaming_student_conditioning_asset,
     load_streaming_student_target_examples_from_records,
     load_streaming_student_target_records_by_split,
 )
 from v5vc.streaming_student.losses import resolve_semantic_supervision_config
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+from v5vc.streaming_student.pitch_provider import (
+    build_stage3_pitch_provider_model_inputs_from_batch,
+    resolve_stage3_pitch_provider_request,
+)
 
 
 DOWNSTREAM_CONTROL_PACKET_VERSION = "streaming_student_downstream_control_v1"
@@ -85,6 +90,10 @@ def export_streaming_student_downstream_control_packet(
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
     model.load_state_dict(payload["model_state_dict"])
     model.eval()
+    pitch_provider_request = resolve_stage3_pitch_provider_request(
+        dict(config["model"]),
+        config_path=config_path,
+    )
 
     semantic_supervision = resolve_semantic_supervision_config(config=config.get("semantic_supervision"))
     branch = branch_label or str(payload.get("experiment_id", checkpoint_path.stem))
@@ -99,7 +108,13 @@ def export_streaming_student_downstream_control_packet(
 
     with torch.no_grad():
         for record in selected_records:
-            example = load_streaming_student_target_examples_from_records([record])[0]
+            example = load_streaming_student_target_examples_from_records(
+                [record],
+                frame_length=frame_length,
+                hop_length=hop_length,
+                include_target_acoustic_state=True,
+                pitch_provider_request=pitch_provider_request,
+            )[0]
             waveform = example.waveform
             if effective_max_audio_sec is not None:
                 max_samples = max(1, int(round(example.sample_rate * effective_max_audio_sec)))
@@ -108,11 +123,23 @@ def export_streaming_student_downstream_control_packet(
             waveform_batch = waveform.unsqueeze(0)
             speaker_embedding = conditioning_asset["speaker_embedding"].unsqueeze(0).to(torch.float32)
             geom_embedding = conditioning_asset["geom_embedding"].unsqueeze(0).to(torch.float32)
+            batch = collate_streaming_student_batch(
+                examples=[example],
+                conditioning_asset=conditioning_asset,
+            )
+            pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+                batch,
+                pitch_provider_mode=config["model"].get("pitch_provider_mode"),
+                audio_lengths=lengths,
+                frame_length=frame_length,
+                hop_length=hop_length,
+            )
             outputs = model(
                 waveform=waveform_batch,
                 lengths=lengths,
                 speaker_embedding=speaker_embedding,
                 geom_embedding=geom_embedding,
+                **pitch_provider_inputs,
             )
             frame_mask = outputs["frame_mask"][0].to(torch.bool).cpu()
             frame_count = int(frame_mask.sum().item())

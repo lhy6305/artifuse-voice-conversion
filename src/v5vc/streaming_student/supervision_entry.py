@@ -19,6 +19,10 @@ from v5vc.streaming_student.losses import (
     resolve_teacher_supervision_weights,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+from v5vc.streaming_student.pitch_provider import (
+    build_stage3_pitch_provider_model_inputs_from_batch,
+    resolve_stage3_pitch_provider_request,
+)
 
 
 def prepare_streaming_student_supervision(
@@ -54,6 +58,10 @@ def prepare_streaming_student_supervision(
     conditioning_asset = load_streaming_student_conditioning_asset(calibration_asset_path)
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
     model.eval()
+    pitch_provider_request = resolve_stage3_pitch_provider_request(
+        dict(config["model"]),
+        config_path=config_path,
+    )
     effective_weights = resolve_teacher_supervision_weights(
         overrides_path=resolved_loss_weight_overrides_path,
     )
@@ -71,16 +79,25 @@ def prepare_streaming_student_supervision(
                 frame_length=int(config["model"]["frame_length"]),
                 hop_length=int(config["model"]["hop_length"]),
                 include_target_acoustic_state=True,
+                pitch_provider_request=pitch_provider_request,
             )
             batch = collate_streaming_student_batch(
                 examples=examples,
                 conditioning_asset=conditioning_asset,
+            )
+            pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+                batch,
+                pitch_provider_mode=config["model"].get("pitch_provider_mode"),
+                audio_lengths=batch["audio_lengths"],
+                frame_length=int(config["model"]["frame_length"]),
+                hop_length=int(config["model"]["hop_length"]),
             )
             outputs = model(
                 waveform=batch["waveform"],
                 lengths=batch["audio_lengths"],
                 speaker_embedding=batch["speaker_embedding"],
                 geom_embedding=batch["geom_embedding"],
+                **pitch_provider_inputs,
             )
             total_loss, metrics = compute_streaming_student_teacher_supervision_loss(
                 outputs=outputs,

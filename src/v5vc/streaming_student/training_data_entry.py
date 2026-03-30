@@ -18,6 +18,11 @@ from v5vc.streaming_student.data import (
     load_streaming_student_target_records_by_split,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+from v5vc.streaming_student.pitch_provider import (
+    DEFAULT_STAGE3_PITCH_PROVIDER_MODE,
+    build_stage3_pitch_provider_model_inputs_from_batch,
+    resolve_stage3_pitch_provider_request,
+)
 
 
 def prepare_streaming_student_training_data(
@@ -50,21 +55,40 @@ def prepare_streaming_student_training_data(
     conditioning_asset = load_streaming_student_conditioning_asset(calibration_asset_path)
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
     model.eval()
+    pitch_provider_request = resolve_stage3_pitch_provider_request(
+        dict(config["model"]),
+        config_path=config_path,
+    )
+    pitch_provider_mode = str(pitch_provider_request.get("mode", DEFAULT_STAGE3_PITCH_PROVIDER_MODE))
 
     dry_run_slices: dict[str, object] = {}
     with torch.no_grad():
         for split_name, records in records_by_split.items():
             batch_records = list(records[: max(1, min(int(batch_size), len(records)))])
-            examples = load_streaming_student_target_examples_from_records(batch_records)
+            examples = load_streaming_student_target_examples_from_records(
+                batch_records,
+                frame_length=int(config["model"]["frame_length"]),
+                hop_length=int(config["model"]["hop_length"]),
+                include_target_acoustic_state=(pitch_provider_mode != DEFAULT_STAGE3_PITCH_PROVIDER_MODE),
+                pitch_provider_request=pitch_provider_request,
+            )
             batch = collate_streaming_student_batch(
                 examples=examples,
                 conditioning_asset=conditioning_asset,
+            )
+            pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+                batch,
+                pitch_provider_mode=pitch_provider_mode,
+                audio_lengths=batch["audio_lengths"],
+                frame_length=int(config["model"]["frame_length"]),
+                hop_length=int(config["model"]["hop_length"]),
             )
             outputs = model(
                 waveform=batch["waveform"],
                 lengths=batch["audio_lengths"],
                 speaker_embedding=batch["speaker_embedding"],
                 geom_embedding=batch["geom_embedding"],
+                **pitch_provider_inputs,
             )
             dry_run_slices[split_name] = build_slice_dry_run_summary(
                 split_name=split_name,
@@ -176,6 +200,10 @@ def prepare_streaming_student_paired_training_data(
     conditioning_asset = load_streaming_student_conditioning_asset(calibration_asset_path)
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
     model.eval()
+    if model.frontend.pitch_provider_mode != DEFAULT_STAGE3_PITCH_PROVIDER_MODE:
+        raise ValueError(
+            "prepare_streaming_student_paired_training_data does not support explicit pitch_provider_mode yet."
+        )
 
     dry_run_slices: dict[str, object] = {}
     with torch.no_grad():

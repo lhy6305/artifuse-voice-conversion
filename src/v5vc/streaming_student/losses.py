@@ -12,6 +12,9 @@ from v5vc.event_semantics import (
     DESIGN_STATE_E_EVT_V1_CONTRACT_VERSION,
     DESIGN_STATE_E_EVT_V1_LABEL_SPACE_VERSION,
 )
+from v5vc.offline_teacher_vocoder_input_scaffold import (
+    normalize_energy_log_rms_for_stage5,
+)
 from v5vc.source_acoustic_state_extraction import DEFAULT_VUV_VOICED_FRAME_THRESHOLD
 from v5vc.streaming_student.proxy_acoustic import build_streaming_student_proxy_acoustic
 
@@ -41,6 +44,12 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_vuv_state": 0.0,
         "teacher_aper_state": 0.0,
         "teacher_energy_state": 0.0,
+        "teacher_energy_stage5_state": 0.0,
+        "teacher_energy_stage5_centered_state": 0.0,
+        "teacher_energy_stage5_std": 0.0,
+        "teacher_energy_stage5_affine_calibrated": 0.0,
+        "teacher_energy_stage5_temporal": 0.0,
+        "teacher_energy_stage5_correlation": 0.0,
         "teacher_hidden_projection": 0.0,
         "teacher_fused_hidden_projection": 0.0,
         "teacher_proxy_acoustic": 0.0,
@@ -772,6 +781,8 @@ def compute_streaming_student_teacher_supervision_loss(
     )
     target_log_f0 = torch.log2(teacher_target_f0_hz.clamp_min(1.0))
     predicted_aper_state = torch.sigmoid(outputs["aperiodicity"] + outputs["aper_correction"])
+    predicted_energy_stage5_norm = normalize_energy_log_rms_for_stage5(predicted_energy)
+    teacher_target_energy_stage5_norm = normalize_energy_log_rms_for_stage5(teacher_target_energy)
 
     z_art_loss_per_sample = masked_mse_per_sample(
         prediction=outputs["z_art"],
@@ -863,6 +874,39 @@ def compute_streaming_student_teacher_supervision_loss(
         target=teacher_target_energy,
         frame_weight=frame_weight,
     )
+    energy_stage5_state_loss_per_sample = masked_mse_per_sample(
+        prediction=predicted_energy_stage5_norm,
+        target=teacher_target_energy_stage5_norm,
+        frame_weight=frame_weight,
+    )
+    energy_stage5_centered_state_loss_per_sample = masked_centered_mse_per_sample(
+        prediction=predicted_energy_stage5_norm,
+        target=teacher_target_energy_stage5_norm,
+        frame_weight=frame_weight,
+    )
+    energy_stage5_std_loss_per_sample = masked_std_mse_per_sample(
+        prediction=predicted_energy_stage5_norm,
+        target=teacher_target_energy_stage5_norm,
+        frame_weight=frame_weight,
+    )
+    energy_stage5_affine_calibrated_loss_per_sample = masked_affine_calibrated_l1_per_sample(
+        prediction=predicted_energy_stage5_norm,
+        target=teacher_target_energy_stage5_norm,
+        frame_weight=frame_weight,
+        clamp_min=0.0,
+        clamp_max=1.0,
+        max_abs_scale=8.0,
+    )
+    energy_stage5_temporal_loss_per_sample = masked_temporal_mse_per_sample(
+        prediction=predicted_energy_stage5_norm,
+        target=teacher_target_energy_stage5_norm,
+        frame_weight=frame_weight,
+    )
+    energy_stage5_correlation_loss_per_sample = masked_correlation_alignment_loss_per_sample(
+        prediction=predicted_energy_stage5_norm,
+        target=teacher_target_energy_stage5_norm,
+        frame_weight=frame_weight,
+    )
     hidden_projection_loss_per_sample = masked_mse_per_sample(
         prediction=student_hidden_projection,
         target=teacher_hidden,
@@ -916,6 +960,18 @@ def compute_streaming_student_teacher_supervision_loss(
     vuv_state_loss = reduce_weighted_sample_loss(vuv_state_loss_per_sample)
     aper_state_loss = reduce_weighted_sample_loss(aper_state_loss_per_sample)
     energy_state_loss = reduce_weighted_sample_loss(energy_state_loss_per_sample)
+    energy_stage5_state_loss = reduce_weighted_sample_loss(energy_stage5_state_loss_per_sample)
+    energy_stage5_centered_state_loss = reduce_weighted_sample_loss(
+        energy_stage5_centered_state_loss_per_sample
+    )
+    energy_stage5_std_loss = reduce_weighted_sample_loss(energy_stage5_std_loss_per_sample)
+    energy_stage5_affine_calibrated_loss = reduce_weighted_sample_loss(
+        energy_stage5_affine_calibrated_loss_per_sample
+    )
+    energy_stage5_temporal_loss = reduce_weighted_sample_loss(energy_stage5_temporal_loss_per_sample)
+    energy_stage5_correlation_loss = reduce_weighted_sample_loss(
+        energy_stage5_correlation_loss_per_sample
+    )
     hidden_projection_loss = reduce_weighted_sample_loss(hidden_projection_loss_per_sample)
     fused_hidden_projection_loss = reduce_weighted_sample_loss(fused_hidden_projection_loss_per_sample)
     proxy_acoustic_loss = reduce_weighted_sample_loss(proxy_acoustic_loss_per_sample)
@@ -943,6 +999,14 @@ def compute_streaming_student_teacher_supervision_loss(
         + vuv_state_loss * effective_weights["teacher_vuv_state"]
         + aper_state_loss * effective_weights["teacher_aper_state"]
         + energy_state_loss * effective_weights["teacher_energy_state"]
+        + energy_stage5_state_loss * effective_weights["teacher_energy_stage5_state"]
+        + energy_stage5_centered_state_loss
+        * effective_weights["teacher_energy_stage5_centered_state"]
+        + energy_stage5_std_loss * effective_weights["teacher_energy_stage5_std"]
+        + energy_stage5_affine_calibrated_loss
+        * effective_weights["teacher_energy_stage5_affine_calibrated"]
+        + energy_stage5_temporal_loss * effective_weights["teacher_energy_stage5_temporal"]
+        + energy_stage5_correlation_loss * effective_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
@@ -967,6 +1031,14 @@ def compute_streaming_student_teacher_supervision_loss(
         + vuv_state_loss * default_weights["teacher_vuv_state"]
         + aper_state_loss * default_weights["teacher_aper_state"]
         + energy_state_loss * default_weights["teacher_energy_state"]
+        + energy_stage5_state_loss * default_weights["teacher_energy_stage5_state"]
+        + energy_stage5_centered_state_loss
+        * default_weights["teacher_energy_stage5_centered_state"]
+        + energy_stage5_std_loss * default_weights["teacher_energy_stage5_std"]
+        + energy_stage5_affine_calibrated_loss
+        * default_weights["teacher_energy_stage5_affine_calibrated"]
+        + energy_stage5_temporal_loss * default_weights["teacher_energy_stage5_temporal"]
+        + energy_stage5_correlation_loss * default_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * default_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * default_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * default_weights["teacher_proxy_acoustic"]
@@ -991,6 +1063,14 @@ def compute_streaming_student_teacher_supervision_loss(
         + vuv_state_loss * effective_weights["teacher_vuv_state"]
         + aper_state_loss * effective_weights["teacher_aper_state"]
         + energy_state_loss * effective_weights["teacher_energy_state"]
+        + energy_stage5_state_loss * effective_weights["teacher_energy_stage5_state"]
+        + energy_stage5_centered_state_loss
+        * effective_weights["teacher_energy_stage5_centered_state"]
+        + energy_stage5_std_loss * effective_weights["teacher_energy_stage5_std"]
+        + energy_stage5_affine_calibrated_loss
+        * effective_weights["teacher_energy_stage5_affine_calibrated"]
+        + energy_stage5_temporal_loss * effective_weights["teacher_energy_stage5_temporal"]
+        + energy_stage5_correlation_loss * effective_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
@@ -1027,6 +1107,30 @@ def compute_streaming_student_teacher_supervision_loss(
         "loss_teacher_vuv_state": round(float(vuv_state_loss.detach().cpu().item()), 6),
         "loss_teacher_aper_state": round(float(aper_state_loss.detach().cpu().item()), 6),
         "loss_teacher_energy_state": round(float(energy_state_loss.detach().cpu().item()), 6),
+        "loss_teacher_energy_stage5_state": round(
+            float(energy_stage5_state_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_energy_stage5_centered_state": round(
+            float(energy_stage5_centered_state_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_energy_stage5_std": round(
+            float(energy_stage5_std_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_energy_stage5_affine_calibrated": round(
+            float(energy_stage5_affine_calibrated_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_energy_stage5_temporal": round(
+            float(energy_stage5_temporal_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_energy_stage5_correlation": round(
+            float(energy_stage5_correlation_loss.detach().cpu().item()),
+            6,
+        ),
         "loss_teacher_hidden_projection": round(float(hidden_projection_loss.detach().cpu().item()), 6),
         "loss_teacher_fused_hidden_projection": round(
             float(fused_hidden_projection_loss.detach().cpu().item()),
@@ -1611,6 +1715,92 @@ def masked_correlation_alignment_loss_per_sample(
     correlation = numerator / denominator
     valid = (flat_weight.sum(dim=1) >= 8.0).to(torch.float32)
     return (1.0 - correlation.clamp(-1.0, 1.0)) * valid
+
+
+def masked_centered_mse_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+) -> torch.Tensor:
+    prediction = prediction.to(torch.float32)
+    target = target.to(torch.float32)
+    frame_weight = frame_weight.to(torch.float32)
+    batch_size = prediction.shape[0]
+    flat_prediction = prediction.reshape(batch_size, -1)
+    flat_target = target.reshape(batch_size, -1)
+    flat_weight = frame_weight.reshape(batch_size, -1)
+    weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
+    mean_prediction = (flat_prediction * flat_weight).sum(dim=1) / weight_sum
+    mean_target = (flat_target * flat_weight).sum(dim=1) / weight_sum
+    centered_prediction = flat_prediction - mean_prediction.unsqueeze(1)
+    centered_target = flat_target - mean_target.unsqueeze(1)
+    numerator = (((centered_prediction - centered_target) ** 2) * flat_weight).sum(dim=1)
+    denominator = weight_sum.clamp_min(1.0)
+    return numerator / denominator
+
+
+def masked_std_mse_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+) -> torch.Tensor:
+    prediction = prediction.to(torch.float32)
+    target = target.to(torch.float32)
+    frame_weight = frame_weight.to(torch.float32)
+    batch_size = prediction.shape[0]
+    flat_prediction = prediction.reshape(batch_size, -1)
+    flat_target = target.reshape(batch_size, -1)
+    flat_weight = frame_weight.reshape(batch_size, -1)
+    weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
+    mean_prediction = (flat_prediction * flat_weight).sum(dim=1) / weight_sum
+    mean_target = (flat_target * flat_weight).sum(dim=1) / weight_sum
+    centered_prediction = flat_prediction - mean_prediction.unsqueeze(1)
+    centered_target = flat_target - mean_target.unsqueeze(1)
+    pred_var = ((centered_prediction.pow(2)) * flat_weight).sum(dim=1) / weight_sum
+    target_var = ((centered_target.pow(2)) * flat_weight).sum(dim=1) / weight_sum
+    pred_std = torch.sqrt(pred_var.clamp_min(1.0e-8))
+    target_std = torch.sqrt(target_var.clamp_min(1.0e-8))
+    valid = (flat_weight.sum(dim=1) >= 8.0).to(torch.float32)
+    return ((pred_std - target_std) ** 2) * valid
+
+
+def masked_affine_calibrated_l1_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+    *,
+    clamp_min: float = 0.0,
+    clamp_max: float = 1.0,
+    max_abs_scale: float = 8.0,
+) -> torch.Tensor:
+    prediction = prediction.to(torch.float32)
+    target = target.to(torch.float32)
+    frame_weight = frame_weight.to(torch.float32)
+    batch_size = prediction.shape[0]
+    flat_prediction = prediction.reshape(batch_size, -1)
+    flat_target = target.reshape(batch_size, -1)
+    flat_weight = frame_weight.reshape(batch_size, -1)
+    weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
+    mean_prediction = (flat_prediction * flat_weight).sum(dim=1) / weight_sum
+    mean_target = (flat_target * flat_weight).sum(dim=1) / weight_sum
+    centered_prediction = flat_prediction - mean_prediction.unsqueeze(1)
+    centered_target = flat_target - mean_target.unsqueeze(1)
+    denominator = (centered_prediction.pow(2) * flat_weight).sum(dim=1)
+    numerator = (centered_prediction * centered_target * flat_weight).sum(dim=1)
+    scale = torch.where(
+        denominator > 1.0e-8,
+        numerator / denominator.clamp_min(1.0e-8),
+        torch.zeros_like(denominator),
+    ).clamp(min=-max_abs_scale, max=max_abs_scale)
+    bias = mean_target - mean_prediction * scale
+    calibrated = (flat_prediction * scale.unsqueeze(1) + bias.unsqueeze(1)).clamp(
+        min=clamp_min,
+        max=clamp_max,
+    )
+    valid = (flat_weight.sum(dim=1) >= 8.0).to(torch.float32)
+    numerator_l1 = ((calibrated - flat_target).abs() * flat_weight).sum(dim=1)
+    denominator_l1 = weight_sum.clamp_min(1.0)
+    return (numerator_l1 / denominator_l1) * valid
 
 
 def masked_bce_with_logits(

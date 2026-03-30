@@ -14,12 +14,22 @@ from v5vc.streaming_student.data import (
     load_streaming_student_target_examples_from_records,
     load_streaming_student_target_records_by_split,
 )
+from v5vc.streaming_student.checkpoint_init import (
+    load_streaming_student_init_checkpoint,
+)
 from v5vc.streaming_student.losses import (
     compute_streaming_student_teacher_supervision_loss,
     resolve_semantic_supervision_config,
     resolve_teacher_supervision_weights,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+from v5vc.streaming_student.pitch_provider import (
+    build_stage3_pitch_provider_model_inputs_from_batch,
+    resolve_stage3_pitch_provider_request,
+)
+from v5vc.streaming_student.training_freeze import (
+    apply_streaming_student_training_freeze,
+)
 
 
 def run_streaming_student_training_step(
@@ -69,12 +79,17 @@ def run_streaming_student_training_step(
         config=config.get("semantic_supervision"),
         overrides_path=resolved_loss_weight_overrides_path,
     )
+    pitch_provider_request = resolve_stage3_pitch_provider_request(
+        dict(config["model"]),
+        config_path=config_path,
+    )
 
     train_examples = load_streaming_student_target_examples_from_records(
         list(records_by_split["target_train"][: max(1, min(int(batch_size), len(records_by_split["target_train"])))]),
         frame_length=int(config["model"]["frame_length"]),
         hop_length=int(config["model"]["hop_length"]),
         include_target_acoustic_state=True,
+        pitch_provider_request=pitch_provider_request,
     )
     train_batch = collate_streaming_student_batch(
         examples=train_examples,
@@ -90,6 +105,7 @@ def run_streaming_student_training_step(
         frame_length=int(config["model"]["frame_length"]),
         hop_length=int(config["model"]["hop_length"]),
         include_target_acoustic_state=True,
+        pitch_provider_request=pitch_provider_request,
     )
     validation_batch = collate_streaming_student_batch(
         examples=validation_examples,
@@ -97,18 +113,34 @@ def run_streaming_student_training_step(
     )
 
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
+    init_checkpoint_summary = None
     resolved_init_checkpoint_path = None if init_checkpoint_path is None else init_checkpoint_path.resolve()
     if resolved_init_checkpoint_path is not None:
-        init_payload = torch.load(resolved_init_checkpoint_path, map_location='cpu', weights_only=False)
-        model.load_state_dict(init_payload['model_state_dict'])
-    optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
+        _, init_checkpoint_summary = load_streaming_student_init_checkpoint(
+            model=model,
+            checkpoint_path=resolved_init_checkpoint_path,
+            allow_partial=bool(config.get("training", {}).get("allow_partial_init_checkpoint", False)),
+        )
+    trainable_parameters, training_freeze_summary = apply_streaming_student_training_freeze(
+        model=model,
+        training_config=config.get("training"),
+    )
+    optimizer = torch.optim.Adam(trainable_parameters, lr=float(learning_rate))
 
     model.train()
+    train_pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+        train_batch,
+        pitch_provider_mode=config["model"].get("pitch_provider_mode"),
+        audio_lengths=train_batch["audio_lengths"],
+        frame_length=int(config["model"]["frame_length"]),
+        hop_length=int(config["model"]["hop_length"]),
+    )
     train_outputs = model(
         waveform=train_batch["waveform"],
         lengths=train_batch["audio_lengths"],
         speaker_embedding=train_batch["speaker_embedding"],
         geom_embedding=train_batch["geom_embedding"],
+        **train_pitch_provider_inputs,
     )
     train_loss, train_metrics = compute_streaming_student_teacher_supervision_loss(
         outputs=train_outputs,
@@ -119,16 +151,24 @@ def run_streaming_student_training_step(
     )
     optimizer.zero_grad(set_to_none=True)
     train_loss.backward()
-    grad_norm = float(clip_grad_norm_(model.parameters(), float(max_grad_norm)).item())
+    grad_norm = float(clip_grad_norm_(trainable_parameters, float(max_grad_norm)).item())
     optimizer.step()
 
     model.eval()
     with torch.no_grad():
+        validation_pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+            validation_batch,
+            pitch_provider_mode=config["model"].get("pitch_provider_mode"),
+            audio_lengths=validation_batch["audio_lengths"],
+            frame_length=int(config["model"]["frame_length"]),
+            hop_length=int(config["model"]["hop_length"]),
+        )
         validation_outputs = model(
             waveform=validation_batch["waveform"],
             lengths=validation_batch["audio_lengths"],
             speaker_embedding=validation_batch["speaker_embedding"],
             geom_embedding=validation_batch["geom_embedding"],
+            **validation_pitch_provider_inputs,
         )
         validation_loss, validation_metrics = compute_streaming_student_teacher_supervision_loss(
             outputs=validation_outputs,
@@ -160,6 +200,8 @@ def run_streaming_student_training_step(
                     if resolved_loss_weight_overrides_path is None
                     else resolved_loss_weight_overrides_path.as_posix()
                 ),
+                "init_checkpoint": init_checkpoint_summary,
+                "training_freeze": training_freeze_summary,
                 "grad_norm": round(grad_norm, 6),
             },
             "train_metrics": train_metrics,
@@ -193,6 +235,8 @@ def run_streaming_student_training_step(
             "loss_weight_overrides_path": (
                 None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
             ),
+            "init_checkpoint": init_checkpoint_summary,
+            "training_freeze": training_freeze_summary,
             "grad_norm": round(grad_norm, 6),
         },
         "train_step": {

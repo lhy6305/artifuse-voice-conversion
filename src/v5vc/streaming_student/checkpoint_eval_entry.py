@@ -20,6 +20,10 @@ from v5vc.streaming_student.losses import (
     resolve_semantic_supervision_config,
 )
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+from v5vc.streaming_student.pitch_provider import (
+    build_stage3_pitch_provider_model_inputs_from_batch,
+    resolve_stage3_pitch_provider_request,
+)
 
 
 def sanitize_experiment_id_for_filename(value: str) -> str:
@@ -61,6 +65,10 @@ def evaluate_streaming_student_checkpoint(
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
     model.load_state_dict(payload["model_state_dict"])
     model.eval()
+    pitch_provider_request = resolve_stage3_pitch_provider_request(
+        dict(config["model"]),
+        config_path=config_path,
+    )
 
     training_summary = dict(payload.get("training", {}))
     loss_weights = dict(training_summary.get("loss_weights", {})) or build_default_teacher_supervision_weights()
@@ -84,6 +92,7 @@ def evaluate_streaming_student_checkpoint(
                 use_teacher_confidence=use_teacher_confidence,
                 semantic_supervision=semantic_supervision,
                 batch_size=batch_size,
+                pitch_provider_request=pitch_provider_request,
             )
 
     run_ended_at = datetime.now()
@@ -137,6 +146,7 @@ def evaluate_split(
     use_teacher_confidence: bool,
     semantic_supervision: dict[str, object],
     batch_size: int,
+    pitch_provider_request: dict[str, object],
 ) -> dict[str, object]:
     effective_batch_size = max(1, int(batch_size))
     batch_count = (len(records) + effective_batch_size - 1) // effective_batch_size
@@ -155,16 +165,25 @@ def evaluate_split(
             frame_length=int(model.frontend.frame_length),
             hop_length=int(model.frontend.hop_length),
             include_target_acoustic_state=True,
+            pitch_provider_request=pitch_provider_request,
         )
         batch = collate_streaming_student_batch(
             examples=examples,
             conditioning_asset=conditioning_asset,
+        )
+        pitch_provider_inputs = build_stage3_pitch_provider_model_inputs_from_batch(
+            batch,
+            pitch_provider_mode=model.frontend.pitch_provider_mode,
+            audio_lengths=batch["audio_lengths"],
+            frame_length=int(model.frontend.frame_length),
+            hop_length=int(model.frontend.hop_length),
         )
         outputs = model(
             waveform=batch["waveform"],
             lengths=batch["audio_lengths"],
             speaker_embedding=batch["speaker_embedding"],
             geom_embedding=batch["geom_embedding"],
+            **pitch_provider_inputs,
         )
         _loss, metrics = compute_streaming_student_teacher_supervision_loss(
             outputs=outputs,

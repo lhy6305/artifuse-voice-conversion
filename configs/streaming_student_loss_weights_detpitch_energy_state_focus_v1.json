@@ -1,0 +1,19 @@
+{
+  "name": "streaming_student_loss_weights_detpitch_energy_state_focus_v1",
+  "notes": [
+    "Use with deterministic pitch-provider nof0corr probes.",
+    "Shift part of the energy learning signal from teacher_energy_proxy to teacher_energy_state so the packet-facing energy calibration target matters earlier.",
+    "Keep F0 untouched and do not change aper weights because detpitch_nof0corr already reaches aper_ready_count 2/3."
+  ],
+  "loss_weights": {
+    "teacher_energy_proxy": 0.15,
+    "teacher_energy_state": 0.05
+  },
+  "loss_weight_schedule": {
+    "teacher_energy_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 2
+    }
+  }
+}

@@ -14,6 +14,9 @@ from v5vc.streaming_student.packet_checkpoint_selection_entry import (
     select_streaming_student_packet_aware_checkpoint,
 )
 from v5vc.streaming_student.plan_entry import prepare_streaming_student_stage
+from v5vc.streaming_student.pitch_provider_audit_entry import (
+    audit_streaming_student_pitch_provider,
+)
 from v5vc.streaming_student.proxy_audio_export import export_streaming_student_proxy_audio
 from v5vc.streaming_student.supervision_entry import prepare_streaming_student_supervision
 from v5vc.streaming_student.teacher_labels import build_streaming_student_teacher_labels
@@ -33,6 +36,7 @@ __all__ = [
     "select_streaming_student_packet_aware_checkpoint",
     "export_streaming_student_downstream_control_packet",
     "build_streaming_student_eval_bridge",
+    "audit_streaming_student_pitch_provider",
     "build_streaming_student_teacher_labels",
     "prepare_streaming_student_paired_training_data",
     "prepare_streaming_student_training_data",

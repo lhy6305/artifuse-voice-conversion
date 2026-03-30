@@ -12,6 +12,7 @@ from v5vc.manifest_builder import load_jsonl
 from v5vc.offline_mvp.data import build_char_vocab, collate_target_batch, load_target_examples_from_records
 from v5vc.special_eval import chunk_records, compute_punctuation_ratio, infer_target_group
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
+from v5vc.streaming_student.pitch_provider import DEFAULT_STAGE3_PITCH_PROVIDER_MODE
 
 
 def build_streaming_student_eval_bridge(
@@ -40,6 +41,10 @@ def build_streaming_student_eval_bridge(
 
     model = instantiate_streaming_student_scaffold(model_config=dict(config["model"]))
     model.eval()
+    if model.frontend.pitch_provider_mode != DEFAULT_STAGE3_PITCH_PROVIDER_MODE:
+        raise ValueError(
+            "build_streaming_student_eval_bridge does not support explicit pitch_provider_mode yet."
+        )
     conditioning = load_conditioning_asset(
         config=config,
         calibration_asset_path=calibration_asset_path,
