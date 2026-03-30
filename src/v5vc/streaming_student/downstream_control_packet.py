@@ -462,11 +462,21 @@ def assess_named_control_readiness(
 ) -> dict[str, object]:
     f0_status = "auto_reject_not_ready"
     if bool(packet_ready_for_named_e_evt_handoff):
+        proxy_reference_corr = f0_calibration_summary.get("proxy_reference_corr")
+        if proxy_reference_corr is None:
+            proxy_reference_corr_value = 0.0
+        else:
+            proxy_reference_corr_value = float(proxy_reference_corr)
+        calibrated_log2_mae = f0_calibration_summary.get("calibrated_log2_mae")
+        if calibrated_log2_mae is None:
+            calibrated_log2_mae_value = 999.0
+        else:
+            calibrated_log2_mae_value = float(calibrated_log2_mae)
         f0_ready = (
             str(f0_calibration_summary.get("status")) == "ok"
             and int(f0_calibration_summary.get("reference_voiced_frame_count", 0)) >= MIN_F0_REFERENCE_VOICED_FRAMES
-            and float(f0_calibration_summary.get("proxy_reference_corr") or 0.0) >= MIN_F0_PROXY_REFERENCE_CORR
-            and float(f0_calibration_summary.get("calibrated_log2_mae") or 999.0) <= MAX_F0_CALIBRATED_LOG2_MAE
+            and proxy_reference_corr_value >= MIN_F0_PROXY_REFERENCE_CORR
+            and calibrated_log2_mae_value <= MAX_F0_CALIBRATED_LOG2_MAE
         )
         if f0_ready:
             f0_status = "review_required"
@@ -606,6 +616,7 @@ def calibrate_f0_log_proxy_to_reference(
         bias = float((y.mean() - x.mean() * scale).item())
         corr = compute_correlation(x, y)
     scale = max(min(scale, 8.0), -8.0)
+    bias = float((y.mean() - x.mean() * scale).item())
 
     pred_log2 = proxy * scale + bias
     pred_f0_hz = torch.pow(2.0, pred_log2).clamp(
@@ -666,6 +677,7 @@ def calibrate_scalar_proxy_to_reference(
         bias = float((y.mean() - x.mean() * scale).item())
         corr = compute_correlation(x, y)
     scale = max(min(scale, 8.0), -8.0)
+    bias = float((y.mean() - x.mean() * scale).item())
     calibrated = (x * scale + bias).clamp(min=clamp_min, max=clamp_max).unsqueeze(-1)
     calibrated_mae = float((calibrated.squeeze(-1) - y).abs().mean().item())
     return {

@@ -293,33 +293,34 @@
   - all screened checkpoints stayed at `aper_ready_count = 2/3`
 - But `ENERGY` still did not move:
   - all screened checkpoints stayed at `energy_ready_count = 0/3`
-  - `avg_energy_stage5_norm_calibrated_reference_mae` stayed pinned at `0.707125`
+- The old absolute packet MAE from that probe is numerically superseded by the later packet-calibration bugfix.
 - So the remaining blocker is not only shared-update interference.
 - It is also that the current isolated energy-only heads are too weak to change packet-facing `ENERGY` on their own.
 - Do not keep repeating the same two-head freeze loop by inertia.
 - The next valid escalation requires new isolated energy-specific capacity, not just stronger patience with the current isolated heads.
 
 ### 38. Do not overread isolated `ENERGY` metric improvement as if the named-control route is now open
-- The dedicated energy-adapter probe is the first isolated deterministic energy probe that improves packet-facing `ENERGY` error while preserving:
+- The dedicated energy-adapter line is still structurally better than the old two-head freeze because it improves packet-facing `ENERGY` while preserving:
   - `f0_ready_count = 3/3`
   - `vuv_ready_count = 3/3`
   - `aper_ready_count = 2/3`
-- Packet-best `avg_energy_stage5_norm_calibrated_reference_mae` improves from `0.707125` to `0.550192`.
-- But the actual route-opening outcome does not change:
-  - `energy_ready_count = 0/3`
-  - `all_core_controls_ready_count = 0/3`
-  - `auto_reject_count = 3/3`
-- This means the new isolated branch direction is structurally better than the old two-head freeze.
-- It does not mean the deterministic line is ready to hand off.
-- Do not turn "sub-threshold energy improvement" into a readiness claim.
+- But the packet-calibration bugfix changed the absolute scale of the story:
+  - the active corrected deterministic isolated-energy frontier is around `0.243` to `0.247`, not the older `0.550` narrative
+- Later corrected continuations changed the route-opening outcome materially:
+  - `cont12` reaches `energy_ready_count = 1/3`
+  - `cont20` reaches `energy_ready_count = 2/3`
+  - `cont20` also reaches `all_core_controls_ready_count = 2/3`
+- So the correct reading is:
+  - the isolated branch direction is real
+  - the absolute progress is much better than previously believed
+  - the route is now partially open, but not fully open
+- Do not turn "partial opening" into a full route-opening claim.
 - If this line continues, the next valid move is stronger isolated `ENERGY` capacity or energy-specific objective routing, not celebratory route-opening language.
 
 ### 39. Do not assume that supervising `ENERGY` on the packet-gate normalization scale is enough by itself
 - The new `teacher_energy_stage5_state` loss directly aligns Stage3 `ENERGY` supervision with the packet gate's `stage5_norm` scale.
 - This wiring is valid and low-risk.
-- But the packet-best result only moved from:
-  - `avg_energy_stage5_norm_calibrated_reference_mae = 0.550192`
-  - to `0.550175`
+- But this family is now numerically superseded by the corrected later calibration-aware branch.
 - Readiness stayed unchanged:
   - `energy_ready_count = 0/3`
   - `all_core_controls_ready_count = 0/3`
@@ -335,11 +336,10 @@
   - `vuv_ready_count = 3/3`
   - `aper_ready_count = 2/3`
 - But it did not improve packet-facing `ENERGY`:
-  - widened-family best `avg_energy_stage5_norm_calibrated_reference_mae = 0.550949`
-  - previous dedicated-branch best was `0.550192`
+  - this family remains worse than the corrected later dynamic-range and affine-calibrated families
 - The widened family also shows an unstable short-loop pattern:
   - early step retains partial improvement
-  - later steps fall back to `0.707125`
+  - later steps regress materially
 - So "more width" is not a good default continuation on this line.
 - If this line continues, prefer more structured isolated capacity or more direct packet-facing objectives instead of naive width scaling.
 
@@ -350,10 +350,8 @@
 - These losses were active and the short warm-start loop was healthy:
   - training loss fell across steps `1` to `4`
   - sampled validation still chose a real checkpoint
-- But packet-facing `ENERGY` did not improve at all:
-  - all screened checkpoints stayed at `energy_ready_count = 0/3`
-  - all screened checkpoints stayed at `avg_energy_stage5_norm_calibrated_reference_mae = 0.707125`
-- This is worse than the earlier dedicated energy-branch best `0.550192`.
+- But packet-facing `ENERGY` still did not become the active winning branch even after the later packet-calibration bugfix reevaluation.
+- It remains clearly weaker than the corrected later dynamic-range and affine-calibrated families.
 - So the current blocker is not solved by generic trajectory pressure on normalized energy.
 - If this line continues, the next valid move should target the observed failure mode more directly:
   - centered energy shape
@@ -364,33 +362,27 @@
 - The direct dynamic-range probe added:
   - `teacher_energy_stage5_centered_state`
   - `teacher_energy_stage5_std`
-- This is the first packet-facing objective that slightly beats the earlier dedicated energy-branch best:
-  - previous best `avg_energy_stage5_norm_calibrated_reference_mae = 0.550192`
-  - new best `avg_energy_stage5_norm_calibrated_reference_mae = 0.550066`
+- After the packet-calibration bugfix reevaluation, this branch still remains a real positive direction:
+  - corrected energy-best `avg_energy_stage5_norm_calibrated_reference_mae = 0.246440`
 - But the route is still not open:
   - `energy_ready_count = 0/3`
   - `all_core_controls_ready_count = 0/3`
-- Representative packet diagnostics still show severe compression:
-  - proxy std stays near `0.01`
-  - reference std is still about `0.35`
 - So this result should be read as:
   - the direct dynamic-range family is more promising than generic shape losses
-  - but the current gain is only a small positive signal, not a readiness milestone
+  - but it is still below the packet gate and not a readiness milestone
 - If this line continues, keep pushing more explicit dynamic-range or calibration-aware objectives rather than declaring victory or falling back to the old generic losses.
 
 ### 43. Do not let packet-selector top-1 rank hide the real winner inside the deterministic energy family
-- The new affine-calibrated probe improves the true `ENERGY` best value to:
-  - `avg_energy_stage5_norm_calibrated_reference_mae = 0.547625`
+- The packet-calibration and zero-mae gate bugfixes make this pitfall more important, not less.
+- In the current corrected affine-calibrated continuation family:
+  - packet selector top-1 at `cont20` is step `2` with `avg_energy_stage5_norm_calibrated_reference_mae = 0.143957`
+  - raw energy-best at `cont20` is step `3` with `avg_energy_stage5_norm_calibrated_reference_mae = 0.120149`
 - But the packet-aware selector still ranks a worse checkpoint first because the lexicographic rule prioritizes:
   - readiness counts
   - then `VUV`
   - then `F0`
   - then `APER`
   - only then `ENERGY`
-- In this concrete family:
-  - step `2` is the true `ENERGY` best checkpoint
-  - step `3` is the selector top-1
-  - but step `3` already regresses `ENERGY` back to `0.707125`
 - Therefore, when the active question is specifically deterministic isolated `ENERGY`, do not quote selector top-1 alone.
 - Always read:
   - the ranking
@@ -400,10 +392,116 @@
 ### 44. Do not assume a lower learning rate will automatically stabilize the new affine-calibrated energy family
 - After the affine-calibrated probe showed the strongest `ENERGY` result so far, a direct follow-up halved learning rate from `5.0e-4` to `2.5e-4`.
 - This did not help:
-  - best visible `ENERGY` values became `0.550892` and `0.550539`
-  - both are worse than the original affine-calibrated run best `0.547625`
+  - corrected energy-best is only `0.258234`
+  - this is still worse than the normal affine-calibrated family corrected energy-best `0.243179`
 - So the current next move is not "blindly lower the learning rate and retry".
 - The active positive signal is still the calibration-aware objective family itself, not the lr-half variant.
+
+### 45. Do not trust packet affine calibration metrics if clipped `scale` and `bias` are not internally consistent
+- The downstream packet calibration path used to:
+  - fit affine `scale` and `bias`
+  - clamp `scale`
+  - keep the old unclipped `bias`
+- This is wrong whenever raw `scale` exceeds the clamp range.
+- The correct behavior is:
+  - clamp `scale`
+  - recompute `bias` from the clipped `scale`
+- A concrete deterministic `ENERGY` proof case changed from:
+  - `0.818279`
+  - to `0.182918`
+- Therefore:
+  - old absolute packet-facing deterministic `ENERGY` MAE values in reports `499` to `504` are numerically superseded
+  - any future packet affine audit change must verify this calibration invariant first
+
+### 46. Do not read continued affine-calibrated `ENERGY` improvement as a free win once `F0` starts dropping again
+- This pitfall is now retired in its previous form.
+- The earlier apparent `F0` drop inside affine-calibrated continuation was caused by the zero-mae gate bug:
+  - exact `f0_calibrated_log2_mae = 0.0` was treated as falsy and replaced by the fallback failure value
+- After the gate fix and selector re-run:
+  - `cont4` keeps `F0 = 3/3` on all four checkpoints
+  - `cont8` also keeps `F0 = 3/3` on all four checkpoints
+  - while `ENERGY` improves monotonically down to `0.224320`
+- So do not escalate into joint-control redesign based on the earlier invalid tradeoff reading.
+- The current valid reading is:
+  - affine-calibrated continuation is still the active deterministic mainline
+  - the remaining blocker is the still-closed `ENERGY` gate, not renewed `F0` instability
+
+### 47. Do not use falsy fallback logic on packet-gate metrics where `0.0` is a valid success value
+- The Stage3 packet gate used to treat:
+  - `f0_calibrated_log2_mae = 0.0`
+  - as if the metric were missing
+- Root cause:
+  - `float(value or fallback)` was used on a metric where exact zero is a meaningful best-case result
+- This created a false `F0` regression story inside the affine-calibrated continuation family.
+- The safe rule is:
+  - only use fallback on `None`
+  - never use boolean-falsy fallback on numeric metrics where `0.0` is valid
+
+### 48. Do not let packet-selector top-1 hide a stable continuing energy frontier just because early checkpoints have slightly better secondary metrics
+- After both packet-side bugfixes, the affine-calibrated deterministic continuation line is now clearly monotonic on the active sample3 packet slice:
+  - warm4 energy-best: `0.243179`
+  - cont4 energy-best: `0.232511`
+  - cont8 energy-best: `0.224320`
+- Later continuation keeps extending the same pattern:
+  - cont12 energy-best: `0.216033`
+  - cont16 energy-best: `0.201423`
+  - cont20 energy-best: `0.120149`
+- But the selector top-1 does not simply track the raw energy frontier:
+  - cont12 selector top-1 is step `3`
+  - cont16 selector top-1 is step `1`
+  - cont20 selector top-1 is step `2`
+- This happens because the lexicographic rule prioritizes readiness counts and secondary packet metrics before raw `ENERGY`.
+- Therefore:
+  - selector top-1 is the least-risk packet candidate
+  - raw energy-best is the correct frontier indicator for this active deterministic energy line
+- Do not misread selector churn or selector conservatism as evidence that the later continuation stopped helping.
+
+### 49. Do not keep describing the deterministic affine-calibrated line as "fully closed"
+- That statement was accurate before `cont12`, but it is no longer accurate after the corrected later continuations.
+- The current correct state on the active sample3 packet slice is:
+  - `F0 / VUV / APER / ENERGY = 3/3, 3/3, 2/3, 2/3`
+  - `all_core_controls_ready_count = 2/3`
+  - `auto_reject_count = 1`
+- The route is still not fully open, but the remaining blocker is now localized to one record:
+  - `target::chapter3_4_firefly_106`
+- At `cont20.step3`, that record still misses both thresholds:
+  - `aper_calibrated_reference_mae = 0.401752` vs gate `0.3`
+  - `energy_stage5_norm_calibrated_reference_mae = 0.165880` vs gate `0.15`
+- Future docs and decisions must describe this as a partial opening with one localized blocker, not as a family that is still uniformly shut.
+
+### 50. Do not assume the raw deterministic `ENERGY` frontier is automatically the right next continuation anchor
+- After `cont20`, the raw deterministic `ENERGY` frontier was:
+  - `cont20.step3`
+  - `avg_energy_stage5_norm_calibrated_reference_mae = 0.120149`
+- A direct follow-up continuation from that checkpoint produced `cont24`, and it regressed to:
+  - `energy_ready_count = 1/3`
+  - `all_core_controls_ready_count = 1/3`
+  - best `avg_energy_stage5_norm_calibrated_reference_mae = 0.165920`
+- The regression happened on both:
+  - the remaining hard blocker `target::chapter3_4_firefly_106`
+  - and the previously opened second energy-ready record `target::chapter3_3_firefly_138`
+- Therefore:
+  - raw energy-best is a frontier indicator
+  - but it is not automatically the correct next init checkpoint
+- If deterministic continuation continues, the continuation rule itself must be reconsidered instead of blindly launching the next block from the raw energy-best checkpoint.
+
+### 51. Do not summarize the remaining sample3 blocker as if `ENERGY` were the only unresolved control
+- After `cont20`, the remaining blocker record is:
+  - `target::chapter3_4_firefly_106`
+- A blocker-localized packet diagnosis shows that its harder failure is actually `APER`, not `ENERGY`.
+- On this record across `cont20.step2`, `cont20.step3`, and `cont24.step1`:
+  - raw `aper_prob` std stays around `0.0125`
+  - raw APER correlation stays slightly negative at about `-0.093`
+  - calibrated APER MAE stays stuck near `0.402`
+  - this remains far above the packet gate threshold `0.3`
+- `ENERGY` is still unresolved on the same record, but it is qualitatively healthier:
+  - raw energy correlation is positive and high
+  - calibration substantially reduces MAE
+  - `cont20.step3` already brought calibrated energy MAE down to `0.165880`
+- Therefore the current blocker hierarchy is:
+  - primary: `APER` structural flatness on `target::chapter3_4_firefly_106`
+  - secondary: `ENERGY` threshold stability on the same record
+- Future docs and continuation plans should not describe the remaining deterministic gap as a generic energy-only problem.
 
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
@@ -447,3 +545,8 @@
 - `docs/502_stage3_detpitch_energy_stage5_shape_objective_probe_report.md`
 - `docs/503_stage3_detpitch_energy_stage5_dynamic_range_objective_probe_report.md`
 - `docs/504_stage3_detpitch_energy_stage5_affine_calibrated_objective_and_lrhalf_followup_report.md`
+- `docs/505_stage3_packet_calibration_bias_recompute_bugfix_and_energy_family_reevaluation_report.md`
+- `docs/506_stage3_f0_zero_mae_gate_bugfix_and_affine_energy_cont8_followup_report.md`
+- `docs/507_stage3_detpitch_affine_energy_cont12_to_cont20_partial_route_opening_report.md`
+- `docs/508_stage3_detpitch_affine_energy_cont24_regression_from_raw_frontier_report.md`
+- `docs/509_stage3_blocker_localized_firefly106_aper_flatness_and_energy_secondary_report.md`
