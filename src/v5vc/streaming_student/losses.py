@@ -48,6 +48,7 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_energy_stage5_centered_state": 0.0,
         "teacher_energy_stage5_std": 0.0,
         "teacher_energy_stage5_affine_calibrated": 0.0,
+        "teacher_energy_stage5_peak_affine_calibrated": 0.0,
         "teacher_energy_stage5_temporal": 0.0,
         "teacher_energy_stage5_correlation": 0.0,
         "teacher_hidden_projection": 0.0,
@@ -897,6 +898,16 @@ def compute_streaming_student_teacher_supervision_loss(
         clamp_max=1.0,
         max_abs_scale=8.0,
     )
+    energy_stage5_peak_affine_calibrated_loss_per_sample = (
+        masked_peak_weighted_affine_calibrated_l1_per_sample(
+            prediction=predicted_energy_stage5_norm,
+            target=teacher_target_energy_stage5_norm,
+            frame_weight=frame_weight,
+            clamp_min=0.0,
+            clamp_max=1.0,
+            max_abs_scale=8.0,
+        )
+    )
     energy_stage5_temporal_loss_per_sample = masked_temporal_mse_per_sample(
         prediction=predicted_energy_stage5_norm,
         target=teacher_target_energy_stage5_norm,
@@ -968,6 +979,9 @@ def compute_streaming_student_teacher_supervision_loss(
     energy_stage5_affine_calibrated_loss = reduce_weighted_sample_loss(
         energy_stage5_affine_calibrated_loss_per_sample
     )
+    energy_stage5_peak_affine_calibrated_loss = reduce_weighted_sample_loss(
+        energy_stage5_peak_affine_calibrated_loss_per_sample
+    )
     energy_stage5_temporal_loss = reduce_weighted_sample_loss(energy_stage5_temporal_loss_per_sample)
     energy_stage5_correlation_loss = reduce_weighted_sample_loss(
         energy_stage5_correlation_loss_per_sample
@@ -1005,6 +1019,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_stage5_std_loss * effective_weights["teacher_energy_stage5_std"]
         + energy_stage5_affine_calibrated_loss
         * effective_weights["teacher_energy_stage5_affine_calibrated"]
+        + energy_stage5_peak_affine_calibrated_loss
+        * effective_weights["teacher_energy_stage5_peak_affine_calibrated"]
         + energy_stage5_temporal_loss * effective_weights["teacher_energy_stage5_temporal"]
         + energy_stage5_correlation_loss * effective_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
@@ -1037,6 +1053,8 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_stage5_std_loss * default_weights["teacher_energy_stage5_std"]
         + energy_stage5_affine_calibrated_loss
         * default_weights["teacher_energy_stage5_affine_calibrated"]
+        + energy_stage5_peak_affine_calibrated_loss
+        * default_weights["teacher_energy_stage5_peak_affine_calibrated"]
         + energy_stage5_temporal_loss * default_weights["teacher_energy_stage5_temporal"]
         + energy_stage5_correlation_loss * default_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * default_weights["teacher_hidden_projection"]
@@ -1121,6 +1139,10 @@ def compute_streaming_student_teacher_supervision_loss(
         ),
         "loss_teacher_energy_stage5_affine_calibrated": round(
             float(energy_stage5_affine_calibrated_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_energy_stage5_peak_affine_calibrated": round(
+            float(energy_stage5_peak_affine_calibrated_loss.detach().cpu().item()),
             6,
         ),
         "loss_teacher_energy_stage5_temporal": round(
@@ -1801,6 +1823,33 @@ def masked_affine_calibrated_l1_per_sample(
     numerator_l1 = ((calibrated - flat_target).abs() * flat_weight).sum(dim=1)
     denominator_l1 = weight_sum.clamp_min(1.0)
     return (numerator_l1 / denominator_l1) * valid
+
+
+def masked_peak_weighted_affine_calibrated_l1_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+    *,
+    clamp_min: float = 0.0,
+    clamp_max: float = 1.0,
+    max_abs_scale: float = 8.0,
+    peak_power: float = 2.0,
+    peak_max_multiplier: float = 4.0,
+) -> torch.Tensor:
+    target = target.to(torch.float32)
+    frame_weight = frame_weight.to(torch.float32)
+    peak_focus = target.clamp(min=0.0, max=1.0).pow(float(peak_power))
+    weighted_frame = frame_weight * (
+        1.0 + peak_focus * max(0.0, float(peak_max_multiplier) - 1.0)
+    )
+    return masked_affine_calibrated_l1_per_sample(
+        prediction=prediction,
+        target=target,
+        frame_weight=weighted_frame,
+        clamp_min=clamp_min,
+        clamp_max=clamp_max,
+        max_abs_scale=max_abs_scale,
+    )
 
 
 def masked_bce_with_logits(

@@ -202,6 +202,9 @@ class StudentControlHeads(nn.Module):
         detach_shared_hidden_for_student: bool,
         f0_control_branch_mode: str,
         f0_control_branch_layers: int | None,
+        aper_control_branch_mode: str,
+        aper_control_branch_layers: int | None,
+        aper_control_branch_hidden_dim: int | None,
         energy_control_branch_mode: str,
         energy_control_branch_layers: int | None,
         energy_control_branch_hidden_dim: int | None,
@@ -228,6 +231,15 @@ class StudentControlHeads(nn.Module):
                 "f0_control_branch_mode must be one of: "
                 "shared_student_v1, explicit_state_branch_v1, explicit_named_control_family_v1."
             )
+        self.aper_control_branch_mode = str(aper_control_branch_mode).strip().lower()
+        if self.aper_control_branch_mode not in {
+            "shared_f0_branch_v1",
+            "dedicated_aper_branch_v1",
+        }:
+            raise ValueError(
+                "aper_control_branch_mode must be one of: "
+                "shared_f0_branch_v1, dedicated_aper_branch_v1."
+            )
         self.energy_control_branch_mode = str(energy_control_branch_mode).strip().lower()
         if self.energy_control_branch_mode not in {
             "shared_f0_branch_v1",
@@ -236,6 +248,14 @@ class StudentControlHeads(nn.Module):
             raise ValueError(
                 "energy_control_branch_mode must be one of: "
                 "shared_f0_branch_v1, dedicated_energy_branch_v1."
+            )
+        if (
+            self.aper_control_branch_mode != "shared_f0_branch_v1"
+            and self.f0_control_branch_mode != "explicit_named_control_family_v1"
+        ):
+            raise ValueError(
+                "dedicated_aper_branch_v1 requires "
+                "f0_control_branch_mode=explicit_named_control_family_v1."
             )
         if (
             self.energy_control_branch_mode != "shared_f0_branch_v1"
@@ -308,12 +328,23 @@ class StudentControlHeads(nn.Module):
             if energy_control_branch_layers is None
             else max(1, int(energy_control_branch_layers))
         )
+        resolved_aper_control_branch_layers = (
+            student_layers
+            if aper_control_branch_layers is None
+            else max(1, int(aper_control_branch_layers))
+        )
         resolved_energy_control_branch_hidden_dim = (
             student_dim
             if energy_control_branch_hidden_dim is None
             else max(1, int(energy_control_branch_hidden_dim))
         )
+        resolved_aper_control_branch_hidden_dim = (
+            student_dim
+            if aper_control_branch_hidden_dim is None
+            else max(1, int(aper_control_branch_hidden_dim))
+        )
         self.energy_control_branch_hidden_dim = resolved_energy_control_branch_hidden_dim
+        self.aper_control_branch_hidden_dim = resolved_aper_control_branch_hidden_dim
         f0_branch_input_dim = (
             shared_dim
             + conditioning_dim
@@ -357,7 +388,12 @@ class StudentControlHeads(nn.Module):
             else None
         )
         self.aper_branch_delta_head = (
-            nn.Linear(student_dim, 1)
+            nn.Linear(
+                resolved_aper_control_branch_hidden_dim
+                if self.aper_control_branch_mode == "dedicated_aper_branch_v1"
+                else student_dim,
+                1,
+            )
             if aper_correction_enabled
             and self.f0_control_branch_mode == "explicit_named_control_family_v1"
             else None
@@ -370,6 +406,27 @@ class StudentControlHeads(nn.Module):
                 1,
             )
             if self.f0_control_branch_mode == "explicit_named_control_family_v1"
+            else None
+        )
+        aper_branch_input_dim = shared_dim + conditioning_dim + event_prior_dim + 4
+        self.aper_branch_input_proj = (
+            nn.Linear(aper_branch_input_dim, resolved_aper_control_branch_hidden_dim)
+            if self.aper_control_branch_mode == "dedicated_aper_branch_v1"
+            else None
+        )
+        self.aper_branch_norm = (
+            nn.LayerNorm(resolved_aper_control_branch_hidden_dim)
+            if self.aper_control_branch_mode == "dedicated_aper_branch_v1"
+            else None
+        )
+        self.aper_branch_encoder = (
+            build_mlp(
+                input_dim=resolved_aper_control_branch_hidden_dim,
+                hidden_dim=resolved_aper_control_branch_hidden_dim,
+                output_dim=resolved_aper_control_branch_hidden_dim,
+                num_layers=resolved_aper_control_branch_layers,
+            )
+            if self.aper_control_branch_mode == "dedicated_aper_branch_v1"
             else None
         )
         energy_branch_input_dim = shared_dim + conditioning_dim + event_prior_dim + 4
@@ -436,6 +493,9 @@ class StudentControlHeads(nn.Module):
             "z_art": self.z_art_head(student_hidden),
             "event_logits": event_logits,
             "event_probs": torch.sigmoid(event_logits),
+            "aper_branch_hidden": student_hidden.new_zeros(
+                (batch_size, frame_count, 0)
+            ),
             "energy_branch_hidden": student_hidden.new_zeros(
                 (batch_size, frame_count, 0)
             ),
@@ -493,6 +553,24 @@ class StudentControlHeads(nn.Module):
                 vuv_logit_delta = torch.tanh(self.vuv_branch_delta_head(f0_branch_hidden)) * 2.0
             if self.aper_branch_delta_head is None:
                 aper_delta = student_hidden.new_zeros((batch_size, frame_count, 1))
+            elif self.aper_control_branch_mode == "dedicated_aper_branch_v1":
+                aper_branch_input = torch.cat(
+                    [
+                        frontend_outputs["control_hidden"],
+                        conditioning,
+                        frontend_outputs["coarse_log_f0"],
+                        torch.sigmoid(frontend_outputs["vuv_logits"]),
+                        frontend_outputs["aperiodicity"],
+                        frontend_outputs["energy"],
+                        torch.sigmoid(frontend_outputs["event_prior_logits"]),
+                    ],
+                    dim=-1,
+                )
+                aper_branch_hidden = self.aper_branch_encoder(
+                    self.aper_branch_norm(self.aper_branch_input_proj(aper_branch_input))
+                )
+                outputs["aper_branch_hidden"] = aper_branch_hidden
+                aper_delta = torch.tanh(self.aper_branch_delta_head(aper_branch_hidden)) * 0.75
             else:
                 aper_delta = torch.tanh(self.aper_branch_delta_head(f0_branch_hidden)) * 0.75
             if self.energy_branch_delta_head is None:
@@ -583,6 +661,9 @@ class StreamingStudentScaffold(nn.Module):
         pitch_provider_mode: str = DEFAULT_STAGE3_PITCH_PROVIDER_MODE,
         f0_control_branch_mode: str = "shared_student_v1",
         f0_control_branch_layers: int | None = None,
+        aper_control_branch_mode: str = "shared_f0_branch_v1",
+        aper_control_branch_layers: int | None = None,
+        aper_control_branch_hidden_dim: int | None = None,
         energy_control_branch_mode: str = "shared_f0_branch_v1",
         energy_control_branch_layers: int | None = None,
         energy_control_branch_hidden_dim: int | None = None,
@@ -626,6 +707,9 @@ class StreamingStudentScaffold(nn.Module):
             detach_shared_hidden_for_student=detach_shared_hidden_for_student,
             f0_control_branch_mode=f0_control_branch_mode,
             f0_control_branch_layers=f0_control_branch_layers,
+            aper_control_branch_mode=aper_control_branch_mode,
+            aper_control_branch_layers=aper_control_branch_layers,
+            aper_control_branch_hidden_dim=aper_control_branch_hidden_dim,
             energy_control_branch_mode=energy_control_branch_mode,
             energy_control_branch_layers=energy_control_branch_layers,
             energy_control_branch_hidden_dim=energy_control_branch_hidden_dim,

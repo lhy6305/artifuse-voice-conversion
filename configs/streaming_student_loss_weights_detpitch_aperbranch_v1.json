@@ -1,0 +1,20 @@
+{
+  "name": "streaming_student_loss_weights_detpitch_aperbranch_v1",
+  "notes": [
+    "Use with deterministic dedicated APER-branch blocker probes.",
+    "Keep the objective narrow: APER proxy plus APER state.",
+    "Do not add generic energy continuation pressure in this probe."
+  ],
+  "loss_weights": {
+    "teacher_aper_proxy": 0.1,
+    "teacher_aper_state": 0.15,
+    "aper_correction_l1": 0.005
+  },
+  "loss_weight_schedule": {
+    "teacher_aper_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    }
+  }
+}

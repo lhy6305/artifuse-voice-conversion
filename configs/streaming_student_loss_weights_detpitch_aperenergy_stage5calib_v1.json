@@ -1,0 +1,46 @@
+{
+  "name": "streaming_student_loss_weights_detpitch_aperenergy_stage5calib_v1",
+  "notes": [
+    "Use with deterministic pitch-provider blocker-oriented APER plus ENERGY freeze probes.",
+    "Keep the existing calibration-aware ENERGY objective family.",
+    "Add nonzero APER state supervision so the unfrozen APER correction path is actually trainable."
+  ],
+  "loss_weights": {
+    "teacher_aper_proxy": 0.1,
+    "teacher_aper_state": 0.1,
+    "aper_correction_l1": 0.005,
+    "teacher_energy_proxy": 0.08,
+    "teacher_energy_state": 0.02,
+    "teacher_energy_stage5_state": 0.05,
+    "teacher_energy_stage5_centered_state": 0.08,
+    "teacher_energy_stage5_std": 0.08,
+    "teacher_energy_stage5_affine_calibrated": 0.08
+  },
+  "loss_weight_schedule": {
+    "teacher_aper_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_centered_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_std": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_affine_calibrated": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    }
+  }
+}

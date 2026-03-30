@@ -1,0 +1,38 @@
+{
+  "name": "streaming_student_loss_weights_detpitch_aperbranch_energyonly_stage5calib_v1",
+  "notes": [
+    "Use with dedicated-APER-scaffold deterministic ENERGY-only blocker continuations.",
+    "Keep APER losses at zero because the APER branch is frozen after the 3/3 route-opening result.",
+    "Retain the calibration-aware ENERGY objective family."
+  ],
+  "loss_weights": {
+    "teacher_energy_proxy": 0.08,
+    "teacher_energy_state": 0.02,
+    "teacher_energy_stage5_state": 0.05,
+    "teacher_energy_stage5_centered_state": 0.08,
+    "teacher_energy_stage5_std": 0.08,
+    "teacher_energy_stage5_affine_calibrated": 0.08
+  },
+  "loss_weight_schedule": {
+    "teacher_energy_stage5_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_centered_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_std": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_affine_calibrated": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    }
+  }
+}

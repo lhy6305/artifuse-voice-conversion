@@ -322,6 +322,19 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
             if model_config.get("f0_control_branch_layers") in {None, ""}
             else int(model_config.get("f0_control_branch_layers"))
         ),
+        aper_control_branch_mode=str(
+            model_config.get("aper_control_branch_mode", "shared_f0_branch_v1")
+        ),
+        aper_control_branch_layers=(
+            None
+            if model_config.get("aper_control_branch_layers") in {None, ""}
+            else int(model_config.get("aper_control_branch_layers"))
+        ),
+        aper_control_branch_hidden_dim=(
+            None
+            if model_config.get("aper_control_branch_hidden_dim") in {None, ""}
+            else int(model_config.get("aper_control_branch_hidden_dim"))
+        ),
         energy_control_branch_mode=str(
             model_config.get("energy_control_branch_mode", "shared_f0_branch_v1")
         ),
@@ -421,6 +434,25 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
                     else 0
                 ),
             },
+            "aper_control_branch": {
+                "mode": str(model_config.get("aper_control_branch_mode", "shared_f0_branch_v1")),
+                "branch_layers": (
+                    int(model_config.get("aper_control_branch_layers", model_config["student_layers"]))
+                    if str(model_config.get("aper_control_branch_mode", "shared_f0_branch_v1"))
+                    .strip()
+                    .lower()
+                    == "dedicated_aper_branch_v1"
+                    else 0
+                ),
+                "hidden_dim": (
+                    int(model_config.get("aper_control_branch_hidden_dim", model_config["student_dim"]))
+                    if str(model_config.get("aper_control_branch_mode", "shared_f0_branch_v1"))
+                    .strip()
+                    .lower()
+                    == "dedicated_aper_branch_v1"
+                    else 0
+                ),
+            },
             "vuv_logits": {"feature_dim": 1},
             "aperiodicity": {"feature_dim": 1},
             "energy": {"feature_dim": 1},
@@ -465,6 +497,16 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
                     .strip()
                     .lower()
                     == "dedicated_energy_branch_v1"
+                    else 0
+                )
+            },
+            "aper_branch_hidden": {
+                "feature_dim": (
+                    int(model_config.get("aper_control_branch_hidden_dim", model_config["student_dim"]))
+                    if str(model_config.get("aper_control_branch_mode", "shared_f0_branch_v1"))
+                    .strip()
+                    .lower()
+                    == "dedicated_aper_branch_v1"
                     else 0
                 )
             },

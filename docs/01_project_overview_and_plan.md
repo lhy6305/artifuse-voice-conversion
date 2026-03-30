@@ -40,6 +40,19 @@
 - The combined selector-comparison artifact now also emits a decision summary that separates teacher-loss reference choice, handoff-facing packet candidate choice, and the conservative route-opening conclusion.
 - The active corrected-manifold Stage5 winner is now `wfta003`, and it should not be retired by broad anti-thrash wording that was meant for already dead pure-buzz families.
 - Paired Stage3 still lacks a valid frame bridge and alignment contract, so paired training cannot be treated as ready.
+- Fixed-input Stage5 decoder-side AB is now also completed on the current deterministic Stage3 winner:
+  - plain `branchcondadapter` remains `8/8 auto_reject` on `tv8`
+  - `fusionbranchmeancontrast_branchcond` also remains `8/8 auto_reject` on `tv8`
+  - both still fail before predicted activity gating
+  - both still keep the main Stage5-local bottleneck at `decoder_hidden -> waveform_decoder_base_logits`
+- A more direct fixed-input Stage5 frame-space candidate is now also screened:
+  - `fusionbranchmeancontrast_residualshape_fullsplit24` reduces the current fixed-input decoded failure from all-auto-reject to `tv8 = 6/8 auto_reject` and `se8 = 6/8 auto_reject`
+  - the current best screened variant is `fusionbranchmeancontrast_residualshape_scale050`
+  - this improves to `tv8 = 5/8 auto_reject` and keeps `se8 = 6/8 auto_reject`
+  - the route is still not open, but this is the first current fixed-input Stage5 family that materially escapes the old uniform auto-reject basin
+  - a focused human-review bundle is now prepared for the resulting `5` review-required records across `tv8` and `se8`
+  - the human review result is now also in: those `5` review-required outputs are still all buzz and are not near-speech
+  - the new spectrogram bundle plus simple UV/V contrast readout supports the human conclusion that the decoded route still lacks meaningful voiced/unvoiced separation
 - Stage3 F0 representation is confirmed structurally blocked: coarse_log_f0 collapses to near-constant output in the current explicit_named_control_family_v1 architecture regardless of loss weight tuning. A structural decision is required before F0 can become a genuine handoff control.
 - External reference review now supports a concrete recovery route:
   - do not insist on waveform-only implicit F0 discovery
@@ -141,17 +154,59 @@
     - `all_core_controls_ready_count = 2/3`
   - current packet-facing top-1 is `cont20.step2`
   - current raw deterministic `ENERGY` frontier is `cont20.step3`
-  - the only remaining blocker on sample3 is `target::chapter3_4_firefly_106`, which still misses both `APER` and `ENERGY` thresholds
+  - at this pre-dedicated-APER stage, the only remaining blocker on sample3 is `target::chapter3_4_firefly_106`, which still misses both `APER` and `ENERGY` thresholds
 - Deterministic continuation past `cont20` is now also probed:
   - `cont24` was started from the raw deterministic `ENERGY` frontier `cont20.step3`
   - it regressed back to `energy_ready_count = 1/3` and `all_core_controls_ready_count = 1/3`
   - so `cont20` remains the active frontier, and raw energy-best should no longer be used as an automatic continuation anchor
-- Blocker-localized diagnosis for `target::chapter3_4_firefly_106` is now also completed:
+- Pre-dedicated-APER blocker-localized diagnosis for `target::chapter3_4_firefly_106` is now also completed:
   - the dominant remaining blocker on sample3 is not `ENERGY` alone
   - `APER` is effectively flat on this record under the current scaffold, with raw std around `0.0125` and slightly negative correlation to the reference
   - affine calibration does not rescue `APER`, which remains stuck near `0.402` calibrated MAE against a `0.3` gate
   - `ENERGY` is still the secondary blocker on this record, but it is reasonably correlated and was already near threshold at `cont20.step3`
   - therefore the next deterministic probe should be framed as blocker-oriented rather than generic energy-only continuation
+- A minimal APER plus ENERGY blocker-oriented freeze probe is now also completed:
+  - it starts from the stable packet-facing anchor `cont20.step2`
+  - it unfreezes `frontend.aper_head` and `student.aper_branch_delta_head`
+  - it adds nonzero `teacher_aper_state` supervision while preserving the current energy objective family
+  - the probe preserves the current `2/3` opening and improves raw deterministic `ENERGY` further to `0.114704`
+  - but it still does not rescue blocker-record `APER`, which stays structurally flat and non-ready
+- A dedicated APER branch structural probe is now also completed:
+  - `aper_control_branch_mode = dedicated_aper_branch_v1` is now wired and validated
+  - the APER-only branch opens `APER` from `2/3` to `3/3` on sample3
+  - the deterministic line now reaches `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 2/3`
+  - the old "APER plus ENERGY" blocker summary is therefore superseded
+  - the remaining blocker is now only `ENERGY` on `target::chapter3_4_firefly_106`
+- A combined dedicated APER plus dedicated ENERGY probe is now also completed:
+  - the warm4 combined branch preserves `APER = 3/3` and keeps `ENERGY = 2/3`
+  - packet-facing top-1 is `ss_detpitch_aperbranch_energy_warm4.step2`
+  - raw deterministic `ENERGY` frontier is `ss_detpitch_aperbranch_energy_warm4.step3`
+  - the blocker record reaches `energy_stage5_norm_calibrated_reference_mae = 0.150639` at warm4 step `3`, missing the `0.15` gate by only `0.000639`
+  - a blind continuation `cont8` from that near-threshold state is unstable and regresses most steps back to `ENERGY = 1/3`
+- A blocker-aware dedicated-APER-scaffold `ENERGY`-only probe is now also completed:
+  - a `step3`-anchor continuation preserves only `2/3` and does not beat the earlier blocker frontier
+  - a `step2`-anchor continuation is better, but only at the first micro-step
+  - `ss_detpitch_aperbranch_energyonly_s2_warm4.step1` reaches blocker-record `energy_stage5_norm_calibrated_reference_mae = 0.150089`
+  - this is the current closest deterministic blocker-facing result, missing the `0.15` gate by only `0.000089`
+  - later steps regress, so the active lesson is now blocker-aware early-stop rather than same-family continuation length
+- A one-step continuation from that blocker-facing micro-anchor is now also completed:
+  - it regresses sharply instead of improving
+  - blocker-record `ENERGY` jumps from `0.150089` to `0.247955`
+  - `energy_ready_count` falls from `2/3` back to `1/3`
+  - this triggers the stop condition for the current same-family deterministic continuation line
+- A new peak-focused `ENERGY` objective redesign is now also completed:
+  - `teacher_energy_stage5_peak_affine_calibrated` is added to the Stage3 loss family
+  - the old blocker-facing micro-anchor still regresses under this new loss
+  - but the stable packet-facing anchor `ss_detpitch_aperbranch_energy_warm4.step2` succeeds immediately under the new loss
+  - new winning checkpoint `ss_detpitch_energypeak_s2_step1.step1` reaches:
+    - `energy_ready_count = 3/3`
+    - `all_core_controls_ready_count = 3/3`
+    - `auto_reject_count = 0`
+  - the old blocker record `target::chapter3_4_firefly_106` now reaches `energy_stage5_norm_calibrated_reference_mae = 0.131030`
+- Broader confirmation is now also completed for the new deterministic winner:
+  - `target_validation` with `sample_count = 8` reaches `all_core_controls_ready_count = 8/8`
+  - `target_special_eval` with `sample_count = 8` also reaches `all_core_controls_ready_count = 8/8`
+  - the new route opening is therefore no longer only a sample3-local result
 
 ## Current Main Lines
 
@@ -179,10 +234,9 @@
 - Current gate reading:
   - `e_evt / z_art` are ready
   - waveform-only `F0` remains structurally blocked in the old architecture: `coarse_log_f0` collapses to near-constant output (span 0.06 octaves vs target 2.6 octaves) regardless of loss weight or temporal loss tuning
-  - under the deterministic explicit-provider nof0corr reference, `F0` and `VUV` are now open on the current sample3 packet screen and `APER` is partially open
-  - on the affine-calibrated deterministic continuation line, `ENERGY` is now also partially open at `2/3`
-  - the dominant remaining blocker is the single sample `target::chapter3_4_firefly_106`, which still fails both `APER` and `ENERGY`
-  - on that sample, `APER` is now identified as the primary blocker and `ENERGY` as the secondary blocker
+  - under the strongest current deterministic explicit-provider line, `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 3/3` on the active sample3 packet screen
+  - the previous single-record `ENERGY` blocker on `target::chapter3_4_firefly_106` is now cleared on the active sample3 packet screen
+  - the old APER-flatness blocker story and the later single-record `ENERGY` blocker story are both superseded on the active line
   - Do not run further waveform-only F0 loss-weight or temporal-loss probes without a structural model change
 - Current preferred structural recovery route for `F0`:
   - Step A: completed as `deterministic_extractor_v1`
@@ -206,8 +260,16 @@
   - deterministic energy-dynamic-range conclusion: centered-state and std losses are a valid positive branch, with corrected energy-best `0.246440`, but `ENERGY` remains fully closed at packet gate
   - deterministic energy-affine-calibrated conclusion: direct calibration-aware loss is the best deterministic isolated-energy family so far, with corrected continuation energy-best improving through `warm4 = 0.243179`, `cont4 = 0.232511`, `cont8 = 0.224320`, `cont12 = 0.216033`, `cont16 = 0.201423`, and `cont20 = 0.120149`
   - deterministic continuation conclusion: after fixing the zero-mae `F0` gate bug, affine-calibrated continuation keeps improving `ENERGY` without giving back already-open `F0 / VUV / APER` through `cont20`, where it reaches `energy_ready_count = 2/3` plus `all_core_controls_ready_count = 2/3` on the active sample3 packet screen
-  - deterministic blocker-localization conclusion: the remaining sample3 blocker is `target::chapter3_4_firefly_106`, which still fails both `APER` and `ENERGY`; localized diagnosis now shows `APER` is the primary blocker and `ENERGY` is the secondary blocker on that record
+  - deterministic blocker-localization conclusion: at the pre-dedicated-APER stage, the remaining sample3 blocker was `target::chapter3_4_firefly_106`, which still failed both `APER` and `ENERGY`; that localized diagnosis correctly identified `APER` as the primary blocker and is now structurally superseded by the later dedicated APER branch result
+  - deterministic APER-unfreeze conclusion: simply unfreezing the current APER head and APER correction head is not enough to fix the blocker-record APER failure under the existing scaffold
   - deterministic continuation-regression conclusion: a direct follow-up `cont24` from the raw deterministic `ENERGY` frontier `cont20.step3` regresses to `energy_ready_count = 1/3`, so raw energy-best should not be treated as an automatic next init checkpoint
+  - deterministic dedicated-APER conclusion: `dedicated_aper_branch_v1` is a real structural fix that opens `APER` to `3/3`, turning the active deterministic line into `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 2/3`
+  - deterministic combined-branch conclusion: adding the dedicated `ENERGY` branch on top of the dedicated APER branch preserves `APER = 3/3` and pushes blocker-record `ENERGY` to `0.150639`, leaving only a single-record energy threshold gap
+  - deterministic combined-continuation conclusion: a blind continuation from that near-threshold combined state is unstable, so future continuation must be blocker-aware or threshold-aware rather than inertia-driven
+  - deterministic energy-only blocker-anchor conclusion: the better blocker-aware continuation anchor is `ss_detpitch_aperbranch_energy_warm4.step2`, not the raw `step3` frontier; a one-step micro-continuation from that anchor reaches `0.150089` on the blocker record, but the route still remains `3/3, 3/3, 3/3, 2/3`
+  - deterministic micro-anchor continuation conclusion: even one more same-family step from the blocker-facing micro-frontier regresses to `ENERGY = 1/3`, so the current continuation family should stop rather than take a second micro-step
+  - deterministic peak-energy-objective conclusion: adding `teacher_energy_stage5_peak_affine_calibrated` and restarting from the stable packet-facing anchor `ss_detpitch_aperbranch_energy_warm4.step2` opens the active sample3 packet screen fully at `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 3/3`
+  - deterministic broad-confirmation conclusion: the same winning checkpoint also clears `target_validation` at `8/8` and `target_special_eval` at `8/8`, so the route opening is now validation-confirmed rather than sample3-local
   - keep both providers behind one shared Stage3 contract for fair comparison
 
 ### Line C: Finish paired Stage3 wiring and alignment prerequisites before paired training
@@ -227,14 +289,16 @@
 - Important experiment and asset changes must land in traceable summary artifacts such as final summaries and machine-readable JSON.
 
 ## Current Recommended Next Steps
-1. Continue generation-side completion around `acoustic_directional_targetstate_bridge_v1`.
+1. For the current deterministic Stage3 winner, keep Stage3 fixed and target the Stage5 consumer-side `decoder_hidden -> waveform_decoder_base_logits` path rather than reopening Stage3 continuation.
 2. Keep handoff candidates behind cheap screen and readiness gate before opening a new Stage5 adapter route.
-3. Keep the current `wfta003` corrected-manifold line active, but only for a clearly different localization-oriented probe rather than more blind same-family weight shrinking.
-4. Finish frame bridge and alignment contract work before any paired Stage3 training decision.
-5. Treat `C-prime / v2-core` as a strategic contract backlog. The immediate named-control blocker is now split: `vuv / aper / E` are training-addressable; `F0` requires a structural decision (explicit pitch feature input vs accepting permanent gate closure).
-6. Use the new packet-aware selector for downstream-facing Stage3 checkpoint ranking, and label post-hoc full-checkpoint eval results explicitly instead of calling every selector output the same "best checkpoint".
-7. Keep writing long-lived conclusions back to `docs/01_project_overview_and_plan.md` and `docs/02_pitfalls_log.md`, while leaving local experiment detail in numbered reports.
-8. For the current `F0` recovery route, keep the provider comparison order explicit:
+3. Keep Stage3 packet readiness and Stage5 decoded confirmation as separate decisions; the current winner is packet-confirmed but the existing Stage5 no-res decoded route still auto-rejects the widened confirmation slices and the current localization now points to the pre-gate waveform-frames path plus the base-logits projection.
+4. Continue generation-side completion around `acoustic_directional_targetstate_bridge_v1`.
+5. Keep the current `wfta003` corrected-manifold line active, but only for a clearly different localization-oriented probe rather than more blind same-family weight shrinking.
+6. Finish frame bridge and alignment contract work before any paired Stage3 training decision.
+7. Treat `C-prime / v2-core` as a strategic contract backlog. The immediate named-control blocker is no longer the deterministic Stage3 packet route; that route is now packet-confirmed, while the active downstream blocker sits in the current Stage5 decoded consumer.
+8. Use the new packet-aware selector for downstream-facing Stage3 checkpoint ranking, and label post-hoc full-checkpoint eval results explicitly instead of calling every selector output the same "best checkpoint".
+9. Keep writing long-lived conclusions back to `docs/01_project_overview_and_plan.md` and `docs/02_pitfalls_log.md`, while leaving local experiment detail in numbered reports.
+10. For the current `F0` recovery route, keep the provider comparison order explicit:
    - completed bootstrap: in-repo deterministic extractor
    - completed bootstrap: RMVPE sidecar
    - completed diagnosis milestone: provider-only audit confirms deterministic positive control and RMVPE raw-contract failure
@@ -245,9 +309,9 @@
    - completed split-confidence probe: confidence and hard `VUV` separation still leaves sample3 at `f0_ready_count = 0/3`
    - completed gated-correction probe: confidence-gated `F0/VUV` correction still leaves sample3 at `f0_ready_count = 0/3`
    - next action: stop the current RMVPE Stage3 family; if RMVPE continues later, require a larger consumer or objective redesign rather than more same-family smokes
-9. For the deterministic explicit-provider line:
-   - keep `deterministic_extractor_v1` plus `f0_correction_enabled = false` as the current packet-facing reference
-   - treat `ENERGY` as the dominant remaining blocker on that line
+11. For the deterministic explicit-provider line:
+   - keep `deterministic_extractor_v1` plus `f0_correction_enabled = false` as the baseline positive reference, but treat the dedicated APER plus ENERGY family as the current strongest deterministic checkpoint family
+   - treat the old single-record `ENERGY` blocker as solved on the active sample3 screen by the peak-focused objective redesign
    - do not continue scalar energy weight nudging by inertia
    - completed isolation probe: strict stagewise freeze preserves already-open `F0 / VUV / APER` but does not move `ENERGY`
    - completed dedicated-branch probe: isolated energy-specific capacity remains the right scaffold; after corrected continuations the active deterministic frontier now reaches partial opening at `energy_ready_count = 2/3` and `all_core_controls_ready_count = 2/3`
@@ -263,7 +327,26 @@
    - completed third-to-fifth continuation probes: the same family then improves further through `cont12 = 0.216033`, `cont16 = 0.201423`, and `cont20 = 0.120149`, where sample3 reaches `energy_ready_count = 2/3` and `all_core_controls_ready_count = 2/3`
    - completed sixth continuation probe: a direct raw-frontier continuation `cont24` regresses back to `energy_ready_count = 1/3`, so the active frontier remains `cont20` rather than the newest block
    - completed lr-half follow-up: halving learning rate to `2.5e-4` remains worse than the normal affine-calibrated family and should not become the default continuation
-   - if this line continues, keep the dedicated energy-branch family but do not keep blindly continuing from raw energy-best checkpoints; retain `cont20.step2` as the packet-facing checkpoint, retain `cont20.step3` as the raw frontier reference, and treat the next probe as blocker-oriented with explicit `APER` reading on `target::chapter3_4_firefly_106` instead of returning to shared scalar tuning, same-family scale alignment, naive width scaling, generic trajectory shaping, or blind lr-half retries
+   - completed dedicated-APER probe: `dedicated_aper_branch_v1` opens `APER` to `3/3` and proves that APER needed isolated structural capacity rather than simple unfreezing
+   - completed dedicated-APER plus ENERGY probe: the strongest deterministic line is now `ss_detpitch_aperbranch_energy_warm4`, where sample3 reaches `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 2/3`
+   - active packet-facing checkpoint on that strongest line: `ss_detpitch_energypeak_s2_step1.step1`
+   - active broader confirmation status: `target_validation 8/8` and `target_special_eval 8/8`
+   - completed Stage5 downstream confirmation: when this winning packet-facing checkpoint is adapted into synthetic Stage5 packages and decoded with the current no-res best-validation checkpoint, both `tv8` and `se8` remain `8/8 auto_reject_obvious_buzz`
+   - completed Stage5 handoff localization: `tv8` and `se8` waveform handoff probes show `decoded_no_gate`, `decoded_pre_ola_gate`, and `decoded_post_ola_gate` all remain `8/8 auto_reject`, so the active failure is already present before predicted activity gating
+   - completed Stage5 structure localization: on `tv8`, temporal collapse is already present by `fused_hidden`, while the strongest Stage5-local coupling and geometry collapse remains `decoder_hidden -> waveform_decoder_base_logits`
+   - completed fixed-input decoder-family AB: plain `branchcondadapter` and `fusionbranchmeancontrast_branchcond` both remain `8/8 auto_reject` on the current fixed-input `tv8` slice; the fusion branch-conditioned family is less bright than the plain branch-conditioned family but neither changes the active pre-gate buzz diagnosis or the `decoder_hidden -> waveform_decoder_base_logits` localization
+   - completed fixed-input residual-shape screen: `fusionbranchmeancontrast_residualshape_fullsplit24` changes the active failure basin on the current fixed-input Stage5 route and reaches `tv8 = 6/8 auto_reject`, `se8 = 6/8 auto_reject`, while `scale050` improves the current `tv8` screen further to `5/8 auto_reject`
+   - immediate next action for this line: do not continue Stage3 optimization and do not keep trying hidden-side branch-conditioned decoder adapters; continue on the output-side residual-shape family, with `fusionbranchmeancontrast_residualshape_scale050` as the current best fixed-input Stage5 candidate
+   - completed practical validation step: the prepared `5`-record human-review bundle for `fusionbranchmeancontrast_residualshape_scale050` was listened to, and all `5` remain qualitatively failed buzz outputs
+   - immediate next action for this line: stop using generic widened screen progress as the main story and move to Stage5 diagnosis that directly targets voiced/unvoiced separation plus source-filter or comb-resonance geometry on the decoded waveform path
+   - previous stable packet-facing anchor before redesign: `ss_detpitch_aperbranch_energy_warm4.step2`
+   - previous raw deterministic `ENERGY` frontier before redesign: `ss_detpitch_aperbranch_energy_warm4.step3`
+   - previous blocker-facing micro-frontier before redesign: `ss_detpitch_aperbranch_energyonly_s2_warm4.step1`
+   - completed combined continuation probe: a follow-up `cont8` regresses most steps back to `ENERGY = 1/3`, so blind continuation from the near-threshold combined state should not become the default rule
+   - completed ENERGY-only blocker-aware probe: `step3` is not the right continuation anchor under frozen APER; the stronger blocker-facing micro-step comes from the `step2` anchor and then immediately needs early-stop
+   - completed micro1 stop probe: one more same-family step from the blocker-facing micro-frontier regresses sharply, so this continuation family is now stopped
+   - completed peak-focused objective redesign: the new `teacher_energy_stage5_peak_affine_calibrated` loss opens the active sample3 packet screen fully in one step from the stable packet-facing anchor
+   - if deterministic work continues, do not resume the old continuation family; use the new winning checkpoint for broader confirmation rather than returning to shared scalar tuning, same-family scale alignment, naive width scaling, generic trajectory shaping, blind lr-half retries, raw-frontier continuation by inertia, or further micro-step retries
 10. Do not keep third-party reference repositories as permanent root-level directories once their design lessons are captured on disk.
 
 ## Key Reference Reports
@@ -310,3 +393,16 @@
 - `docs/507_stage3_detpitch_affine_energy_cont12_to_cont20_partial_route_opening_report.md`
 - `docs/508_stage3_detpitch_affine_energy_cont24_regression_from_raw_frontier_report.md`
 - `docs/509_stage3_blocker_localized_firefly106_aper_flatness_and_energy_secondary_report.md`
+- `docs/510_stage3_detpitch_aperenergy_blocker_probe_report.md`
+- `docs/511_stage3_detpitch_dedicated_aper_branch_route_opening_report.md`
+- `docs/512_stage3_detpitch_dedicated_aper_plus_energy_warm4_and_cont8_report.md`
+- `docs/513_stage3_detpitch_energyonly_blocker_aware_anchor_probe_report.md`
+- `docs/514_stage3_detpitch_energy_micro1_regression_and_same_family_stop_report.md`
+- `docs/515_stage3_detpitch_peak_energy_objective_route_opening_report.md`
+- `docs/516_stage3_detpitch_peak_energy_objective_broad_slice_confirmation_report.md`
+- `docs/517_stage3_peak_energy_downstream_stage5_nores_confirmation_and_export_plumbing_report.md`
+- `docs/518_stage5_consumer_handoff_localization_for_energypeak_stage3_winner_report.md`
+- `docs/519_stage5_fixed_input_branch_conditioned_decoder_family_ab_report.md`
+- `docs/520_stage5_fixed_input_fusion_residualshape_breakthrough_and_scale_screen_report.md`
+- `docs/521_stage5_fusion_residualshape_scale050_human_review_bundle_report.md`
+- `docs/522_stage5_fusion_residualshape_scale050_spectrogram_review_and_human_stop_report.md`

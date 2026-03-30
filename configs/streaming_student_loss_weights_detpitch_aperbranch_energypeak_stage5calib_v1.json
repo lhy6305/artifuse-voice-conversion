@@ -1,0 +1,44 @@
+{
+  "name": "streaming_student_loss_weights_detpitch_aperbranch_energypeak_stage5calib_v1",
+  "notes": [
+    "Use with dedicated-APER-scaffold deterministic ENERGY objective redesign probes.",
+    "Retain the existing calibration-aware ENERGY family and add a peak-focused affine-calibrated term.",
+    "The new term upweights high reference energy frames because the remaining blocker is a peak-compression error."
+  ],
+  "loss_weights": {
+    "teacher_energy_proxy": 0.08,
+    "teacher_energy_state": 0.02,
+    "teacher_energy_stage5_state": 0.05,
+    "teacher_energy_stage5_centered_state": 0.08,
+    "teacher_energy_stage5_std": 0.08,
+    "teacher_energy_stage5_affine_calibrated": 0.08,
+    "teacher_energy_stage5_peak_affine_calibrated": 0.08
+  },
+  "loss_weight_schedule": {
+    "teacher_energy_stage5_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_centered_state": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_std": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_affine_calibrated": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    },
+    "teacher_energy_stage5_peak_affine_calibrated": {
+      "type": "linear_warmup_hold",
+      "start_weight": 0.0,
+      "warmup_steps": 1
+    }
+  }
+}
