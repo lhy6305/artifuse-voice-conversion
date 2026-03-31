@@ -96,6 +96,15 @@ from v5vc.stage5_low_activity_probe import (
 )
 from v5vc.stage5_low_activity_governance_report import materialize_stage5_low_activity_governance_report
 from v5vc.stage5_speech_emergence_probe import analyze_stage5_nores_speech_emergence
+from v5vc.stage5_source_filter_probe import analyze_stage5_nores_source_filter_review
+from v5vc.stage5_vuv_decode_projection_probe import analyze_stage5_nores_vuv_decode_projection_review
+from v5vc.stage5_vuv_path_probe import analyze_stage5_nores_vuv_path_review
+from v5vc.stage5_vuv_noise_hidden_residual_structure_probe import (
+    analyze_stage5_nores_vuv_noise_hidden_residual_structure_probe,
+)
+from v5vc.stage5_vuv_retention_probe import analyze_stage5_nores_vuv_retention_probe
+from v5vc.stage5_vuv_noise_hidden_residual_probe import analyze_stage5_nores_vuv_noise_hidden_residual_probe
+from v5vc.stage5_vuv_runtime_residual_probe import analyze_stage5_nores_vuv_runtime_residual_probe
 from v5vc.stage5_waveform_decoder_structure_probe import analyze_stage5_nores_waveform_decoder_structure
 from v5vc.stage5_waveform_handoff_probe import analyze_stage5_nores_waveform_handoff
 from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_waveform_objective_collapse
@@ -4088,6 +4097,46 @@ def build_parser() -> argparse.ArgumentParser:
         help="Residual-shape branch-conditioned correction semantics: raw_additive_v1, shape_only_unit_rms_v1, or shape_only_energy_debiased_v1.",
     )
     nores_vocoder_dataset_loop_parser.add_argument(
+        "--use-noise-hidden-residual-adapter",
+        action="store_true",
+        help="Enable an explicit noise_hidden-driven residual path in addition to the existing residual-shape branch.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--noise-hidden-residual-mode",
+        default="gate_plus_delta_v1",
+        help="Explicit noise_hidden residual path mode: gate_bias_only_v1, delta_direct_v1, or gate_plus_delta_v1.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--noise-hidden-residual-scale",
+        type=float,
+        default=1.0,
+        help="Optional scalar applied to the explicit noise_hidden residual contribution.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--trainable-parameter-prefixes",
+        nargs="*",
+        default=None,
+        help="Optional parameter-prefix allowlist for bounded Stage5 finetunes.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--allow-partial-init-checkpoint-load",
+        action="store_true",
+        help="Allow init checkpoint loading with missing keys so new Stage5 modules can be added on top of an older checkpoint.",
+    )
+    nores_vocoder_dataset_loop_parser.set_defaults(resume_optimizer_from_init_checkpoint=True)
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--resume-optimizer-from-init-checkpoint",
+        dest="resume_optimizer_from_init_checkpoint",
+        action="store_true",
+        help="Reuse optimizer state from --init-checkpoint when architecture and trainable parameter set are unchanged.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
+        "--disable-resume-optimizer-from-init-checkpoint",
+        dest="resume_optimizer_from_init_checkpoint",
+        action="store_false",
+        help="Start a fresh optimizer even when --init-checkpoint is provided.",
+    )
+    nores_vocoder_dataset_loop_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
         type=float,
         default=0.0,
@@ -4783,6 +4832,233 @@ def build_parser() -> argparse.ArgumentParser:
         type=float,
         default=0.0,
         help="Optional inference-time branch-mean mix alpha applied to decoder_hidden for fused_single waveform decoders.",
+    )
+    stage5_source_filter_review_parser = subparsers.add_parser(
+        "analyze-stage5-nores-source-filter-review",
+        help="Audit exported Stage5 decoded outputs for voiced/unvoiced separation collapse and source-filter geometry sidecars.",
+    )
+    stage5_source_filter_review_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 source-filter review outputs.",
+    )
+    stage5_source_filter_review_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        required=True,
+        help="stage5_human_review_bundle.json or equivalent review bundle manifest.",
+    )
+    stage5_source_filter_review_parser.add_argument(
+        "--dataset-indexes",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more Stage5 dataset index manifests used to resolve training packages for the reviewed records.",
+    )
+    stage5_source_filter_review_parser.add_argument(
+        "--peak-count",
+        type=int,
+        default=8,
+        help="Maximum number of mean-spectrum peaks to keep in the resonance-spacing sidecar.",
+    )
+    stage5_source_filter_review_parser.add_argument(
+        "--peak-min-separation-hz",
+        type=float,
+        default=180.0,
+        help="Minimum frequency spacing between retained spectral peaks in the resonance-spacing sidecar.",
+    )
+    stage5_source_filter_review_parser.add_argument(
+        "--high-band-hz",
+        type=float,
+        default=4000.0,
+        help="Frequency boundary used by the voiced/unvoiced high-band ratio sidecar.",
+    )
+    stage5_vuv_path_review_parser = subparsers.add_parser(
+        "analyze-stage5-nores-vuv-path-review",
+        help="Localize the current Stage5 review slice inside the fused_single waveform path with vuv-conditioned stage summaries.",
+    )
+    stage5_vuv_path_review_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 vuv path review outputs.",
+    )
+    stage5_vuv_path_review_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        required=True,
+        help="stage5_human_review_bundle.json or equivalent review bundle manifest.",
+    )
+    stage5_vuv_path_review_parser.add_argument(
+        "--audio-export-manifests",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more nores_vocoder_audio_export.json manifests used to resolve reviewed records back to training packages and checkpoints.",
+    )
+    stage5_vuv_path_review_parser.add_argument(
+        "--peak-count",
+        type=int,
+        default=8,
+        help="Maximum number of mean-spectrum peaks to keep in the resonance-spacing sidecar.",
+    )
+    stage5_vuv_path_review_parser.add_argument(
+        "--peak-min-separation-hz",
+        type=float,
+        default=180.0,
+        help="Minimum frequency spacing between retained spectral peaks in the resonance-spacing sidecar.",
+    )
+    stage5_vuv_path_review_parser.add_argument(
+        "--high-band-hz",
+        type=float,
+        default=4000.0,
+        help="Frequency boundary used by the voiced/unvoiced high-band ratio sidecar.",
+    )
+    stage5_vuv_decode_projection_review_parser = subparsers.add_parser(
+        "analyze-stage5-nores-vuv-decode-projection-review",
+        help="Decompose review-slice decode-side vuv loss across no-gate, pre-OLA gate, and post-OLA gate waveform reconstruction routes.",
+    )
+    stage5_vuv_decode_projection_review_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 vuv decode-projection review outputs.",
+    )
+    stage5_vuv_decode_projection_review_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        required=True,
+        help="stage5_human_review_bundle.json or equivalent review bundle manifest.",
+    )
+    stage5_vuv_decode_projection_review_parser.add_argument(
+        "--audio-export-manifests",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more nores_vocoder_audio_export.json manifests used to resolve reviewed records back to training packages and checkpoints.",
+    )
+    stage5_vuv_decode_projection_review_parser.add_argument(
+        "--high-band-hz",
+        type=float,
+        default=4000.0,
+        help="Frequency boundary used by the voiced/unvoiced high-band ratio sidecar.",
+    )
+    stage5_vuv_retention_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-vuv-retention-probe",
+        help="Run review-slice counterfactual waveform-logit variants to test whether simple unvoiced emphasis can recover vuv separation.",
+    )
+    stage5_vuv_retention_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 vuv retention probe outputs.",
+    )
+    stage5_vuv_retention_probe_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        required=True,
+        help="stage5_human_review_bundle.json or equivalent review bundle manifest.",
+    )
+    stage5_vuv_retention_probe_parser.add_argument(
+        "--audio-export-manifests",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more nores_vocoder_audio_export.json manifests used to resolve reviewed records back to training packages and checkpoints.",
+    )
+    stage5_vuv_retention_probe_parser.add_argument(
+        "--high-band-hz",
+        type=float,
+        default=4000.0,
+        help="Frequency boundary used by the voiced/unvoiced high-band ratio sidecar.",
+    )
+    stage5_vuv_runtime_residual_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-vuv-runtime-residual-probe",
+        help="Compare target-mask and runtime-gate residual scaling rules on the current Stage5 review slice.",
+    )
+    stage5_vuv_runtime_residual_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 vuv runtime residual probe outputs.",
+    )
+    stage5_vuv_runtime_residual_probe_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        required=True,
+        help="stage5_human_review_bundle.json or equivalent review bundle manifest.",
+    )
+    stage5_vuv_runtime_residual_probe_parser.add_argument(
+        "--audio-export-manifests",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more nores_vocoder_audio_export.json manifests used to resolve reviewed records back to training packages and checkpoints.",
+    )
+    stage5_vuv_runtime_residual_probe_parser.add_argument(
+        "--high-band-hz",
+        type=float,
+        default=4000.0,
+        help="Frequency boundary used by the voiced/unvoiced high-band ratio sidecar.",
+    )
+    stage5_vuv_noise_hidden_residual_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-vuv-noise-hidden-residual-probe",
+        help="Compare target-mask and noise_hidden-driven residual scaling rules on the current Stage5 review slice.",
+    )
+    stage5_vuv_noise_hidden_residual_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 vuv noise-hidden residual probe outputs.",
+    )
+    stage5_vuv_noise_hidden_residual_probe_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        required=True,
+        help="stage5_human_review_bundle.json or equivalent review bundle manifest.",
+    )
+    stage5_vuv_noise_hidden_residual_probe_parser.add_argument(
+        "--audio-export-manifests",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more nores_vocoder_audio_export.json manifests used to resolve reviewed records back to training packages and checkpoints.",
+    )
+    stage5_vuv_noise_hidden_residual_probe_parser.add_argument(
+        "--high-band-hz",
+        type=float,
+        default=4000.0,
+        help="Frequency boundary used by the voiced/unvoiced high-band ratio sidecar.",
+    )
+    stage5_vuv_noise_hidden_residual_structure_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-vuv-noise-hidden-residual-structure-probe",
+        help="Test explicit noise_hidden-to-residual feature reroutes on the current Stage5 review slice.",
+    )
+    stage5_vuv_noise_hidden_residual_structure_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 vuv noise-hidden residual structure probe outputs.",
+    )
+    stage5_vuv_noise_hidden_residual_structure_probe_parser.add_argument(
+        "--review-bundle",
+        type=Path,
+        required=True,
+        help="stage5_human_review_bundle.json or equivalent review bundle manifest.",
+    )
+    stage5_vuv_noise_hidden_residual_structure_probe_parser.add_argument(
+        "--audio-export-manifests",
+        type=Path,
+        nargs="+",
+        required=True,
+        help="One or more nores_vocoder_audio_export.json manifests used to resolve reviewed records back to training packages and checkpoints.",
+    )
+    stage5_vuv_noise_hidden_residual_structure_probe_parser.add_argument(
+        "--high-band-hz",
+        type=float,
+        default=4000.0,
+        help="Frequency boundary used by the voiced/unvoiced high-band ratio sidecar.",
     )
     stage5_waveform_objective_collapse_parser = subparsers.add_parser(
         "analyze-stage5-nores-waveform-objective-collapse",
@@ -6387,6 +6663,9 @@ def main(argv: list[str] | None = None) -> int:
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
             residual_shape_branch_condition_scale=args.residual_shape_branch_condition_scale,
             residual_shape_branch_condition_mode=args.residual_shape_branch_condition_mode,
+            use_noise_hidden_residual_adapter=bool(args.use_noise_hidden_residual_adapter),
+            noise_hidden_residual_mode=args.noise_hidden_residual_mode,
+            noise_hidden_residual_scale=args.noise_hidden_residual_scale,
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -6454,6 +6733,9 @@ def main(argv: list[str] | None = None) -> int:
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
             residual_shape_branch_condition_scale=args.residual_shape_branch_condition_scale,
             residual_shape_branch_condition_mode=args.residual_shape_branch_condition_mode,
+            use_noise_hidden_residual_adapter=bool(args.use_noise_hidden_residual_adapter),
+            noise_hidden_residual_mode=args.noise_hidden_residual_mode,
+            noise_hidden_residual_scale=args.noise_hidden_residual_scale,
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -6557,6 +6839,9 @@ def main(argv: list[str] | None = None) -> int:
             use_residual_shape_branch_condition_adapter=bool(args.use_residual_shape_branch_condition_adapter),
             residual_shape_branch_condition_scale=args.residual_shape_branch_condition_scale,
             residual_shape_branch_condition_mode=args.residual_shape_branch_condition_mode,
+            use_noise_hidden_residual_adapter=bool(args.use_noise_hidden_residual_adapter),
+            noise_hidden_residual_mode=args.noise_hidden_residual_mode,
+            noise_hidden_residual_scale=args.noise_hidden_residual_scale,
             periodic_waveform_frame_delta_weight=args.periodic_waveform_frame_delta_weight,
             periodic_waveform_frame_adjacent_cosine_weight=args.periodic_waveform_frame_adjacent_cosine_weight,
             periodic_waveform_frame_rms_floor_weight=args.periodic_waveform_frame_rms_floor_weight,
@@ -6589,6 +6874,9 @@ def main(argv: list[str] | None = None) -> int:
             waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=args.waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
             frame_rms_lagcorr_max_lag_frames=args.frame_rms_lagcorr_max_lag_frames,
             semantic_supervision_enabled=bool(args.semantic_supervision_enabled),
+            trainable_parameter_prefixes=args.trainable_parameter_prefixes,
+            allow_partial_init_checkpoint_load=bool(args.allow_partial_init_checkpoint_load),
+            resume_optimizer_from_init_checkpoint=bool(args.resume_optimizer_from_init_checkpoint),
         )
         return 0
     if args.command == "review-offline-mvp-nores-vocoder-checkpoints":
@@ -6702,6 +6990,66 @@ def main(argv: list[str] | None = None) -> int:
             predicted_activity_gate_floor=args.predicted_activity_gate_floor,
             predicted_activity_gate_smoothing_frames=args.predicted_activity_gate_smoothing_frames,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-source-filter-review":
+        analyze_stage5_nores_source_filter_review(
+            output_dir=args.output_dir,
+            review_bundle_path=args.review_bundle,
+            dataset_index_paths=args.dataset_indexes,
+            peak_count=args.peak_count,
+            peak_min_separation_hz=args.peak_min_separation_hz,
+            high_band_hz=args.high_band_hz,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-vuv-path-review":
+        analyze_stage5_nores_vuv_path_review(
+            output_dir=args.output_dir,
+            review_bundle_path=args.review_bundle,
+            audio_export_manifest_paths=args.audio_export_manifests,
+            peak_count=args.peak_count,
+            peak_min_separation_hz=args.peak_min_separation_hz,
+            high_band_hz=args.high_band_hz,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-vuv-decode-projection-review":
+        analyze_stage5_nores_vuv_decode_projection_review(
+            output_dir=args.output_dir,
+            review_bundle_path=args.review_bundle,
+            audio_export_manifest_paths=args.audio_export_manifests,
+            high_band_hz=args.high_band_hz,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-vuv-retention-probe":
+        analyze_stage5_nores_vuv_retention_probe(
+            output_dir=args.output_dir,
+            review_bundle_path=args.review_bundle,
+            audio_export_manifest_paths=args.audio_export_manifests,
+            high_band_hz=args.high_band_hz,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-vuv-runtime-residual-probe":
+        analyze_stage5_nores_vuv_runtime_residual_probe(
+            output_dir=args.output_dir,
+            review_bundle_path=args.review_bundle,
+            audio_export_manifest_paths=args.audio_export_manifests,
+            high_band_hz=args.high_band_hz,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-vuv-noise-hidden-residual-probe":
+        analyze_stage5_nores_vuv_noise_hidden_residual_probe(
+            output_dir=args.output_dir,
+            review_bundle_path=args.review_bundle,
+            audio_export_manifest_paths=args.audio_export_manifests,
+            high_band_hz=args.high_band_hz,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-vuv-noise-hidden-residual-structure-probe":
+        analyze_stage5_nores_vuv_noise_hidden_residual_structure_probe(
+            output_dir=args.output_dir,
+            review_bundle_path=args.review_bundle,
+            audio_export_manifest_paths=args.audio_export_manifests,
+            high_band_hz=args.high_band_hz,
         )
         return 0
     if args.command == "analyze-stage5-nores-waveform-objective-collapse":

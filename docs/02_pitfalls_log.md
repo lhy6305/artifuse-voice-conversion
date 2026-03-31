@@ -739,6 +739,98 @@
   - it does not mean "close to speech"
   - do not keep narrating this slice as a qualitative breakthrough after the human stop conclusion
 
+### 67. Once a Stage5 failure family is localized by a reusable review probe, stop rebuilding ad-hoc scripts for the same question
+- The current `fusionbranchmeancontrast_residualshape_scale050` route now has a reusable CLI:
+  - `analyze-stage5-nores-source-filter-review`
+- It formalizes the same practical question that was previously answered by one-off spectrogram review:
+  - does the current review-required slice still show collapsed voiced/unvoiced separation and non-speech source-filter geometry
+- The current formalized result is still negative:
+  - `primary_localization = vuv_separation_collapsed`
+  - decoded vuv high-band contrast remains near zero while aligned targets remain clearly positive
+- Therefore:
+  - do not keep creating throwaway scripts for the same residual-shape review slice
+  - use the reusable source-filter review CLI first
+  - only open a new Stage5 family screen after that probe says the current blocker has materially changed
+
+### 68. Once the review-slice vuv-path probe says `waveform_frames` are already flat, stop starting from post-decode or gate-side explanations
+- The current `fusionbranchmeancontrast_residualshape_scale050` review slice now also has a reusable path-level CLI:
+  - `analyze-stage5-nores-vuv-path-review`
+- The current result is more specific than decoded-only `vuv` collapse:
+  - `2/5` records already miss vuv separation at `waveform_decoder_base_logits`
+  - the remaining `3/5` keep only tiny positive base-logits gaps and all `5/5` turn non-positive by `waveform_frames`
+  - `waveform_residual_shape_delta` is also non-positive on `5/5`
+  - `noise_gate_not_dominant_on_unvoiced_frames` appears on `5/5`
+- Therefore:
+  - do not start the next Stage5 move from post-decode waveform tweaks
+  - do not start from predicted-activity gate tweaks
+  - do not assume the residual-shape branch is almost rescuing unvoiced structure
+  - start from the `waveform_decoder_base_logits -> waveform_frames` vuv-retention problem instead
+
+### 69. Do not mistake decoded-side vuv-gap improvement from generic centered-logit boosts for a real local rescue
+- The review-slice counterfactual probe now shows that simple centered-logit unvoiced gain can improve decoded-side `vuv` high-band means while still making `waveform_frames` vuv separation worse.
+- Concrete example on the current `5`-record slice:
+  - baseline waveform-frames mean `vuv` high-band gap: `-0.003187`
+  - `unvoiced_centered_gain200` waveform-frames mean: `-0.009912`
+  - yet the same variant lifts decoded mean to `0.022807`
+- The cleaner local signal comes from:
+  - `residual_unvoiced_gain300`
+  - which flips all `5/5` waveform-frames record gaps positive
+  - while keeping the aggregate decoded mean positive too
+- Therefore:
+  - do not promote generic base-logit gain shaping just because decoded-side sidecars look nicer
+  - prefer probes that improve the actual localized sink first
+  - on the current line, that means explicit unvoiced-focused residual or noise-side interventions
+
+### 70. Do not keep treating the current gate heads as the likely deployable unvoiced carrier once the runtime-gate probe says they are empty
+- The runtime-gate residual probe now shows:
+  - best runtime gate variant = `baseline`
+  - all runtime gate variants remain non-positive at waveform-frames `vuv` gap
+  - `noise_dominance_fraction = 0.0` on all `5/5` reviewed records
+- Therefore:
+  - stop expecting `noise_gate`
+  - `noise > periodic`
+  - or simple gate-derived masks
+  - to rescue the active residual-shape review slice
+
+### 71. Once `noise_hidden` matches the oracle review-slice rescue, stop routing the next structural probe through the gate heads
+- The `noise_hidden` residual probe now shows:
+  - `noise_hidden_rms_soft_residual_gain500` reaches waveform-frames aggregate `vuv` high-band gap `0.003365`
+  - the oracle target-side positive control is `0.003254`
+  - the gap is only `-0.000111`
+- This means the deployable upstream carrier is already present before the gate heads.
+- Therefore:
+  - the next structural probe should be explicit `noise_hidden -> residual`
+  - not more gate-head tuning
+  - and not more generic base-logit gain shaping
+
+### 72. Do not mistake a valid `noise_hidden` carrier for proof that the current residual adapter can already use it
+- The new residual-structure probe now tests the next narrower question:
+  - can the current residual-shape branch-condition adapter recover the `noise_hidden` leverage through simple feature rerouting
+- The answer is no on the current `5`-record review slice:
+  - best structural reroute = `residual_branch_noise_hidden_only`
+  - waveform-frames aggregate `vuv` high-band gap only improves from `-0.003187` to `-0.002912`
+  - this stays far behind:
+    - `noise_hidden_rms_soft_residual_gain500 = 0.003365`
+    - `target_unvoiced_residual_gain300 = 0.003254`
+- Therefore:
+  - do not keep opening more variants that only reshuffle the same residual adapter feature tuple
+  - do not say "the carrier exists, so the adapter path is basically solved"
+  - the next valid move must add a new explicit `noise_hidden -> residual` projection or injection path instead of more gate tweaks or more adapter-input swapping
+
+### 73. Do not mistake a recovered `waveform_frames` gap for a decoded route opening
+- The new explicit `noise_hidden -> residual` micro-fit now proves that a real local rescue is possible:
+  - `delta_direct_v1` moves waveform-frames aggregate `vuv` high-band gap from `-0.003187` to `0.002642`
+- But the same run leaves decoded aggregate `vuv` high-band gap unchanged:
+  - baseline decoded mean `-0.001537`
+  - `delta_direct_v1` decoded mean `-0.001537`
+- The primary localization also changes accordingly:
+  - from `waveform_frames_vuv_separation_lost_after_base_logits`
+  - to `decoded_waveform_vuv_separation_lost_after_frame_projection`
+- Therefore:
+  - do not stop at frame-space improvement and call the route solved
+  - do not send the next round back to carrier sourcing, gate heads, or residual-adapter input reshuffling
+  - the next valid move must target the downstream frame projection or decode path that erases the rescued residual contrast
+
 
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
@@ -800,3 +892,10 @@
 - `docs/520_stage5_fixed_input_fusion_residualshape_breakthrough_and_scale_screen_report.md`
 - `docs/521_stage5_fusion_residualshape_scale050_human_review_bundle_report.md`
 - `docs/522_stage5_fusion_residualshape_scale050_spectrogram_review_and_human_stop_report.md`
+- `docs/523_stage5_source_filter_review_cli_formalization_and_vuv_collapse_confirmation_report.md`
+- `docs/524_stage5_review_slice_vuv_path_localization_probe_report.md`
+- `docs/525_stage5_review_slice_vuv_retention_counterfactual_probe_report.md`
+- `docs/526_stage5_review_slice_runtime_gate_vs_oracle_unvoiced_residual_probe_report.md`
+- `docs/527_stage5_review_slice_noise_hidden_unvoiced_residual_probe_report.md`
+- `docs/528_stage5_review_slice_noise_hidden_residual_structure_probe_report.md`
+- `docs/529_stage5_explicit_noise_hidden_residual_microfit_and_downstream_projection_blocker_report.md`

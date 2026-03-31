@@ -323,6 +323,9 @@ def export_offline_mvp_nores_vocoder_audio(
             "residual_shape_branch_condition_mode": str(
                 getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")
             ),
+            "use_noise_hidden_residual_adapter": bool(getattr(model, "use_noise_hidden_residual_adapter", False)),
+            "noise_hidden_residual_mode": str(getattr(model, "noise_hidden_residual_mode", "gate_plus_delta_v1")),
+            "noise_hidden_residual_scale": float(getattr(model, "noise_hidden_residual_scale", 1.0)),
         },
         "checkpoint_path": resolved_checkpoint_path.as_posix(),
         "dataset_index_path": dataset_index_path.as_posix(),
@@ -766,6 +769,9 @@ def build_model_from_checkpoint(
     model_config = checkpoint_payload.get("model_config")
     residual_shape_branch_condition_scale = 1.0
     residual_shape_branch_condition_mode = "raw_additive_v1"
+    use_noise_hidden_residual_adapter = False
+    noise_hidden_residual_mode = "gate_plus_delta_v1"
+    noise_hidden_residual_scale = 1.0
     if isinstance(model_config, dict):
         residual_shape_branch_condition_scale = float(
             model_config.get("residual_shape_branch_condition_scale", 1.0)
@@ -773,6 +779,9 @@ def build_model_from_checkpoint(
         residual_shape_branch_condition_mode = str(
             model_config.get("residual_shape_branch_condition_mode", "raw_additive_v1")
         )
+        use_noise_hidden_residual_adapter = bool(model_config.get("use_noise_hidden_residual_adapter", False))
+        noise_hidden_residual_mode = str(model_config.get("noise_hidden_residual_mode", "gate_plus_delta_v1"))
+        noise_hidden_residual_scale = float(model_config.get("noise_hidden_residual_scale", 1.0))
     model = build_nores_vocoder_scaffold_from_state_dict(
         state_dict=state_dict,
         periodic_input_dim=int(first_batch["periodic_branch_features"].shape[-1]),
@@ -780,6 +789,9 @@ def build_model_from_checkpoint(
         frame_length=int(first_runtime["frame_length"]),
         residual_shape_branch_condition_scale=residual_shape_branch_condition_scale,
         residual_shape_branch_condition_mode=residual_shape_branch_condition_mode,
+        use_noise_hidden_residual_adapter=use_noise_hidden_residual_adapter,
+        noise_hidden_residual_mode=noise_hidden_residual_mode,
+        noise_hidden_residual_scale=noise_hidden_residual_scale,
     )
     model.load_state_dict(state_dict)
     return model

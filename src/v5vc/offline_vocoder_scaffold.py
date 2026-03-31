@@ -35,6 +35,11 @@ SUPPORTED_RESIDUAL_SHAPE_BRANCH_CONDITION_MODES = {
     "shape_only_unit_rms_v1",
     "shape_only_energy_debiased_v1",
 }
+SUPPORTED_NOISE_HIDDEN_RESIDUAL_MODES = {
+    "gate_bias_only_v1",
+    "delta_direct_v1",
+    "gate_plus_delta_v1",
+}
 
 
 class NoResidualSourceFilterVocoderScaffold(nn.Module):
@@ -52,6 +57,9 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         use_residual_shape_branch_condition_adapter: bool = False,
         residual_shape_branch_condition_scale: float = 1.0,
         residual_shape_branch_condition_mode: str = "raw_additive_v1",
+        use_noise_hidden_residual_adapter: bool = False,
+        noise_hidden_residual_mode: str = "gate_plus_delta_v1",
+        noise_hidden_residual_scale: float = 1.0,
     ) -> None:
         super().__init__()
         self.frame_length = int(frame_length) if frame_length is not None and int(frame_length) > 0 else None
@@ -65,6 +73,9 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.residual_shape_branch_condition_mode = normalize_residual_shape_branch_condition_mode(
             residual_shape_branch_condition_mode
         )
+        self.use_noise_hidden_residual_adapter = bool(use_noise_hidden_residual_adapter)
+        self.noise_hidden_residual_mode = normalize_noise_hidden_residual_mode(noise_hidden_residual_mode)
+        self.noise_hidden_residual_scale = normalize_noise_hidden_residual_scale(noise_hidden_residual_scale)
         self.periodic_encoder = build_mlp(periodic_input_dim, hidden_dim, hidden_dim)
         self.noise_encoder = build_mlp(noise_input_dim, hidden_dim, hidden_dim)
         self.periodic_gate = nn.Linear(hidden_dim, 1)
@@ -138,6 +149,9 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.residual_shape_branch_condition_adapter = None
         self.residual_shape_branch_condition_gate = None
         self.residual_shape_branch_condition_proj = None
+        self.noise_hidden_residual_adapter = None
+        self.noise_hidden_residual_gate_proj = None
+        self.noise_hidden_residual_delta_proj = None
         if self.use_decoder_branch_condition_adapter:
             self.decoder_branch_condition_adapter = nn.Sequential(
                 nn.Linear(hidden_dim * 3, hidden_dim),
@@ -171,6 +185,19 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 nn.init.constant_(self.residual_shape_branch_condition_gate.bias, -2.0)
                 nn.init.zeros_(self.residual_shape_branch_condition_proj.weight)
                 nn.init.zeros_(self.residual_shape_branch_condition_proj.bias)
+            if self.use_noise_hidden_residual_adapter:
+                self.noise_hidden_residual_adapter = nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.GELU(),
+                    nn.LayerNorm(hidden_dim),
+                    nn.Linear(hidden_dim, hidden_dim),
+                )
+                self.noise_hidden_residual_gate_proj = nn.Linear(hidden_dim, 1)
+                self.noise_hidden_residual_delta_proj = nn.Linear(hidden_dim, int(self.frame_length))
+                nn.init.zeros_(self.noise_hidden_residual_gate_proj.weight)
+                nn.init.constant_(self.noise_hidden_residual_gate_proj.bias, -8.0)
+                nn.init.zeros_(self.noise_hidden_residual_delta_proj.weight)
+                nn.init.zeros_(self.noise_hidden_residual_delta_proj.bias)
             if self.waveform_decoder_mode == "fused_single":
                 self.waveform_decoder = nn.Sequential(
                     nn.Linear(hidden_dim, hidden_dim),
@@ -405,6 +432,8 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         noise_condition = None
         residual_shape_branch_condition_gate = None
         residual_shape_branch_condition_delta = None
+        noise_hidden_residual_gate = None
+        noise_hidden_residual_delta = None
         if self.use_decoder_branch_condition_adapter:
             if (
                 self.decoder_branch_condition_adapter is None
@@ -452,6 +481,20 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             residual_shape_branch_condition_delta = torch.tanh(
                 self.residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
             )
+        if self.use_noise_hidden_residual_adapter:
+            if (
+                self.noise_hidden_residual_adapter is None
+                or self.noise_hidden_residual_gate_proj is None
+                or self.noise_hidden_residual_delta_proj is None
+            ):
+                raise RuntimeError("Noise-hidden residual adapter modules are not initialized.")
+            noise_hidden_residual_context = self.noise_hidden_residual_adapter(noise_hidden)
+            if self.noise_hidden_residual_mode in {"gate_bias_only_v1", "gate_plus_delta_v1"}:
+                noise_hidden_residual_gate = torch.sigmoid(self.noise_hidden_residual_gate_proj(noise_hidden_residual_context))
+            if self.noise_hidden_residual_mode in {"delta_direct_v1", "gate_plus_delta_v1"}:
+                noise_hidden_residual_delta = torch.tanh(
+                    self.noise_hidden_residual_delta_proj(noise_hidden_residual_context)
+                )
         outputs = {
             "periodic_hidden": periodic_hidden,
             "noise_hidden": noise_hidden,
@@ -475,6 +518,10 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         if residual_shape_branch_condition_gate is not None:
             outputs["residual_shape_branch_condition_gate"] = residual_shape_branch_condition_gate
             outputs["residual_shape_branch_condition_delta"] = residual_shape_branch_condition_delta
+        if noise_hidden_residual_gate is not None:
+            outputs["noise_hidden_residual_gate"] = noise_hidden_residual_gate
+        if noise_hidden_residual_delta is not None:
+            outputs["noise_hidden_residual_delta"] = noise_hidden_residual_delta
         if self.frame_length is None:
             return outputs
         if self.waveform_decoder_mode == "fused_single":
@@ -500,6 +547,37 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 outputs["waveform_residual_shape_delta"] = waveform_residual_shape_delta
             else:
                 outputs["waveform_residual_shape_delta"] = torch.zeros_like(waveform_decoder_base_logits)
+            waveform_noise_hidden_residual_delta = torch.zeros_like(waveform_decoder_base_logits)
+            if self.use_noise_hidden_residual_adapter:
+                if self.noise_hidden_residual_mode == "gate_bias_only_v1":
+                    if noise_hidden_residual_gate is not None:
+                        waveform_noise_hidden_residual_delta = (
+                            float(self.noise_hidden_residual_scale)
+                            * noise_hidden_residual_gate
+                            * outputs["waveform_residual_shape_delta"]
+                        )
+                else:
+                    resolved_noise_hidden_residual_delta = resolve_residual_shape_branch_condition_delta(
+                        delta=noise_hidden_residual_delta,
+                        reference_frames=waveform_decoder_base_logits,
+                        mode=self.residual_shape_branch_condition_mode,
+                    )
+                    if resolved_noise_hidden_residual_delta is not None:
+                        if self.noise_hidden_residual_mode == "gate_plus_delta_v1":
+                            if noise_hidden_residual_gate is None:
+                                raise RuntimeError("noise_hidden_residual_gate is required for gate_plus_delta_v1.")
+                            waveform_noise_hidden_residual_delta = (
+                                float(self.noise_hidden_residual_scale)
+                                * noise_hidden_residual_gate
+                                * resolved_noise_hidden_residual_delta
+                            )
+                        else:
+                            waveform_noise_hidden_residual_delta = (
+                                float(self.noise_hidden_residual_scale)
+                                * resolved_noise_hidden_residual_delta
+                            )
+                waveform_frame_logits = waveform_frame_logits + waveform_noise_hidden_residual_delta
+            outputs["waveform_noise_hidden_residual_delta"] = waveform_noise_hidden_residual_delta
             outputs["waveform_decoder_base_logits"] = waveform_decoder_base_logits
             outputs["waveform_frame_logits"] = waveform_frame_logits
             outputs["waveform_frames"] = torch.tanh(waveform_frame_logits)
@@ -952,6 +1030,10 @@ def infer_residual_shape_branch_condition_adapter_from_state_dict(state_dict: di
     return "residual_shape_branch_condition_adapter.0.weight" in state_dict
 
 
+def infer_noise_hidden_residual_adapter_from_state_dict(state_dict: dict[str, torch.Tensor]) -> bool:
+    return "noise_hidden_residual_adapter.0.weight" in state_dict
+
+
 def build_nores_vocoder_scaffold_from_state_dict(
     *,
     state_dict: dict[str, torch.Tensor],
@@ -960,6 +1042,9 @@ def build_nores_vocoder_scaffold_from_state_dict(
     frame_length: int,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_noise_hidden_residual_adapter: bool | None = None,
+    noise_hidden_residual_mode: str = "gate_plus_delta_v1",
+    noise_hidden_residual_scale: float = 1.0,
 ) -> NoResidualSourceFilterVocoderScaffold:
     hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
     harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
@@ -979,6 +1064,13 @@ def build_nores_vocoder_scaffold_from_state_dict(
         ),
         residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
         residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+        use_noise_hidden_residual_adapter=(
+            infer_noise_hidden_residual_adapter_from_state_dict(state_dict)
+            if use_noise_hidden_residual_adapter is None
+            else bool(use_noise_hidden_residual_adapter)
+        ),
+        noise_hidden_residual_mode=str(noise_hidden_residual_mode),
+        noise_hidden_residual_scale=float(noise_hidden_residual_scale),
     )
 
 
@@ -1028,6 +1120,25 @@ def normalize_residual_shape_branch_condition_mode(mode: str) -> str:
             "Unsupported residual_shape_branch_condition_mode for no-residual vocoder scaffold: "
             f"{mode!r}"
         )
+    return resolved
+
+
+def normalize_noise_hidden_residual_mode(mode: str) -> str:
+    resolved = str(mode).strip().lower()
+    if resolved not in SUPPORTED_NOISE_HIDDEN_RESIDUAL_MODES:
+        raise ValueError(
+            "Unsupported noise_hidden_residual_mode for no-residual vocoder scaffold: "
+            f"{mode!r}"
+        )
+    return resolved
+
+
+def normalize_noise_hidden_residual_scale(scale: float) -> float:
+    resolved = float(scale)
+    if not math.isfinite(resolved):
+        raise ValueError("noise_hidden_residual_scale must be finite.")
+    if resolved < 0.0:
+        raise ValueError("noise_hidden_residual_scale must be >= 0.0.")
     return resolved
 
 

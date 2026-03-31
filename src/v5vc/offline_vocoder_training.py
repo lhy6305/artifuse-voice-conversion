@@ -82,6 +82,79 @@ SUPPORTED_STAGE5_SPECTRAL_TARGET_MODES = {
     "gate_masked_halfsplit_v1",
     "f0_harmonicity_split_v1",
 }
+
+
+def apply_nores_vocoder_training_freeze(
+    model: torch.nn.Module,
+    trainable_parameter_prefixes: list[str] | None,
+) -> tuple[list[torch.nn.Parameter], dict[str, object]]:
+    normalized_prefixes = normalize_nores_vocoder_trainable_prefixes(trainable_parameter_prefixes)
+    if not normalized_prefixes:
+        trainable_parameters = [parameter for parameter in model.parameters() if parameter.requires_grad]
+        return trainable_parameters, {
+            "enabled": False,
+            "mode": "all_trainable",
+            "trainable_parameter_prefixes": [],
+            "trainable_parameter_count": len(trainable_parameters),
+            "frozen_parameter_count": 0,
+            "trainable_parameter_names": [name for name, _ in model.named_parameters()],
+            "frozen_parameter_names": [],
+        }
+
+    trainable_parameters: list[torch.nn.Parameter] = []
+    trainable_parameter_names: list[str] = []
+    frozen_parameter_names: list[str] = []
+    for name, parameter in model.named_parameters():
+        is_trainable = any(name == prefix or name.startswith(f"{prefix}.") for prefix in normalized_prefixes)
+        parameter.requires_grad_(is_trainable)
+        if is_trainable:
+            trainable_parameters.append(parameter)
+            trainable_parameter_names.append(name)
+        else:
+            frozen_parameter_names.append(name)
+    if not trainable_parameters:
+        raise ValueError("trainable_parameter_prefixes matched no Stage5 parameters.")
+    return trainable_parameters, {
+        "enabled": True,
+        "mode": "prefix_allowlist_v1",
+        "trainable_parameter_prefixes": normalized_prefixes,
+        "trainable_parameter_count": len(trainable_parameter_names),
+        "frozen_parameter_count": len(frozen_parameter_names),
+        "trainable_parameter_names": trainable_parameter_names,
+        "frozen_parameter_names": frozen_parameter_names,
+    }
+
+
+def normalize_nores_vocoder_trainable_prefixes(trainable_parameter_prefixes: list[str] | None) -> list[str]:
+    if not isinstance(trainable_parameter_prefixes, list):
+        return []
+    normalized: list[str] = []
+    for item in trainable_parameter_prefixes:
+        if not isinstance(item, str):
+            continue
+        prefix = item.strip()
+        if prefix:
+            normalized.append(prefix)
+    return normalized
+
+
+def load_nores_vocoder_init_state(
+    model: torch.nn.Module,
+    state_dict: dict[str, torch.Tensor],
+    *,
+    allow_partial: bool,
+) -> dict[str, object]:
+    incompatible = model.load_state_dict(state_dict, strict=not allow_partial)
+    missing_keys = list(getattr(incompatible, "missing_keys", []))
+    unexpected_keys = list(getattr(incompatible, "unexpected_keys", []))
+    return {
+        "enabled": True,
+        "allow_partial": bool(allow_partial),
+        "missing_key_count": len(missing_keys),
+        "unexpected_key_count": len(unexpected_keys),
+        "missing_keys": missing_keys,
+        "unexpected_keys": unexpected_keys,
+    }
 STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES = [
     "clean_text_available",
     "nonverbal_only",
@@ -504,6 +577,9 @@ def run_offline_mvp_nores_vocoder_training_step(
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_noise_hidden_residual_adapter: bool = False,
+    noise_hidden_residual_mode: str = "gate_plus_delta_v1",
+    noise_hidden_residual_scale: float = 1.0,
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
@@ -687,6 +763,9 @@ def run_offline_mvp_nores_vocoder_training_step(
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
             "residual_shape_branch_condition_scale": float(model.residual_shape_branch_condition_scale),
             "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+            "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
+            "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
+            "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
         },
         "reproducibility": reproducibility,
         "loss_weights": {
@@ -848,6 +927,9 @@ def run_offline_mvp_nores_vocoder_training_loop(
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_noise_hidden_residual_adapter: bool = False,
+    noise_hidden_residual_mode: str = "gate_plus_delta_v1",
+    noise_hidden_residual_scale: float = 1.0,
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
@@ -1019,7 +1101,7 @@ def run_offline_mvp_nores_vocoder_training_loop(
         )
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
-        grad_norm = float(clip_grad_norm_(model.parameters(), float(max_grad_norm)).item())
+        grad_norm = float(clip_grad_norm_(trainable_parameters, float(max_grad_norm)).item())
         optimizer.step()
 
         step_ended_at = datetime.now()
@@ -1138,7 +1220,13 @@ def run_offline_mvp_nores_vocoder_training_loop(
                             model.residual_shape_branch_condition_scale
                         ),
                         "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+                        "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
+                        "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
+                        "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
                     },
+                    "training_freeze": training_freeze_summary,
+                    "init_checkpoint_load": init_checkpoint_load_summary,
+                    "optimizer_resume": optimizer_resume_summary,
                 },
                 checkpoint_path,
             )
@@ -1618,6 +1706,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_noise_hidden_residual_adapter: bool = False,
+    noise_hidden_residual_mode: str = "gate_plus_delta_v1",
+    noise_hidden_residual_scale: float = 1.0,
     periodic_waveform_frame_delta_weight: float = 0.0,
     periodic_waveform_frame_adjacent_cosine_weight: float = 0.0,
     periodic_waveform_frame_rms_floor_weight: float = 0.0,
@@ -1646,6 +1737,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
     semantic_supervision_enabled: bool = False,
+    trainable_parameter_prefixes: list[str] | None = None,
+    allow_partial_init_checkpoint_load: bool = False,
+    resume_optimizer_from_init_checkpoint: bool = True,
 ) -> None:
     dataset_index_path = dataset_index_path.resolve()
     output_dir = output_dir.resolve()
@@ -1707,7 +1801,18 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
             residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
             residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+            use_noise_hidden_residual_adapter=bool(use_noise_hidden_residual_adapter),
+            noise_hidden_residual_mode=str(noise_hidden_residual_mode),
+            noise_hidden_residual_scale=float(noise_hidden_residual_scale),
         ).to(resolved_device)
+        init_checkpoint_load_summary = {
+            "enabled": False,
+            "allow_partial": False,
+            "missing_key_count": 0,
+            "unexpected_key_count": 0,
+            "missing_keys": [],
+            "unexpected_keys": [],
+        }
     else:
         init_checkpoint_payload = torch.load(resolved_init_checkpoint_path, map_location="cpu", weights_only=False)
         init_state_dict = dict(init_checkpoint_payload["model_state_dict"])
@@ -1727,20 +1832,57 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             residual_shape_branch_condition_mode=str(
                 init_model_config.get("residual_shape_branch_condition_mode", "raw_additive_v1")
             ),
+            use_noise_hidden_residual_adapter=(
+                bool(init_model_config.get("use_noise_hidden_residual_adapter", False))
+                or bool(use_noise_hidden_residual_adapter)
+            ),
+            noise_hidden_residual_mode=str(
+                noise_hidden_residual_mode
+                if bool(use_noise_hidden_residual_adapter)
+                else init_model_config.get("noise_hidden_residual_mode", "gate_plus_delta_v1")
+            ),
+            noise_hidden_residual_scale=float(
+                noise_hidden_residual_scale
+                if bool(use_noise_hidden_residual_adapter)
+                else init_model_config.get("noise_hidden_residual_scale", 1.0)
+            ),
         ).to(resolved_device)
-        model.load_state_dict(init_state_dict)
-    optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
+        init_checkpoint_load_summary = load_nores_vocoder_init_state(
+            model,
+            init_state_dict,
+            allow_partial=bool(allow_partial_init_checkpoint_load),
+        )
+    trainable_parameters, training_freeze_summary = apply_nores_vocoder_training_freeze(
+        model,
+        trainable_parameter_prefixes,
+    )
+    optimizer = torch.optim.Adam(trainable_parameters, lr=float(learning_rate))
+    optimizer_resume_summary = {
+        "enabled": bool(resolved_init_checkpoint_path is not None and resume_optimizer_from_init_checkpoint),
+        "loaded": False,
+        "skipped_reason": None,
+    }
     if resolved_init_checkpoint_path is not None:
         init_checkpoint_payload = torch.load(resolved_init_checkpoint_path, map_location="cpu", weights_only=False)
         optimizer_state_dict = init_checkpoint_payload.get("optimizer_state_dict")
-        if isinstance(optimizer_state_dict, dict):
-            optimizer.load_state_dict(optimizer_state_dict)
-            for state in optimizer.state.values():
-                if not isinstance(state, dict):
-                    continue
-                for key, value in list(state.items()):
-                    if isinstance(value, torch.Tensor):
-                        state[key] = value.to(resolved_device)
+        if bool(resume_optimizer_from_init_checkpoint) and isinstance(optimizer_state_dict, dict):
+            if bool(allow_partial_init_checkpoint_load):
+                optimizer_resume_summary["skipped_reason"] = "partial_init_checkpoint_load_enabled"
+            elif bool(training_freeze_summary.get("enabled", False)):
+                optimizer_resume_summary["skipped_reason"] = "trainable_parameter_prefixes_enabled"
+            else:
+                optimizer.load_state_dict(optimizer_state_dict)
+                for state in optimizer.state.values():
+                    if not isinstance(state, dict):
+                        continue
+                    for key, value in list(state.items()):
+                        if isinstance(value, torch.Tensor):
+                            state[key] = value.to(resolved_device)
+                optimizer_resume_summary["loaded"] = True
+        elif not bool(resume_optimizer_from_init_checkpoint):
+            optimizer_resume_summary["skipped_reason"] = "disabled_by_flag"
+        elif not isinstance(optimizer_state_dict, dict):
+            optimizer_resume_summary["skipped_reason"] = "missing_optimizer_state_dict"
         for param_group in optimizer.param_groups:
             param_group["lr"] = float(learning_rate)
 
@@ -1893,7 +2035,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         total_loss = accumulated_loss / float(len(selected_entries))
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
-        grad_norm = float(clip_grad_norm_(model.parameters(), float(max_grad_norm)).item())
+        grad_norm = float(clip_grad_norm_(trainable_parameters, float(max_grad_norm)).item())
         optimizer.step()
 
         step_ended_at = datetime.now()
@@ -2063,6 +2205,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                             model.residual_shape_branch_condition_scale
                         ),
                         "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+                        "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
+                        "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
+                        "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
                     },
                 },
                 checkpoint_path,
@@ -2106,6 +2251,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
             "residual_shape_branch_condition_scale": float(model.residual_shape_branch_condition_scale),
             "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+            "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
+            "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
+            "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
         },
         "training": {
             "num_steps": effective_num_steps,
@@ -2199,6 +2347,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
             },
+            "training_freeze": training_freeze_summary,
+            "init_checkpoint_load": init_checkpoint_load_summary,
+            "optimizer_resume": optimizer_resume_summary,
             "semantic_supervision": semantic_supervision,
         },
         "step_history": step_history,

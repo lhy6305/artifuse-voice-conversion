@@ -52,7 +52,7 @@
   - the route is still not open, but this is the first current fixed-input Stage5 family that materially escapes the old uniform auto-reject basin
   - a focused human-review bundle is now prepared for the resulting `5` review-required records across `tv8` and `se8`
   - the human review result is now also in: those `5` review-required outputs are still all buzz and are not near-speech
-  - the new spectrogram bundle plus simple UV/V contrast readout supports the human conclusion that the decoded route still lacks meaningful voiced/unvoiced separation
+  - the new spectrogram bundle plus simple vuv contrast readout supports the human conclusion that the decoded route still lacks meaningful voiced/unvoiced separation
 - Stage3 F0 representation is confirmed structurally blocked: coarse_log_f0 collapses to near-constant output in the current explicit_named_control_family_v1 architecture regardless of loss weight tuning. A structural decision is required before F0 can become a genuine handoff control.
 - External reference review now supports a concrete recovery route:
   - do not insist on waveform-only implicit F0 discovery
@@ -289,9 +289,9 @@
 - Important experiment and asset changes must land in traceable summary artifacts such as final summaries and machine-readable JSON.
 
 ## Current Recommended Next Steps
-1. For the current deterministic Stage3 winner, keep Stage3 fixed and target the Stage5 consumer-side `decoder_hidden -> waveform_decoder_base_logits` path rather than reopening Stage3 continuation.
+1. For the current deterministic Stage3 winner, keep Stage3 fixed and target the Stage5 consumer-side path after `waveform_frames`, because the newest explicit `noise_hidden -> residual` result has already shifted the active sink downstream to frame projection or decode.
 2. Keep handoff candidates behind cheap screen and readiness gate before opening a new Stage5 adapter route.
-3. Keep Stage3 packet readiness and Stage5 decoded confirmation as separate decisions; the current winner is packet-confirmed but the existing Stage5 no-res decoded route still auto-rejects the widened confirmation slices and the current localization now points to the pre-gate waveform-frames path plus the base-logits projection.
+3. Keep Stage3 packet readiness and Stage5 decoded confirmation as separate decisions; the current winner is packet-confirmed but the existing Stage5 no-res decoded route still fails decoded confirmation, and the current localization now points to frame projection or decode-side loss after `waveform_frames` rather than back to Stage3.
 4. Continue generation-side completion around `acoustic_directional_targetstate_bridge_v1`.
 5. Keep the current `wfta003` corrected-manifold line active, but only for a clearly different localization-oriented probe rather than more blind same-family weight shrinking.
 6. Finish frame bridge and alignment contract work before any paired Stage3 training decision.
@@ -338,7 +338,18 @@
    - completed fixed-input residual-shape screen: `fusionbranchmeancontrast_residualshape_fullsplit24` changes the active failure basin on the current fixed-input Stage5 route and reaches `tv8 = 6/8 auto_reject`, `se8 = 6/8 auto_reject`, while `scale050` improves the current `tv8` screen further to `5/8 auto_reject`
    - immediate next action for this line: do not continue Stage3 optimization and do not keep trying hidden-side branch-conditioned decoder adapters; continue on the output-side residual-shape family, with `fusionbranchmeancontrast_residualshape_scale050` as the current best fixed-input Stage5 candidate
    - completed practical validation step: the prepared `5`-record human-review bundle for `fusionbranchmeancontrast_residualshape_scale050` was listened to, and all `5` remain qualitatively failed buzz outputs
-   - immediate next action for this line: stop using generic widened screen progress as the main story and move to Stage5 diagnosis that directly targets voiced/unvoiced separation plus source-filter or comb-resonance geometry on the decoded waveform path
+   - completed reusable source-filter review formalization: `analyze-stage5-nores-source-filter-review` now reproduces the Stage5 human-stop direction on the same `5`-record review bundle and localizes the current fixed-input residual-shape route to `vuv_separation_collapsed`
+   - completed review-slice vuv-path localization: `analyze-stage5-nores-vuv-path-review` now maps the same `5`-record review slice back into the active fused_single waveform path and shows `2/5` records already missing vuv contrast at `waveform_decoder_base_logits`, while the remaining `3/5` keep only tiny positive base-logits gaps that all disappear by `waveform_frames`
+   - completed residual and gate sidecar diagnosis on the same review slice: `waveform_residual_shape_delta` is not unvoiced-focused on `5/5`, and `noise_gate_not_dominant_on_unvoiced_frames` also appears on `5/5`
+   - completed review-slice vuv-retention counterfactual probe: generic centered-logit unvoiced gain makes `waveform_frames` vuv separation worse, while `residual_unvoiced_gain300` flips all `5/5` record-level `waveform_frames` vuv high-band gaps positive and improves the aggregate mean from `-0.003187` to `0.003254`
+   - completed bounded no-go check on the same counterfactual probe: even the best local variant keeps the machine status at `review_required 5/5`, so this is leverage evidence, not a training-free route opening
+   - completed runtime-gate no-go decomposition: `analyze-stage5-nores-vuv-runtime-residual-probe` shows current `noise_gate` and `noise > periodic` rules do not recover any of the oracle unvoiced-residual leverage, with `noise_dominance_fraction = 0.0` on all `5/5` reviewed records
+   - completed upstream carrier decomposition: `analyze-stage5-nores-vuv-noise-hidden-residual-probe` shows `noise_hidden_rms_soft_residual_gain500` reaches aggregate waveform-frames `vuv` high-band gap `0.003365`, slightly above the oracle target-side positive control `0.003254`
+   - completed noise-hidden residual-structure probe: `analyze-stage5-nores-vuv-noise-hidden-residual-structure-probe` shows the best simple residual-adapter feature reroute only improves waveform-frames aggregate `vuv` high-band gap from `-0.003187` to `-0.002912`, far behind both the `noise_hidden` scaling comparator `0.003365` and the oracle target-side positive control `0.003254`
+   - updated structural conclusion after `528`: the active upstream carrier is still `noise_hidden`, but the current residual-shape adapter does not unlock that carrier through simple feature-slot rerouting and therefore needs a new explicit projection or injection path
+   - completed explicit `noise_hidden -> residual` micro-fit after `529`: the new `delta_direct_v1` branch rescues aggregate waveform-frames `vuv` high-band gap from `-0.003187` to `0.002642`, while `gate_bias_only_v1` and `gate_plus_delta_v1` remain effectively flat
+   - updated downstream conclusion after `529`: the active Stage5 sink is no longer mainly `waveform_decoder_base_logits -> waveform_frames`; after the new direct delta path recovers frame-space separation, the loss now localizes to `decoded_waveform_vuv_separation_lost_after_frame_projection`
+   - immediate next action for this line: stop gate-side tweaking, stop old residual-adapter input shuffling, keep the explicit `noise_hidden -> residual` direct-delta path as the validated local branch, and target the downstream `waveform_frames -> decoded waveform` projection or decode path
    - previous stable packet-facing anchor before redesign: `ss_detpitch_aperbranch_energy_warm4.step2`
    - previous raw deterministic `ENERGY` frontier before redesign: `ss_detpitch_aperbranch_energy_warm4.step3`
    - previous blocker-facing micro-frontier before redesign: `ss_detpitch_aperbranch_energyonly_s2_warm4.step1`
@@ -406,3 +417,10 @@
 - `docs/520_stage5_fixed_input_fusion_residualshape_breakthrough_and_scale_screen_report.md`
 - `docs/521_stage5_fusion_residualshape_scale050_human_review_bundle_report.md`
 - `docs/522_stage5_fusion_residualshape_scale050_spectrogram_review_and_human_stop_report.md`
+- `docs/523_stage5_source_filter_review_cli_formalization_and_vuv_collapse_confirmation_report.md`
+- `docs/524_stage5_review_slice_vuv_path_localization_probe_report.md`
+- `docs/525_stage5_review_slice_vuv_retention_counterfactual_probe_report.md`
+- `docs/526_stage5_review_slice_runtime_gate_vs_oracle_unvoiced_residual_probe_report.md`
+- `docs/527_stage5_review_slice_noise_hidden_unvoiced_residual_probe_report.md`
+- `docs/528_stage5_review_slice_noise_hidden_residual_structure_probe_report.md`
+- `docs/529_stage5_explicit_noise_hidden_residual_microfit_and_downstream_projection_blocker_report.md`
