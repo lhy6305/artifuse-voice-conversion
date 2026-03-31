@@ -577,6 +577,8 @@ def run_offline_mvp_nores_vocoder_training_step(
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_waveform_decoder_input_adapter: bool = False,
+    waveform_decoder_input_adapter_scale: float = 1.0,
     use_noise_hidden_residual_adapter: bool = False,
     noise_hidden_residual_mode: str = "gate_plus_delta_v1",
     noise_hidden_residual_scale: float = 1.0,
@@ -655,6 +657,8 @@ def run_offline_mvp_nores_vocoder_training_step(
         use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
         residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
         residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+        use_waveform_decoder_input_adapter=bool(use_waveform_decoder_input_adapter),
+        waveform_decoder_input_adapter_scale=float(waveform_decoder_input_adapter_scale),
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
     model.train()
@@ -763,6 +767,8 @@ def run_offline_mvp_nores_vocoder_training_step(
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
             "residual_shape_branch_condition_scale": float(model.residual_shape_branch_condition_scale),
             "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+            "use_waveform_decoder_input_adapter": bool(model.use_waveform_decoder_input_adapter),
+            "waveform_decoder_input_adapter_scale": float(model.waveform_decoder_input_adapter_scale),
             "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
             "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
             "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
@@ -927,6 +933,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_waveform_decoder_input_adapter: bool = False,
+    waveform_decoder_input_adapter_scale: float = 1.0,
     use_noise_hidden_residual_adapter: bool = False,
     noise_hidden_residual_mode: str = "gate_plus_delta_v1",
     noise_hidden_residual_scale: float = 1.0,
@@ -1015,6 +1023,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
         use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
         residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
         residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+        use_waveform_decoder_input_adapter=bool(use_waveform_decoder_input_adapter),
+        waveform_decoder_input_adapter_scale=float(waveform_decoder_input_adapter_scale),
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
 
@@ -1220,6 +1230,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
                             model.residual_shape_branch_condition_scale
                         ),
                         "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+                        "use_waveform_decoder_input_adapter": bool(model.use_waveform_decoder_input_adapter),
+                        "waveform_decoder_input_adapter_scale": float(model.waveform_decoder_input_adapter_scale),
                         "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
                         "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
                         "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
@@ -1265,6 +1277,8 @@ def run_offline_mvp_nores_vocoder_training_loop(
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
             "residual_shape_branch_condition_scale": float(model.residual_shape_branch_condition_scale),
             "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+            "use_waveform_decoder_input_adapter": bool(model.use_waveform_decoder_input_adapter),
+            "waveform_decoder_input_adapter_scale": float(model.waveform_decoder_input_adapter_scale),
         },
         "reproducibility": reproducibility,
         "training": {
@@ -1350,6 +1364,15 @@ def run_offline_mvp_nores_vocoder_training_loop(
                 "waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr": float(
                     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight
                 ),
+                "waveform_frames_cross_record_logspec_template": float(
+                    waveform_frames_cross_record_logspec_template_weight
+                ),
+                "waveform_decoder_base_logits_cross_record_logspec_template": float(
+                    waveform_decoder_base_logits_cross_record_logspec_template_weight
+                ),
+                "cross_record_logspec_focus_record_ids": [
+                    str(record_id) for record_id in (cross_record_logspec_focus_record_ids or [])
+                ],
                 "frame_rms_lagcorr_max_lag_frames": int(frame_rms_lagcorr_max_lag_frames),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
@@ -1706,6 +1729,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_waveform_decoder_input_adapter: bool = False,
+    waveform_decoder_input_adapter_scale: float = 1.0,
+    use_waveform_decoder_dynamic_basis: bool = False,
+    waveform_decoder_dynamic_basis_count: int = 4,
+    waveform_decoder_dynamic_basis_scale: float = 1.0,
     use_noise_hidden_residual_adapter: bool = False,
     noise_hidden_residual_mode: str = "gate_plus_delta_v1",
     noise_hidden_residual_scale: float = 1.0,
@@ -1735,6 +1763,9 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_frames_cross_record_logspec_template_weight: float = 0.0,
+    waveform_decoder_base_logits_cross_record_logspec_template_weight: float = 0.0,
+    cross_record_logspec_focus_record_ids: list[str] | None = None,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
     semantic_supervision_enabled: bool = False,
     trainable_parameter_prefixes: list[str] | None = None,
@@ -1801,6 +1832,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
             residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
             residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+            use_waveform_decoder_input_adapter=bool(use_waveform_decoder_input_adapter),
+            waveform_decoder_input_adapter_scale=float(waveform_decoder_input_adapter_scale),
+            use_waveform_decoder_dynamic_basis=bool(use_waveform_decoder_dynamic_basis),
+            waveform_decoder_dynamic_basis_count=int(waveform_decoder_dynamic_basis_count),
+            waveform_decoder_dynamic_basis_scale=float(waveform_decoder_dynamic_basis_scale),
             use_noise_hidden_residual_adapter=bool(use_noise_hidden_residual_adapter),
             noise_hidden_residual_mode=str(noise_hidden_residual_mode),
             noise_hidden_residual_scale=float(noise_hidden_residual_scale),
@@ -1831,6 +1867,38 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             ),
             residual_shape_branch_condition_mode=str(
                 init_model_config.get("residual_shape_branch_condition_mode", "raw_additive_v1")
+            ),
+            use_waveform_decoder_input_adapter=(
+                bool(init_model_config.get("use_waveform_decoder_input_adapter", False))
+                or bool(use_waveform_decoder_input_adapter)
+            ),
+            waveform_decoder_input_adapter_scale=float(
+                waveform_decoder_input_adapter_scale
+                if bool(use_waveform_decoder_input_adapter)
+                else init_model_config.get("waveform_decoder_input_adapter_scale", 1.0)
+            ),
+            use_waveform_decoder_dynamic_basis=(
+                True
+                if bool(use_waveform_decoder_dynamic_basis)
+                else (
+                    bool(init_model_config.get("use_waveform_decoder_dynamic_basis", False))
+                    if "use_waveform_decoder_dynamic_basis" in init_model_config
+                    else None
+                )
+            ),
+            waveform_decoder_dynamic_basis_count=(
+                int(waveform_decoder_dynamic_basis_count)
+                if bool(use_waveform_decoder_dynamic_basis)
+                else (
+                    int(init_model_config["waveform_decoder_dynamic_basis_count"])
+                    if "waveform_decoder_dynamic_basis_count" in init_model_config
+                    else None
+                )
+            ),
+            waveform_decoder_dynamic_basis_scale=float(
+                waveform_decoder_dynamic_basis_scale
+                if bool(use_waveform_decoder_dynamic_basis)
+                else init_model_config.get("waveform_decoder_dynamic_basis_scale", 1.0)
             ),
             use_noise_hidden_residual_adapter=(
                 bool(init_model_config.get("use_noise_hidden_residual_adapter", False))
@@ -1919,6 +1987,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         model.train()
         accumulated_loss = None
         package_metrics: list[dict[str, object]] = []
+        step_forward_cache: list[dict[str, object]] = []
         for entry in selected_entries:
             payload = load_training_package_payload(Path(entry["training_package_path"]))
             runtime = extract_training_runtime(payload)
@@ -2030,9 +2099,152 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     "semantic_weighting": semantic_weighting,
                 }
             )
+            step_forward_cache.append(
+                {
+                    "record_id": str(entry["record_id"]),
+                    "outputs": outputs,
+                    "aligned_waveform": batch["aligned_waveform"],
+                    "frame_length": int(runtime["frame_length"]),
+                    "hop_length": int(runtime["hop_length"]),
+                    "semantic_package_multiplier": float(semantic_weighting["semantic_package_multiplier"]),
+                }
+            )
         if accumulated_loss is None:
             raise RuntimeError("No packages were selected for the current training step.")
-        total_loss = accumulated_loss / float(len(selected_entries))
+        batch_objective_loss = accumulated_loss.new_zeros(())
+        batch_objective_weighted = accumulated_loss.new_zeros(())
+        if step_forward_cache:
+            mean_semantic_package_multiplier = sum(
+                float(item["semantic_package_multiplier"]) for item in step_forward_cache
+            ) / float(len(step_forward_cache))
+            aligned_waveforms = [item["aligned_waveform"] for item in step_forward_cache]
+            frame_lengths = [int(item["frame_length"]) for item in step_forward_cache]
+            hop_lengths = [int(item["hop_length"]) for item in step_forward_cache]
+            base_logits_cross_record_loss = accumulated_loss.new_zeros(())
+            base_logits_cross_record_metrics = {
+                "valid_record_count": 0.0,
+                "pair_count": 0.0,
+                "predicted_pairwise_cosine_mean": 0.0,
+                "target_pairwise_cosine_mean": 0.0,
+                "predicted_pairwise_cosine_max": 0.0,
+                "target_pairwise_cosine_max": 0.0,
+            }
+            waveform_frames_cross_record_loss = accumulated_loss.new_zeros(())
+            waveform_frames_cross_record_metrics = {
+                "valid_record_count": 0.0,
+                "pair_count": 0.0,
+                "predicted_pairwise_cosine_mean": 0.0,
+                "target_pairwise_cosine_mean": 0.0,
+                "predicted_pairwise_cosine_max": 0.0,
+                "target_pairwise_cosine_max": 0.0,
+            }
+            if float(waveform_decoder_base_logits_cross_record_logspec_template_weight) > 0.0:
+                predicted_frames_by_record = [
+                    item["outputs"].get("waveform_decoder_base_logits") for item in step_forward_cache
+                ]
+                if all(frames is not None for frames in predicted_frames_by_record):
+                    base_logits_cross_record_loss, base_logits_cross_record_metrics = (
+                        compute_cross_record_logspec_template_excess_loss_against_aligned_target(
+                            predicted_frames_by_record=predicted_frames_by_record,
+                            aligned_waveforms=aligned_waveforms,
+                            frame_lengths=frame_lengths,
+                            hop_lengths=hop_lengths,
+                            record_ids_by_record=[item["record_id"] for item in step_forward_cache],
+                            focus_record_ids=cross_record_logspec_focus_record_ids,
+                            zero_like=predicted_frames_by_record[0],
+                        )
+                    )
+                    batch_objective_loss = batch_objective_loss + (
+                        base_logits_cross_record_loss
+                        * float(waveform_decoder_base_logits_cross_record_logspec_template_weight)
+                    )
+            if float(waveform_frames_cross_record_logspec_template_weight) > 0.0:
+                predicted_frames_by_record = [item["outputs"]["waveform_frames"] for item in step_forward_cache]
+                waveform_frames_cross_record_loss, waveform_frames_cross_record_metrics = (
+                    compute_cross_record_logspec_template_excess_loss_against_aligned_target(
+                        predicted_frames_by_record=predicted_frames_by_record,
+                        aligned_waveforms=aligned_waveforms,
+                        frame_lengths=frame_lengths,
+                        hop_lengths=hop_lengths,
+                        record_ids_by_record=[item["record_id"] for item in step_forward_cache],
+                        focus_record_ids=cross_record_logspec_focus_record_ids,
+                        zero_like=predicted_frames_by_record[0],
+                    )
+                )
+                batch_objective_loss = batch_objective_loss + (
+                    waveform_frames_cross_record_loss
+                    * float(waveform_frames_cross_record_logspec_template_weight)
+                )
+            batch_objective_weighted = batch_objective_loss * float(mean_semantic_package_multiplier)
+            batch_objective_loss_value = float(batch_objective_loss.detach().cpu().item())
+            batch_objective_weighted_value = float(batch_objective_weighted.detach().cpu().item())
+            base_logits_cross_record_loss_value = float(base_logits_cross_record_loss.detach().cpu().item())
+            waveform_frames_cross_record_loss_value = float(waveform_frames_cross_record_loss.detach().cpu().item())
+            for package_metric in package_metrics:
+                loss_metrics = dict(package_metric["loss_metrics"])
+                loss_metrics["loss_total"] = round(float(loss_metrics["loss_total"]) + batch_objective_loss_value, 6)
+                loss_metrics["loss_total_semantic_weighted"] = round(
+                    float(loss_metrics["loss_total_semantic_weighted"]) + batch_objective_weighted_value,
+                    6,
+                )
+                loss_metrics["loss_waveform_decoder_base_logits_cross_record_logspec_template_excess"] = round(
+                    base_logits_cross_record_loss_value,
+                    6,
+                )
+                loss_metrics["loss_waveform_frames_cross_record_logspec_template_excess"] = round(
+                    waveform_frames_cross_record_loss_value,
+                    6,
+                )
+                loss_metrics["waveform_decoder_base_logits_cross_record_template_valid_record_count"] = round(
+                    float(base_logits_cross_record_metrics["valid_record_count"]),
+                    6,
+                )
+                loss_metrics["waveform_decoder_base_logits_cross_record_template_pair_count"] = round(
+                    float(base_logits_cross_record_metrics["pair_count"]),
+                    6,
+                )
+                loss_metrics["waveform_decoder_base_logits_cross_record_template_pairwise_cosine_mean"] = round(
+                    float(base_logits_cross_record_metrics["predicted_pairwise_cosine_mean"]),
+                    6,
+                )
+                loss_metrics["waveform_decoder_base_logits_target_cross_record_template_pairwise_cosine_mean"] = round(
+                    float(base_logits_cross_record_metrics["target_pairwise_cosine_mean"]),
+                    6,
+                )
+                loss_metrics["waveform_decoder_base_logits_cross_record_template_pairwise_cosine_max"] = round(
+                    float(base_logits_cross_record_metrics["predicted_pairwise_cosine_max"]),
+                    6,
+                )
+                loss_metrics["waveform_decoder_base_logits_target_cross_record_template_pairwise_cosine_max"] = round(
+                    float(base_logits_cross_record_metrics["target_pairwise_cosine_max"]),
+                    6,
+                )
+                loss_metrics["waveform_frames_cross_record_template_valid_record_count"] = round(
+                    float(waveform_frames_cross_record_metrics["valid_record_count"]),
+                    6,
+                )
+                loss_metrics["waveform_frames_cross_record_template_pair_count"] = round(
+                    float(waveform_frames_cross_record_metrics["pair_count"]),
+                    6,
+                )
+                loss_metrics["waveform_frames_cross_record_template_pairwise_cosine_mean"] = round(
+                    float(waveform_frames_cross_record_metrics["predicted_pairwise_cosine_mean"]),
+                    6,
+                )
+                loss_metrics["waveform_frames_target_cross_record_template_pairwise_cosine_mean"] = round(
+                    float(waveform_frames_cross_record_metrics["target_pairwise_cosine_mean"]),
+                    6,
+                )
+                loss_metrics["waveform_frames_cross_record_template_pairwise_cosine_max"] = round(
+                    float(waveform_frames_cross_record_metrics["predicted_pairwise_cosine_max"]),
+                    6,
+                )
+                loss_metrics["waveform_frames_target_cross_record_template_pairwise_cosine_max"] = round(
+                    float(waveform_frames_cross_record_metrics["target_pairwise_cosine_max"]),
+                    6,
+                )
+                package_metric["loss_metrics"] = loss_metrics
+        total_loss = accumulated_loss / float(len(selected_entries)) + batch_objective_weighted
         optimizer.zero_grad(set_to_none=True)
         total_loss.backward()
         grad_norm = float(clip_grad_norm_(trainable_parameters, float(max_grad_norm)).item())
@@ -2122,8 +2334,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     ),
                     waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
                     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
+                    waveform_frames_cross_record_logspec_template_weight=waveform_frames_cross_record_logspec_template_weight,
+                    waveform_decoder_base_logits_cross_record_logspec_template_weight=waveform_decoder_base_logits_cross_record_logspec_template_weight,
+                    cross_record_logspec_focus_record_ids=cross_record_logspec_focus_record_ids,
                     frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
-                semantic_supervision=semantic_supervision,
+                    semantic_supervision=semantic_supervision,
                     validation_source="validation_packages",
                 )
             else:
@@ -2175,7 +2390,16 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                     waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight=(
                         waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight
                     ),
+                    waveform_decoder_base_logits_frame_delta_weight=waveform_decoder_base_logits_frame_delta_weight,
+                    waveform_decoder_base_logits_noise_focus_frame_delta_weight=(
+                        waveform_decoder_base_logits_noise_focus_frame_delta_weight
+                    ),
+                    waveform_decoder_base_logits_frame_adjacent_cosine_weight=waveform_decoder_base_logits_frame_adjacent_cosine_weight,
+                    waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight=waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight,
                     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight=waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight,
+                    waveform_frames_cross_record_logspec_template_weight=waveform_frames_cross_record_logspec_template_weight,
+                    waveform_decoder_base_logits_cross_record_logspec_template_weight=waveform_decoder_base_logits_cross_record_logspec_template_weight,
+                    cross_record_logspec_focus_record_ids=cross_record_logspec_focus_record_ids,
                     frame_rms_lagcorr_max_lag_frames=frame_rms_lagcorr_max_lag_frames,
                     semantic_supervision=semantic_supervision,
                     validation_source="train_packages_reused",
@@ -2205,6 +2429,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                             model.residual_shape_branch_condition_scale
                         ),
                         "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+                        "use_waveform_decoder_input_adapter": bool(model.use_waveform_decoder_input_adapter),
+                        "waveform_decoder_input_adapter_scale": float(model.waveform_decoder_input_adapter_scale),
+                        "use_waveform_decoder_dynamic_basis": bool(model.use_waveform_decoder_dynamic_basis),
+                        "waveform_decoder_dynamic_basis_count": int(model.waveform_decoder_dynamic_basis_count),
+                        "waveform_decoder_dynamic_basis_scale": float(model.waveform_decoder_dynamic_basis_scale),
                         "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
                         "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
                         "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
@@ -2251,6 +2480,11 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "use_residual_shape_branch_condition_adapter": bool(model.use_residual_shape_branch_condition_adapter),
             "residual_shape_branch_condition_scale": float(model.residual_shape_branch_condition_scale),
             "residual_shape_branch_condition_mode": str(model.residual_shape_branch_condition_mode),
+            "use_waveform_decoder_input_adapter": bool(model.use_waveform_decoder_input_adapter),
+            "waveform_decoder_input_adapter_scale": float(model.waveform_decoder_input_adapter_scale),
+            "use_waveform_decoder_dynamic_basis": bool(model.use_waveform_decoder_dynamic_basis),
+            "waveform_decoder_dynamic_basis_count": int(model.waveform_decoder_dynamic_basis_count),
+            "waveform_decoder_dynamic_basis_scale": float(model.waveform_decoder_dynamic_basis_scale),
             "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
             "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
             "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
@@ -2343,6 +2577,15 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 "waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr": float(
                     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight
                 ),
+                "waveform_frames_cross_record_logspec_template": float(
+                    waveform_frames_cross_record_logspec_template_weight
+                ),
+                "waveform_decoder_base_logits_cross_record_logspec_template": float(
+                    waveform_decoder_base_logits_cross_record_logspec_template_weight
+                ),
+                "cross_record_logspec_focus_record_ids": [
+                    str(record_id) for record_id in (cross_record_logspec_focus_record_ids or [])
+                ],
                 "frame_rms_lagcorr_max_lag_frames": int(frame_rms_lagcorr_max_lag_frames),
                 "use_predicted_activity_gate": bool(use_predicted_activity_gate),
                 "reconstruction_frame_gain_apply_mode": resolved_reconstruction_frame_gain_apply_mode,
@@ -4930,6 +5173,147 @@ def compute_frame_structure_losses_against_aligned_target(
     return active_template_loss, frame_delta_loss, adjacent_cosine_loss, zero_target_flux_jitter_loss
 
 
+def build_active_frame_logspec_template(
+    *,
+    predicted_frames: torch.Tensor,
+    aligned_waveform: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
+) -> tuple[torch.Tensor | None, torch.Tensor | None]:
+    aligned_analysis_frames = frame_waveform_sequence(
+        waveform=aligned_waveform,
+        frame_length=int(frame_length),
+        hop_length=int(hop_length),
+    )
+    common_frame_count = min(int(predicted_frames.shape[0]), int(aligned_analysis_frames.shape[0]))
+    if common_frame_count <= 0:
+        return None, None
+    resolved_predicted_frames = predicted_frames[:common_frame_count]
+    resolved_aligned_frames = aligned_analysis_frames[:common_frame_count]
+    aligned_frame_rms = compute_centered_frame_rms(resolved_aligned_frames)
+    active_mask = aligned_frame_rms >= float(active_frame_rms_threshold)
+    if not bool(active_mask.any()):
+        active_mask = torch.ones_like(aligned_frame_rms, dtype=torch.bool)
+    predicted_logspec = compute_frame_logspec(normalize_frames_unit_rms(resolved_predicted_frames[active_mask]))
+    aligned_logspec = compute_frame_logspec(normalize_frames_unit_rms(resolved_aligned_frames[active_mask]))
+    if int(predicted_logspec.shape[0]) <= 0 or int(aligned_logspec.shape[0]) <= 0:
+        return None, None
+    predicted_template = predicted_logspec.mean(dim=0)
+    aligned_template = aligned_logspec.mean(dim=0)
+    predicted_template = predicted_template - predicted_template.mean()
+    aligned_template = aligned_template - aligned_template.mean()
+    return predicted_template, aligned_template
+
+
+def compute_cross_record_logspec_template_excess_loss_against_aligned_target(
+    *,
+    predicted_frames_by_record: list[torch.Tensor],
+    aligned_waveforms: list[torch.Tensor],
+    frame_lengths: list[int],
+    hop_lengths: list[int],
+    record_ids_by_record: list[str] | None = None,
+    focus_record_ids: list[str] | None = None,
+    active_frame_rms_threshold: float = DEFAULT_ACTIVE_TEMPLATE_FRAME_RMS_THRESHOLD,
+    zero_like: torch.Tensor | None = None,
+) -> tuple[torch.Tensor, dict[str, float]]:
+    zero_source = zero_like if zero_like is not None else predicted_frames_by_record[0]
+    if (
+        len(predicted_frames_by_record) <= 1
+        or len(aligned_waveforms) <= 1
+        or len(frame_lengths) <= 1
+        or len(hop_lengths) <= 1
+    ):
+        zero = zero_source.new_zeros(())
+        return zero, {
+            "valid_record_count": 0.0,
+            "pair_count": 0.0,
+            "predicted_pairwise_cosine_mean": 0.0,
+            "target_pairwise_cosine_mean": 0.0,
+            "predicted_pairwise_cosine_max": 0.0,
+            "target_pairwise_cosine_max": 0.0,
+        }
+    predicted_templates: list[torch.Tensor] = []
+    aligned_templates: list[torch.Tensor] = []
+    resolved_focus_record_ids = {
+        str(record_id).strip()
+        for record_id in (focus_record_ids or [])
+        if str(record_id).strip()
+    }
+    if record_ids_by_record is None:
+        resolved_record_ids_by_record = [str(index) for index in range(len(predicted_frames_by_record))]
+    else:
+        resolved_record_ids_by_record = [str(record_id) for record_id in record_ids_by_record]
+    for record_id, predicted_frames, aligned_waveform, frame_length, hop_length in zip(
+        resolved_record_ids_by_record,
+        predicted_frames_by_record,
+        aligned_waveforms,
+        frame_lengths,
+        hop_lengths,
+        strict=False,
+    ):
+        if resolved_focus_record_ids and str(record_id) not in resolved_focus_record_ids:
+            continue
+        predicted_template, aligned_template = build_active_frame_logspec_template(
+            predicted_frames=predicted_frames,
+            aligned_waveform=aligned_waveform,
+            frame_length=int(frame_length),
+            hop_length=int(hop_length),
+            active_frame_rms_threshold=float(active_frame_rms_threshold),
+        )
+        if predicted_template is None or aligned_template is None:
+            continue
+        if predicted_templates and int(predicted_templates[0].shape[-1]) != int(predicted_template.shape[-1]):
+            continue
+        predicted_templates.append(predicted_template)
+        aligned_templates.append(aligned_template)
+    if len(predicted_templates) <= 1 or len(aligned_templates) <= 1:
+        zero = zero_source.new_zeros(())
+        return zero, {
+            "valid_record_count": float(len(predicted_templates)),
+            "pair_count": 0.0,
+            "predicted_pairwise_cosine_mean": 0.0,
+            "target_pairwise_cosine_mean": 0.0,
+            "predicted_pairwise_cosine_max": 0.0,
+            "target_pairwise_cosine_max": 0.0,
+        }
+    predicted_stack = torch.stack(predicted_templates, dim=0).to(torch.float32)
+    aligned_stack = torch.stack(aligned_templates, dim=0).to(torch.float32)
+    predicted_stack = predicted_stack / predicted_stack.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
+    aligned_stack = aligned_stack / aligned_stack.norm(dim=1, keepdim=True).clamp_min(1.0e-6)
+    predicted_pairwise_cosine = predicted_stack @ predicted_stack.transpose(0, 1)
+    aligned_pairwise_cosine = aligned_stack @ aligned_stack.transpose(0, 1)
+    pair_mask = torch.triu(
+        torch.ones(
+            predicted_pairwise_cosine.shape,
+            device=predicted_pairwise_cosine.device,
+            dtype=torch.bool,
+        ),
+        diagonal=1,
+    )
+    predicted_pairs = predicted_pairwise_cosine[pair_mask]
+    aligned_pairs = aligned_pairwise_cosine[pair_mask]
+    if int(predicted_pairs.numel()) <= 0 or int(aligned_pairs.numel()) <= 0:
+        zero = zero_source.new_zeros(())
+        return zero, {
+            "valid_record_count": float(len(predicted_templates)),
+            "pair_count": 0.0,
+            "predicted_pairwise_cosine_mean": 0.0,
+            "target_pairwise_cosine_mean": 0.0,
+            "predicted_pairwise_cosine_max": 0.0,
+            "target_pairwise_cosine_max": 0.0,
+        }
+    excess = (predicted_pairs - aligned_pairs).clamp_min(0.0)
+    return excess.mean(), {
+        "valid_record_count": float(len(predicted_templates)),
+        "pair_count": float(int(predicted_pairs.numel())),
+        "predicted_pairwise_cosine_mean": float(predicted_pairs.mean().detach().cpu().item()),
+        "target_pairwise_cosine_mean": float(aligned_pairs.mean().detach().cpu().item()),
+        "predicted_pairwise_cosine_max": float(predicted_pairs.max().detach().cpu().item()),
+        "target_pairwise_cosine_max": float(aligned_pairs.max().detach().cpu().item()),
+    }
+
+
 def compute_fused_hidden_anti_collapse_losses(
     *,
     periodic_hidden: torch.Tensor,
@@ -6215,10 +6599,14 @@ def run_nores_vocoder_dataset_validation_pass(
     waveform_decoder_base_logits_residual_shape_delta_noise_focus_abs_zero_lag_corr_weight: float = 0.0,
     waveform_decoder_base_logits_aper_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
     waveform_residual_shape_delta_noise_energy_abs_zero_lag_corr_weight: float = 0.0,
+    waveform_frames_cross_record_logspec_template_weight: float = 0.0,
+    waveform_decoder_base_logits_cross_record_logspec_template_weight: float = 0.0,
+    cross_record_logspec_focus_record_ids: list[str] | None = None,
     frame_rms_lagcorr_max_lag_frames: int = DEFAULT_FRAME_RMS_LAGCORR_MAX_LAG_FRAMES,
     semantic_supervision: dict[str, object] | None = None,
 ) -> dict[str, object]:
     package_metrics: list[dict[str, object]] = []
+    validation_forward_cache: list[dict[str, object]] = []
     resolved_semantic_supervision = resolve_stage5_semantic_supervision_config(semantic_supervision)
     model.eval()
     with torch.no_grad():
@@ -6331,6 +6719,157 @@ def run_nores_vocoder_dataset_validation_pass(
                     "semantic_weighting": semantic_weighting,
                 }
             )
+            validation_forward_cache.append(
+                {
+                    "record_id": str(entry["record_id"]),
+                    "outputs": outputs,
+                    "aligned_waveform": batch["aligned_waveform"],
+                    "frame_length": int(runtime["frame_length"]),
+                    "hop_length": int(runtime["hop_length"]),
+                    "semantic_package_multiplier": float(semantic_weighting["semantic_package_multiplier"]),
+                }
+            )
+    if validation_forward_cache:
+        mean_semantic_package_multiplier = sum(
+            float(item["semantic_package_multiplier"]) for item in validation_forward_cache
+        ) / float(len(validation_forward_cache))
+        aligned_waveforms = [item["aligned_waveform"] for item in validation_forward_cache]
+        frame_lengths = [int(item["frame_length"]) for item in validation_forward_cache]
+        hop_lengths = [int(item["hop_length"]) for item in validation_forward_cache]
+        base_logits_cross_record_loss = aligned_waveforms[0].new_zeros(())
+        base_logits_cross_record_metrics = {
+            "valid_record_count": 0.0,
+            "pair_count": 0.0,
+            "predicted_pairwise_cosine_mean": 0.0,
+            "target_pairwise_cosine_mean": 0.0,
+            "predicted_pairwise_cosine_max": 0.0,
+            "target_pairwise_cosine_max": 0.0,
+        }
+        waveform_frames_cross_record_loss = aligned_waveforms[0].new_zeros(())
+        waveform_frames_cross_record_metrics = {
+            "valid_record_count": 0.0,
+            "pair_count": 0.0,
+            "predicted_pairwise_cosine_mean": 0.0,
+            "target_pairwise_cosine_mean": 0.0,
+            "predicted_pairwise_cosine_max": 0.0,
+            "target_pairwise_cosine_max": 0.0,
+        }
+        batch_objective_loss_value = 0.0
+        batch_objective_weighted_value = 0.0
+        if float(waveform_decoder_base_logits_cross_record_logspec_template_weight) > 0.0:
+            predicted_frames_by_record = [
+                item["outputs"].get("waveform_decoder_base_logits") for item in validation_forward_cache
+            ]
+            if all(frames is not None for frames in predicted_frames_by_record):
+                base_logits_cross_record_loss, base_logits_cross_record_metrics = (
+                    compute_cross_record_logspec_template_excess_loss_against_aligned_target(
+                        predicted_frames_by_record=predicted_frames_by_record,
+                        aligned_waveforms=aligned_waveforms,
+                        frame_lengths=frame_lengths,
+                        hop_lengths=hop_lengths,
+                        record_ids_by_record=[item["record_id"] for item in validation_forward_cache],
+                        focus_record_ids=cross_record_logspec_focus_record_ids,
+                        zero_like=predicted_frames_by_record[0],
+                    )
+                )
+                batch_objective_loss_value += float(
+                    (
+                        base_logits_cross_record_loss
+                        * float(waveform_decoder_base_logits_cross_record_logspec_template_weight)
+                    )
+                    .detach()
+                    .cpu()
+                    .item()
+                )
+        if float(waveform_frames_cross_record_logspec_template_weight) > 0.0:
+            predicted_frames_by_record = [item["outputs"]["waveform_frames"] for item in validation_forward_cache]
+            waveform_frames_cross_record_loss, waveform_frames_cross_record_metrics = (
+                compute_cross_record_logspec_template_excess_loss_against_aligned_target(
+                    predicted_frames_by_record=predicted_frames_by_record,
+                    aligned_waveforms=aligned_waveforms,
+                    frame_lengths=frame_lengths,
+                    hop_lengths=hop_lengths,
+                    record_ids_by_record=[item["record_id"] for item in validation_forward_cache],
+                    focus_record_ids=cross_record_logspec_focus_record_ids,
+                    zero_like=predicted_frames_by_record[0],
+                )
+            )
+            batch_objective_loss_value += float(
+                (
+                    waveform_frames_cross_record_loss
+                    * float(waveform_frames_cross_record_logspec_template_weight)
+                )
+                .detach()
+                .cpu()
+                .item()
+            )
+        batch_objective_weighted_value = batch_objective_loss_value * float(mean_semantic_package_multiplier)
+        base_logits_cross_record_loss_value = float(base_logits_cross_record_loss.detach().cpu().item())
+        waveform_frames_cross_record_loss_value = float(waveform_frames_cross_record_loss.detach().cpu().item())
+        for package_metric in package_metrics:
+            loss_metrics = dict(package_metric["loss_metrics"])
+            loss_metrics["loss_total"] = round(float(loss_metrics["loss_total"]) + batch_objective_loss_value, 6)
+            loss_metrics["loss_total_semantic_weighted"] = round(
+                float(loss_metrics["loss_total_semantic_weighted"]) + batch_objective_weighted_value,
+                6,
+            )
+            loss_metrics["loss_waveform_decoder_base_logits_cross_record_logspec_template_excess"] = round(
+                base_logits_cross_record_loss_value,
+                6,
+            )
+            loss_metrics["loss_waveform_frames_cross_record_logspec_template_excess"] = round(
+                waveform_frames_cross_record_loss_value,
+                6,
+            )
+            loss_metrics["waveform_decoder_base_logits_cross_record_template_valid_record_count"] = round(
+                float(base_logits_cross_record_metrics["valid_record_count"]),
+                6,
+            )
+            loss_metrics["waveform_decoder_base_logits_cross_record_template_pair_count"] = round(
+                float(base_logits_cross_record_metrics["pair_count"]),
+                6,
+            )
+            loss_metrics["waveform_decoder_base_logits_cross_record_template_pairwise_cosine_mean"] = round(
+                float(base_logits_cross_record_metrics["predicted_pairwise_cosine_mean"]),
+                6,
+            )
+            loss_metrics["waveform_decoder_base_logits_target_cross_record_template_pairwise_cosine_mean"] = round(
+                float(base_logits_cross_record_metrics["target_pairwise_cosine_mean"]),
+                6,
+            )
+            loss_metrics["waveform_decoder_base_logits_cross_record_template_pairwise_cosine_max"] = round(
+                float(base_logits_cross_record_metrics["predicted_pairwise_cosine_max"]),
+                6,
+            )
+            loss_metrics["waveform_decoder_base_logits_target_cross_record_template_pairwise_cosine_max"] = round(
+                float(base_logits_cross_record_metrics["target_pairwise_cosine_max"]),
+                6,
+            )
+            loss_metrics["waveform_frames_cross_record_template_valid_record_count"] = round(
+                float(waveform_frames_cross_record_metrics["valid_record_count"]),
+                6,
+            )
+            loss_metrics["waveform_frames_cross_record_template_pair_count"] = round(
+                float(waveform_frames_cross_record_metrics["pair_count"]),
+                6,
+            )
+            loss_metrics["waveform_frames_cross_record_template_pairwise_cosine_mean"] = round(
+                float(waveform_frames_cross_record_metrics["predicted_pairwise_cosine_mean"]),
+                6,
+            )
+            loss_metrics["waveform_frames_target_cross_record_template_pairwise_cosine_mean"] = round(
+                float(waveform_frames_cross_record_metrics["target_pairwise_cosine_mean"]),
+                6,
+            )
+            loss_metrics["waveform_frames_cross_record_template_pairwise_cosine_max"] = round(
+                float(waveform_frames_cross_record_metrics["predicted_pairwise_cosine_max"]),
+                6,
+            )
+            loss_metrics["waveform_frames_target_cross_record_template_pairwise_cosine_max"] = round(
+                float(waveform_frames_cross_record_metrics["target_pairwise_cosine_max"]),
+                6,
+            )
+            package_metric["loss_metrics"] = loss_metrics
     return {
         "step": int(step),
         "validation_source": str(validation_source),

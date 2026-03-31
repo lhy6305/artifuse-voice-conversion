@@ -5,9 +5,12 @@ from pathlib import Path
 import torch
 
 from v5vc.nores_vocoder_audio_export import (
+    DEFAULT_RECONSTRUCTION_CONTRACT_MODE,
     assess_stage5_decoded_buzz_reject,
     build_model_from_checkpoint,
     normalize_predicted_activity_gate_apply_mode,
+    normalize_reconstruction_contract_mode,
+    reconstruct_waveform_from_frames_with_contract,
     resolve_checkpoint_path_from_inputs,
     resolve_package_entries,
 )
@@ -15,7 +18,6 @@ from v5vc.offline_vocoder_training import (
     extract_training_batch,
     extract_training_runtime,
     load_training_package_payload,
-    reconstruct_waveform_from_frames,
 )
 from v5vc.stage5_speech_emergence_probe import (
     summarize_frame_sequence_metrics,
@@ -59,6 +61,7 @@ def analyze_stage5_nores_waveform_handoff(
     device: str,
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
+    reconstruction_contract_mode: str = DEFAULT_RECONSTRUCTION_CONTRACT_MODE,
     decoder_branch_mean_mix_alpha: float = 0.0,
 ) -> None:
     output_dir = output_dir.resolve()
@@ -74,6 +77,7 @@ def analyze_stage5_nores_waveform_handoff(
         if isinstance(selection_summary, dict)
         else str(selection_target)
     )
+    resolved_reconstruction_contract_mode = normalize_reconstruction_contract_mode(reconstruction_contract_mode)
     checkpoint_payload = torch.load(resolved_checkpoint_path, map_location="cpu", weights_only=False)
     dataset_index = json.loads(dataset_index_path.read_text(encoding="utf-8"))
     package_entries = resolve_package_entries(
@@ -141,10 +145,11 @@ def analyze_stage5_nores_waveform_handoff(
 
             route_rows = []
             for route in HANDOFF_DECODE_ROUTES:
-                route_waveform = reconstruct_waveform_from_frames(
+                route_waveform = reconstruct_waveform_from_frames_with_contract(
                     waveform_frames=waveform_frames,
                     frame_length=int(runtime["frame_length"]),
                     hop_length=int(runtime["hop_length"]),
+                    reconstruction_contract_mode=resolved_reconstruction_contract_mode,
                     frame_gains=predicted_activity if bool(route["use_predicted_activity_gate"]) else None,
                     frame_gain_floor=float(predicted_activity_gate_floor),
                     frame_gain_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
@@ -196,6 +201,7 @@ def analyze_stage5_nores_waveform_handoff(
             "device": str(resolved_device),
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
+            "reconstruction_contract_mode": resolved_reconstruction_contract_mode,
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
             "fusion_mode": str(getattr(model, "fusion_mode", "plain")),
             "waveform_decoder_mode": str(getattr(model, "waveform_decoder_mode", "unknown")),

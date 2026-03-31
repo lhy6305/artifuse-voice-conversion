@@ -1004,6 +1004,7 @@ def compute_waveform_structure_outputs_for_probe(
         raise RuntimeError("waveform_decoder is not initialized for fused_single structure probe.")
     branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
     decoder_hidden = fused_hidden
+    waveform_decoder_input_hidden = decoder_hidden
     branch_condition_gate = None
     if bool(getattr(model, "use_decoder_branch_condition_adapter", False)):
         decoder_branch_condition_adapter = getattr(model, "decoder_branch_condition_adapter", None)
@@ -1027,7 +1028,32 @@ def compute_waveform_structure_outputs_for_probe(
         branch_condition_gate = torch.sigmoid(decoder_branch_condition_gate(branch_condition_context))
         fused_condition = torch.tanh(decoder_fused_condition_proj(branch_condition_context))
         decoder_hidden = decoder_hidden + branch_condition_gate * fused_condition
-    waveform_decoder_base_logits = waveform_decoder(decoder_hidden)
+    if bool(getattr(model, "use_waveform_decoder_input_adapter", False)):
+        waveform_decoder_input_adapter = getattr(model, "waveform_decoder_input_adapter", None)
+        waveform_decoder_input_gate_head = getattr(model, "waveform_decoder_input_gate", None)
+        waveform_decoder_input_proj = getattr(model, "waveform_decoder_input_proj", None)
+        if (
+            waveform_decoder_input_adapter is None
+            or waveform_decoder_input_gate_head is None
+            or waveform_decoder_input_proj is None
+        ):
+            raise RuntimeError("Waveform decoder input adapter modules are not initialized for structure probe.")
+        waveform_decoder_input_context = waveform_decoder_input_adapter(decoder_hidden)
+        waveform_decoder_input_gate = torch.sigmoid(
+            waveform_decoder_input_gate_head(waveform_decoder_input_context)
+        )
+        waveform_decoder_input_delta = torch.tanh(
+            waveform_decoder_input_proj(waveform_decoder_input_context)
+        )
+        waveform_decoder_input_hidden = (
+            decoder_hidden
+            + float(getattr(model, "waveform_decoder_input_adapter_scale", 1.0))
+            * waveform_decoder_input_gate
+            * waveform_decoder_input_delta
+        )
+    waveform_decoder_base_logits, _ = model.compute_waveform_decoder_base_logits(
+        waveform_decoder_input_hidden
+    )
     waveform_frame_logits = waveform_decoder_base_logits
     residual_shape_delta = torch.zeros_like(waveform_decoder_base_logits)
     if bool(getattr(model, "use_residual_shape_branch_condition_adapter", False)):

@@ -40,6 +40,7 @@ SUPPORTED_NOISE_HIDDEN_RESIDUAL_MODES = {
     "delta_direct_v1",
     "gate_plus_delta_v1",
 }
+DEFAULT_WAVEFORM_DECODER_DYNAMIC_BASIS_COUNT = 4
 
 
 class NoResidualSourceFilterVocoderScaffold(nn.Module):
@@ -57,6 +58,11 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         use_residual_shape_branch_condition_adapter: bool = False,
         residual_shape_branch_condition_scale: float = 1.0,
         residual_shape_branch_condition_mode: str = "raw_additive_v1",
+        use_waveform_decoder_input_adapter: bool = False,
+        waveform_decoder_input_adapter_scale: float = 1.0,
+        use_waveform_decoder_dynamic_basis: bool = False,
+        waveform_decoder_dynamic_basis_count: int = DEFAULT_WAVEFORM_DECODER_DYNAMIC_BASIS_COUNT,
+        waveform_decoder_dynamic_basis_scale: float = 1.0,
         use_noise_hidden_residual_adapter: bool = False,
         noise_hidden_residual_mode: str = "gate_plus_delta_v1",
         noise_hidden_residual_scale: float = 1.0,
@@ -73,9 +79,24 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.residual_shape_branch_condition_mode = normalize_residual_shape_branch_condition_mode(
             residual_shape_branch_condition_mode
         )
+        self.use_waveform_decoder_input_adapter = bool(use_waveform_decoder_input_adapter)
+        self.waveform_decoder_input_adapter_scale = normalize_waveform_decoder_input_adapter_scale(
+            waveform_decoder_input_adapter_scale
+        )
+        self.use_waveform_decoder_dynamic_basis = bool(use_waveform_decoder_dynamic_basis)
+        self.waveform_decoder_dynamic_basis_count = normalize_waveform_decoder_dynamic_basis_count(
+            waveform_decoder_dynamic_basis_count
+        )
+        self.waveform_decoder_dynamic_basis_scale = normalize_waveform_decoder_dynamic_basis_scale(
+            waveform_decoder_dynamic_basis_scale
+        )
         self.use_noise_hidden_residual_adapter = bool(use_noise_hidden_residual_adapter)
         self.noise_hidden_residual_mode = normalize_noise_hidden_residual_mode(noise_hidden_residual_mode)
         self.noise_hidden_residual_scale = normalize_noise_hidden_residual_scale(noise_hidden_residual_scale)
+        if self.use_waveform_decoder_dynamic_basis and self.waveform_decoder_mode != "fused_single":
+            raise ValueError(
+                "waveform_decoder_dynamic_basis is only supported for fused_single waveform decoder mode."
+            )
         self.periodic_encoder = build_mlp(periodic_input_dim, hidden_dim, hidden_dim)
         self.noise_encoder = build_mlp(noise_input_dim, hidden_dim, hidden_dim)
         self.periodic_gate = nn.Linear(hidden_dim, 1)
@@ -149,6 +170,12 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.residual_shape_branch_condition_adapter = None
         self.residual_shape_branch_condition_gate = None
         self.residual_shape_branch_condition_proj = None
+        self.waveform_decoder_input_adapter = None
+        self.waveform_decoder_input_gate = None
+        self.waveform_decoder_input_proj = None
+        self.waveform_decoder_dynamic_adapter = None
+        self.waveform_decoder_dynamic_gate = None
+        self.waveform_decoder_dynamic_basis = None
         self.noise_hidden_residual_adapter = None
         self.noise_hidden_residual_gate_proj = None
         self.noise_hidden_residual_delta_proj = None
@@ -185,6 +212,19 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                 nn.init.constant_(self.residual_shape_branch_condition_gate.bias, -2.0)
                 nn.init.zeros_(self.residual_shape_branch_condition_proj.weight)
                 nn.init.zeros_(self.residual_shape_branch_condition_proj.bias)
+            if self.use_waveform_decoder_input_adapter:
+                self.waveform_decoder_input_adapter = nn.Sequential(
+                    nn.Linear(hidden_dim, hidden_dim),
+                    nn.GELU(),
+                    nn.LayerNorm(hidden_dim),
+                    nn.Linear(hidden_dim, hidden_dim),
+                )
+                self.waveform_decoder_input_gate = nn.Linear(hidden_dim, 1)
+                self.waveform_decoder_input_proj = nn.Linear(hidden_dim, hidden_dim)
+                nn.init.zeros_(self.waveform_decoder_input_gate.weight)
+                nn.init.constant_(self.waveform_decoder_input_gate.bias, -2.0)
+                nn.init.zeros_(self.waveform_decoder_input_proj.weight)
+                nn.init.zeros_(self.waveform_decoder_input_proj.bias)
             if self.use_noise_hidden_residual_adapter:
                 self.noise_hidden_residual_adapter = nn.Sequential(
                     nn.Linear(hidden_dim, hidden_dim),
@@ -205,6 +245,27 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                     nn.LayerNorm(hidden_dim),
                     nn.Linear(hidden_dim, int(self.frame_length)),
                 )
+                if self.use_waveform_decoder_dynamic_basis:
+                    self.waveform_decoder_dynamic_adapter = nn.Sequential(
+                        nn.Linear(hidden_dim, hidden_dim),
+                        nn.GELU(),
+                        nn.LayerNorm(hidden_dim),
+                    )
+                    self.waveform_decoder_dynamic_gate = nn.Linear(
+                        hidden_dim,
+                        int(self.waveform_decoder_dynamic_basis_count),
+                    )
+                    self.waveform_decoder_dynamic_basis = nn.ModuleList(
+                        [
+                            nn.Linear(hidden_dim, int(self.frame_length))
+                            for _ in range(int(self.waveform_decoder_dynamic_basis_count))
+                        ]
+                    )
+                    nn.init.zeros_(self.waveform_decoder_dynamic_gate.weight)
+                    nn.init.zeros_(self.waveform_decoder_dynamic_gate.bias)
+                    for layer in self.waveform_decoder_dynamic_basis:
+                        nn.init.zeros_(layer.weight)
+                        nn.init.zeros_(layer.bias)
             elif self.waveform_decoder_mode == "dual_branch_mix":
                 self.periodic_waveform_decoder = nn.Sequential(
                     nn.Linear(hidden_dim, hidden_dim),
@@ -432,6 +493,9 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         noise_condition = None
         residual_shape_branch_condition_gate = None
         residual_shape_branch_condition_delta = None
+        waveform_decoder_input_gate = None
+        waveform_decoder_input_delta = None
+        waveform_decoder_input_hidden = decoder_hidden
         noise_hidden_residual_gate = None
         noise_hidden_residual_delta = None
         if self.use_decoder_branch_condition_adapter:
@@ -481,6 +545,26 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             residual_shape_branch_condition_delta = torch.tanh(
                 self.residual_shape_branch_condition_proj(residual_shape_branch_condition_context)
             )
+        if self.use_waveform_decoder_input_adapter:
+            if (
+                self.waveform_decoder_input_adapter is None
+                or self.waveform_decoder_input_gate is None
+                or self.waveform_decoder_input_proj is None
+            ):
+                raise RuntimeError("Waveform decoder input adapter modules are not initialized.")
+            waveform_decoder_input_context = self.waveform_decoder_input_adapter(decoder_hidden)
+            waveform_decoder_input_gate = torch.sigmoid(
+                self.waveform_decoder_input_gate(waveform_decoder_input_context)
+            )
+            waveform_decoder_input_delta = torch.tanh(
+                self.waveform_decoder_input_proj(waveform_decoder_input_context)
+            )
+            waveform_decoder_input_hidden = (
+                decoder_hidden
+                + float(self.waveform_decoder_input_adapter_scale)
+                * waveform_decoder_input_gate
+                * waveform_decoder_input_delta
+            )
         if self.use_noise_hidden_residual_adapter:
             if (
                 self.noise_hidden_residual_adapter is None
@@ -518,6 +602,10 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         if residual_shape_branch_condition_gate is not None:
             outputs["residual_shape_branch_condition_gate"] = residual_shape_branch_condition_gate
             outputs["residual_shape_branch_condition_delta"] = residual_shape_branch_condition_delta
+        if waveform_decoder_input_gate is not None:
+            outputs["waveform_decoder_input_gate"] = waveform_decoder_input_gate
+            outputs["waveform_decoder_input_delta"] = waveform_decoder_input_delta
+            outputs["waveform_decoder_input_hidden"] = waveform_decoder_input_hidden
         if noise_hidden_residual_gate is not None:
             outputs["noise_hidden_residual_gate"] = noise_hidden_residual_gate
         if noise_hidden_residual_delta is not None:
@@ -525,9 +613,9 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         if self.frame_length is None:
             return outputs
         if self.waveform_decoder_mode == "fused_single":
-            if self.waveform_decoder is None:
-                raise RuntimeError("waveform_decoder is not initialized for fused_single mode.")
-            waveform_decoder_base_logits = self.waveform_decoder(decoder_hidden)
+            waveform_decoder_base_logits, waveform_decoder_dynamic_outputs = self.compute_waveform_decoder_base_logits(
+                waveform_decoder_input_hidden
+            )
             residual_shape_branch_condition_delta = resolve_residual_shape_branch_condition_delta(
                 delta=residual_shape_branch_condition_delta,
                 reference_frames=waveform_decoder_base_logits,
@@ -578,6 +666,7 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                             )
                 waveform_frame_logits = waveform_frame_logits + waveform_noise_hidden_residual_delta
             outputs["waveform_noise_hidden_residual_delta"] = waveform_noise_hidden_residual_delta
+            outputs.update(waveform_decoder_dynamic_outputs)
             outputs["waveform_decoder_base_logits"] = waveform_decoder_base_logits
             outputs["waveform_frame_logits"] = waveform_frame_logits
             outputs["waveform_frames"] = torch.tanh(waveform_frame_logits)
@@ -868,6 +957,41 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         outputs["waveform_frames"] = torch.tanh(waveform_frames)
         return outputs
 
+    def compute_waveform_decoder_base_logits(
+        self,
+        waveform_decoder_input_hidden: torch.Tensor,
+    ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+        if self.waveform_decoder is None:
+            raise RuntimeError("waveform_decoder is not initialized for fused_single mode.")
+        waveform_decoder_base_logits = self.waveform_decoder(waveform_decoder_input_hidden)
+        dynamic_outputs: dict[str, torch.Tensor] = {}
+        if not self.use_waveform_decoder_dynamic_basis:
+            return waveform_decoder_base_logits, dynamic_outputs
+        if (
+            self.waveform_decoder_dynamic_adapter is None
+            or self.waveform_decoder_dynamic_gate is None
+            or self.waveform_decoder_dynamic_basis is None
+        ):
+            raise RuntimeError("Dynamic waveform decoder basis modules are not initialized.")
+        dynamic_context = self.waveform_decoder_dynamic_adapter(waveform_decoder_input_hidden)
+        dynamic_gate_logits = self.waveform_decoder_dynamic_gate(dynamic_context)
+        dynamic_basis_weights = torch.softmax(dynamic_gate_logits, dim=-1)
+        dynamic_basis_frames = torch.stack(
+            [layer(waveform_decoder_input_hidden) for layer in self.waveform_decoder_dynamic_basis],
+            dim=-2,
+        )
+        dynamic_basis_delta = torch.sum(
+            dynamic_basis_weights.unsqueeze(-1) * torch.tanh(dynamic_basis_frames),
+            dim=-2,
+        )
+        waveform_decoder_base_logits = (
+            waveform_decoder_base_logits
+            + float(self.waveform_decoder_dynamic_basis_scale) * dynamic_basis_delta
+        )
+        dynamic_outputs["waveform_decoder_dynamic_basis_weights"] = dynamic_basis_weights
+        dynamic_outputs["waveform_decoder_dynamic_basis_delta"] = dynamic_basis_delta
+        return waveform_decoder_base_logits, dynamic_outputs
+
 
 def prepare_offline_mvp_nores_vocoder_scaffold(
     scaffold_path: Path,
@@ -1030,6 +1154,27 @@ def infer_residual_shape_branch_condition_adapter_from_state_dict(state_dict: di
     return "residual_shape_branch_condition_adapter.0.weight" in state_dict
 
 
+def infer_waveform_decoder_input_adapter_from_state_dict(state_dict: dict[str, torch.Tensor]) -> bool:
+    return "waveform_decoder_input_adapter.0.weight" in state_dict
+
+
+def infer_waveform_decoder_dynamic_basis_from_state_dict(
+    state_dict: dict[str, torch.Tensor],
+) -> tuple[bool, int]:
+    prefix = "waveform_decoder_dynamic_basis."
+    indices: set[int] = set()
+    for key in state_dict:
+        if not key.startswith(prefix):
+            continue
+        suffix = key[len(prefix) :]
+        index_text = suffix.split(".", 1)[0]
+        if index_text.isdigit():
+            indices.add(int(index_text))
+    if indices:
+        return True, max(indices) + 1
+    return False, 0
+
+
 def infer_noise_hidden_residual_adapter_from_state_dict(state_dict: dict[str, torch.Tensor]) -> bool:
     return "noise_hidden_residual_adapter.0.weight" in state_dict
 
@@ -1042,6 +1187,11 @@ def build_nores_vocoder_scaffold_from_state_dict(
     frame_length: int,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_waveform_decoder_input_adapter: bool | None = None,
+    waveform_decoder_input_adapter_scale: float = 1.0,
+    use_waveform_decoder_dynamic_basis: bool | None = None,
+    waveform_decoder_dynamic_basis_count: int | None = None,
+    waveform_decoder_dynamic_basis_scale: float = 1.0,
     use_noise_hidden_residual_adapter: bool | None = None,
     noise_hidden_residual_mode: str = "gate_plus_delta_v1",
     noise_hidden_residual_scale: float = 1.0,
@@ -1049,6 +1199,18 @@ def build_nores_vocoder_scaffold_from_state_dict(
     hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
     harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
     noise_bins = int(state_dict["noise_envelope.weight"].shape[0])
+    inferred_dynamic_basis_enabled, inferred_dynamic_basis_count = (
+        infer_waveform_decoder_dynamic_basis_from_state_dict(state_dict)
+    )
+    resolved_dynamic_basis_count = (
+        int(waveform_decoder_dynamic_basis_count)
+        if waveform_decoder_dynamic_basis_count is not None
+        else (
+            int(inferred_dynamic_basis_count)
+            if inferred_dynamic_basis_enabled and int(inferred_dynamic_basis_count) > 0
+            else int(DEFAULT_WAVEFORM_DECODER_DYNAMIC_BASIS_COUNT)
+        )
+    )
     return NoResidualSourceFilterVocoderScaffold(
         periodic_input_dim=int(periodic_input_dim),
         noise_input_dim=int(noise_input_dim),
@@ -1064,6 +1226,19 @@ def build_nores_vocoder_scaffold_from_state_dict(
         ),
         residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
         residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+        use_waveform_decoder_input_adapter=(
+            infer_waveform_decoder_input_adapter_from_state_dict(state_dict)
+            if use_waveform_decoder_input_adapter is None
+            else bool(use_waveform_decoder_input_adapter)
+        ),
+        waveform_decoder_input_adapter_scale=float(waveform_decoder_input_adapter_scale),
+        use_waveform_decoder_dynamic_basis=(
+            inferred_dynamic_basis_enabled
+            if use_waveform_decoder_dynamic_basis is None
+            else bool(use_waveform_decoder_dynamic_basis)
+        ),
+        waveform_decoder_dynamic_basis_count=resolved_dynamic_basis_count,
+        waveform_decoder_dynamic_basis_scale=float(waveform_decoder_dynamic_basis_scale),
         use_noise_hidden_residual_adapter=(
             infer_noise_hidden_residual_adapter_from_state_dict(state_dict)
             if use_noise_hidden_residual_adapter is None
@@ -1094,6 +1269,22 @@ def normalize_waveform_decoder_mode(waveform_decoder_mode: str) -> str:
     return resolved
 
 
+def normalize_waveform_decoder_dynamic_basis_count(count: int) -> int:
+    resolved = int(count)
+    if resolved <= 0:
+        raise ValueError("waveform_decoder_dynamic_basis_count must be > 0.")
+    return resolved
+
+
+def normalize_waveform_decoder_dynamic_basis_scale(scale: float) -> float:
+    resolved = float(scale)
+    if not math.isfinite(resolved):
+        raise ValueError("waveform_decoder_dynamic_basis_scale must be finite.")
+    if resolved < 0.0:
+        raise ValueError("waveform_decoder_dynamic_basis_scale must be >= 0.0.")
+    return resolved
+
+
 def normalize_fusion_mode(fusion_mode: str) -> str:
     resolved = str(fusion_mode).strip().lower()
     if resolved not in SUPPORTED_FUSION_MODES:
@@ -1120,6 +1311,15 @@ def normalize_residual_shape_branch_condition_mode(mode: str) -> str:
             "Unsupported residual_shape_branch_condition_mode for no-residual vocoder scaffold: "
             f"{mode!r}"
         )
+    return resolved
+
+
+def normalize_waveform_decoder_input_adapter_scale(scale: float) -> float:
+    resolved = float(scale)
+    if not math.isfinite(resolved):
+        raise ValueError("waveform_decoder_input_adapter_scale must be finite.")
+    if resolved < 0.0:
+        raise ValueError("waveform_decoder_input_adapter_scale must be >= 0.0.")
     return resolved
 
 

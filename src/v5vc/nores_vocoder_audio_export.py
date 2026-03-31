@@ -21,6 +21,7 @@ from v5vc.offline_vocoder_training import (
     extract_training_runtime,
     frame_waveform_sequence,
     load_training_package_payload,
+    prepare_reconstruction_frame_gains,
     reconstruct_waveform_from_frames,
 )
 from v5vc.proxy_audio_export import compute_proxy_activity_gate, smooth_noise
@@ -28,6 +29,7 @@ from v5vc.stage5_low_activity_probe import compute_waveform_spectral_summary
 from v5vc.target_format_recovery import write_waveform_int16
 
 DEFAULT_PREDICTED_ACTIVITY_GATE_SMOOTHING_FRAMES = 3
+DEFAULT_RECONSTRUCTION_CONTRACT_MODE = "hann_window_sum_norm"
 DEFAULT_STAGE5_BUZZ_REJECT_HEURISTIC_VERSION = "stage5_buzz_reject_v2"
 AUTO_REJECT_TEMPLATE_COSINE_MEAN = 0.985
 AUTO_REJECT_ADJACENT_COSINE_MEAN = 0.97
@@ -66,6 +68,7 @@ def export_offline_mvp_nores_vocoder_audio(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    reconstruction_contract_mode: str = DEFAULT_RECONSTRUCTION_CONTRACT_MODE,
     decoder_branch_mean_mix_alpha: float = 0.0,
 ) -> None:
     if float(predicted_activity_gate_floor) < 0.0 or float(predicted_activity_gate_floor) > 1.0:
@@ -81,6 +84,7 @@ def export_offline_mvp_nores_vocoder_audio(
     resolved_predicted_activity_gate_apply_mode = normalize_predicted_activity_gate_apply_mode(
         predicted_activity_gate_apply_mode
     )
+    resolved_reconstruction_contract_mode = normalize_reconstruction_contract_mode(reconstruction_contract_mode)
     resolved_export_use_predicted_activity_gate = (
         True if use_predicted_activity_gate is None else bool(use_predicted_activity_gate)
     )
@@ -137,6 +141,7 @@ def export_offline_mvp_nores_vocoder_audio(
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
         predicted_activity_gate_apply_mode=resolved_predicted_activity_gate_apply_mode,
+        reconstruction_contract_mode=resolved_reconstruction_contract_mode,
         decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
         use_decoder_branch_condition_adapter=bool(model.use_decoder_branch_condition_adapter),
         use_residual_shape_branch_condition_adapter=bool(model.use_residual_shape_branch_condition_adapter),
@@ -144,6 +149,8 @@ def export_offline_mvp_nores_vocoder_audio(
         residual_shape_branch_condition_mode=str(
             getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")
         ),
+        use_waveform_decoder_input_adapter=bool(getattr(model, "use_waveform_decoder_input_adapter", False)),
+        waveform_decoder_input_adapter_scale=float(getattr(model, "waveform_decoder_input_adapter_scale", 1.0)),
     )
     loss_metrics_exactly_match_decoded_audio = bool(
         (not bool(resolved_export_use_predicted_activity_gate) and not bool(training_loss_weights["use_predicted_activity_gate"]))
@@ -152,6 +159,7 @@ def export_offline_mvp_nores_vocoder_audio(
             == bool(training_loss_weights["use_predicted_activity_gate"])
             and str(training_loss_weights["reconstruction_frame_gain_apply_mode"])
             == resolved_predicted_activity_gate_apply_mode
+            and resolved_reconstruction_contract_mode == DEFAULT_RECONSTRUCTION_CONTRACT_MODE
             and float(predicted_activity_gate_floor) == 0.0
             and int(predicted_activity_gate_smoothing_frames) == 0
         )
@@ -201,10 +209,11 @@ def export_offline_mvp_nores_vocoder_audio(
                 ),
             )
             predicted_activity = torch.maximum(outputs["periodic_gate"], outputs["noise_gate"])
-            decoded_waveform = reconstruct_waveform_from_frames(
+            decoded_waveform = reconstruct_waveform_from_frames_with_contract(
                 waveform_frames=outputs["waveform_frames"],
                 frame_length=int(runtime["frame_length"]),
                 hop_length=int(runtime["hop_length"]),
+                reconstruction_contract_mode=resolved_reconstruction_contract_mode,
                 frame_gains=predicted_activity if bool(resolved_export_use_predicted_activity_gate) else None,
                 frame_gain_floor=float(predicted_activity_gate_floor),
                 frame_gain_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
@@ -282,6 +291,7 @@ def export_offline_mvp_nores_vocoder_audio(
                         "reconstruction_frame_gain_apply_mode": str(
                             training_loss_weights["reconstruction_frame_gain_apply_mode"]
                         ),
+                        "reconstruction_contract_mode": resolved_reconstruction_contract_mode,
                         "predicted_activity_gate_floor": None,
                         "predicted_activity_gate_smoothing_frames": None,
                         "activity_gate_weight": float(training_loss_weights["activity_gate"]),
@@ -313,6 +323,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "predicted_activity_gate_floor": float(predicted_activity_gate_floor),
             "predicted_activity_gate_smoothing_frames": int(predicted_activity_gate_smoothing_frames),
             "predicted_activity_gate_apply_mode": resolved_predicted_activity_gate_apply_mode,
+            "reconstruction_contract_mode": resolved_reconstruction_contract_mode,
             "decoder_branch_mean_mix_alpha": float(decoder_branch_mean_mix_alpha),
             "fusion_mode": str(model.fusion_mode),
             "use_decoder_branch_condition_adapter": bool(model.use_decoder_branch_condition_adapter),
@@ -322,6 +333,12 @@ def export_offline_mvp_nores_vocoder_audio(
             ),
             "residual_shape_branch_condition_mode": str(
                 getattr(model, "residual_shape_branch_condition_mode", "raw_additive_v1")
+            ),
+            "use_waveform_decoder_input_adapter": bool(
+                getattr(model, "use_waveform_decoder_input_adapter", False)
+            ),
+            "waveform_decoder_input_adapter_scale": float(
+                getattr(model, "waveform_decoder_input_adapter_scale", 1.0)
             ),
             "use_noise_hidden_residual_adapter": bool(getattr(model, "use_noise_hidden_residual_adapter", False)),
             "noise_hidden_residual_mode": str(getattr(model, "noise_hidden_residual_mode", "gate_plus_delta_v1")),
@@ -343,6 +360,7 @@ def export_offline_mvp_nores_vocoder_audio(
             "reconstruction_frame_gain_apply_mode": str(
                 training_loss_weights["reconstruction_frame_gain_apply_mode"]
             ),
+            "reconstruction_contract_mode": resolved_reconstruction_contract_mode,
             "predicted_activity_gate_floor": None,
             "predicted_activity_gate_smoothing_frames": None,
             "activity_gate_weight": float(training_loss_weights["activity_gate"]),
@@ -356,7 +374,7 @@ def export_offline_mvp_nores_vocoder_audio(
         "records": exported_records,
         "notes": [
             "aligned_target.wav is the frame-aligned target waveform used by the current Stage5 bootstrap objective.",
-            "decoded.wav is reconstructed from the checkpoint's waveform_frames head via overlap-add with the current export-side gate settings.",
+            f"decoded.wav is reconstructed from the checkpoint's waveform_frames head using reconstruction_contract_mode={resolved_reconstruction_contract_mode} with the current export-side gate settings.",
             "When use_predicted_activity_gate is enabled, predicted_activity_gate_floor, predicted_activity_gate_smoothing_frames, and predicted_activity_gate_apply_mode define export-side gate softening only; they do not rewrite checkpoint weights.",
             "Unless explicitly overridden, checkpoint_forward_objective_metrics inherit activity/template/delta/gating defaults from the resolved Stage5 training summary, while decoded.wav follows the export-side decode settings.",
             "decoded_pitch_matched.wav is an optional listening-only variant that globally pitch-shifts decoded.wav toward the aligned target's median voiced F0 while preserving duration.",
@@ -536,6 +554,92 @@ def normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_m
             f"{predicted_activity_gate_apply_mode}"
         )
     return normalized
+
+
+def normalize_reconstruction_contract_mode(reconstruction_contract_mode: str) -> str:
+    normalized = str(reconstruction_contract_mode).strip().lower()
+    if normalized not in {"hann_window_sum_norm", "rectangular_overlap_count_norm"}:
+        raise ValueError(
+            "Unsupported reconstruction_contract_mode: "
+            f"{reconstruction_contract_mode}"
+        )
+    return normalized
+
+
+def reconstruct_waveform_from_frames_with_contract(
+    *,
+    waveform_frames: torch.Tensor,
+    frame_length: int,
+    hop_length: int,
+    reconstruction_contract_mode: str,
+    frame_gains: torch.Tensor | None = None,
+    frame_gain_floor: float = 0.0,
+    frame_gain_smoothing_frames: int = 0,
+    frame_gain_apply_mode: str = DEFAULT_TRAINING_RECONSTRUCTION_FRAME_GAIN_APPLY_MODE,
+) -> torch.Tensor:
+    normalized_contract_mode = normalize_reconstruction_contract_mode(reconstruction_contract_mode)
+    if normalized_contract_mode == DEFAULT_RECONSTRUCTION_CONTRACT_MODE:
+        return reconstruct_waveform_from_frames(
+            waveform_frames=waveform_frames,
+            frame_length=frame_length,
+            hop_length=hop_length,
+            frame_gains=frame_gains,
+            frame_gain_floor=frame_gain_floor,
+            frame_gain_smoothing_frames=frame_gain_smoothing_frames,
+            frame_gain_apply_mode=frame_gain_apply_mode,
+        )
+    if waveform_frames.ndim != 2:
+        raise ValueError(f"Expected waveform_frames shape [frames, samples], got {tuple(waveform_frames.shape)}")
+    if int(waveform_frames.shape[-1]) != int(frame_length):
+        raise ValueError(
+            "waveform_frames sample dimension does not match frame_length: "
+            f"frames={tuple(waveform_frames.shape)} frame_length={frame_length}"
+        )
+    frame_count = int(waveform_frames.shape[0])
+    total_length = int(frame_length + max(0, frame_count - 1) * hop_length)
+    output = waveform_frames.new_zeros((total_length,))
+    weights = waveform_frames.new_zeros((total_length,))
+    normalized_apply_mode = str(frame_gain_apply_mode).strip().lower()
+    if normalized_apply_mode not in {"pre_overlap_add", "post_ola_envelope"}:
+        raise ValueError(f"Unsupported frame_gain_apply_mode: {frame_gain_apply_mode}")
+    window = waveform_frames.new_ones((int(frame_length),))
+    resolved_frame_gains = None
+    if frame_gains is not None:
+        resolved_frame_gains = frame_gains.to(dtype=waveform_frames.dtype, device=waveform_frames.device)
+        if resolved_frame_gains.ndim == 2 and int(resolved_frame_gains.shape[-1]) == 1:
+            resolved_frame_gains = resolved_frame_gains.squeeze(-1)
+        if resolved_frame_gains.ndim != 1 or int(resolved_frame_gains.shape[0]) != frame_count:
+            raise ValueError(
+                "frame_gains must match waveform frame count: "
+                f"frame_gains={tuple(resolved_frame_gains.shape)} frame_count={frame_count}"
+            )
+        resolved_frame_gains = prepare_reconstruction_frame_gains(
+            frame_gains=resolved_frame_gains,
+            frame_gain_floor=float(frame_gain_floor),
+            frame_gain_smoothing_frames=int(frame_gain_smoothing_frames),
+        ).to(dtype=waveform_frames.dtype, device=waveform_frames.device)
+    gain_output = None
+    gain_weights = None
+    if resolved_frame_gains is not None and normalized_apply_mode == "post_ola_envelope":
+        gain_output = waveform_frames.new_zeros((total_length,))
+        gain_weights = waveform_frames.new_zeros((total_length,))
+    for frame_index in range(frame_count):
+        start = int(frame_index * hop_length)
+        end = start + int(frame_length)
+        frame = waveform_frames[frame_index]
+        if resolved_frame_gains is not None and normalized_apply_mode == "pre_overlap_add":
+            frame = frame * resolved_frame_gains[frame_index].clamp(0.0, 1.0)
+        output[start:end] += frame * window
+        weights[start:end] += window
+        if gain_output is not None and gain_weights is not None:
+            gain = resolved_frame_gains[frame_index].clamp(0.0, 1.0)
+            gain_output[start:end] += gain * window
+            gain_weights[start:end] += window
+    reconstructed = output / weights.clamp_min(1.0e-6)
+    if gain_output is not None and gain_weights is not None:
+        gain_envelope = gain_output / gain_weights.clamp_min(1.0e-6)
+        reconstructed = reconstructed * gain_envelope.clamp(0.0, 1.0)
+    return reconstructed
 
 
 def resolve_listening_audio_path(
@@ -769,6 +873,11 @@ def build_model_from_checkpoint(
     model_config = checkpoint_payload.get("model_config")
     residual_shape_branch_condition_scale = 1.0
     residual_shape_branch_condition_mode = "raw_additive_v1"
+    use_waveform_decoder_input_adapter = False
+    waveform_decoder_input_adapter_scale = 1.0
+    use_waveform_decoder_dynamic_basis = False
+    waveform_decoder_dynamic_basis_count = 4
+    waveform_decoder_dynamic_basis_scale = 1.0
     use_noise_hidden_residual_adapter = False
     noise_hidden_residual_mode = "gate_plus_delta_v1"
     noise_hidden_residual_scale = 1.0
@@ -779,6 +888,11 @@ def build_model_from_checkpoint(
         residual_shape_branch_condition_mode = str(
             model_config.get("residual_shape_branch_condition_mode", "raw_additive_v1")
         )
+        use_waveform_decoder_input_adapter = bool(model_config.get("use_waveform_decoder_input_adapter", False))
+        waveform_decoder_input_adapter_scale = float(model_config.get("waveform_decoder_input_adapter_scale", 1.0))
+        use_waveform_decoder_dynamic_basis = bool(model_config.get("use_waveform_decoder_dynamic_basis", False))
+        waveform_decoder_dynamic_basis_count = int(model_config.get("waveform_decoder_dynamic_basis_count", 4))
+        waveform_decoder_dynamic_basis_scale = float(model_config.get("waveform_decoder_dynamic_basis_scale", 1.0))
         use_noise_hidden_residual_adapter = bool(model_config.get("use_noise_hidden_residual_adapter", False))
         noise_hidden_residual_mode = str(model_config.get("noise_hidden_residual_mode", "gate_plus_delta_v1"))
         noise_hidden_residual_scale = float(model_config.get("noise_hidden_residual_scale", 1.0))
@@ -789,6 +903,11 @@ def build_model_from_checkpoint(
         frame_length=int(first_runtime["frame_length"]),
         residual_shape_branch_condition_scale=residual_shape_branch_condition_scale,
         residual_shape_branch_condition_mode=residual_shape_branch_condition_mode,
+        use_waveform_decoder_input_adapter=use_waveform_decoder_input_adapter,
+        waveform_decoder_input_adapter_scale=waveform_decoder_input_adapter_scale,
+        use_waveform_decoder_dynamic_basis=use_waveform_decoder_dynamic_basis,
+        waveform_decoder_dynamic_basis_count=waveform_decoder_dynamic_basis_count,
+        waveform_decoder_dynamic_basis_scale=waveform_decoder_dynamic_basis_scale,
         use_noise_hidden_residual_adapter=use_noise_hidden_residual_adapter,
         noise_hidden_residual_mode=noise_hidden_residual_mode,
         noise_hidden_residual_scale=noise_hidden_residual_scale,
@@ -1070,22 +1189,28 @@ def infer_branch_label(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    reconstruction_contract_mode: str = DEFAULT_RECONSTRUCTION_CONTRACT_MODE,
     decoder_branch_mean_mix_alpha: float = 0.0,
     use_decoder_branch_condition_adapter: bool = False,
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_waveform_decoder_input_adapter: bool = False,
+    waveform_decoder_input_adapter_scale: float = 1.0,
 ) -> str:
     suffix = describe_waveform_decode_variant(
         use_predicted_activity_gate=bool(use_predicted_activity_gate),
         predicted_activity_gate_floor=float(predicted_activity_gate_floor),
         predicted_activity_gate_smoothing_frames=int(predicted_activity_gate_smoothing_frames),
         predicted_activity_gate_apply_mode=str(predicted_activity_gate_apply_mode),
+        reconstruction_contract_mode=str(reconstruction_contract_mode),
         decoder_branch_mean_mix_alpha=float(decoder_branch_mean_mix_alpha),
         use_decoder_branch_condition_adapter=bool(use_decoder_branch_condition_adapter),
         use_residual_shape_branch_condition_adapter=bool(use_residual_shape_branch_condition_adapter),
         residual_shape_branch_condition_scale=float(residual_shape_branch_condition_scale),
         residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
+        use_waveform_decoder_input_adapter=bool(use_waveform_decoder_input_adapter),
+        waveform_decoder_input_adapter_scale=float(waveform_decoder_input_adapter_scale),
     )
     if selection_summary is not None:
         selected_step = selection_summary.get("step")
@@ -1099,11 +1224,14 @@ def describe_waveform_decode_variant(
     predicted_activity_gate_floor: float,
     predicted_activity_gate_smoothing_frames: int,
     predicted_activity_gate_apply_mode: str,
+    reconstruction_contract_mode: str = DEFAULT_RECONSTRUCTION_CONTRACT_MODE,
     decoder_branch_mean_mix_alpha: float = 0.0,
     use_decoder_branch_condition_adapter: bool = False,
     use_residual_shape_branch_condition_adapter: bool = False,
     residual_shape_branch_condition_scale: float = 1.0,
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
+    use_waveform_decoder_input_adapter: bool = False,
+    waveform_decoder_input_adapter_scale: float = 1.0,
 ) -> str:
     parts: list[str] = []
     if bool(use_decoder_branch_condition_adapter):
@@ -1115,6 +1243,11 @@ def describe_waveform_decode_variant(
             parts.append(f"rsscale{scale_tag:03d}")
         if str(residual_shape_branch_condition_mode).strip().lower() != "raw_additive_v1":
             parts.append("rsunitrms")
+    if bool(use_waveform_decoder_input_adapter):
+        parts.append("prehead")
+        if abs(float(waveform_decoder_input_adapter_scale) - 1.0) > 1.0e-9:
+            scale_tag = int(round(float(waveform_decoder_input_adapter_scale) * 1000.0))
+            parts.append(f"phscale{scale_tag:03d}")
     if float(decoder_branch_mean_mix_alpha) > 1.0e-9:
         mix_tag = int(round(float(decoder_branch_mean_mix_alpha) * 1000.0))
         parts.append(f"mix{mix_tag:03d}")
@@ -1129,6 +1262,9 @@ def describe_waveform_decode_variant(
     normalized_apply_mode = normalize_predicted_activity_gate_apply_mode(predicted_activity_gate_apply_mode)
     if normalized_apply_mode == "post_ola_envelope":
         parts.append("postenv")
+    normalized_contract_mode = normalize_reconstruction_contract_mode(reconstruction_contract_mode)
+    if normalized_contract_mode == "rectangular_overlap_count_norm":
+        parts.append("rectola")
     if not parts:
         return ""
     return "__decode_" + "_".join(parts)

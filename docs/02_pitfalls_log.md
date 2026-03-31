@@ -831,6 +831,398 @@
   - do not send the next round back to carrier sourcing, gate heads, or residual-adapter input reshuffling
   - the next valid move must target the downstream frame projection or decode path that erases the rescued residual contrast
 
+### 74. Do not replay a new export manifest while still reading `decoded.wav` from the old review bundle
+- The first post-`529` replay made this exact mistake:
+  - internal activations came from the new `delta_direct_v1` checkpoint
+  - but decoded audio still came from the original baseline review-bundle path
+- That stale-path mix made the first decoded-side number look much milder than reality:
+  - stale replay reading: decoded aggregate `vuv` gap `-0.001537`
+  - corrected replay reading: decoded aggregate `vuv` gap `-0.066452`
+- Therefore:
+  - when replaying a reviewed slice through a new export manifest, always resolve decoded and aligned audio from the active manifest first
+  - do not trust review-bundle audio paths as the replay source of truth once a new export has been created
+
+### 75. Do not reopen gate-side debate once corrected replay shows `decoded_no_gate` is already collapsed
+- The corrected `delta_direct_v1` decode-projection review now shows:
+  - waveform-frames aggregate `vuv` gap `0.002642`
+  - `decoded_no_gate = -0.066444`
+  - `decoded_pre_ola_gate = -0.066328`
+  - `decoded_post_ola_gate = -0.066453`
+- This means the route is already broken before predicted activity gating.
+- The gate-mode differences are tiny:
+  - no-gate vs pre-OLA difference `0.000116`
+  - no-gate vs post-OLA difference `0.000009`
+- Therefore:
+  - do not send the next round back to gate-floor tuning
+  - do not spend time debating pre-vs-post gate mode
+  - the next valid move must target frame reconstruction or overlap-add geometry itself
+
+### 76. Do not treat the current Hann no-gate reconstruction as a neutral baseline once rectangular overlap averaging is clearly better
+- The new frame-reconstruction probe now holds `waveform_frames` fixed and swaps only reconstruction geometry.
+- On the corrected `delta_direct_v1` review slice, aggregate `vuv` high-band gaps are:
+  - waveform-frames `0.002642`
+  - `hann_ola_baseline = -0.066444`
+  - `rectangular_ola = 0.017643`
+  - `hop_stitch = -0.001695`
+  - `flatten_frames = 0.000006`
+- `rectangular_ola` is also positive on all `5/5` reviewed records in that replay.
+- Therefore:
+  - do not keep describing the current Hann no-gate reconstruction as if it were a neutral decode reference
+  - do not say "decode-side is broken everywhere equally"
+  - the next valid move must isolate windowing and overlap normalization rules, because the current Hann reconstruction contract itself is now the main localized sink
+
+### 77. Do not overread reconstruction counterfactual wins as immediate route opening
+- `rectangular_ola` is a strong positive control on the current review slice, but it is still a reconstruction counterfactual.
+- It proves leverage on the localized sink.
+- It does not yet prove:
+  - stable training compatibility
+  - wider-slice decoded readiness
+  - or human-listening success
+- Therefore:
+  - use the result to prioritize reconstruction-contract AB work
+  - but do not declare the Stage5 route open until the same conclusion survives normal export and route-level confirmation
+
+### 78. Do not assume a small Hann-family normalization tweak will rescue the current decode contract
+- The reconstruction-contract AB now tested the obvious nearby Hann-family variants on the corrected `delta_direct_v1` review slice:
+  - `hann_window_sum_norm = -0.066444`
+  - `hann_overlap_count_norm = -0.049303`
+  - `hann_window_square_norm = -0.059694`
+  - `sqrt_hann_window_square_norm = -0.027126`
+  - `rectangular_overlap_count_norm = 0.017643`
+- The best Hann-family neighbor is better than the current contract, but it still stays negative on all `5/5` reviewed records.
+- Therefore:
+  - do not keep spinning more tiny Hann normalization permutations as if one of them is likely to open the route by itself
+  - the next valid move is to promote the rectangular positive control into a bounded real export contract and test it as the actual decoded route
+
+### 79. Do not equate decoded `vuv` rescue under rectangular export with route opening
+- The real export-contract AB now shows that `rectangular_overlap_count_norm` preserves the decoded `vuv` rescue when promoted from probe to actual `decoded.wav`:
+  - corrected decoded aggregate `vuv` gap `0.017643`
+  - source-filter localization no longer says `vuv_separation_collapsed`
+- But the same real export still lands at:
+  - `auto_reject_count = 5/5`
+  - `review_required_count = 0/5`
+  - decoded template cosine mean `0.99003`
+- Therefore:
+  - do not say "rectangular solved Stage5" just because the old `vuv` sink is gone
+  - once rectangular export is in place, the next valid move is to localize the remaining buzz or template-collapse basin, not to reopen Hann or gate debates
+
+### 80. Do not blame the remaining rectangular-route failure on reconstruction once waveform-frames are already template-collapsed
+- The new waveform-frame template-collapse review now shows that, on the same corrected `delta_direct_v1` review slice:
+  - `waveform_frames_template_cosine_mean = 0.992189`
+  - `waveform_frames_adjacent_cosine_mean = 0.999529`
+  - `waveform_frames_template_cosine_gap_vs_aligned = 0.959170`
+- Those values already satisfy the existing obvious-buzz template-collapse pattern before any reconstruction contract is applied.
+- At the same time:
+  - rectangular export keeps decoded `vuv` gap positive at `0.017643`
+  - rectangular decoded template cosine stays near the same frame-level collapse at `0.990030`
+  - Hann decoded template cosine is also still highly collapsed at `0.984943`
+- Therefore:
+  - do not keep framing the remaining blocker as another Hann-vs-rectangular reconstruction mystery
+  - do not assume rectangular introduced a new decoded-only collapse
+  - the next valid move must target why `waveform_decoder_base_logits -> waveform_frames` already produces a near-template frame sequence even after the local `vuv` rescue
+
+### 81. Do not reopen final-activation speculation once the review-slice handoff recheck says `tanh` is not the main new collapse site
+- The active `delta_direct_v1` review-slice handoff recheck now shows:
+  - `waveform_frame_logits_template_cosine_mean = 0.993400`
+  - `waveform_frames_template_cosine_mean = 0.992189`
+  - `logits_to_frames_template_cosine_gap = -0.001211`
+  - `waveform_frame_logits_fraction_abs_ge_1 = 0.070934`
+  - `waveform_frame_logits_fraction_abs_ge_2 = 0.001039`
+  - `waveform_frame_logits_fraction_abs_ge_3 = 0.0`
+- The probe diagnosis is therefore:
+  - `tanh_is_main_new_collapse_site = false`
+  - `logits_show_heavy_saturation_pressure = false`
+- The paired structure recheck on the same slice also confirms:
+  - `decoder_hidden -> waveform_decoder_base_logits` is still the strongest coupling amplifier
+  - `decoder_hidden -> waveform_decoder_base_logits` is still the strongest geometry collapse site
+- Therefore:
+  - do not send the next round back to final `tanh` saturation debate
+  - do not treat residual-shape-only hypotheses as the main remaining blocker
+  - the next valid move must target the output-head projection itself
+
+## Pitfall 82: Do not misread a `waveform_decoder`-only microfit as either route opening or output-head disproof
+- The bounded `536` review-slice microfit moved some second-order output-head metrics:
+  - `waveform_frame_logits_template_cosine_mean = 0.993400 -> 0.992962`
+  - `waveform_frames_template_cosine_mean = 0.992189 -> 0.991705`
+  - rectangular decoded `vuv` gap `0.017643 -> 0.032176`
+- But it did not change the main route conclusion:
+  - real rectangular export still stayed `5/5 auto_reject`
+  - the strongest geometry collapse still stayed at `decoder_hidden -> waveform_decoder_base_logits`
+  - `decoder_to_base_logits_template_distance_drop` even stayed around `-0.68`
+- Therefore:
+  - do not promote small head-only gains into a route-opening claim
+  - do not use this result to abandon output-head localization either
+  - the next valid move must widen scope from the last `waveform_decoder` stack to the broader `decoder_hidden -> waveform_decoder_base_logits` interface
+
+## Pitfall 83: Do not misread a pre-head-adapter-only microfit as proof that widening scope already solved the interface
+- The bounded `537` review-slice pre-head run did widen scope beyond the last stack:
+  - a zero-init adapter was inserted between `decoder_hidden` and `waveform_decoder`
+  - only `10` adapter-side parameters were trained
+  - local handoff metrics moved slightly:
+    - `waveform_frame_logits_template_cosine_mean = 0.993400 -> 0.992947`
+    - `waveform_frames_template_cosine_mean = 0.992189 -> 0.991691`
+- But it still did not change the route conclusion:
+  - real rectangular export stayed `5/5 auto_reject`
+  - decoded `vuv` gap reached only `0.019217`, weaker than the earlier head-only `0.032176`
+  - the strongest geometry collapse still stayed at `decoder_hidden -> waveform_decoder_base_logits`
+  - `decoder_to_base_logits_template_distance_drop` worsened further to `-0.701049`
+- Therefore:
+  - do not stop at "we already widened scope once"
+  - do not treat adapter plumbing alone as the solution
+  - the next valid move must be a joint interface edit, not another single-sided replay
+
+## Pitfall 84: Do not misread the first joint-interface win as route opening
+- The bounded `538` review-slice joint run is the strongest current bounded interface edit:
+  - `decoded_frame_template_cosine_mean` improves to `0.988889`
+  - decoded `vuv` gap stays strongly positive at `0.029999`
+  - spectral brightness also drops materially relative to the baseline and pre-head-only runs
+- But the main route conclusion still does not change:
+  - real rectangular export remains `5/5 auto_reject`
+  - the strongest geometry collapse still stays at `decoder_hidden -> waveform_decoder_base_logits`
+  - `fused_hidden_frame_mean` still barely changes the heard path, so the projector basin is still active
+- Therefore:
+  - do not promote the first joint-interface win into "Stage5 route opened"
+  - do not keep replaying the exact same joint scope by inertia
+  - the next valid move must widen one step further upstream into the immediate `decoder_hidden` producer, not backslide into single-sided edits or stay frozen at the same joint boundary
+
+## Pitfall 85: Do not misread a handoff-side near-opening on `539` as proof that the real export route is already solved
+- The bounded `539` producer-plus-interface run is the first current checkpoint where the handoff probe decoded routes all escape auto-reject:
+  - `decoded_no_gate = 0/5 auto_reject`
+  - `decoded_pre_ola_gate = 0/5 auto_reject`
+  - `decoded_post_ola_gate = 0/5 auto_reject`
+- But the corresponding real rectangular export still does not match that reading:
+  - `auto_reject_count = 3/5`
+  - `review_required_count = 2/5`
+- Therefore:
+  - do not promote the handoff-side result into a route-open claim
+  - do not immediately open another wider training loop by inertia
+  - the next valid move must first localize the renewed handoff-vs-export gap on the improved `539` checkpoint itself
+
+## Pitfall 86: Do not compare handoff decoded routes against real export unless reconstruction contracts are explicitly aligned
+- The first `539` handoff readout made this exact mistake:
+  - handoff probe reconstructed decoded routes with the old training-side Hann overlap-add helper
+  - real export reconstructed decoded audio with `rectangular_overlap_count_norm`
+- That mismatch created a false route split:
+  - stale handoff `decoded_no_gate = 0/5 auto_reject`
+  - real export `decoded.wav = 3/5 auto_reject`
+- After `540` fixed the handoff probe to accept `reconstruction_contract_mode` and replayed `539` with `rectangular_overlap_count_norm`, the split disappeared:
+  - corrected handoff `decoded_no_gate = 3/5 auto_reject`
+  - matching real export exactly on both aggregate and record-level status
+- Therefore:
+  - do not compare handoff and export route metrics unless the reconstruction contract is explicitly stated on both sides
+  - do not treat a handoff-vs-export discrepancy as model behavior until the route materialization semantics are aligned first
+
+## Pitfall 87: Do not treat the corrected `539` remaining-failure split as one homogeneous class or treat `review_required 2/5` as a positive bucket
+- After the corrected subset replay in `541`, the remaining `3/5 auto_reject` frontier is now clearly split:
+  - hard no-gate template-collapse blockers:
+    - `target::chapter3_26_firefly_114`
+    - `target::chapter4_7_firefly_105`
+  - one gate-sensitive border case:
+    - `target::no_text_voice/chapter3_18_firefly_101`
+- The gate-sensitive record is not evidence that the whole remaining failure set is gate-dominated:
+  - `decoded_no_gate` template cosine is `0.985013`
+  - `decoded_pre_ola_gate` template cosine slips to `0.984834`
+  - this only matters because the current auto-reject threshold is exactly `0.985`
+- The `2/5 review_required` records are also not both good controls:
+  - `target::chapter3_30_firefly_132` is the cleaner near-open control
+  - `target::no_text_voice/chapter3_21_firefly_108` is still heavily template-collapsed at `0.991612`
+  - it only escapes auto-reject because `predicted_activity_to_aligned_frame_rms_corr = 0.347759` stays below the `0.75` envelope-following threshold
+- Therefore:
+  - do not train or compare against a naive `fail3 vs review2` grouping as if both sides were homogeneous
+  - do not reopen a global `vuv` or gate-family detour just because one remaining record is gate-sensitive
+  - use the hard pair as the actual blocker set, `chapter3_30_firefly_132` as the better same-frontier control, and keep `chapter3_21_firefly_108` out of the positive-control bucket
+
+## Pitfall 88: Do not promote the first `0/5 auto_reject` full-slice replay into route opening without listening confirmation
+- The focused `542` hard-pair template-push microfit is the first bounded review-slice checkpoint that replays onto the full active `5`-record slice at:
+  - `0/5 auto_reject`
+  - `5/5 review_required`
+- This is a real machine-side gain:
+  - old `539` full5 frontier was `3/5 auto_reject + 2/5 review_required`
+  - full-slice decoded template cosine improves from `0.985812` to `0.968295`
+  - source-filter replay also improves materially rather than only sliding under one threshold
+- But the gate semantics still do not change:
+  - `review_required` is not a positive acceptance state
+  - there is still no machine-side label here that means "speech confirmed" or "route opened"
+- Therefore:
+  - do not write the first `0/5 auto_reject` replay up as solved speech emergence
+  - do not immediately broaden the family or celebrate success before bounded listening review
+  - treat `542` as a new strongest bounded frontier that has earned human review, not as a completed route-opening claim
+
+## Pitfall 89: Do not confuse lower-harshness buzz plus better energy following with speech emergence
+- The manual review after `544` settles the `templatepush_b` frontier:
+  - all `5` decoded outputs still remain pure buzz
+  - there is slightly more energy-following fluctuation
+  - spectrograms still show dominant uniform stripe patterns
+  - some short sand-like texture can appear locally
+  - but there is still no speech structure and no human-voice-like region
+- This means the current gain is real but narrower than it first appears:
+  - machine negative-gate escape is real
+  - template-collapse severity is lower
+  - source-filter sidecars improve
+  - but the route still stays inside a buzz basin
+- Therefore:
+  - do not keep describing the current frontier as near-speech just because it is less harsh
+  - do not broaden replay or continue the same template-push family by inertia without a new structural hypothesis
+  - frame the next move around missing speech structure, not only around further lowering template-collapse metrics
+
+## Pitfall 90: Do not treat lower within-record template-collapse scalars as proof that record-specific speech structure has emerged
+- The post-`544` localization in `545` shows that `templatepush_b` improves several within-record collapse metrics:
+  - corrected `539` to `templatepush_b` handoff `waveform_frame_logits_template_cosine_mean = 0.990774 -> 0.971137`
+  - corrected `539` to `templatepush_b` handoff `waveform_frames_template_cosine_mean = 0.989148 -> 0.967072`
+  - corrected `539` to `templatepush_b` decoded no-gate template cosine `0.985812 -> 0.968295`
+- But the same round also shows that decoded resonance structure is still highly shared across different records:
+  - mean pairwise decoded peak-set Jaccard rises from `0.707` to `0.773`
+  - aligned-target mean stays only `0.116`
+  - several decoded record pairs reach identical peak sets at Jaccard `1.0`
+- The structure probe also keeps the same dominant bottleneck:
+  - `decoder_hidden_to_base_logits_is_main_coupling_amplifier`
+  - `decoder_hidden_to_base_logits_is_main_geometry_collapse`
+- Therefore:
+  - do not read a lower decoded template cosine alone as evidence of speech emergence
+  - do not assume that "less collapsed inside each record" means "more record-specific across records"
+  - when human review still says pure buzz, check whether decoded resonance peaks are converging onto a shared cross-record template before opening broader replay
+
+## Pitfall 91: Do not assume that globally breaking cross-record sharedness is already the same thing as building speech structure
+- The new `546` batch regularizer does directly break the old shared resonance-template basin:
+  - full5 decoded peak-set Jaccard mean drops from `0.773` on `templatepush_b` to about `0.50`
+  - full5 decoded template cosine also drops sharply to about `0.803`
+- But the route still does not improve in the way that matters:
+  - real no-gate rectangular export regresses from `0/5 auto_reject` back to `1/5 auto_reject`
+  - the regressed record is the current near-open control `target::chapter3_30_firefly_132`
+  - the hard blocker pair `target::chapter3_26_firefly_114` and `target::chapter4_7_firefly_105` still keeps identical decoded peak sets at Jaccard `1.0`
+- The structure probe also keeps the same dominant bottleneck:
+  - `decoder_hidden_to_base_logits_is_main_coupling_amplifier`
+  - `decoder_hidden_to_base_logits_is_main_geometry_collapse`
+- Therefore:
+  - do not promote a global cross-record de-sharing trick into route opening just because cross-record overlap falls
+  - do not replace one scalar obsession with another one
+  - when a global de-sharing objective hurts the near-open control while leaving the hard blocker pair partly unresolved, the next valid move is narrower pair-specific differentiation pressure, not more of the same global penalty
+
+## Pitfall 92: Do not attribute a new post-frontier basin shift to a new regularizer unless a matched no-regularizer continuation control says it is really new
+- `546` was missing exactly this control:
+  - the regularizer runs were compared against the original `templatepush_b` frontier
+  - but not against a plain same-scope continuation from the same `templatepush_b.step8` anchor
+- `547` closes that gap and changes the causal reading:
+  - plain continuation alone regresses full5 real export from `0/5 auto_reject` to `1/5 auto_reject`
+  - the regressed record is the same near-open control `target::chapter3_30_firefly_132`
+  - plain continuation also reproduces the same post-step8 basin shape:
+    - `decoded_template_cosine_mean = 0.802061`
+    - mean decoded peak-set Jaccard `0.504242`
+    - hard-pair `114/105` Jaccard still `1.0`
+    - structure still localizes to `decoder_hidden -> waveform_decoder_base_logits`
+    - `decoder_to_base_logits_template_distance_drop = -3.679934`
+- The regularizer families are only second-order different from that same plain continuation basin:
+  - `crossrecordspeca decoded_template_cosine_mean = 0.802901`
+  - `hardpairspeca decoded_template_cosine_mean = 0.802036`
+  - per-record statuses remain identical across the three post-step8 continuations
+- Therefore:
+  - do not claim that a newly added loss is what caused a basin shift unless a matched no-op continuation control fails to make the same move
+  - do not use a near-threshold unstable frontier as a causal baseline without matched continuation governance
+  - for future same-anchor ABs, require the plain continuation control in the same round before writing any mechanism-level conclusion
+
+## Pitfall 93: Do not promote a small single-step de-sharing blip into a new mechanism unless it survives the next matched step
+- `548` adds the next missing governance layer after `547`:
+  - once plain continuation control is present, the next temptation is to overread the first short-horizon difference
+- On the stable pre-drift `templatepush_b` anchor:
+  - `step1` of plain continuation and `hardpairspeca` is effectively identical
+  - `step2` shows a small focused gain on mean decoded peak-set Jaccard:
+    - control `0.628687`
+    - focused `0.565253`
+  - but export statuses remain identical:
+    - both `0/5 auto_reject`
+    - both preserve `132`
+    - hard-pair `114/105` Jaccard still stays `0.6`
+- Most importantly, the apparent focused gain is not durable:
+  - by `step3`, mean decoded peak-set Jaccard is again identical at `0.583030`
+  - export statuses and per-record metrics are again nearly indistinguishable
+- Therefore:
+  - do not write up a single-step metric dip as a real new mechanism unless the next matched step still preserves it
+  - do not let a transient cross-record overlap change outrank route-level facts like `132` preservation, hard-pair separation, or export status
+  - if the only visible advantage disappears one step later, stop calling that family a new main line
+
+## Pitfall 94: Do not continue a blocker-specific family once the remaining difference has been narrowed to a human-audible question but no human review has been done yet
+- After `549`, the current focused family is no longer blocked on missing machine-side preparation:
+  - the matched `step2 control vs focused` paired bundle now exists
+  - it already isolates the only `4` records that matter for the next decision
+  - it already includes both audio and spectrogram sidecars for direct A/B review
+- At that point, more same-family continuation would be the wrong move:
+  - machine-side differences are already too small to settle the question alone
+  - the remaining decision is now whether a human can hear or see more record-specific structure on `114/105` without any regression on `132`
+- Therefore:
+  - once the problem has been narrowed to a bounded human-review question, do not reopen training first
+  - do not keep inflating scalar logs when the next real evidence must come from paired listening
+  - complete the paired review before deciding whether to retire or continue the family
+
+## Pitfall 95: Do not keep a blocker-specific family alive after paired human review says the matched variants are still the same buzz basin
+- `550` resolves the paired `step2` review from `549`:
+  - focused `step2` and control `step2` are both still pure buzz
+  - both still show only slightly stronger energy-following fluctuation
+  - both still show uniform thin-line stripe spectrograms
+  - both still show only tiny local sand-like texture
+  - neither produces speech structure or any human-voice-like region
+- That means the last remaining ambiguity from `548` is gone:
+  - the transient `step2` de-sharing signal is not a human-meaningful gain
+  - it is not enough to justify another same-family continuation
+- Therefore:
+  - once matched human review says two variants are the same buzz basin, stop the family
+  - do not keep a line alive on tiny transient machine-side differences after human evidence has already collapsed them back together
+  - move on only to a materially different mechanism, not another replay of the same objective family
+
+## Pitfall 96: Do not call a new local freedom a breakthrough if the export status stays the same and the old structure bottleneck does not move
+- `551` adds a genuinely different local mechanism:
+  - a minimal dynamic residual basis head on `waveform_decoder_base_logits`
+  - new parameters only
+  - clean partial-init training from the old `templatepush_b` frontier
+  - slightly better machine-side source-filter aggregates on full5 real export
+- That still is not enough to claim the bottleneck is solved:
+  - full5 real export remains `0/5 auto_reject + 5/5 review_required`, exactly the same negative-gate status as `templatepush_b`
+  - the structure probe still localizes the main bottleneck to `decoder_hidden -> waveform_decoder_base_logits`
+  - `decoder_to_base_logits_template_distance_drop` remains strongly negative and even worsens slightly relative to the old frontier
+- Therefore:
+  - do not confuse "new mechanism trains and nudges machine metrics" with "route-opening evidence"
+  - if export status is unchanged and structure localization is unchanged, treat the result as an incremental smoke only
+  - require either human-audible improvement or a real structural relocation before promoting the new family to main line
+
+## Pitfall 97: Do not scatter hearing-review evidence across multiple runtime directories once human A/B is the next critical-path decision
+- By `551`, the next valid step is explicit human A/B between `templatepushb` and `dynamicheadsmokea`
+- Before `552`, the needed assets were split across:
+  - audio export directories
+  - source-filter review directories
+  - an older single-variant listening bundle
+  - a separate structure-probe directory
+- That makes human review slower and more error-prone:
+  - it is too easy to compare mismatched files
+  - it is harder to verify that both variants use the same record set and reference targets
+  - it raises the cost of repeating the same review pattern on later variants
+- Therefore:
+  - once human review becomes the next gating decision, collocate all current audio, spectrogram, and json/md sidecars under one root directory
+  - keep aligned references and per-variant decoded assets under the same `records/<record_id>/...` tree
+  - keep copied manifests in the same root so the review context never depends on chasing the original runtime paths
+
+## Pitfall 98: Do not keep escalating tiny output-head freedoms after repeated human review says every variant is still the same pure-buzz basin
+- By `553`, this has happened across multiple local families:
+  - template-push improved machine metrics but stayed pure buzz
+  - focused de-sharing regularizers changed some machine overlap scalars but stayed pure buzz
+  - minimal dynamic output-head freedom also stayed pure buzz and was not even clearly distinguishable from `templatepushb` by listening
+- That means the project now has enough evidence to tighten the framing:
+  - a local head can still be the visible bottleneck interface
+  - but repeated tiny local freedom increases are not yet evidence that the missing ingredient is "just one more head tweak"
+- Therefore:
+  - stop escalating same-locality output-head ideas by inertia once multiple human reviews collapse them back into the same buzz basin
+  - before any new training family, ask whether the hidden representation itself still contains recoverable target-specific speech structure
+  - prefer oracle-style sufficiency probes before another round of local projector tuning
+
+## Pitfall 99: Do not misread coarse oracle recoverability as evidence that fine speech structure is still available to a local waveform head
+- By `554`, the new oracle probe shows two very different realities at once:
+  - RMS, VUV, and compressed log-spectrum are still strongly recoverable from multiple stages
+  - cross-record waveform-frame recovery stays near zero even after adding a small nonlinear waveform MLP oracle
+- That means:
+  - a coarse oracle success only proves that envelope-, activity-, and broad spectral information survived
+  - it does not prove that target-specific fine waveform geometry still exists in a form the local head can exploit
+- Therefore:
+  - do not use strong coarse oracle numbers as a reason to continue local output-head redesign by default
+  - once fine waveform oracle metrics remain near zero across both linear and small nonlinear readouts, shift the main localization effort upstream into the producer / fusion representation path
+
 
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
@@ -899,3 +1291,28 @@
 - `docs/527_stage5_review_slice_noise_hidden_unvoiced_residual_probe_report.md`
 - `docs/528_stage5_review_slice_noise_hidden_residual_structure_probe_report.md`
 - `docs/529_stage5_explicit_noise_hidden_residual_microfit_and_downstream_projection_blocker_report.md`
+- `docs/530_stage5_decode_projection_review_and_replay_path_bugfix_report.md`
+- `docs/531_stage5_frame_reconstruction_geometry_probe_report.md`
+- `docs/532_stage5_reconstruction_contract_hann_family_ab_report.md`
+- `docs/533_stage5_real_export_contract_ab_report.md`
+- `docs/534_stage5_waveform_frame_template_collapse_localization_report.md`
+- `docs/535_stage5_reviewslice_deltadirect_output_head_recheck_report.md`
+- `docs/536_stage5_reviewslice_outputhead_only_microfit_report.md`
+- `docs/537_stage5_reviewslice_prehead_adapter_microfit_report.md`
+- `docs/538_stage5_reviewslice_joint_interface_microfit_report.md`
+- `docs/539_stage5_reviewslice_producer_interface_microfit_partial_opening_report.md`
+- `docs/540_stage5_waveform_handoff_contract_alignment_bugfix_report.md`
+- `docs/541_stage5_reviewslice_remaining_failure_subset_localization_report.md`
+- `docs/542_stage5_reviewslice_hardpair_templatepush_microfit_report.md`
+- `docs/543_stage5_templatepushb_listening_bundle_and_machine_preread_report.md`
+- `docs/544_stage5_templatepushb_manual_review_and_human_stop_report.md`
+- `docs/545_stage5_templatepushb_crossrecord_resonance_trap_localization_report.md`
+- `docs/546_stage5_crossrecord_logspec_regularizer_ab_report.md`
+- `docs/547_stage5_templatepushb_continuation_control_vs_crossrecord_regularizer_report.md`
+- `docs/548_stage5_short_horizon_hardpair_regularizer_replay_report.md`
+- `docs/549_stage5_step2_paired_listening_bundle_preparation_report.md`
+- `docs/550_stage5_step2_paired_manual_review_and_focused_regularizer_stop_report.md`
+- `docs/551_stage5_dynamic_output_head_smoke_report.md`
+- `docs/552_stage5_paired_full5_listening_bundle_colocation_report.md`
+- `docs/553_stage5_dynamicheadsmokea_manual_review_and_oracle_probe_plan_report.md`
+- `docs/554_stage5_representation_oracle_waveform_sufficiency_report.md`

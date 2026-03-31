@@ -859,6 +859,11 @@ def build_vocoder_model_from_runtime_dims(
     frame_length: int,
 ) -> NoResidualSourceFilterVocoderScaffold:
     state_dict = dict(checkpoint_payload["model_state_dict"])
+    model_config = (
+        dict(checkpoint_payload.get("model_config", {}))
+        if isinstance(checkpoint_payload.get("model_config"), dict)
+        else {}
+    )
     validate_vocoder_checkpoint_against_runtime_dims(
         state_dict=state_dict,
         periodic_input_dim=periodic_input_dim,
@@ -870,6 +875,19 @@ def build_vocoder_model_from_runtime_dims(
         periodic_input_dim=int(periodic_input_dim),
         noise_input_dim=int(noise_input_dim),
         frame_length=int(frame_length),
+        use_waveform_decoder_dynamic_basis=(
+            bool(model_config.get("use_waveform_decoder_dynamic_basis", False))
+            if "use_waveform_decoder_dynamic_basis" in model_config
+            else None
+        ),
+        waveform_decoder_dynamic_basis_count=(
+            int(model_config["waveform_decoder_dynamic_basis_count"])
+            if "waveform_decoder_dynamic_basis_count" in model_config
+            else None
+        ),
+        waveform_decoder_dynamic_basis_scale=float(
+            model_config.get("waveform_decoder_dynamic_basis_scale", 1.0)
+        ),
     )
     model.load_state_dict(state_dict)
     return model

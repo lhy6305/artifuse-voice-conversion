@@ -23,11 +23,26 @@ from v5vc.stage5_waveform_decoder_structure_probe import (
 from v5vc.stage5_speech_emergence_probe import summarize_frame_sequence_metrics
 
 
+def build_audio_export_record_map(audio_export_manifest_paths: list[Path]) -> dict[str, dict[str, object]]:
+    record_map: dict[str, dict[str, object]] = {}
+    for manifest_path in audio_export_manifest_paths:
+        payload = json.loads(manifest_path.read_text(encoding="utf-8"))
+        for record in payload.get("records", []):
+            record_id = str(record.get("record_id", "")).strip()
+            if not record_id:
+                continue
+            record_map[record_id] = dict(record)
+    return record_map
+
+
 def analyze_stage5_nores_source_filter_review(
     *,
     output_dir: Path,
     review_bundle_path: Path,
     dataset_index_paths: list[Path],
+    audio_export_manifest_paths: list[Path] | None,
+    target_record_ids: list[str] | None,
+    prefer_audio_export_status: bool,
     peak_count: int,
     peak_min_separation_hz: float,
     high_band_hz: float,
@@ -41,7 +56,13 @@ def analyze_stage5_nores_source_filter_review(
     records = list(review_bundle.get("records", []))
     if not records:
         raise ValueError("Review bundle contains no records.")
+    if target_record_ids:
+        wanted_ids = {str(record_id).strip() for record_id in target_record_ids if str(record_id).strip()}
+        records = [record for record in records if str(record.get("record_id", "")).strip() in wanted_ids]
+        if not records:
+            raise ValueError("No review-bundle records matched target_record_ids.")
     package_map = build_training_package_map(dataset_index_paths)
+    export_record_map = build_audio_export_record_map(audio_export_manifest_paths or [])
 
     per_record_rows: list[dict[str, object]] = []
     for review_record in records:
@@ -56,10 +77,15 @@ def analyze_stage5_nores_source_filter_review(
         batch = extract_training_batch(payload)
         runtime = extract_training_runtime(payload)
 
-        decoded_waveform, decoded_sample_rate = read_wav_mono(Path(str(review_record["decoded_audio_path"])).resolve())
-        aligned_waveform, aligned_sample_rate = read_wav_mono(
-            Path(str(review_record["aligned_target_audio_path"])).resolve()
-        )
+        export_entry = export_record_map.get(record_id, {})
+        decoded_audio_path = Path(
+            str(export_entry.get("decoded_audio_path", review_record.get("decoded_audio_path", "")))
+        ).resolve()
+        aligned_target_audio_path = Path(
+            str(export_entry.get("aligned_target_audio_path", review_record.get("aligned_target_audio_path", "")))
+        ).resolve()
+        decoded_waveform, decoded_sample_rate = read_wav_mono(decoded_audio_path)
+        aligned_waveform, aligned_sample_rate = read_wav_mono(aligned_target_audio_path)
         if int(decoded_sample_rate) != int(aligned_sample_rate):
             raise ValueError(
                 f"Sample-rate mismatch for {record_id}: decoded={decoded_sample_rate} aligned={aligned_sample_rate}"
@@ -186,12 +212,14 @@ def analyze_stage5_nores_source_filter_review(
             {
                 "record_id": record_id,
                 "split_name": str(review_record.get("split_name", package_entry.get("split_name", ""))),
-                "status": str(review_record.get("status", "unknown")),
-                "training_package_path": package_path.as_posix(),
-                "decoded_audio_path": str(Path(str(review_record["decoded_audio_path"])).resolve().as_posix()),
-                "aligned_target_audio_path": str(
-                    Path(str(review_record["aligned_target_audio_path"])).resolve().as_posix()
+                "status": resolve_review_status(
+                    review_record=review_record,
+                    export_entry=export_entry,
+                    prefer_audio_export_status=prefer_audio_export_status,
                 ),
+                "training_package_path": package_path.as_posix(),
+                "decoded_audio_path": decoded_audio_path.as_posix(),
+                "aligned_target_audio_path": aligned_target_audio_path.as_posix(),
                 "decoded_spectrogram_path": decoded_spectrogram_path.as_posix(),
                 "aligned_spectrogram_path": aligned_spectrogram_path.as_posix(),
                 "conditioning_summary": {
@@ -235,6 +263,8 @@ def analyze_stage5_nores_source_filter_review(
         "record_count": len(per_record_rows),
         "review_bundle_label": str(review_bundle.get("bundle_label", "")),
         "source_family": str(review_bundle.get("source_family", "")),
+        "target_record_ids": [str(record_id).strip() for record_id in (target_record_ids or []) if str(record_id).strip()],
+        "prefer_audio_export_status": bool(prefer_audio_export_status),
         "aggregates": build_source_filter_aggregates(per_record_rows),
         "diagnosis": diagnose_source_filter_review(per_record_rows),
         "records": per_record_rows,
@@ -262,6 +292,19 @@ def build_training_package_map(dataset_index_paths: list[Path]) -> dict[str, dic
                 package_map[record_id] = dict(entry)
                 package_map[record_id]["_dataset_index_path"] = dataset_index_path.as_posix()
     return package_map
+
+
+def resolve_review_status(
+    *,
+    review_record: dict[str, object],
+    export_entry: dict[str, object],
+    prefer_audio_export_status: bool,
+) -> str:
+    if prefer_audio_export_status:
+        export_status = str(dict(export_entry.get("buzz_reject_assessment", {})).get("status", "")).strip()
+        if export_status:
+            return export_status
+    return str(review_record.get("status", "unknown"))
 
 
 def build_vuv_contrast_summary(

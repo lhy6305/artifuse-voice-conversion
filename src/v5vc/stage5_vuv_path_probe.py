@@ -31,6 +31,8 @@ def analyze_stage5_nores_vuv_path_review(
     output_dir: Path,
     review_bundle_path: Path,
     audio_export_manifest_paths: list[Path],
+    target_record_ids: list[str] | None,
+    prefer_audio_export_status: bool,
     high_band_hz: float,
     peak_count: int,
     peak_min_separation_hz: float,
@@ -44,6 +46,13 @@ def analyze_stage5_nores_vuv_path_review(
     review_records = list(review_bundle.get("records", []))
     if not review_records:
         raise ValueError("Review bundle contains no records.")
+    if target_record_ids:
+        wanted_ids = {str(record_id).strip() for record_id in target_record_ids if str(record_id).strip()}
+        review_records = [
+            record for record in review_records if str(record.get("record_id", "")).strip() in wanted_ids
+        ]
+        if not review_records:
+            raise ValueError("No review-bundle records matched target_record_ids.")
 
     export_record_map = build_export_record_map(audio_export_manifest_paths)
     model_cache: dict[str, torch.nn.Module] = {}
@@ -290,7 +299,11 @@ def analyze_stage5_nores_vuv_path_review(
             {
                 "record_id": record_id,
                 "split_name": str(review_record.get("split_name", export_entry.get("split_name", ""))),
-                "status": str(review_record.get("status", "unknown")),
+                "status": resolve_review_status(
+                    review_record=review_record,
+                    export_entry=export_entry,
+                    prefer_audio_export_status=prefer_audio_export_status,
+                ),
                 "review_bundle_path": review_bundle_path.as_posix(),
                 "audio_export_manifest_path": str(export_entry["audio_export_manifest_path"]),
                 "checkpoint_path": checkpoint_path.as_posix(),
@@ -348,6 +361,8 @@ def analyze_stage5_nores_vuv_path_review(
         "record_count": len(per_record_rows),
         "review_bundle_label": str(review_bundle.get("bundle_label", "")),
         "source_family": str(review_bundle.get("source_family", "")),
+        "target_record_ids": [str(record_id).strip() for record_id in (target_record_ids or []) if str(record_id).strip()],
+        "prefer_audio_export_status": bool(prefer_audio_export_status),
         "high_band_hz": float(high_band_hz),
         "peak_count": int(peak_count),
         "peak_min_separation_hz": float(peak_min_separation_hz),
@@ -384,6 +399,19 @@ def build_export_record_map(audio_export_manifest_paths: list[Path]) -> dict[str
                 "waveform_decode": dict(payload.get("waveform_decode", {})),
             }
     return record_map
+
+
+def resolve_review_status(
+    *,
+    review_record: dict[str, object],
+    export_entry: dict[str, object],
+    prefer_audio_export_status: bool,
+) -> str:
+    if prefer_audio_export_status:
+        export_status = str(dict(export_entry.get("buzz_reject_assessment", {})).get("status", "")).strip()
+        if export_status:
+            return export_status
+    return str(review_record.get("status", "unknown"))
 
 
 def summarize_vuv_conditioned_frame_sequence(
