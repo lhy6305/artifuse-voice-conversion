@@ -457,6 +457,15 @@
    - completed explicit `RMS / high-band` regularizer continuation after `564`: held-out minisplit ablations now show that `rms_guard = 0.2` alone is not a good richer-contract route, while `rms_guard = 0.2 + waveform_decoder_base_logits_high_band_excess = 0.1` is the first branch to improve RMS overshoot, spectral brightness, and template collapse together on held-out speech-emergence probes
    - corrected regularizer-route reading after `564`: the validation-best checkpoint is no longer the best machine-emergence checkpoint once these waveform-side regularizers are introduced; on the combined route, `step20` is more balanced than the validation-best `step36`
    - promoted next-stop reading after `564`: the current human-audit candidate is now the combined richer-contract checkpoint `rmsguard02 + bhb01 step20`, because further machine-side scalar tuning is no longer clearly rankable by `loss_total` alone
+   - completed richer-contract listening-bundle preparation after `565`: the first richer-contract human A/B is now colocated under a single bundle root for `baseline39` vs `combo20`, with decoded/aligned/audio-proxy wavs, spectrograms, export sidecars, source-filter-review sidecars, and speech-emergence sidecars all copied into one directory tree
+   - updated listening-handoff policy after `565`: when the next critical-path step is human listening, the handoff artifact must now be a single bundle root that already contains all review-relevant audio, spectrogram, and current machine `json/md` sidecars
+   - current stop state after `565`: machine work is intentionally paused until the new richer-contract paired listening bundle is reviewed by ear
+   - completed richer-contract paired listening review after `566`: `combo20` is less piercing than `baseline39` and becomes more intermittent, but neither route contains any speech structure, and both still show the same fixed-spacing thin-line stripe pattern by spectrogram
+   - completed self-audit after `566`: the recent Stage5-local regularizer sweep has now exhausted its value; it clarified the current buzz basin but did not change route class, and it should not remain the default frontier
+   - corrected next-direction reading after `566`: the next valid move is upstream representation/supervision redesign with an oracle gate, not another Stage5-local loss sweep
+   - completed first upstream fine-structure oracle gate after `567`: the new analysis-only packet/source-scaffold fine-structure families are now implemented and replayed on the active full5 review slice, covering both a compact `unit_rms_logspec_48 + delta` reference and a direct `unit_rms_waveform_frame` reference
+   - corrected compact-dense reading after `567`: the compact magnitude-style dense candidate still remains weak at `fine_structure_reference_family = 0.017661 / 0.019218`, so simply exporting a denser log-spectrum-like sidecar does not solve the missing cross-record fine waveform geometry
+   - corrected next-representation target after `567`: direct local waveform geometry is sufficient by oracle (`fine_structure_waveform_reference_family = 0.999958 / 0.845117`), so the next valid upstream redesign should be a compact learned waveform-geometry code derived from that signal class, not another magnitude-only compact spectrum family
    - previous stable packet-facing anchor before redesign: `ss_detpitch_aperbranch_energy_warm4.step2`
    - previous raw deterministic `ENERGY` frontier before redesign: `ss_detpitch_aperbranch_energy_warm4.step3`
    - previous blocker-facing micro-frontier before redesign: `ss_detpitch_aperbranch_energyonly_s2_warm4.step1`
@@ -566,3 +575,6 @@
 - `docs/562_stage5_richercontract_dataset_loop_smoke_and_partial_init_report.md`
 - `docs/563_stage5_richercontract_bounded_training_and_minisplit_report.md`
 - `docs/564_stage5_richercontract_rms_highband_regularizer_tradeoff_and_listening_candidate_report.md`
+- `docs/565_stage5_richercontract_listening_bundle_preparation_and_colocation_policy_report.md`
+- `docs/566_stage5_richercontract_listening_result_self_audit_and_next_direction_report.md`
+- `docs/567_stage3_fine_structure_reference_oracle_gate_report.md`

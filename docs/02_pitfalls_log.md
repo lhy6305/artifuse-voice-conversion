@@ -1336,6 +1336,47 @@
   - for regularized Stage5 richer-contract runs, always inspect machine speech-emergence metrics on more than one checkpoint before choosing a listening candidate
   - do not promote or reject a regularized branch from `loss_total` alone when the main question is waveform emergence quality
 
+## Pitfall 108: Once a listening audit becomes the next critical-path step, do not hand off scattered runtime directories
+- Earlier Stage5 listening rounds repeatedly left audio exports, spectrograms, and machine sidecars spread across separate runtime folders.
+- That creates predictable review friction:
+  - the listener has to reconstruct the comparison manually
+  - the wrong json/md sidecars can be read against the wrong audio
+  - the handoff can claim “ready for listening” while still not being directly executable
+- After `565`, the project now has a stronger default:
+  - one single-root listening bundle
+  - `records/` for audio and spectrograms
+  - `manifests/` for copied machine sidecars
+- Therefore:
+  - once human listening is the next step, always hand off a single colocated bundle root
+  - make sure that root already contains all review-relevant audio, spectrogram pngs, and current machine `json/md` sidecars cited in the decision
+
+## Pitfall 109: If repeated listening rounds still say “same stripe-pattern buzz, only less harsh or more intermittent”, stop Stage5-local polish and escalate upstream
+- The richer-contract regularizer continuation in `564-566` improved several machine-side scalars and even reduced perceived harshness.
+- But the paired listening result still remained:
+  - no speech structure
+  - same fixed-spacing thin-line spectrogram basin
+  - only a texture shift from harsher buzz to more intermittent/broken-up buzz
+- By the time this pattern appears after earlier upstream oracle evidence like `554`, `558`, and `560`, continuing to optimize Stage5-local losses becomes the wrong default level of abstraction.
+- Therefore:
+  - do not keep treating “less harsh buzz” as evidence that another local decoder regularizer is likely to open speech
+  - once this pattern repeats, escalate to upstream representation/supervision redesign and require a new oracle win before returning to Stage5-local tuning
+
+## Pitfall 110: Do not confuse a compact magnitude-style dense sidecar with the waveform-geometry signal class that the oracle gate actually requires
+- `567` now separates two analysis-only upstream reference families on the same active full5 review slice:
+  - compact `unit_rms_logspec_48 + delta`
+  - direct `unit_rms_waveform_frame`
+- Their oracle outcomes are not remotely equivalent:
+  - compact magnitude-style family stays weak at `0.017661 / 0.019218`
+  - direct waveform-frame geometry opens the gate at `0.999958 / 0.845117`
+  - format above is `linear / mlp`
+- Therefore:
+  - do not assume that “denser than scalars” is already the right abstraction
+  - do not start a new upstream training cycle around another hand-designed compact magnitude-only spectrum family and call that representation redesign
+  - the next valid redesign target must preserve local waveform geometry much more directly, then compress or learn from that signal class under oracle governance
+- Secondary interpretation guard:
+  - once an analysis-only waveform reference is inserted into `available_controls`, `all_available_controls` and `unselected_available_controls` become upper-bound sanity checks only
+  - do not misread those boosted families as proof that the current deployable student packet contract is already solved
+
 
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
@@ -1439,3 +1480,6 @@
 - `docs/562_stage5_richercontract_dataset_loop_smoke_and_partial_init_report.md`
 - `docs/563_stage5_richercontract_bounded_training_and_minisplit_report.md`
 - `docs/564_stage5_richercontract_rms_highband_regularizer_tradeoff_and_listening_candidate_report.md`
+- `docs/565_stage5_richercontract_listening_bundle_preparation_and_colocation_policy_report.md`
+- `docs/566_stage5_richercontract_listening_result_self_audit_and_next_direction_report.md`
+- `docs/567_stage3_fine_structure_reference_oracle_gate_report.md`

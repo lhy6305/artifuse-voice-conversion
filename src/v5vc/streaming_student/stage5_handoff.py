@@ -206,6 +206,7 @@ def build_streaming_student_vocoder_input_scaffold(
 
     controls = dict(payload["controls"])
     conditioning = dict(payload["conditioning"])
+    fine_structure_reference = dict(payload.get("fine_structure_reference", {}))
     control_contract = dict(payload.get("control_contract", {}))
     e_evt_meta = dict(control_contract.get("e_evt_meta", {}))
     frame_start_ms = payload["frame_start_ms"].to(torch.float32)
@@ -260,6 +261,31 @@ def build_streaming_student_vocoder_input_scaffold(
         "aper": aper,
         "E": energy_log,
         "E_log_rms_norm": energy_norm,
+        **(
+            {}
+            if not isinstance(fine_structure_reference.get("unit_rms_waveform_frame"), torch.Tensor)
+            else {
+                "packet_unit_rms_waveform_frame": fine_structure_reference["unit_rms_waveform_frame"].to(
+                    torch.float32
+                ),
+            }
+        ),
+        **(
+            {}
+            if not isinstance(fine_structure_reference.get("unit_rms_logspec"), torch.Tensor)
+            else {
+                "packet_unit_rms_logspec": fine_structure_reference["unit_rms_logspec"].to(torch.float32),
+            }
+        ),
+        **(
+            {}
+            if not isinstance(fine_structure_reference.get("unit_rms_logspec_delta"), torch.Tensor)
+            else {
+                "packet_unit_rms_logspec_delta": fine_structure_reference["unit_rms_logspec_delta"].to(
+                    torch.float32
+                ),
+            }
+        ),
     }
     scaffold_payload = {
         "scaffold_version": STREAMING_STUDENT_VOCODER_INPUT_SCAFFOLD_VERSION,
@@ -344,6 +370,33 @@ def build_streaming_student_vocoder_input_scaffold(
             "aper_dim": int(aper.shape[-1]),
             "E_dim": int(energy_log.shape[-1]),
             "E_log_rms_norm_dim": int(energy_norm.shape[-1]),
+            **(
+                {}
+                if not isinstance(fine_structure_reference.get("unit_rms_waveform_frame"), torch.Tensor)
+                else {
+                    "packet_unit_rms_waveform_frame_dim": int(
+                        fine_structure_reference["unit_rms_waveform_frame"].shape[-1]
+                    ),
+                }
+            ),
+            **(
+                {}
+                if not isinstance(fine_structure_reference.get("unit_rms_logspec"), torch.Tensor)
+                else {
+                    "packet_unit_rms_logspec_dim": int(
+                        fine_structure_reference["unit_rms_logspec"].shape[-1]
+                    ),
+                }
+            ),
+            **(
+                {}
+                if not isinstance(fine_structure_reference.get("unit_rms_logspec_delta"), torch.Tensor)
+                else {
+                    "packet_unit_rms_logspec_delta_dim": int(
+                        fine_structure_reference["unit_rms_logspec_delta"].shape[-1]
+                    ),
+                }
+            ),
             "speaker_dim": int(speaker_embedding.shape[-1]),
             "geom_dim": int(geom_embedding.shape[-1]),
         },
@@ -352,6 +405,7 @@ def build_streaming_student_vocoder_input_scaffold(
             "It preserves the existing Stage5 36/36 explicit-control layout so current no-res checkpoints can be fail-fast decoded without retraining.",
             f"The noise-branch first 8 dims currently use {resolved_noise_event_family}. Use legacy_event_probs when evaluating old v2/event_probs Stage5 checkpoints.",
             "f0 / aper / energy remain packet-calibrated analysis controls; this route is for end-to-end decode screening, not a claim that named-control readiness is complete.",
+            "packet_unit_rms_logspec and packet_unit_rms_logspec_delta are analysis-only dense fine-structure references exported for oracle gating; current Stage5 branch layouts do not consume them yet.",
         ],
     }
     pt_path = output_dir / "streaming_student_vocoder_input_scaffold.pt"

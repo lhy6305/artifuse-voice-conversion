@@ -7,6 +7,7 @@ import math
 from pathlib import Path
 
 import torch
+import torch.nn.functional as F
 
 from v5vc.event_semantics import build_design_state_e_evt_v1_meta
 from v5vc.offline_teacher_vocoder_input_scaffold import (
@@ -18,6 +19,7 @@ from v5vc.offline_teacher_vocoder_input_scaffold import (
 from v5vc.source_acoustic_state_extraction import (
     DEFAULT_VUV_VOICED_FRAME_THRESHOLD,
     extract_source_acoustic_state,
+    slice_aligned_frames,
 )
 from v5vc.streaming_student.data import (
     collate_streaming_student_batch,
@@ -41,6 +43,7 @@ MAX_F0_CALIBRATED_LOG2_MAE = 0.2
 MAX_VUV_REFERENCE_MAE = 0.18
 MAX_APER_REFERENCE_MAE = 0.3
 MAX_ENERGY_STAGE5_NORM_REFERENCE_MAE = 0.15
+FINE_STRUCTURE_REFERENCE_LOGSPEC_BINS = 48
 
 
 def export_streaming_student_downstream_control_packet(
@@ -158,6 +161,12 @@ def export_streaming_student_downstream_control_packet(
                 frame_start_samples=frame_start_samples,
                 frame_length=frame_length,
             )
+            fine_structure_reference = build_fine_structure_reference(
+                waveform=waveform,
+                frame_start_samples=frame_start_samples,
+                frame_length=frame_length,
+                logspec_bins=FINE_STRUCTURE_REFERENCE_LOGSPEC_BINS,
+            )
 
             z_art = outputs["z_art"][0, :frame_count].to(torch.float32).cpu()
             event_probs = outputs["event_probs"][0, :frame_count].to(torch.float32).cpu()
@@ -259,6 +268,7 @@ def export_streaming_student_downstream_control_packet(
                     "energy_log": reference_energy_log,
                     "energy_stage5_norm": reference_energy_stage5_norm,
                 },
+                "fine_structure_reference": fine_structure_reference,
                 "diagnostics": {
                     "event_logits": event_logits,
                     "event_prior_probs": event_prior_probs,
@@ -284,6 +294,7 @@ def export_streaming_student_downstream_control_packet(
                     "f0_status": "analysis_only_affine_calibrated_to_target_reference",
                     "aper_status": "analysis_only_affine_calibrated_to_target_reference",
                     "energy_status": "analysis_only_affine_calibrated_to_target_reference",
+                    "fine_structure_reference_status": "analysis_only_target_derived_dense_reference",
                     "r_res_status": "absent_by_design",
                 },
             }
@@ -375,6 +386,8 @@ def export_streaming_student_downstream_control_packet(
             "f0_status": "analysis_only_affine_calibrated_to_target_reference",
             "aper_status": "analysis_only_affine_calibrated_to_target_reference",
             "energy_status": "analysis_only_affine_calibrated_to_target_reference",
+            "fine_structure_reference_status": "analysis_only_target_derived_dense_reference",
+            "fine_structure_logspec_bins": int(FINE_STRUCTURE_REFERENCE_LOGSPEC_BINS),
         },
         "packet_ready_count": packet_ready_count,
         "named_control_readiness_summary": readiness_summary,
@@ -386,6 +399,7 @@ def export_streaming_student_downstream_control_packet(
             "aper and energy now also export analysis-only affine-calibrated audit views against target reference; this is an audit aid, not yet a deployment-ready control contract.",
             "packet_ready_for_named_e_evt_handoff only means the named e_evt tensor/metadata contract is exportable; it is not a numeric readiness claim.",
             "named_control_readiness is a negative gate only: it can auto-reject clearly incomplete packets, but it does not prove a successful downstream handoff.",
+            "fine_structure_reference is analysis-only target-derived dense supervision scaffolding; it is not a deployable student-predicted control contract.",
             "r_res remains intentionally absent on this route.",
         ],
     }
@@ -448,6 +462,62 @@ def sanitize_filename(value: str) -> str:
         else:
             safe.append("_")
     return "".join(safe).strip("_") or "record"
+
+
+def build_fine_structure_reference(
+    *,
+    waveform: torch.Tensor,
+    frame_start_samples: torch.Tensor,
+    frame_length: int,
+    logspec_bins: int,
+) -> dict[str, torch.Tensor]:
+    aligned_frames = slice_aligned_frames(
+        waveform=waveform,
+        frame_start_samples=frame_start_samples,
+        frame_length=int(frame_length),
+    )
+    normalized_frames = normalize_frames_unit_rms(aligned_frames)
+    unit_rms_logspec = compress_logspec_bins(
+        compute_frame_logspec(normalized_frames),
+        output_bins=int(logspec_bins),
+    )
+    return {
+        "unit_rms_waveform_frame": normalized_frames,
+        "unit_rms_logspec": unit_rms_logspec,
+        "unit_rms_logspec_delta": compute_adjacent_deltas(unit_rms_logspec),
+    }
+
+
+def normalize_frames_unit_rms(frames: torch.Tensor) -> torch.Tensor:
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    if int(frames_cpu.shape[0]) <= 0:
+        return frames_cpu
+    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
+    frame_rms = centered.pow(2).mean(dim=1, keepdim=True).sqrt().clamp_min(1.0e-6)
+    return centered / frame_rms
+
+
+def compute_frame_logspec(frames: torch.Tensor) -> torch.Tensor:
+    frames_cpu = frames.detach().cpu().to(torch.float32)
+    spectrum = torch.fft.rfft(frames_cpu, dim=1)
+    return torch.log1p(spectrum.abs())
+
+
+def compress_logspec_bins(logspec: torch.Tensor, *, output_bins: int) -> torch.Tensor:
+    logspec_cpu = logspec.detach().cpu().to(torch.float32)
+    if int(logspec_cpu.shape[-1]) == int(output_bins):
+        return logspec_cpu.contiguous()
+    return F.adaptive_avg_pool1d(logspec_cpu.unsqueeze(1), int(output_bins)).squeeze(1).contiguous()
+
+
+def compute_adjacent_deltas(sequence: torch.Tensor) -> torch.Tensor:
+    sequence_cpu = sequence.detach().cpu().to(torch.float32)
+    if int(sequence_cpu.shape[0]) <= 0:
+        return sequence_cpu
+    deltas = torch.zeros_like(sequence_cpu)
+    if int(sequence_cpu.shape[0]) > 1:
+        deltas[1:] = sequence_cpu[1:] - sequence_cpu[:-1]
+    return deltas.contiguous()
 
 
 def assess_named_control_readiness(

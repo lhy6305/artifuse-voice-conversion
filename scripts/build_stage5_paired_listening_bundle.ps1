@@ -9,6 +9,7 @@ param(
     [string]$LeftSourceFilterReviewJson,
     [string]$LeftBundleManifestJson = "",
     [string]$LeftStructureProbeJson = "",
+    [string]$LeftSpeechEmergenceJson = "",
     [Parameter(Mandatory = $true)]
     [string]$RightVariantId,
     [Parameter(Mandatory = $true)]
@@ -16,7 +17,8 @@ param(
     [Parameter(Mandatory = $true)]
     [string]$RightSourceFilterReviewJson,
     [string]$RightBundleManifestJson = "",
-    [string]$RightStructureProbeJson = ""
+    [string]$RightStructureProbeJson = "",
+    [string]$RightSpeechEmergenceJson = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -66,6 +68,8 @@ $leftBundleManifestJson = if ([string]::IsNullOrWhiteSpace($LeftBundleManifestJs
 $rightBundleManifestJson = if ([string]::IsNullOrWhiteSpace($RightBundleManifestJson)) { $null } else { Resolve-AbsolutePath $RightBundleManifestJson }
 $leftStructureProbeJson = if ([string]::IsNullOrWhiteSpace($LeftStructureProbeJson)) { $null } else { Resolve-AbsolutePath $LeftStructureProbeJson }
 $rightStructureProbeJson = if ([string]::IsNullOrWhiteSpace($RightStructureProbeJson)) { $null } else { Resolve-AbsolutePath $RightStructureProbeJson }
+$leftSpeechEmergenceJson = if ([string]::IsNullOrWhiteSpace($LeftSpeechEmergenceJson)) { $null } else { Resolve-AbsolutePath $LeftSpeechEmergenceJson }
+$rightSpeechEmergenceJson = if ([string]::IsNullOrWhiteSpace($RightSpeechEmergenceJson)) { $null } else { Resolve-AbsolutePath $RightSpeechEmergenceJson }
 
 $outputDir = Join-Path (Get-Location) $OutputDir
 if (Test-Path $outputDir) {
@@ -85,10 +89,12 @@ $leftExportManifestMd = Get-SiblingMarkdownPath $leftExportManifestJson
 $leftSourceFilterReviewMd = Get-SiblingMarkdownPath $leftSourceFilterReviewJson
 $leftBundleManifestMd = if ($leftBundleManifestJson) { Get-SiblingMarkdownPath $leftBundleManifestJson } else { $null }
 $leftStructureProbeMd = if ($leftStructureProbeJson) { Get-SiblingMarkdownPath $leftStructureProbeJson } else { $null }
+$leftSpeechEmergenceMd = if ($leftSpeechEmergenceJson) { Get-SiblingMarkdownPath $leftSpeechEmergenceJson } else { $null }
 $rightExportManifestMd = Get-SiblingMarkdownPath $rightExportManifestJson
 $rightSourceFilterReviewMd = Get-SiblingMarkdownPath $rightSourceFilterReviewJson
 $rightBundleManifestMd = if ($rightBundleManifestJson) { Get-SiblingMarkdownPath $rightBundleManifestJson } else { $null }
 $rightStructureProbeMd = if ($rightStructureProbeJson) { Get-SiblingMarkdownPath $rightStructureProbeJson } else { $null }
+$rightSpeechEmergenceMd = if ($rightSpeechEmergenceJson) { Get-SiblingMarkdownPath $rightSpeechEmergenceJson } else { $null }
 
 $leftReviewRecords = @{}
 foreach ($record in $leftReview.records) {
@@ -177,6 +183,8 @@ $manifestCopySpecs = @(
     @{ path = $leftBundleManifestMd; name = "$LeftVariantId.stage5_listening_bundle.md" },
     @{ path = $leftStructureProbeJson; name = "$LeftVariantId.stage5_waveform_decoder_structure_probe.json" },
     @{ path = $leftStructureProbeMd; name = "$LeftVariantId.stage5_waveform_decoder_structure_probe.md" },
+    @{ path = $leftSpeechEmergenceJson; name = "$LeftVariantId.stage5_speech_emergence_probe.json" },
+    @{ path = $leftSpeechEmergenceMd; name = "$LeftVariantId.stage5_speech_emergence_probe.md" },
     @{ path = $rightExportManifestJson; name = "$RightVariantId.nores_vocoder_audio_export.json" },
     @{ path = $rightExportManifestMd; name = "$RightVariantId.nores_vocoder_audio_export.md" },
     @{ path = $rightSourceFilterReviewJson; name = "$RightVariantId.stage5_source_filter_review.json" },
@@ -184,7 +192,9 @@ $manifestCopySpecs = @(
     @{ path = $rightBundleManifestJson; name = "$RightVariantId.stage5_listening_bundle.json" },
     @{ path = $rightBundleManifestMd; name = "$RightVariantId.stage5_listening_bundle.md" },
     @{ path = $rightStructureProbeJson; name = "$RightVariantId.stage5_waveform_decoder_structure_probe.json" },
-    @{ path = $rightStructureProbeMd; name = "$RightVariantId.stage5_waveform_decoder_structure_probe.md" }
+    @{ path = $rightStructureProbeMd; name = "$RightVariantId.stage5_waveform_decoder_structure_probe.md" },
+    @{ path = $rightSpeechEmergenceJson; name = "$RightVariantId.stage5_speech_emergence_probe.json" },
+    @{ path = $rightSpeechEmergenceMd; name = "$RightVariantId.stage5_speech_emergence_probe.md" }
 )
 foreach ($spec in $manifestCopySpecs) {
     if ($null -ne $spec.path -and -not [string]::IsNullOrWhiteSpace([string]$spec.path) -and (Test-Path $spec.path)) {
@@ -205,6 +215,7 @@ $bundle = [ordered]@{
             source_filter_review_path = $leftSourceFilterReviewJson
             bundle_manifest_path = $leftBundleManifestJson
             structure_probe_path = $leftStructureProbeJson
+            speech_emergence_path = $leftSpeechEmergenceJson
             aggregate = $leftReview.aggregates
             buzz_reject_summary = $leftExport.buzz_reject_summary
         },
@@ -215,6 +226,7 @@ $bundle = [ordered]@{
             source_filter_review_path = $rightSourceFilterReviewJson
             bundle_manifest_path = $rightBundleManifestJson
             structure_probe_path = $rightStructureProbeJson
+            speech_emergence_path = $rightSpeechEmergenceJson
             aggregate = $rightReview.aggregates
             buzz_reject_summary = $rightExport.buzz_reject_summary
         }
@@ -249,6 +261,7 @@ $mdLines.Add("")
 $mdLines.Add("## Layout")
 $mdLines.Add("- manifests: ``" + $manifestsDir + "``")
 $mdLines.Add("- records: ``" + $recordsDir + "``")
+$mdLines.Add("- manifests now also copy optional speech-emergence json/md when provided.")
 $mdLines.Add("")
 $mdLines.Add("## Records")
 foreach ($record in $recordEntries) {

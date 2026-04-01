@@ -29,6 +29,10 @@ STAGE_SPECS = [
     ("all_available_controls", "Full dynamic control contract from source_scaffold available_controls."),
     ("unselected_available_controls", "Dynamic controls present in source_scaffold but omitted from the current Stage5-selected contract."),
     ("all_controls_plus_conditioning", "Full source_scaffold control contract plus static conditioning."),
+    ("fine_structure_reference_family", "Analysis-only dense fine-structure reference family exported from the Stage3 packet."),
+    ("fine_structure_waveform_reference_family", "Analysis-only direct unit-RMS waveform-frame reference exported from the Stage3 packet."),
+    ("selected_dynamic_plus_fine_structure_reference", "Current Stage5-selected dynamic controls plus the analysis-only dense fine-structure reference family."),
+    ("selected_dynamic_plus_fine_structure_waveform_reference", "Current Stage5-selected dynamic controls plus the analysis-only waveform-frame reference family."),
     ("event_gate_family", "Explicit e_evt family only."),
     ("event_probs_family", "Legacy event_probs family only."),
     ("event_full_family", "Combined event gate and event probability families."),
@@ -182,6 +186,8 @@ def analyze_stage5_nores_source_scaffold_oracle_probe(
         "notes": [
             "This probe moves earlier than Stage5 branch features and reads the source_scaffold control contract directly.",
             "The main question is whether source_scaffold available_controls contains materially stronger fine waveform geometry than the current Stage5-selected contract.",
+            "fine_structure_reference_family is analysis-only and target-derived; a strong score there means the signal class is worth redesigning upstream supervision around, not that the current student already predicts it.",
+            "If analysis-only waveform-reference families are present in available_controls, then all_available_controls and unselected_available_controls become upper-bound sanity checks rather than deployable-contract evidence.",
             "conditioning_family is frame-constant, so any tiny waveform oracle score there should be read only as record-level leakage, not temporal fine-structure evidence.",
             "Primary interpretation should compare selected_dynamic_controls, all_available_controls, and unselected_available_controls before any conditioning-augmented variants.",
         ],
@@ -246,6 +252,31 @@ def build_candidate_stage_sequences(*, package_payload: dict[str, object]) -> di
         stage_sequences["conditioning_family"] = conditioning_tensor
     if all_plus_conditioning:
         stage_sequences["all_controls_plus_conditioning"] = torch.cat(all_plus_conditioning, dim=-1)
+
+    fine_structure_keys = [
+        key
+        for key in ("packet_unit_rms_logspec", "packet_unit_rms_logspec_delta")
+        if key in available_controls and isinstance(available_controls[key], torch.Tensor)
+    ]
+    if fine_structure_keys:
+        fine_structure_tensor = concat_control_keys(available_controls, fine_structure_keys)
+        stage_sequences["fine_structure_reference_family"] = fine_structure_tensor
+        selected_dynamic_tensor = stage_sequences.get("selected_dynamic_controls")
+        if selected_dynamic_tensor is not None:
+            stage_sequences["selected_dynamic_plus_fine_structure_reference"] = torch.cat(
+                [selected_dynamic_tensor, fine_structure_tensor],
+                dim=-1,
+            )
+    waveform_reference = available_controls.get("packet_unit_rms_waveform_frame")
+    if isinstance(waveform_reference, torch.Tensor):
+        waveform_reference_tensor = waveform_reference.detach().cpu().to(torch.float32)
+        stage_sequences["fine_structure_waveform_reference_family"] = waveform_reference_tensor
+        selected_dynamic_tensor = stage_sequences.get("selected_dynamic_controls")
+        if selected_dynamic_tensor is not None:
+            stage_sequences["selected_dynamic_plus_fine_structure_waveform_reference"] = torch.cat(
+                [selected_dynamic_tensor, waveform_reference_tensor],
+                dim=-1,
+            )
 
     add_control_family_if_present(
         stage_sequences=stage_sequences,
@@ -554,6 +585,10 @@ def build_source_scaffold_summary(cross_record_stage_aggregates: list[dict[str, 
     all_controls = by_stage.get("all_available_controls")
     unselected_controls = by_stage.get("unselected_available_controls")
     all_plus_conditioning = by_stage.get("all_controls_plus_conditioning")
+    fine_structure_reference = by_stage.get("fine_structure_reference_family")
+    fine_structure_waveform_reference = by_stage.get("fine_structure_waveform_reference_family")
+    selected_plus_fine_structure = by_stage.get("selected_dynamic_plus_fine_structure_reference")
+    selected_plus_fine_structure_waveform = by_stage.get("selected_dynamic_plus_fine_structure_waveform_reference")
     summary: dict[str, object] = {
         "best_cross_record_waveform_stage": str(best_linear["stage_name"]),
         "best_cross_record_waveform_value": float(best_linear["oracle_waveform_frame_cosine_mean"]),
@@ -573,15 +608,39 @@ def build_source_scaffold_summary(cross_record_stage_aggregates: list[dict[str, 
     add_stage_signal_snapshot(summary, selected_dynamic, "selected_dynamic")
     add_stage_signal_snapshot(summary, all_controls, "all_available_controls")
     add_stage_signal_snapshot(summary, unselected_controls, "unselected_available_controls")
+    add_stage_signal_snapshot(summary, fine_structure_reference, "fine_structure_reference")
+    add_stage_signal_snapshot(summary, fine_structure_waveform_reference, "fine_structure_waveform_reference")
     add_waveform_gain(summary, selected_dynamic, all_controls, "selected_dynamic_to_all_controls")
     add_waveform_gain(summary, selected_joint, all_plus_conditioning, "selected_joint_to_all_controls_plus_conditioning")
     add_waveform_gain(summary, selected_dynamic, unselected_controls, "selected_dynamic_to_unselected_controls")
+    add_waveform_gain(
+        summary,
+        selected_dynamic,
+        selected_plus_fine_structure,
+        "selected_dynamic_to_selected_plus_fine_structure",
+    )
+    add_waveform_gain(
+        summary,
+        selected_dynamic,
+        selected_plus_fine_structure_waveform,
+        "selected_dynamic_to_selected_plus_fine_structure_waveform",
+    )
 
     selected_dynamic_signal = max_stage_signal(selected_dynamic)
     all_controls_signal = max_stage_signal(all_controls)
     unselected_signal = max_stage_signal(unselected_controls)
+    fine_structure_signal = max_stage_signal(fine_structure_reference)
+    fine_structure_waveform_signal = max_stage_signal(fine_structure_waveform_reference)
     best_dynamic_contract_signal = max(selected_dynamic_signal, all_controls_signal, unselected_signal)
-    if best_dynamic_contract_signal < 0.05:
+    if (
+        fine_structure_waveform_signal >= 0.5
+        and fine_structure_signal < 0.05
+        and selected_dynamic_signal < 0.05
+    ):
+        summary["diagnosis"] = "compact_magnitude_only_fine_structure_is_still_too_weak_but_direct_waveform_geometry_would_open_the_gate"
+    elif fine_structure_signal >= selected_dynamic_signal + 0.08 and fine_structure_signal >= 0.08:
+        summary["diagnosis"] = "analysis_only_dense_fine_structure_reference_opens_a_much_stronger_signal_class_than_current_stage5_controls"
+    elif best_dynamic_contract_signal < 0.05:
         summary["diagnosis"] = "fine_waveform_geometry_is_already_weak_in_source_scaffold_control_contract"
     elif all_controls_signal >= selected_dynamic_signal + 0.02 and unselected_signal >= selected_dynamic_signal + 0.01:
         summary["diagnosis"] = "source_scaffold_contains_additional_fine_geometry_outside_current_stage5_selection"

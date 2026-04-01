@@ -1,0 +1,43 @@
+{
+    "dataset_index_version":  "offline_mvp_nores_vocoder_dataset_index_v1",
+    "generated_at":  "2026-04-01T18:27:06",
+    "packet_export_path":  [
+                               null
+                           ],
+    "selection_mode":  "validation_duplicated_to_train_for_loopsmoke",
+    "split_name":  "validation",
+    "semantic_consumer_mode":  "streaming_student_waveform_pca_code_v1",
+    "target_contract_mode":  "legacy_proxy",
+    "noise_event_family":  "e_evt",
+    "train_packages":  [
+                           null
+                       ],
+    "validation_packages":  [
+                                null
+                            ],
+    "summary":  {
+                    "train":  {
+                                  "package_count":  1,
+                                  "periodic_input_dims":  [
+                                                              0
+                                                          ],
+                                  "noise_input_dims":  [
+                                                           0
+                                                       ]
+                              },
+                    "validation":  {
+                                       "package_count":  1,
+                                       "periodic_input_dims":  [
+                                                                   0
+                                                               ],
+                                       "noise_input_dims":  [
+                                                                0
+                                                            ]
+                                   },
+                    "run_duration_sec":  0
+                },
+    "notes":  [
+                  "This loopsmoke index duplicates the same PCA16 waveform-code full5 review-slice packages into both train and validation only for bounded startup verification.",
+                  "This remains an analysis-only upper-bound consumer route because the waveform_pca_code is fitted from target waveform references inside each packet export."
+              ]
+}

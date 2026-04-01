@@ -108,6 +108,10 @@ from v5vc.stage5_source_filter_probe import analyze_stage5_nores_source_filter_r
 from v5vc.stage5_source_scaffold_oracle_probe import (
     analyze_stage5_nores_source_scaffold_oracle_probe,
 )
+from v5vc.stage5_fine_structure_code_oracle_probe import (
+    DEFAULT_WAVEFORM_CODE_DIMS,
+    analyze_stage5_nores_fine_structure_code_oracle_probe,
+)
 from v5vc.stage5_teacher_contract_hidden_probe import (
     analyze_stage5_nores_teacher_contract_hidden_probe,
 )
@@ -128,6 +132,9 @@ from v5vc.stage5_waveform_decoder_structure_probe import analyze_stage5_nores_wa
 from v5vc.stage5_waveform_handoff_probe import analyze_stage5_nores_waveform_handoff
 from v5vc.stage5_waveform_objective_collapse_probe import analyze_stage5_nores_waveform_objective_collapse
 from v5vc.stage_report import materialize_offline_mvp_stage_report
+from v5vc.streaming_student.fine_structure_code_packet import (
+    materialize_streaming_student_fine_structure_pca_packet_export,
+)
 from v5vc.streaming_student import (
     audit_streaming_student_pitch_provider,
     build_streaming_student_calibration_assets,
@@ -1456,6 +1463,29 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional max duration for each exported audio item.",
     )
     add_student_route_guard_argument(streaming_student_downstream_control_parser)
+    streaming_student_fine_structure_code_packet_parser = subparsers.add_parser(
+        "materialize-streaming-student-fine-structure-pca-packet-export",
+        help="Augment an existing streaming-student downstream packet export with an analysis-only compact waveform PCA code.",
+    )
+    streaming_student_fine_structure_code_packet_parser.add_argument(
+        "--packet-export",
+        type=Path,
+        required=True,
+        help="streaming_student_downstream_control_packet.json produced by the Stage3 packet exporter.",
+    )
+    streaming_student_fine_structure_code_packet_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for the augmented packet export.",
+    )
+    streaming_student_fine_structure_code_packet_parser.add_argument(
+        "--code-dim",
+        type=int,
+        default=16,
+        help="Compact PCA waveform-code dimension to materialize.",
+    )
+    add_student_route_guard_argument(streaming_student_fine_structure_code_packet_parser)
     audio_audit_gui_parser = subparsers.add_parser(
         "launch-audio-audit-gui",
         help="Launch the proxy-audio audit GUI for manual listening review.",
@@ -5202,6 +5232,82 @@ def build_parser() -> argparse.ArgumentParser:
         default=1.0e-3,
         help="Learning rate for the optional waveform-frame MLP oracle readout.",
     )
+    stage5_fine_structure_code_oracle_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-fine-structure-code-oracle-probe",
+        help="Fit compact waveform-geometry PCA codes on the analysis-only unit-RMS waveform-frame reference and compare them against the current Stage5 dynamic-control baseline.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 fine-structure code oracle probe outputs.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--active-frame-rms-threshold",
+        type=float,
+        default=0.02,
+        help="Aligned-frame RMS threshold used to define the active-frame support mask for the oracle probe.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--logspec-bins",
+        type=int,
+        default=48,
+        help="Number of compressed log-spectral bins used by the oracle readout target.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--ridge-lambda",
+        type=float,
+        default=1.0,
+        help="L2 regularization strength for the closed-form ridge oracle readout.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--waveform-mlp-hidden-dim",
+        type=int,
+        default=128,
+        help="Hidden width for the optional 2-layer waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--waveform-mlp-steps",
+        type=int,
+        default=200,
+        help="Training steps for the optional waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--waveform-mlp-lr",
+        type=float,
+        default=1.0e-3,
+        help="Learning rate for the optional waveform-frame MLP oracle readout.",
+    )
+    stage5_fine_structure_code_oracle_probe_parser.add_argument(
+        "--code-dims",
+        type=int,
+        nargs="*",
+        default=list(DEFAULT_WAVEFORM_CODE_DIMS),
+        help="Compact PCA waveform-code dimensions to test.",
+    )
     stage5_teacher_contract_hidden_probe_parser = subparsers.add_parser(
         "analyze-stage5-nores-teacher-contract-hidden-probe",
         help="Fit cheap oracle readouts on upstream teacher-contract hidden states and compare them against the explicit dynamic control package exported into source_scaffold.",
@@ -7037,6 +7143,17 @@ def main(argv: list[str] | None = None) -> int:
             max_audio_sec=args.max_audio_sec,
         )
         return 0
+    if args.command == "materialize-streaming-student-fine-structure-pca-packet-export":
+        require_student_route_explicit_ack(
+            args.command,
+            args.allow_student_line_while_teacher_unsatisfied,
+        )
+        materialize_streaming_student_fine_structure_pca_packet_export(
+            packet_export_path=args.packet_export,
+            output_dir=args.output_dir,
+            code_dim=args.code_dim,
+        )
+        return 0
     if args.command == "launch-audio-audit-gui":
         launch_audio_audit_gui(
             bundle_paths=list(args.bundle),
@@ -7831,6 +7948,22 @@ def main(argv: list[str] | None = None) -> int:
             waveform_mlp_hidden_dim=args.waveform_mlp_hidden_dim,
             waveform_mlp_steps=args.waveform_mlp_steps,
             waveform_mlp_lr=args.waveform_mlp_lr,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-fine-structure-code-oracle-probe":
+        analyze_stage5_nores_fine_structure_code_oracle_probe(
+            output_dir=args.output_dir,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            active_frame_rms_threshold=args.active_frame_rms_threshold,
+            logspec_bins=args.logspec_bins,
+            ridge_lambda=args.ridge_lambda,
+            waveform_mlp_hidden_dim=args.waveform_mlp_hidden_dim,
+            waveform_mlp_steps=args.waveform_mlp_steps,
+            waveform_mlp_lr=args.waveform_mlp_lr,
+            code_dims=tuple(args.code_dims),
         )
         return 0
     if args.command == "analyze-stage5-nores-teacher-contract-hidden-probe":

@@ -76,6 +76,7 @@ SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
     "target_timing_sidecar_framewise_v1",
     "source_semantic_parity_framewise_v1",
     "streaming_student_richer_source_contract_v1",
+    "streaming_student_waveform_pca_code_v1",
 }
 SUPPORTED_STAGE5_TARGET_CONTRACT_MODES = {
     "legacy_proxy",
@@ -3356,6 +3357,32 @@ def build_stage5_semantic_consumer_features(
                 "feature_values": [],
             },
         }
+    if resolved_mode == "streaming_student_waveform_pca_code_v1":
+        feature_tensor, source_contract_summary = build_stage5_streaming_student_waveform_pca_code_feature_tensors(
+            source_scaffold_payload=source_scaffold_payload,
+            frame_count=int(frame_count),
+        )
+        feature_names = list(source_contract_summary["feature_names"])
+        return {
+            "feature_dim": int(feature_tensor.shape[-1]),
+            "semantic_tag": "streaming_student_waveform_pca_code_v1",
+            "periodic_broadcast_features": feature_tensor,
+            "noise_broadcast_features": feature_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "streaming_student_waveform_pca_code_v1",
+                "feature_dim": int(feature_tensor.shape[-1]),
+                "feature_names": feature_names,
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+                "feature_source": str(source_contract_summary["feature_source"]),
+                "source_contract_path": source_contract_summary["source_contract_path"],
+                "source_contract_version": source_contract_summary["source_contract_version"],
+                "source_contract_code_feature_dim": int(source_contract_summary["code_feature_dim"]),
+                "feature_values": [],
+            },
+        }
     return {
         "feature_dim": int(feature_tensor.shape[-1]),
         "semantic_tag": "source_semantic_parity_framewise_v1",
@@ -3469,6 +3496,69 @@ def build_stage5_streaming_student_source_contract_feature_tensors(
         "reference_feature_dim": int(reference_feature_dim),
         "diagnostic_feature_dim": int(diagnostic_feature_dim),
         "conditioning_feature_dim": int(conditioning_feature_dim),
+    }
+
+
+def build_stage5_streaming_student_waveform_pca_code_feature_tensors(
+    *,
+    source_scaffold_payload: dict[str, object] | None,
+    frame_count: int,
+) -> tuple[torch.Tensor, dict[str, object]]:
+    empty = torch.zeros((int(frame_count), 0), dtype=torch.float32)
+    if not isinstance(source_scaffold_payload, dict):
+        return empty, {
+            "feature_source": "zeros_missing_source_scaffold_payload",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "code_feature_dim": 0,
+        }
+    source_contract_path = source_scaffold_payload.get("source_contract_path")
+    if not isinstance(source_contract_path, str) or not source_contract_path:
+        return empty, {
+            "feature_source": "zeros_missing_source_contract_path",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "code_feature_dim": 0,
+        }
+    contract_path = Path(source_contract_path).resolve()
+    if not contract_path.exists():
+        raise FileNotFoundError(f"semantic_consumer_mode requires source_contract_path to exist: {contract_path}")
+    source_contract_payload = torch.load(contract_path, map_location="cpu", weights_only=False)
+    if not isinstance(source_contract_payload, dict):
+        raise TypeError(f"Unsupported source contract payload type: {type(source_contract_payload)!r}")
+    source_contract_version = str(source_contract_payload.get("packet_version", "unknown"))
+    if source_contract_version != "streaming_student_downstream_control_v1":
+        raise ValueError(
+            "streaming_student_waveform_pca_code_v1 requires "
+            f"streaming_student_downstream_control_v1, got {source_contract_version!r}."
+        )
+    fine_structure_code = dict(source_contract_payload.get("fine_structure_code", {}))
+    waveform_code = fine_structure_code.get("waveform_pca_code")
+    if not isinstance(waveform_code, torch.Tensor):
+        return empty, {
+            "feature_source": "zeros_missing_waveform_pca_code",
+            "feature_names": [],
+            "source_contract_path": contract_path.as_posix(),
+            "source_contract_version": source_contract_version,
+            "code_feature_dim": 0,
+        }
+    tensor = normalize_streaming_student_frame_tensor(
+        value=waveform_code,
+        frame_count=int(frame_count),
+        key="fine_structure_code.waveform_pca_code",
+    )
+    feature_names = expand_stage5_feature_names(
+        prefix="fine_structure_code.waveform_pca_code",
+        dim=int(tensor.shape[-1]),
+    )
+    return tensor, {
+        "feature_source": "streaming_student_waveform_pca_code",
+        "feature_names": feature_names,
+        "source_contract_path": contract_path.as_posix(),
+        "source_contract_version": source_contract_version,
+        "code_feature_dim": int(tensor.shape[-1]),
     }
 
 
