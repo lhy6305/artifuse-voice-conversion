@@ -422,37 +422,99 @@ def build_producer_summary(cross_record_stage_aggregates: list[dict[str, object]
     decoder_hidden = by_stage.get("decoder_hidden")
     waveform_input_hidden = by_stage.get("waveform_decoder_input_hidden")
     base_logits = by_stage.get("waveform_decoder_base_logits")
+    best_linear_value = float(best_linear["oracle_waveform_frame_cosine_mean"])
+    best_mlp_value = float(best_mlp["oracle_waveform_mlp_frame_cosine_mean"])
     summary: dict[str, object] = {
         "best_cross_record_waveform_stage": str(best_linear["stage_name"]),
-        "best_cross_record_waveform_value": float(best_linear["oracle_waveform_frame_cosine_mean"]),
+        "best_cross_record_waveform_value": best_linear_value,
         "best_cross_record_waveform_mlp_stage": str(best_mlp["stage_name"]),
-        "best_cross_record_waveform_mlp_value": float(best_mlp["oracle_waveform_mlp_frame_cosine_mean"]),
+        "best_cross_record_waveform_mlp_value": best_mlp_value,
     }
     if branch_difference is not None and fusion_residual is not None:
+        summary["branch_difference_to_fusion_residual_waveform_drop"] = round(
+            float(branch_difference["oracle_waveform_frame_cosine_mean"])
+            - float(fusion_residual["oracle_waveform_frame_cosine_mean"]),
+            6,
+        )
         summary["branch_difference_to_fusion_residual_waveform_mlp_drop"] = round(
             float(branch_difference["oracle_waveform_mlp_frame_cosine_mean"])
             - float(fusion_residual["oracle_waveform_mlp_frame_cosine_mean"]),
             6,
         )
     if branch_mean is not None and fused_hidden is not None:
+        summary["branch_mean_to_fused_hidden_waveform_drop"] = round(
+            float(branch_mean["oracle_waveform_frame_cosine_mean"])
+            - float(fused_hidden["oracle_waveform_frame_cosine_mean"]),
+            6,
+        )
         summary["branch_mean_to_fused_hidden_waveform_mlp_drop"] = round(
             float(branch_mean["oracle_waveform_mlp_frame_cosine_mean"])
             - float(fused_hidden["oracle_waveform_mlp_frame_cosine_mean"]),
             6,
         )
     if decoder_hidden is not None and waveform_input_hidden is not None:
+        summary["decoder_hidden_to_waveform_input_hidden_waveform_drop"] = round(
+            float(decoder_hidden["oracle_waveform_frame_cosine_mean"])
+            - float(waveform_input_hidden["oracle_waveform_frame_cosine_mean"]),
+            6,
+        )
         summary["decoder_hidden_to_waveform_input_hidden_waveform_mlp_drop"] = round(
             float(decoder_hidden["oracle_waveform_mlp_frame_cosine_mean"])
             - float(waveform_input_hidden["oracle_waveform_mlp_frame_cosine_mean"]),
             6,
         )
     if waveform_input_hidden is not None and base_logits is not None:
+        summary["waveform_input_hidden_to_base_logits_waveform_drop"] = round(
+            float(waveform_input_hidden["oracle_waveform_frame_cosine_mean"])
+            - float(base_logits["oracle_waveform_frame_cosine_mean"]),
+            6,
+        )
         summary["waveform_input_hidden_to_base_logits_waveform_mlp_drop"] = round(
             float(waveform_input_hidden["oracle_waveform_mlp_frame_cosine_mean"])
             - float(base_logits["oracle_waveform_mlp_frame_cosine_mean"]),
             6,
         )
-    summary["diagnosis"] = "needs_manual_reading"
+    output_head_linear_drop = summary.get("waveform_input_hidden_to_base_logits_waveform_drop")
+    output_head_mlp_drop = summary.get("waveform_input_hidden_to_base_logits_waveform_mlp_drop")
+    branch_mean_linear_drop = summary.get("branch_mean_to_fused_hidden_waveform_drop")
+    branch_mean_mlp_drop = summary.get("branch_mean_to_fused_hidden_waveform_mlp_drop")
+    branch_difference_linear_drop = summary.get("branch_difference_to_fusion_residual_waveform_drop")
+    branch_difference_mlp_drop = summary.get("branch_difference_to_fusion_residual_waveform_mlp_drop")
+    fusion_path_is_not_a_strong_new_collapse_site = all(
+        value is None or abs(float(value)) < 0.01
+        for value in (
+            branch_mean_linear_drop,
+            branch_mean_mlp_drop,
+            branch_difference_linear_drop,
+            branch_difference_mlp_drop,
+        )
+    )
+    output_head_is_visible_linear_collapse_site = (
+        output_head_linear_drop is not None and float(output_head_linear_drop) >= 0.005
+    )
+    output_head_is_visible_nonlinear_collapse_site = (
+        output_head_mlp_drop is not None and float(output_head_mlp_drop) >= 0.005
+    )
+    best_available_waveform_signal = max(best_linear_value, best_mlp_value)
+    if best_available_waveform_signal < 0.05:
+        if output_head_is_visible_linear_collapse_site and fusion_path_is_not_a_strong_new_collapse_site:
+            summary["diagnosis"] = (
+                "fine_waveform_geometry_is_weak_across_the_full_producer_path_and_base_logits_remains_the_"
+                "sharpest_visible_collapse_site"
+            )
+        elif output_head_is_visible_linear_collapse_site or output_head_is_visible_nonlinear_collapse_site:
+            summary["diagnosis"] = (
+                "fine_waveform_geometry_is_weak_across_the_full_producer_path_with_an_additional_visible_"
+                "base_logits_collapse"
+            )
+        else:
+            summary["diagnosis"] = "fine_waveform_geometry_is_weak_across_the_full_producer_path"
+    elif output_head_is_visible_linear_collapse_site or output_head_is_visible_nonlinear_collapse_site:
+        summary["diagnosis"] = "producer_path_keeps_some_fine_geometry_but_base_logits_discards_it"
+    elif fusion_path_is_not_a_strong_new_collapse_site:
+        summary["diagnosis"] = "fusion_path_preserves_the_available_fine_geometry"
+    else:
+        summary["diagnosis"] = "needs_manual_reading"
     return summary
 
 

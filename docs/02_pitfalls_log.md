@@ -1223,6 +1223,119 @@
   - do not use strong coarse oracle numbers as a reason to continue local output-head redesign by default
   - once fine waveform oracle metrics remain near zero across both linear and small nonlinear readouts, shift the main localization effort upstream into the producer / fusion representation path
 
+## Pitfall 100: Do not misread the still-visible base-logits collapse as proof that the current producer path already contains strong recoverable fine waveform structure
+- `555` refines the post-`554` story:
+  - the producer/fusion probe still shows the sharpest visible linear collapse at `waveform_decoder_input_hidden -> waveform_decoder_base_logits`
+  - but the same probe also shows that cross-record fine waveform recoverability is already near zero across the full producer path
+- The key numbers are:
+  - best cross-record linear waveform cosine is only `fusion_residual_hidden = 0.015881`
+  - best cross-record waveform MLP cosine is only `noise_hidden = 0.013228`
+  - `branch_mean_hidden -> fused_hidden` waveform MLP drop is effectively zero at `-0.000080`
+  - `decoder_hidden -> waveform_decoder_input_hidden` waveform MLP drop is also tiny at `-0.001028`
+  - `waveform_decoder_input_hidden -> waveform_decoder_base_logits` linear waveform drop is still visible at `0.006449`
+- That means:
+  - the output head is still a visible collapse boundary
+  - but it is not sitting on top of a strong hidden reservoir of recoverable shared fine waveform structure
+  - fusion alone is also not the newly proven main collapse source
+- Therefore:
+  - do not restart local output-head redesign just because the last projection still looks bad
+  - do not tell the story as if the producer path were healthy and only the last head were broken
+  - after `555`, the next structural move should target how stronger target-specific fine structure is formed or preserved before the current producer-path low-signal regime
+
+## Pitfall 101: Do not blame Stage5 early encoders or overread static conditioning slices once the branch-feature oracle already says the raw branch-input contract is low-signal
+- `556` moves the localization one step earlier than `555`:
+  - raw `periodic_branch_features` and `noise_branch_features` still keep strong coarse oracle signals
+  - but dynamic raw-family fine waveform cosine remains tiny, with only `acoustic_state_family = 0.020021` linearly and `f0_hz_log_norm_family = 0.019484` under the waveform MLP
+  - the periodic and noise encoders then add only small extra waveform loss:
+    - `periodic_branch_features -> periodic_hidden = 0.001814 / 0.000779`
+    - `noise_branch_features -> noise_hidden = 0.004939 / 0.000880`
+  - format above is `linear / mlp`
+- `conditioning_family` is an easy place to overread the result:
+  - it reaches a slightly higher tiny waveform score at `0.022368`
+  - but it is frame-constant conditioning and also gives `oracle_rms_corr = 0.0` and `oracle_vuv_accuracy = 0.471101`
+  - so that score is weak record-level leakage, not proof of temporal fine waveform structure
+- Therefore:
+  - do not shift blame to the periodic or noise input encoders as the newly proven main collapse site
+  - do not cite `conditioning_family` as evidence that Stage5 already has a useful temporal fine-structure reservoir
+  - after `556`, the next valid structural move is earlier than the current Stage5 package boundary, at the upstream control contract and representation-formation path
+
+## Pitfall 102: Do not let source_scaffold conditioning leakage replace the primary dynamic-control comparison
+- The next post-`556` localization step is a read-only `source_scaffold` oracle probe.
+- Its primary question is dynamic:
+  - how `selected_dynamic_controls` compares with `all_available_controls`
+  - whether `unselected_available_controls` contains materially stronger fine waveform geometry than the current Stage5-selected subset
+- Conditioning-augmented views can still be useful, but only as secondary leakage checks:
+  - `conditioning_family` is frame-constant by design
+  - `all_controls_plus_conditioning` can therefore show record-level leakage that does not prove temporal fine-structure capacity
+- Therefore:
+  - do not let `selected_joint_contract` or `all_controls_plus_conditioning` override the main reading from the three dynamic-control comparisons
+  - if the dynamic-control comparisons all stay near zero, the diagnosis should remain that the source-scaffold control contract itself is already low-signal
+  - only treat conditioning-augmented variants as contextual side evidence, not as the route-opening conclusion
+
+## Pitfall 103: Do not assume the current student packet or its hidden states hide a strong omitted fine-structure reservoir once the upstream probes say otherwise
+- `558` to `560` now bound the current active student route on the same full5 review slice:
+  - exported packet controls stay weak, with `source_contract_core_controls = 0.011209 / 0.011934`
+  - packet-only diagnostics also stay weak, with `source_contract_diagnostics_family = 0.00583 / -0.000269`
+  - replayed hidden states also stay weak, with `shared_hidden = 0.009423 / 0.00692` and `student_hidden = 0.006876 / 0.00962`
+  - even the stronger currently available upstream input families remain only mildly higher, with `packet_reference_controls = 0.02178 / 0.014518` and `pitch_provider_family = 0.020932 / 0.016573`
+  - format above is `linear / mlp`
+- Therefore:
+  - do not tell the story as if one omitted packet diagnostic or one unexported hidden tensor is the newly proven missing reservoir
+  - do not keep replaying Stage5-local control-subset reshuffles or packet-field juggling after the current upstream chain is already bounded in the `~0.01` to `~0.02` regime
+  - after `560`, the next valid move is an upstream representation or supervision redesign, not another same-family localization replay
+
+## Pitfall 104: Do not overread richer-contract plumbing smoke as if it already proved quality or old-checkpoint compatibility
+- `561` changes the status from probe-only to implementation:
+  - the new `streaming_student_richer_source_contract_v1` route appends a `48`-dim upstream sidecar into both Stage5 branches
+  - the active Stage5 input contract therefore changes from `36/36` to `84/84`
+  - package build and single-step training smoke both pass on this new route
+- But that only proves plumbing:
+  - it proves the richer contract is buildable
+  - it proves the Stage5 training path can consume it
+  - it does not prove that decoded quality improves
+- Therefore:
+  - do not claim route-opening quality from `561` alone
+  - do not try to reuse old `36/36` no-res checkpoints on the new `84/84` richer-contract dataset
+  - after `561`, the next valid move is bounded machine-side Stage5 training on the richer-contract dataset, not immediate listening claims
+
+## Pitfall 105: Do not assume `strict=False` partial init automatically handles widened-input shape mismatches
+- `562` exposed a specific failure on the richer-contract route:
+  - old Stage5 checkpoints can still be structurally useful as warm-start sources
+  - but the widened richer-contract first encoder layers change from `36` input dims to `84`
+  - plain `model.load_state_dict(..., strict=False)` still crashes on shape mismatches
+- Therefore:
+  - when reusing old checkpoints on widened richer-contract Stage5 models, do not rely on `strict=False` alone
+  - explicitly filter out mismatched-shape keys before loading
+  - read the resulting `missing_keys` / `skipped_shape_mismatch_keys` summary as the real partial-init contract
+
+## Pitfall 106: Do not treat duplicated train=validation loop-smoke improvements as held-out generalization evidence
+- The first richer-contract bounded comparison in `563` used a loop-smoke dataset that duplicated the same 5 packages into both `train_packages` and `validation_packages`.
+- That setup is still useful:
+  - it proves the route can optimize beyond 3-step smoke
+  - it gives a fair random-init vs warm-start machine comparison under the same tiny package pool
+- But it is not held-out validation:
+  - a falling validation loss there does not by itself prove cross-package generalization
+  - a selected checkpoint there should be read as a bounded route check, not a trustworthy generalization anchor
+- Therefore:
+  - after a duplicated loop-smoke comparison starts looking promising, the next move must tighten validation, for example with a minisplit or a larger held-out package pool
+  - do not trigger human listening audit just because the duplicated loop-smoke validation keeps falling
+
+## Pitfall 107: Do not rank waveform-regularized richer-contract checkpoints by validation loss alone
+- After `564`, the richer-contract route with explicit `rms_guard` and `waveform_decoder_base_logits_high_band_excess` no longer preserved the old ordering between held-out validation loss and machine emergence quality.
+- Concrete example:
+  - plain richer-contract minisplit `step39` still wins held-out validation at `0.443589`
+  - combined `rmsguard02 + bhb01` validation-best `step36` is much worse on loss at `0.612045`
+  - but the combined route's earlier `step20` checkpoint gives a much better joint machine balance on the real failure axes:
+    - `decoded_to_aligned_rms_ratio = 1.167112` instead of `2.963793`
+    - `decoded_spectral_high_band_energy_ratio = 0.593995` instead of `0.683286`
+    - `decoded_frame_template_cosine_gap_vs_aligned = 0.734923` instead of `0.844697`
+- Meaning:
+  - once waveform-side regularizers enter the objective, `loss_total` can overweight optimization comfort relative to downstream emergence quality
+  - the validation-best checkpoint can become a worse listening candidate than an earlier checkpoint on the same run
+- Therefore:
+  - for regularized Stage5 richer-contract runs, always inspect machine speech-emergence metrics on more than one checkpoint before choosing a listening candidate
+  - do not promote or reject a regularized branch from `loss_total` alone when the main question is waveform emergence quality
+
 
 ## Current Maintenance Rules
 - Before adding a new pitfall, decide whether it will keep affecting multiple future decisions.
@@ -1316,3 +1429,13 @@
 - `docs/552_stage5_paired_full5_listening_bundle_colocation_report.md`
 - `docs/553_stage5_dynamicheadsmokea_manual_review_and_oracle_probe_plan_report.md`
 - `docs/554_stage5_representation_oracle_waveform_sufficiency_report.md`
+- `docs/555_stage5_producer_fine_structure_probe_report.md`
+- `docs/556_stage5_branch_feature_oracle_probe_report.md`
+- `docs/557_stage5_source_scaffold_control_contract_probe_report.md`
+- `docs/558_stage5_source_contract_upstream_probe_report.md`
+- `docs/559_stage3_packet_hidden_state_probe_report.md`
+- `docs/560_stage3_frontend_input_probe_report.md`
+- `docs/561_stage5_richer_source_contract_consumer_plumbing_report.md`
+- `docs/562_stage5_richercontract_dataset_loop_smoke_and_partial_init_report.md`
+- `docs/563_stage5_richercontract_bounded_training_and_minisplit_report.md`
+- `docs/564_stage5_richercontract_rms_highband_regularizer_tradeoff_and_listening_candidate_report.md`

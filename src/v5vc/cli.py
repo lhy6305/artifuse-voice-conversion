@@ -96,9 +96,21 @@ from v5vc.stage5_low_activity_probe import (
     analyze_stage5_low_activity_fragments,
 )
 from v5vc.stage5_low_activity_governance_report import materialize_stage5_low_activity_governance_report
+from v5vc.stage5_branch_feature_oracle_probe import (
+    analyze_stage5_nores_branch_feature_oracle_probe,
+)
+from v5vc.stage5_producer_fine_structure_probe import (
+    analyze_stage5_nores_producer_fine_structure_probe,
+)
 from v5vc.stage5_representation_oracle_probe import analyze_stage5_nores_representation_oracle_probe
 from v5vc.stage5_speech_emergence_probe import analyze_stage5_nores_speech_emergence
 from v5vc.stage5_source_filter_probe import analyze_stage5_nores_source_filter_review
+from v5vc.stage5_source_scaffold_oracle_probe import (
+    analyze_stage5_nores_source_scaffold_oracle_probe,
+)
+from v5vc.stage5_teacher_contract_hidden_probe import (
+    analyze_stage5_nores_teacher_contract_hidden_probe,
+)
 from v5vc.stage5_vuv_decode_projection_probe import analyze_stage5_nores_vuv_decode_projection_review
 from v5vc.stage5_vuv_frame_reconstruction_probe import analyze_stage5_nores_vuv_frame_reconstruction_review
 from v5vc.stage5_vuv_reconstruction_contract_probe import analyze_stage5_nores_vuv_reconstruction_contract_review
@@ -3190,6 +3202,39 @@ def build_parser() -> argparse.ArgumentParser:
         help="Optional scalar applied to the decoder_hidden pre-head adapter contribution.",
     )
     nores_vocoder_train_step_parser.add_argument(
+        "--use-waveform-decoder-dynamic-basis",
+        action="store_true",
+        help="Enable a small dynamic residual basis head on waveform_decoder_base_logits for fused_single routes.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-dynamic-basis-count",
+        type=int,
+        default=4,
+        help="Number of dynamic residual basis projections mixed per frame when the dynamic waveform decoder head is enabled.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--waveform-decoder-dynamic-basis-scale",
+        type=float,
+        default=1.0,
+        help="Scalar applied to the mixed dynamic residual basis delta before it is added to waveform_decoder_base_logits.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--use-noise-hidden-residual-adapter",
+        action="store_true",
+        help="Enable an explicit noise_hidden-driven residual path in addition to the existing residual-shape branch.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--noise-hidden-residual-mode",
+        default="gate_plus_delta_v1",
+        help="Explicit noise_hidden residual path mode: gate_bias_only_v1, delta_direct_v1, or gate_plus_delta_v1.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
+        "--noise-hidden-residual-scale",
+        type=float,
+        default=1.0,
+        help="Optional scalar applied to the explicit noise_hidden residual contribution.",
+    )
+    nores_vocoder_train_step_parser.add_argument(
         "--periodic-waveform-frame-delta-weight",
         type=float,
         default=0.0,
@@ -3806,7 +3851,7 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "How target_event_semantic_sidecar is consumed during package build: "
             "none, target_sidecar_broadcast_v1, target_timing_sidecar_framewise_v1, or "
-            "source_semantic_parity_framewise_v1."
+            "source_semantic_parity_framewise_v1, or streaming_student_richer_source_contract_v1."
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(
@@ -4527,7 +4572,11 @@ def build_parser() -> argparse.ArgumentParser:
     student_stage5_dataset_parser.add_argument(
         "--semantic-consumer-mode",
         default="none",
-        help="How Stage5 semantic sidecar features are consumed inside each synthetic package. Keep none for the minimal route.",
+        help=(
+            "How Stage5 semantic sidecar features are consumed inside each synthetic package. "
+            "Use streaming_student_richer_source_contract_v1 to append packet reference-controls, diagnostics, "
+            "and conditioning as a richer upstream contract."
+        ),
     )
     student_stage5_dataset_parser.add_argument(
         "--target-contract-mode",
@@ -4856,6 +4905,390 @@ def build_parser() -> argparse.ArgumentParser:
         help="Training steps for the optional waveform-frame MLP oracle readout. Set <=0 to disable it.",
     )
     stage5_representation_oracle_probe_parser.add_argument(
+        "--waveform-mlp-lr",
+        type=float,
+        default=1.0e-3,
+        help="Learning rate for the optional waveform-frame MLP oracle readout.",
+    )
+    stage5_producer_fine_structure_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-producer-fine-structure-probe",
+        help="Fit cheap oracle readouts on producer and fusion-path hidden stages to localize where target-specific fine structure disappears before the waveform head.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 producer fine-structure probe outputs.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path. When omitted, --checkpoint-selection must be provided.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used to resolve the probe checkpoint.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to probe from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Torch device used for the probe, for example cpu or cuda:0.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--decoder-branch-mean-mix-alpha",
+        type=float,
+        default=0.0,
+        help="Optional forward-path mix coefficient used when recomputing the hidden stages from the checkpoint.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--active-frame-rms-threshold",
+        type=float,
+        default=0.02,
+        help="Aligned-frame RMS threshold used to define the active-frame support mask for the probe.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--logspec-bins",
+        type=int,
+        default=201,
+        help="Number of compressed log-spectral bins used by the producer fine-structure oracle targets.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--ridge-lambda",
+        type=float,
+        default=1.0,
+        help="L2 regularization strength for the closed-form ridge oracle readout.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--test-stride",
+        type=int,
+        default=3,
+        help="Every Nth active frame is held out for in-record oracle evaluation.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--waveform-mlp-hidden-dim",
+        type=int,
+        default=128,
+        help="Hidden width for the optional 2-layer waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--waveform-mlp-steps",
+        type=int,
+        default=200,
+        help="Training steps for the optional waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_producer_fine_structure_probe_parser.add_argument(
+        "--waveform-mlp-lr",
+        type=float,
+        default=1.0e-3,
+        help="Learning rate for the optional waveform-frame MLP oracle readout.",
+    )
+    stage5_branch_feature_oracle_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-branch-feature-oracle-probe",
+        help="Fit cheap oracle readouts on raw Stage5 branch inputs and semantic-family slices to localize whether fine waveform structure is already weak before the branch encoders.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 branch-feature oracle probe outputs.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path. When omitted, --checkpoint-selection must be provided.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used to resolve the probe checkpoint.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to probe from the selection payload: stable_late_stop, best_validation, or best_rms.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--device",
+        default="cpu",
+        help="Torch device used for the probe, for example cpu or cuda:0.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--active-frame-rms-threshold",
+        type=float,
+        default=0.02,
+        help="Aligned-frame RMS threshold used to define the active-frame support mask for the oracle probe.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--logspec-bins",
+        type=int,
+        default=48,
+        help="Number of compressed log-spectral bins used by the oracle readout target.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--ridge-lambda",
+        type=float,
+        default=1.0,
+        help="L2 regularization strength for the closed-form ridge oracle readout.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--test-stride",
+        type=int,
+        default=3,
+        help="Every Nth active frame is held out for in-record oracle evaluation.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--waveform-mlp-hidden-dim",
+        type=int,
+        default=128,
+        help="Hidden width for the optional 2-layer waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--waveform-mlp-steps",
+        type=int,
+        default=200,
+        help="Training steps for the optional waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_branch_feature_oracle_probe_parser.add_argument(
+        "--waveform-mlp-lr",
+        type=float,
+        default=1.0e-3,
+        help="Learning rate for the optional waveform-frame MLP oracle readout.",
+    )
+    stage5_source_scaffold_oracle_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-source-scaffold-oracle-probe",
+        help="Fit cheap oracle readouts directly on the read-only source_scaffold control contract to compare the current Stage5-selected controls against the full available control set.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 source-scaffold oracle probe outputs.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path kept only for anchor citation in the summary. The probe itself reads only source_scaffold payloads.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used only to cite the current anchor in the summary.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to cite from the selection payload when --checkpoint-selection is provided.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--active-frame-rms-threshold",
+        type=float,
+        default=0.02,
+        help="Aligned-frame RMS threshold used to define the active-frame support mask for the oracle probe.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--logspec-bins",
+        type=int,
+        default=48,
+        help="Number of compressed log-spectral bins used by the oracle readout target.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--ridge-lambda",
+        type=float,
+        default=1.0,
+        help="L2 regularization strength for the closed-form ridge oracle readout.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--test-stride",
+        type=int,
+        default=3,
+        help="Every Nth active frame is held out for in-record oracle evaluation.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--waveform-mlp-hidden-dim",
+        type=int,
+        default=128,
+        help="Hidden width for the optional 2-layer waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--waveform-mlp-steps",
+        type=int,
+        default=200,
+        help="Training steps for the optional waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_source_scaffold_oracle_probe_parser.add_argument(
+        "--waveform-mlp-lr",
+        type=float,
+        default=1.0e-3,
+        help="Learning rate for the optional waveform-frame MLP oracle readout.",
+    )
+    stage5_teacher_contract_hidden_probe_parser = subparsers.add_parser(
+        "analyze-stage5-nores-teacher-contract-hidden-probe",
+        help="Fit cheap oracle readouts on upstream teacher-contract hidden states and compare them against the explicit dynamic control package exported into source_scaffold.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--output-dir",
+        type=Path,
+        required=True,
+        help="Directory for Stage5 teacher-contract hidden probe outputs.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--checkpoint",
+        type=Path,
+        default=None,
+        help="Optional explicit checkpoint path kept only for anchor citation in the summary.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--checkpoint-selection",
+        type=Path,
+        default=None,
+        help="Optional Stage5 checkpoint-selection json used only to cite the current anchor in the summary.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--selection-target",
+        default="best_validation",
+        help="Checkpoint role to cite from the selection payload when --checkpoint-selection is provided.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--dataset-index",
+        type=Path,
+        required=True,
+        help="offline_mvp_nores_vocoder_dataset_index.json used to resolve probe packages.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--split-name",
+        default="validation",
+        help="Dataset split to probe from: validation or train.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--sample-count",
+        type=int,
+        default=12,
+        help="How many packages to probe when --target-record-ids is omitted.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--target-record-ids",
+        nargs="*",
+        default=None,
+        help="Optional explicit target record ids to probe.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--active-frame-rms-threshold",
+        type=float,
+        default=0.02,
+        help="Aligned-frame RMS threshold used to define the active-frame support mask for the oracle probe.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--logspec-bins",
+        type=int,
+        default=48,
+        help="Number of compressed log-spectral bins used by the oracle readout target.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--ridge-lambda",
+        type=float,
+        default=1.0,
+        help="L2 regularization strength for the closed-form ridge oracle readout.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--test-stride",
+        type=int,
+        default=3,
+        help="Every Nth active frame is held out for in-record oracle evaluation.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--waveform-mlp-hidden-dim",
+        type=int,
+        default=128,
+        help="Hidden width for the optional 2-layer waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
+        "--waveform-mlp-steps",
+        type=int,
+        default=200,
+        help="Training steps for the optional waveform-frame MLP oracle readout. Set <=0 to disable it.",
+    )
+    stage5_teacher_contract_hidden_probe_parser.add_argument(
         "--waveform-mlp-lr",
         type=float,
         default=1.0e-3,
@@ -7331,6 +7764,85 @@ def main(argv: list[str] | None = None) -> int:
             target_record_ids=args.target_record_ids,
             device=args.device,
             decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            active_frame_rms_threshold=args.active_frame_rms_threshold,
+            logspec_bins=args.logspec_bins,
+            ridge_lambda=args.ridge_lambda,
+            test_stride=args.test_stride,
+            waveform_mlp_hidden_dim=args.waveform_mlp_hidden_dim,
+            waveform_mlp_steps=args.waveform_mlp_steps,
+            waveform_mlp_lr=args.waveform_mlp_lr,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-producer-fine-structure-probe":
+        analyze_stage5_nores_producer_fine_structure_probe(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            device=args.device,
+            decoder_branch_mean_mix_alpha=args.decoder_branch_mean_mix_alpha,
+            active_frame_rms_threshold=args.active_frame_rms_threshold,
+            logspec_bins=args.logspec_bins,
+            ridge_lambda=args.ridge_lambda,
+            test_stride=args.test_stride,
+            waveform_mlp_hidden_dim=args.waveform_mlp_hidden_dim,
+            waveform_mlp_steps=args.waveform_mlp_steps,
+            waveform_mlp_lr=args.waveform_mlp_lr,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-branch-feature-oracle-probe":
+        analyze_stage5_nores_branch_feature_oracle_probe(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            device=args.device,
+            active_frame_rms_threshold=args.active_frame_rms_threshold,
+            logspec_bins=args.logspec_bins,
+            ridge_lambda=args.ridge_lambda,
+            test_stride=args.test_stride,
+            waveform_mlp_hidden_dim=args.waveform_mlp_hidden_dim,
+            waveform_mlp_steps=args.waveform_mlp_steps,
+            waveform_mlp_lr=args.waveform_mlp_lr,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-source-scaffold-oracle-probe":
+        analyze_stage5_nores_source_scaffold_oracle_probe(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
+            active_frame_rms_threshold=args.active_frame_rms_threshold,
+            logspec_bins=args.logspec_bins,
+            ridge_lambda=args.ridge_lambda,
+            test_stride=args.test_stride,
+            waveform_mlp_hidden_dim=args.waveform_mlp_hidden_dim,
+            waveform_mlp_steps=args.waveform_mlp_steps,
+            waveform_mlp_lr=args.waveform_mlp_lr,
+        )
+        return 0
+    if args.command == "analyze-stage5-nores-teacher-contract-hidden-probe":
+        analyze_stage5_nores_teacher_contract_hidden_probe(
+            output_dir=args.output_dir,
+            checkpoint_path=args.checkpoint,
+            checkpoint_selection_path=args.checkpoint_selection,
+            selection_target=args.selection_target,
+            dataset_index_path=args.dataset_index,
+            split_name=args.split_name,
+            sample_count=args.sample_count,
+            target_record_ids=args.target_record_ids,
             active_frame_rms_threshold=args.active_frame_rms_threshold,
             logspec_bins=args.logspec_bins,
             ridge_lambda=args.ridge_lambda,

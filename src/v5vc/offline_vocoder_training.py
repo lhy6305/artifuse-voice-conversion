@@ -61,6 +61,10 @@ SUPPORTED_TRAINING_PACKAGE_VERSIONS = {
     "offline_mvp_nores_vocoder_train_targets_v1",
     "offline_mvp_nores_vocoder_train_targets_v2",
 }
+SUPPORTED_NORES_VOCODER_DATASET_INDEX_VERSIONS = {
+    "offline_mvp_nores_vocoder_dataset_index_v1",
+    "streaming_student_stage5_dataset_index_v1",
+}
 DEFAULT_STAGE5_SEMANTIC_PACKAGE_ALPHA = 0.2
 DEFAULT_STAGE5_SEMANTIC_CONSUMER_MODE = "none"
 DEFAULT_STAGE5_TARGET_CONTRACT_MODE = "legacy_proxy"
@@ -71,6 +75,7 @@ SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
     "target_sidecar_broadcast_v1",
     "target_timing_sidecar_framewise_v1",
     "source_semantic_parity_framewise_v1",
+    "streaming_student_richer_source_contract_v1",
 }
 SUPPORTED_STAGE5_TARGET_CONTRACT_MODES = {
     "legacy_proxy",
@@ -144,7 +149,22 @@ def load_nores_vocoder_init_state(
     *,
     allow_partial: bool,
 ) -> dict[str, object]:
-    incompatible = model.load_state_dict(state_dict, strict=not allow_partial)
+    skipped_shape_mismatch_keys: list[str] = []
+    loadable_state_dict = dict(state_dict)
+    if bool(allow_partial):
+        model_state = model.state_dict()
+        filtered_state_dict: dict[str, torch.Tensor] = {}
+        for key, value in loadable_state_dict.items():
+            model_value = model_state.get(key)
+            if not isinstance(model_value, torch.Tensor):
+                filtered_state_dict[key] = value
+                continue
+            if tuple(model_value.shape) != tuple(value.shape):
+                skipped_shape_mismatch_keys.append(key)
+                continue
+            filtered_state_dict[key] = value
+        loadable_state_dict = filtered_state_dict
+    incompatible = model.load_state_dict(loadable_state_dict, strict=not allow_partial)
     missing_keys = list(getattr(incompatible, "missing_keys", []))
     unexpected_keys = list(getattr(incompatible, "unexpected_keys", []))
     return {
@@ -154,6 +174,8 @@ def load_nores_vocoder_init_state(
         "unexpected_key_count": len(unexpected_keys),
         "missing_keys": missing_keys,
         "unexpected_keys": unexpected_keys,
+        "skipped_shape_mismatch_key_count": len(skipped_shape_mismatch_keys),
+        "skipped_shape_mismatch_keys": skipped_shape_mismatch_keys,
     }
 STAGE5_TARGET_SIDECAR_BROADCAST_FEATURE_NAMES = [
     "clean_text_available",
@@ -437,6 +459,7 @@ def build_offline_mvp_nores_vocoder_training_package(
             if isinstance(source_semantic_parity_sidecar, dict)
             else None
         ),
+        source_scaffold_payload=payload,
         frame_count=frame_count,
         mode=resolved_semantic_consumer_mode,
     )
@@ -579,6 +602,9 @@ def run_offline_mvp_nores_vocoder_training_step(
     residual_shape_branch_condition_mode: str = "raw_additive_v1",
     use_waveform_decoder_input_adapter: bool = False,
     waveform_decoder_input_adapter_scale: float = 1.0,
+    use_waveform_decoder_dynamic_basis: bool = False,
+    waveform_decoder_dynamic_basis_count: int = 4,
+    waveform_decoder_dynamic_basis_scale: float = 1.0,
     use_noise_hidden_residual_adapter: bool = False,
     noise_hidden_residual_mode: str = "gate_plus_delta_v1",
     noise_hidden_residual_scale: float = 1.0,
@@ -659,6 +685,12 @@ def run_offline_mvp_nores_vocoder_training_step(
         residual_shape_branch_condition_mode=str(residual_shape_branch_condition_mode),
         use_waveform_decoder_input_adapter=bool(use_waveform_decoder_input_adapter),
         waveform_decoder_input_adapter_scale=float(waveform_decoder_input_adapter_scale),
+        use_waveform_decoder_dynamic_basis=bool(use_waveform_decoder_dynamic_basis),
+        waveform_decoder_dynamic_basis_count=int(waveform_decoder_dynamic_basis_count),
+        waveform_decoder_dynamic_basis_scale=float(waveform_decoder_dynamic_basis_scale),
+        use_noise_hidden_residual_adapter=bool(use_noise_hidden_residual_adapter),
+        noise_hidden_residual_mode=str(noise_hidden_residual_mode),
+        noise_hidden_residual_scale=float(noise_hidden_residual_scale),
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
     model.train()
@@ -1799,7 +1831,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
     )
 
     index_payload = json.loads(dataset_index_path.read_text(encoding="utf-8"))
-    if str(index_payload.get("dataset_index_version")) != "offline_mvp_nores_vocoder_dataset_index_v1":
+    if str(index_payload.get("dataset_index_version")) not in SUPPORTED_NORES_VOCODER_DATASET_INDEX_VERSIONS:
         raise ValueError(
             "Unsupported dataset_index_version for no-residual vocoder dataset loop: "
             f"{index_payload.get('dataset_index_version')!r}"
@@ -3213,6 +3245,7 @@ def build_stage5_semantic_consumer_features(
     target_event_semantic_sidecar: dict[str, object] | None,
     target_event_timing_semantic_sidecar: dict[str, object] | None,
     source_semantic_parity_sidecar: dict[str, object] | None,
+    source_scaffold_payload: dict[str, object] | None,
     frame_count: int,
     mode: str,
 ) -> dict[str, object]:
@@ -3295,6 +3328,34 @@ def build_stage5_semantic_consumer_features(
         source_semantic_parity_sidecar=source_semantic_parity_sidecar,
         frame_count=int(frame_count),
     )
+    if resolved_mode == "streaming_student_richer_source_contract_v1":
+        feature_tensor, source_contract_summary = build_stage5_streaming_student_source_contract_feature_tensors(
+            source_scaffold_payload=source_scaffold_payload,
+            frame_count=int(frame_count),
+        )
+        feature_names = list(source_contract_summary["feature_names"])
+        return {
+            "feature_dim": int(feature_tensor.shape[-1]),
+            "semantic_tag": "streaming_student_richer_source_contract_v1",
+            "periodic_broadcast_features": feature_tensor,
+            "noise_broadcast_features": feature_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "streaming_student_richer_source_contract_v1",
+                "feature_dim": int(feature_tensor.shape[-1]),
+                "feature_names": feature_names,
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+                "feature_source": str(source_contract_summary["feature_source"]),
+                "source_contract_path": source_contract_summary["source_contract_path"],
+                "source_contract_version": source_contract_summary["source_contract_version"],
+                "source_contract_reference_feature_dim": int(source_contract_summary["reference_feature_dim"]),
+                "source_contract_diagnostic_feature_dim": int(source_contract_summary["diagnostic_feature_dim"]),
+                "source_contract_conditioning_feature_dim": int(source_contract_summary["conditioning_feature_dim"]),
+                "feature_values": [],
+            },
+        }
     return {
         "feature_dim": int(feature_tensor.shape[-1]),
         "semantic_tag": "source_semantic_parity_framewise_v1",
@@ -3316,6 +3377,173 @@ def build_stage5_semantic_consumer_features(
             "feature_values": [],
         },
     }
+
+
+def build_stage5_streaming_student_source_contract_feature_tensors(
+    *,
+    source_scaffold_payload: dict[str, object] | None,
+    frame_count: int,
+) -> tuple[torch.Tensor, dict[str, object]]:
+    empty = torch.zeros((int(frame_count), 0), dtype=torch.float32)
+    if not isinstance(source_scaffold_payload, dict):
+        return empty, {
+            "feature_source": "zeros_missing_source_scaffold_payload",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "reference_feature_dim": 0,
+            "diagnostic_feature_dim": 0,
+            "conditioning_feature_dim": 0,
+        }
+
+    source_contract_path = source_scaffold_payload.get("source_contract_path")
+    if not isinstance(source_contract_path, str) or not source_contract_path:
+        return empty, {
+            "feature_source": "zeros_missing_source_contract_path",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "reference_feature_dim": 0,
+            "diagnostic_feature_dim": 0,
+            "conditioning_feature_dim": 0,
+        }
+
+    contract_path = Path(source_contract_path).resolve()
+    if not contract_path.exists():
+        raise FileNotFoundError(f"semantic_consumer_mode requires source_contract_path to exist: {contract_path}")
+    source_contract_payload = torch.load(contract_path, map_location="cpu", weights_only=False)
+    if not isinstance(source_contract_payload, dict):
+        raise TypeError(f"Unsupported source contract payload type: {type(source_contract_payload)!r}")
+    source_contract_version = str(source_contract_payload.get("packet_version", "unknown"))
+    if source_contract_version != "streaming_student_downstream_control_v1":
+        raise ValueError(
+            "streaming_student_richer_source_contract_v1 requires "
+            f"streaming_student_downstream_control_v1, got {source_contract_version!r}."
+        )
+
+    reference_controls = dict(source_contract_payload.get("reference_controls", {}))
+    diagnostics = dict(source_contract_payload.get("diagnostics", {}))
+    conditioning = dict(source_contract_payload.get("conditioning", {}))
+    feature_chunks: list[torch.Tensor] = []
+    feature_names: list[str] = []
+
+    reference_feature_dim = append_streaming_student_feature_family(
+        destination=feature_chunks,
+        feature_names=feature_names,
+        family=reference_controls,
+        keys=("f0_hz", "vuv", "aper", "energy_log", "energy_stage5_norm"),
+        frame_count=int(frame_count),
+        prefix="reference_controls",
+    )
+    diagnostic_feature_dim = append_streaming_student_feature_family(
+        destination=feature_chunks,
+        feature_names=feature_names,
+        family=diagnostics,
+        keys=("coarse_log_f0", "log_f0_correction", "event_logits", "event_prior_probs"),
+        frame_count=int(frame_count),
+        prefix="diagnostics",
+    )
+    conditioning_feature_dim = append_streaming_student_static_family(
+        destination=feature_chunks,
+        feature_names=feature_names,
+        family=conditioning,
+        keys=("alpha", "speaker_embedding", "geom_embedding"),
+        frame_count=int(frame_count),
+        prefix="conditioning",
+    )
+    if not feature_chunks:
+        return empty, {
+            "feature_source": "zeros_missing_streaming_student_source_contract_features",
+            "feature_names": [],
+            "source_contract_path": contract_path.as_posix(),
+            "source_contract_version": source_contract_version,
+            "reference_feature_dim": 0,
+            "diagnostic_feature_dim": 0,
+            "conditioning_feature_dim": 0,
+        }
+    return torch.cat(feature_chunks, dim=-1), {
+        "feature_source": "streaming_student_source_contract_reference_diagnostics_conditioning",
+        "feature_names": feature_names,
+        "source_contract_path": contract_path.as_posix(),
+        "source_contract_version": source_contract_version,
+        "reference_feature_dim": int(reference_feature_dim),
+        "diagnostic_feature_dim": int(diagnostic_feature_dim),
+        "conditioning_feature_dim": int(conditioning_feature_dim),
+    }
+
+
+def append_streaming_student_feature_family(
+    *,
+    destination: list[torch.Tensor],
+    feature_names: list[str],
+    family: dict[str, object],
+    keys: tuple[str, ...],
+    frame_count: int,
+    prefix: str,
+) -> int:
+    family_feature_dim = 0
+    for key in keys:
+        value = family.get(key)
+        if not isinstance(value, torch.Tensor):
+            continue
+        tensor = normalize_streaming_student_frame_tensor(value=value, frame_count=int(frame_count), key=key)
+        destination.append(tensor)
+        feature_names.extend(expand_stage5_feature_names(prefix=f"{prefix}.{key}", dim=int(tensor.shape[-1])))
+        family_feature_dim += int(tensor.shape[-1])
+    return family_feature_dim
+
+
+def append_streaming_student_static_family(
+    *,
+    destination: list[torch.Tensor],
+    feature_names: list[str],
+    family: dict[str, object],
+    keys: tuple[str, ...],
+    frame_count: int,
+    prefix: str,
+) -> int:
+    family_feature_dim = 0
+    for key in keys:
+        value = family.get(key)
+        if not isinstance(value, torch.Tensor):
+            continue
+        tensor = broadcast_streaming_student_static_tensor(value=value, frame_count=int(frame_count), key=key)
+        destination.append(tensor)
+        feature_names.extend(expand_stage5_feature_names(prefix=f"{prefix}.{key}", dim=int(tensor.shape[-1])))
+        family_feature_dim += int(tensor.shape[-1])
+    return family_feature_dim
+
+
+def normalize_streaming_student_frame_tensor(*, value: torch.Tensor, frame_count: int, key: str) -> torch.Tensor:
+    tensor = value.detach().cpu().to(torch.float32)
+    if tensor.ndim == 1:
+        if int(tensor.shape[0]) != int(frame_count):
+            raise ValueError(
+                f"streaming_student_richer_source_contract_v1 expected {key} to align to frame_count={frame_count}, "
+                f"got shape {tuple(tensor.shape)}."
+            )
+        return tensor.unsqueeze(-1).contiguous()
+    if tensor.ndim == 2 and int(tensor.shape[0]) == int(frame_count):
+        return tensor.contiguous()
+    raise ValueError(
+        f"streaming_student_richer_source_contract_v1 expected {key} with shape [frames] or [frames, dim], "
+        f"got {tuple(tensor.shape)}."
+    )
+
+
+def broadcast_streaming_student_static_tensor(*, value: torch.Tensor, frame_count: int, key: str) -> torch.Tensor:
+    tensor = value.detach().cpu().to(torch.float32).reshape(-1)
+    if tensor.numel() <= 0:
+        raise ValueError(
+            f"streaming_student_richer_source_contract_v1 expected non-empty static conditioning tensor for {key}."
+        )
+    return tensor.view(1, -1).expand(int(frame_count), -1).contiguous()
+
+
+def expand_stage5_feature_names(*, prefix: str, dim: int) -> list[str]:
+    if int(dim) <= 1:
+        return [str(prefix)]
+    return [f"{prefix}[{index}]" for index in range(int(dim))]
 
 
 def resolve_target_event_semantic_sidecar_path_for_stage5(
