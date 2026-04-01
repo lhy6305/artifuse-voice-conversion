@@ -1,18 +1,29 @@
-# 文档归档说明
+# Archive Directory Notes
 
-## 用途
-- 本目录保存主文档的大体积历史快照。
-- 这些文件用于追溯旧阶段上下文，不再作为默认接班入口。
+## Purpose
+- This directory stores large historical snapshots of the main handoff documents.
+- These files are for historical recovery and old-stage tracing, not for default takeover reading.
 
-## 当前快照
+## Current Snapshots
+- `00_context_bootstrap_snapshot_20260401.md`
+  - full pre-compression snapshot of active `00` taken during the 2026-04-01 archive pass
 - `01_project_overview_and_plan_snapshot_20260326.md`
-  - 2026-03-26 压缩前的超长版 `01`。
+  - pre-compression long-form `01` snapshot from 2026-03-26
+- `01_project_overview_and_plan_snapshot_20260328.md`
+  - active-history snapshot of `01` from 2026-03-28
+- `01_project_overview_and_plan_snapshot_20260401.md`
+  - full pre-compression snapshot of active `01` taken during the 2026-04-01 archive pass
 - `02_pitfalls_log_snapshot_20260326.md`
-  - 2026-03-26 压缩前的超长版 `02`。
+  - pre-compression long-form `02` snapshot from 2026-03-26
+- `02_pitfalls_log_snapshot_20260328.md`
+  - active-history snapshot of `02` from 2026-03-28
+- `02_pitfalls_log_snapshot_20260401.md`
+  - full pre-compression snapshot of active `02` taken during the 2026-04-01 archive pass
 
-## 使用规则
-- 默认先读：
+## Usage Rules
+- Read these first by default:
+  - `docs/00_context_bootstrap.md`
   - `docs/01_project_overview_and_plan.md`
   - `docs/02_pitfalls_log.md`
-- 只有在需要追溯旧阶段长历史时，才进入本目录。
-- 以后若 `01/02` 再次显著膨胀，继续在本目录追加带日期的快照。
+- Only enter `docs/archive/` when old long-form history is actually needed.
+- If `00/01/02` become bulky again, add new date-stamped snapshots here before compressing the active versions.

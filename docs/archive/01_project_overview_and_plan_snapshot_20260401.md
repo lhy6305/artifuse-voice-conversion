@@ -1,0 +1,587 @@
+# Project Overview and Execution Plan
+
+## Document Role
+- This file keeps only the project goal, stage judgment, active lines of work, and next steps needed for takeover.
+- Detailed per-round experiment logs and old long-form history should not keep flowing back into this file.
+- Current archive snapshots:
+  - `docs/archive/01_project_overview_and_plan_snapshot_20260326.md`
+  - `docs/archive/01_project_overview_and_plan_snapshot_20260328.md`
+
+## Project Goal Summary
+- Based on `initial_design.md`, the project goal remains an industrial voice-conversion system that balances high offline quality with low online latency.
+- The core control-chain design state remains:
+  - `z_art`
+  - `e_evt`
+  - `F0 / vuv / aper / E`
+  - tightly constrained `r_res`
+- The main principles are unchanged:
+  - the no-residual backbone must stand on its own first
+  - the system must not collapse into a neural codec hidden behind an interpretable shell
+  - streaming end-to-end closure comes after offline backbone validation
+
+## Current Repository Layout
+- `initial_design.md`: primary design document
+- `initial_design_judg.md`: risk and de-romanticization review
+- `manage.py`: unified command entry
+- `python.exe`: fixed project interpreter
+- `src/v5vc/`: main source tree for Stage3, Stage5, teacher-first, and streaming-student work
+- `configs/`: configuration files and templates
+- `reports/`: training, evaluation, export artifacts, and structured experiment outputs
+- `docs/`: active docs and numbered reports
+- `docs/archive/`: archived snapshots from older stages
+
+## Current Stage Assessment
+- The strongest current Stage3 reference remains generation-side work around `acoustic_directional_targetstate_bridge_v1`.
+- The old `Stage5 no-res downstream` route is no longer the default route worth re-running by inertia.
+- The `student_control_packet -> minimal Stage5 adapter` path already reached real `decoded.wav` smoke level, but obvious buzz already gave a harder fail-fast negative conclusion.
+- Stage3 now has a formal packet-aware checkpoint selector, and Stage3 checkpoint choice must no longer collapse training-trajectory validation, post-hoc full-checkpoint evaluation, and packet-aware screening into one "best checkpoint" label.
+- The Stage3 post-hoc teacher-loss selector now has an explicit preferred CLI name, while the older `select-streaming-student-best-checkpoint` command remains only as a legacy alias.
+- Stage3 also now has a combined selector-comparison CLI, so future checkpoint-family reviews can materialize selector disagreement directly instead of stitching two selector directories by hand.
+- The combined selector-comparison artifact now also emits a decision summary that separates teacher-loss reference choice, handoff-facing packet candidate choice, and the conservative route-opening conclusion.
+- The active corrected-manifold Stage5 winner is now `wfta003`, and it should not be retired by broad anti-thrash wording that was meant for already dead pure-buzz families.
+- Paired Stage3 still lacks a valid frame bridge and alignment contract, so paired training cannot be treated as ready.
+- Fixed-input Stage5 decoder-side AB is now also completed on the current deterministic Stage3 winner:
+  - plain `branchcondadapter` remains `8/8 auto_reject` on `tv8`
+  - `fusionbranchmeancontrast_branchcond` also remains `8/8 auto_reject` on `tv8`
+  - both still fail before predicted activity gating
+  - both still keep the main Stage5-local bottleneck at `decoder_hidden -> waveform_decoder_base_logits`
+- A more direct fixed-input Stage5 frame-space candidate is now also screened:
+  - `fusionbranchmeancontrast_residualshape_fullsplit24` reduces the current fixed-input decoded failure from all-auto-reject to `tv8 = 6/8 auto_reject` and `se8 = 6/8 auto_reject`
+  - the current best screened variant is `fusionbranchmeancontrast_residualshape_scale050`
+  - this improves to `tv8 = 5/8 auto_reject` and keeps `se8 = 6/8 auto_reject`
+  - the route is still not open, but this is the first current fixed-input Stage5 family that materially escapes the old uniform auto-reject basin
+  - a focused human-review bundle is now prepared for the resulting `5` review-required records across `tv8` and `se8`
+  - the human review result is now also in: those `5` review-required outputs are still all buzz and are not near-speech
+  - the new spectrogram bundle plus simple vuv contrast readout supports the human conclusion that the decoded route still lacks meaningful voiced/unvoiced separation
+- Stage3 F0 representation is confirmed structurally blocked: coarse_log_f0 collapses to near-constant output in the current explicit_named_control_family_v1 architecture regardless of loss weight tuning. A structural decision is required before F0 can become a genuine handoff control.
+- External reference review now supports a concrete recovery route:
+  - do not insist on waveform-only implicit F0 discovery
+  - formalize a Stage3 pitch-provider interface
+  - integrate the in-repo deterministic extractor first
+  - evaluate RMVPE second behind the same contract
+- Step A is now implemented and smoke-validated:
+  - `deterministic_extractor_v1` is wired through training, checkpoint eval, proxy export, and downstream packet export
+  - the current strong F0 smoke metrics validate contract plumbing, not final runtime readiness
+- Step B is now also implemented at wiring level:
+  - `rmvpe_v1` is wired through the same Stage3 contract
+  - current naive direct injection is not yet contract-compatible and fails the small packet screen
+- Provider-only audit is now completed:
+  - `deterministic_extractor_v1` is a clean positive control at the raw provider level
+  - `rmvpe_v1` still fails raw provider-only readiness-like screening on `8/8` validation records
+  - simple anchor and lag sweeps do not rescue RMVPE into a usable contract
+- RMVPE diagnosis is now further narrowed:
+  - hybrid `rmvpe_f0 + deterministic_vuv` still does not clear readiness-like screening
+  - jointly voiced RMVPE F0 is often reasonable
+  - the dominant remaining mismatch appears to be voiced-support contract drift rather than octave error or raw F0 magnitude collapse
+- RMVPE voicing calibration is now also probed:
+  - threshold sweep slightly changes the tradeoff but does not clear readiness
+  - simple binary VUV postprocess presets are effectively no-ops on the audited validation slice
+  - the current thresholded RMVPE route should not open a new packet-smoke cycle
+- A confidence-aware RMVPE provider probe now also exists:
+  - `rmvpe_confidence_v1` feeds unthresholded RMVPE F0 plus sampled confidence
+  - provider-side evidence is stronger than old thresholded RMVPE
+  - but one-step packet smoke still fails `F0` readiness on `0/3`
+- A short controlled `rmvpe_confidence_v1` training loop and packet-aware selector pass are now also completed:
+  - sampled validation improved and chose step `4`
+  - packet-aware screening across steps `1` to `6` still found `f0_ready_count = 0/3` for every checkpoint
+  - packet-facing best step `3` is only the least-bad candidate, not a route-opening winner
+- A follow-up richer contract probe is now also completed:
+  - `rmvpe_split_confidence_v1` keeps hard `VUV` and sampled confidence separate
+  - the new probe passes supervision and one-step training smoke
+  - sample3 packet readiness is still unchanged at `f0_ready_count = 0/3`
+- A consumer-side confidence-gated correction probe is now also completed:
+  - `provider_confidence_gate_mode = hard_vuv_times_confidence_v1`
+  - the gate reduces correction magnitude substantially
+  - sample3 packet readiness is still unchanged at `f0_ready_count = 0/3`
+- The deterministic explicit-provider line has now progressed beyond bootstrap:
+  - `deterministic_extractor_v1` with `f0_correction_enabled = false` reaches `f0_ready_count = 3/3`, `vuv_ready_count = 3/3`, and `aper_ready_count = 2/3` on the current sample3 packet screen
+  - this makes `ENERGY`, not `F0`, the dominant remaining blocker on that line
+- Deterministic energy-focus probes are now also bounded:
+  - scratch energy-focused training can raise `energy_ready_count` to `2/3`, but only by giving back `F0` and `APER`
+  - warm-starting from the packet-best deterministic checkpoint does not preserve the earlier `F0` opening under the same energy-focused objective
+  - the current scalar-loss route is therefore exhausted for joint `F0 / VUV / APER / ENERGY` opening on this scaffold
+- Deterministic energy-freeze isolation is now also probed:
+  - a strict trainable-prefix allowlist can preserve packet-facing `F0 / VUV / APER` across all screened checkpoints
+  - but `ENERGY` remains unchanged at `0/3`
+  - this shows the remaining blocker is not only shared-update interference; the current scaffold also lacks enough isolated energy-specific capacity
+- Deterministic dedicated energy-branch isolation is now also probed:
+  - a new isolated `dedicated_energy_branch_v1` improves packet-facing `ENERGY` error while still preserving `F0 / VUV / APER`
+  - after the packet calibration and zero-mae gate bugfixes, the active continuation line now advances from the old corrected `0.24x` frontier down to `0.120149` raw energy-best at `cont20.step3`
+  - this line now reaches a real partial opening on sample3:
+    - `energy_ready_count = 2/3`
+    - `all_core_controls_ready_count = 2/3`
+  - the route is still not fully open because one record still blocks both `APER` and `ENERGY`
+- Deterministic Stage5-scale energy objective routing is now also probed:
+  - a new `teacher_energy_stage5_state` loss supervises `ENERGY` on the same normalized scale used by the packet gate
+  - the loss wiring works, but this family is now numerically superseded by the later packet-calibration bugfix reevaluation
+  - so simple gate-scale alignment does not materially improve readiness on the current isolated branch
+- Deterministic dedicated energy-branch widening is now also probed:
+  - widening the isolated energy branch hidden dimension from `96` to `192` keeps `F0 / VUV / APER` stable
+  - but the best energy value in the widened family is still worse than the earlier dedicated-branch result
+  - later checkpoints regress materially, so naive widening is not the right next move
+- Deterministic Stage5-shape energy objective routing is now also probed:
+  - Stage5-normalized temporal and correlation losses are wired correctly and do optimize during training
+  - but this branch is now numerically superseded by the later packet-calibration bugfix reevaluation
+  - so generic Stage5 trajectory shaping is not enough; the next move should target dynamic range or calibration more directly
+- Deterministic Stage5 dynamic-range energy objective routing is now also probed:
+  - centered-shape and per-sample std losses remain a valid positive direction after reevaluation, with corrected energy-best `0.246440`
+  - but `energy_ready_count` still stays `0/3`
+  - this is still a sub-threshold result, not a route-opening result
+- Deterministic Stage5 affine-calibrated energy objective routing is now also probed:
+  - direct affine-calibrated Stage5 loss remains the strongest deterministic isolated-energy family after reevaluation
+  - corrected warm4 energy-best reaches `0.243179`, and later continuations improve this through:
+    - `cont4`: `0.232511`
+    - `cont8`: `0.224320`
+    - `cont12`: `0.216033`
+    - `cont16`: `0.201423`
+    - `cont20`: `0.120149`
+  - this family now reaches `energy_ready_count = 2/3` and `all_core_controls_ready_count = 2/3` on the active sample3 packet screen
+  - a low-learning-rate follow-up at `2.5e-4` remains worse than the normal affine-calibrated family and should not become the default continuation
+- Stage3 packet affine calibration is now also corrected:
+  - both scalar and `F0` calibration paths now recompute `bias` after clipped affine `scale`
+  - the old deterministic `ENERGY` absolute MAE values in reports `499` to `504` are numerically superseded
+  - the active corrected deterministic `ENERGY` frontier is around `0.243` to `0.247`, not around `0.55`
+- Stage3 `F0` readiness gate is now also corrected:
+  - exact `f0_calibrated_log2_mae = 0.0` is no longer misread as failure by a falsy fallback
+  - the earlier apparent affine-calibrated continuation `F0` regression was an audit artifact, not a real tradeoff
+  - after the corrected re-run, affine-calibrated continuation keeps `F0 = 3/3` while improving `ENERGY` further to `0.232511`
+  - a second continuation pushes the deterministic affine-calibrated energy-best further to `0.224320` while keeping `F0 / VUV / APER = 3/3, 3/3, 2/3`
+- Deterministic affine-calibrated continuation is now extended through `cont20`:
+  - `cont12` is the first partial opening with `energy_ready_count = 1/3`
+  - `cont16` keeps the same opening count while still improving raw deterministic `ENERGY`
+  - `cont20` is the first sample3 block that reaches:
+    - `energy_ready_count = 2/3`
+    - `all_core_controls_ready_count = 2/3`
+  - current packet-facing top-1 is `cont20.step2`
+  - current raw deterministic `ENERGY` frontier is `cont20.step3`
+  - at this pre-dedicated-APER stage, the only remaining blocker on sample3 is `target::chapter3_4_firefly_106`, which still misses both `APER` and `ENERGY` thresholds
+- Deterministic continuation past `cont20` is now also probed:
+  - `cont24` was started from the raw deterministic `ENERGY` frontier `cont20.step3`
+  - it regressed back to `energy_ready_count = 1/3` and `all_core_controls_ready_count = 1/3`
+  - so `cont20` remains the active frontier, and raw energy-best should no longer be used as an automatic continuation anchor
+- Pre-dedicated-APER blocker-localized diagnosis for `target::chapter3_4_firefly_106` is now also completed:
+  - the dominant remaining blocker on sample3 is not `ENERGY` alone
+  - `APER` is effectively flat on this record under the current scaffold, with raw std around `0.0125` and slightly negative correlation to the reference
+  - affine calibration does not rescue `APER`, which remains stuck near `0.402` calibrated MAE against a `0.3` gate
+  - `ENERGY` is still the secondary blocker on this record, but it is reasonably correlated and was already near threshold at `cont20.step3`
+  - therefore the next deterministic probe should be framed as blocker-oriented rather than generic energy-only continuation
+- A minimal APER plus ENERGY blocker-oriented freeze probe is now also completed:
+  - it starts from the stable packet-facing anchor `cont20.step2`
+  - it unfreezes `frontend.aper_head` and `student.aper_branch_delta_head`
+  - it adds nonzero `teacher_aper_state` supervision while preserving the current energy objective family
+  - the probe preserves the current `2/3` opening and improves raw deterministic `ENERGY` further to `0.114704`
+  - but it still does not rescue blocker-record `APER`, which stays structurally flat and non-ready
+- A dedicated APER branch structural probe is now also completed:
+  - `aper_control_branch_mode = dedicated_aper_branch_v1` is now wired and validated
+  - the APER-only branch opens `APER` from `2/3` to `3/3` on sample3
+  - the deterministic line now reaches `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 2/3`
+  - the old "APER plus ENERGY" blocker summary is therefore superseded
+  - the remaining blocker is now only `ENERGY` on `target::chapter3_4_firefly_106`
+- A combined dedicated APER plus dedicated ENERGY probe is now also completed:
+  - the warm4 combined branch preserves `APER = 3/3` and keeps `ENERGY = 2/3`
+  - packet-facing top-1 is `ss_detpitch_aperbranch_energy_warm4.step2`
+  - raw deterministic `ENERGY` frontier is `ss_detpitch_aperbranch_energy_warm4.step3`
+  - the blocker record reaches `energy_stage5_norm_calibrated_reference_mae = 0.150639` at warm4 step `3`, missing the `0.15` gate by only `0.000639`
+  - a blind continuation `cont8` from that near-threshold state is unstable and regresses most steps back to `ENERGY = 1/3`
+- A blocker-aware dedicated-APER-scaffold `ENERGY`-only probe is now also completed:
+  - a `step3`-anchor continuation preserves only `2/3` and does not beat the earlier blocker frontier
+  - a `step2`-anchor continuation is better, but only at the first micro-step
+  - `ss_detpitch_aperbranch_energyonly_s2_warm4.step1` reaches blocker-record `energy_stage5_norm_calibrated_reference_mae = 0.150089`
+  - this is the current closest deterministic blocker-facing result, missing the `0.15` gate by only `0.000089`
+  - later steps regress, so the active lesson is now blocker-aware early-stop rather than same-family continuation length
+- A one-step continuation from that blocker-facing micro-anchor is now also completed:
+  - it regresses sharply instead of improving
+  - blocker-record `ENERGY` jumps from `0.150089` to `0.247955`
+  - `energy_ready_count` falls from `2/3` back to `1/3`
+  - this triggers the stop condition for the current same-family deterministic continuation line
+- A new peak-focused `ENERGY` objective redesign is now also completed:
+  - `teacher_energy_stage5_peak_affine_calibrated` is added to the Stage3 loss family
+  - the old blocker-facing micro-anchor still regresses under this new loss
+  - but the stable packet-facing anchor `ss_detpitch_aperbranch_energy_warm4.step2` succeeds immediately under the new loss
+  - new winning checkpoint `ss_detpitch_energypeak_s2_step1.step1` reaches:
+    - `energy_ready_count = 3/3`
+    - `all_core_controls_ready_count = 3/3`
+    - `auto_reject_count = 0`
+  - the old blocker record `target::chapter3_4_firefly_106` now reaches `energy_stage5_norm_calibrated_reference_mae = 0.131030`
+- Broader confirmation is now also completed for the new deterministic winner:
+  - `target_validation` with `sample_count = 8` reaches `all_core_controls_ready_count = 8/8`
+  - `target_special_eval` with `sample_count = 8` also reaches `all_core_controls_ready_count = 8/8`
+  - the new route opening is therefore no longer only a sample3-local result
+
+## Current Main Lines
+
+### Line A: Continue teacher-label and target-state generation-side completion
+- Current reference:
+  - `acoustic_directional_targetstate_bridge_v1`
+- Current action:
+  - continue generation-side bridge and target-state completion
+  - do not go back to old `acoustic_contextual` micro-patches
+  - do not overinterpret loss-side imitation improvements as readiness improvements
+
+### Line B: Re-identify the correct handoff family instead of recycling the old Stage5 route
+- The highest-priority current candidate is still `Stage3 student-control packet v1`.
+- Before opening a new Stage5 route, require:
+  - `proxy-acoustic / proxy-audio` cheap screen
+  - named-control readiness negative gate
+- For Stage3 checkpoint choice inside this line:
+  - keep the incumbent packet-facing reference at `vuvbalancedgate24.step24`
+  - keep `warm6_18.step15` as the current packet-aware next-best non-reference candidate and teacher-loss leader in the current two-way role-aware comparison
+  - use packet-aware selection for downstream packet and handoff screening
+  - keep post-hoc full-checkpoint teacher-loss evaluation as a separate signal
+  - prefer the explicit `posthoc-teacher-loss` selector name in new reports and commands
+  - use the combined selector-comparison command when the checkpoint-family decision depends on reconciling both signals
+  - cite the combined `decision_summary` block first when the conclusion needs a teacher-loss reference, a handoff-facing candidate, and a route-opening recommendation
+- Current gate reading:
+  - `e_evt / z_art` are ready
+  - waveform-only `F0` remains structurally blocked in the old architecture: `coarse_log_f0` collapses to near-constant output (span 0.06 octaves vs target 2.6 octaves) regardless of loss weight or temporal loss tuning
+  - under the strongest current deterministic explicit-provider line, `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 3/3` on the active sample3 packet screen
+  - the previous single-record `ENERGY` blocker on `target::chapter3_4_firefly_106` is now cleared on the active sample3 packet screen
+  - the old APER-flatness blocker story and the later single-record `ENERGY` blocker story are both superseded on the active line
+  - Do not run further waveform-only F0 loss-weight or temporal-loss probes without a structural model change
+- Current preferred structural recovery route for `F0`:
+  - Step A: completed as `deterministic_extractor_v1`
+  - Step B: completed bootstrap for `rmvpe_v1`, but current naive direct injection is not yet viable
+  - Provider-only audit conclusion: RMVPE mismatch is not explained by simple lag alone
+  - voiced-intersection conclusion: RMVPE F0 is often acceptable where voicing agrees; the next diagnosis must target provider-side VUV calibration
+  - calibration conclusion: threshold sweep and simple VUV cleanup do not produce a viable current-contract RMVPE provider
+  - confidence-aware bootstrap conclusion: `rmvpe_confidence_v1` is structurally more plausible than thresholded RMVPE, but still not packet-ready after one-step smoke
+  - short-loop conclusion: the confidence-aware branch can reduce sampled teacher loss, but the current consumer and loss mix still do not convert it into packet-ready `F0`
+  - split-confidence conclusion: separating hard `VUV` from provider confidence improves some `F0` MAE values but still does not improve packet readiness or `F0` correlation enough to matter
+  - gated-correction conclusion: confidence-gating the correction branch reduces correction activity but still does not rescue packet-facing `F0`
+  - deterministic nof0corr conclusion: explicit deterministic provider plus disabled `F0` correction is now the strongest packet-facing positive reference on sample3
+  - deterministic energy-focus conclusion: the remaining blocker is co-optimizing `ENERGY` without damaging already-open `F0 / VUV / APER`
+  - deterministic warm-start conclusion: better sampled validation and packet-best warm-starting still do not preserve packet-facing `F0` once the current energy-focused objective is applied
+  - deterministic energy-freeze conclusion: preserving `F0 / VUV / APER` with a strict energy-head allowlist still leaves `ENERGY` completely unchanged, so the next escalation must add isolated energy capacity rather than more scalar tuning
+  - deterministic energy-adapter conclusion: a dedicated isolated energy branch remains the right scaffold, and later corrected continuations now push that family from the `0.24x` range down to a `0.120149` raw energy-best plus `energy_ready_count = 2/3`
+  - deterministic packet-calibration bugfix conclusion: downstream packet affine calibration used a stale unclipped bias after scale clipping, so older deterministic `ENERGY` absolute MAE readings are numerically superseded
+  - deterministic stage5-energy-objective conclusion: direct packet-facing objectives do help once the packet bug is fixed, and the affine-calibrated family is now the strongest deterministic isolated-energy family
+  - deterministic energy-widening conclusion: naive widening of the isolated energy branch does not beat the earlier dedicated-branch result and is not a promising default continuation
+  - deterministic energy-stage5-shape conclusion: generic temporal and correlation shaping is not the active continuation
+  - deterministic energy-dynamic-range conclusion: centered-state and std losses are a valid positive branch, with corrected energy-best `0.246440`, but `ENERGY` remains fully closed at packet gate
+  - deterministic energy-affine-calibrated conclusion: direct calibration-aware loss is the best deterministic isolated-energy family so far, with corrected continuation energy-best improving through `warm4 = 0.243179`, `cont4 = 0.232511`, `cont8 = 0.224320`, `cont12 = 0.216033`, `cont16 = 0.201423`, and `cont20 = 0.120149`
+  - deterministic continuation conclusion: after fixing the zero-mae `F0` gate bug, affine-calibrated continuation keeps improving `ENERGY` without giving back already-open `F0 / VUV / APER` through `cont20`, where it reaches `energy_ready_count = 2/3` plus `all_core_controls_ready_count = 2/3` on the active sample3 packet screen
+  - deterministic blocker-localization conclusion: at the pre-dedicated-APER stage, the remaining sample3 blocker was `target::chapter3_4_firefly_106`, which still failed both `APER` and `ENERGY`; that localized diagnosis correctly identified `APER` as the primary blocker and is now structurally superseded by the later dedicated APER branch result
+  - deterministic APER-unfreeze conclusion: simply unfreezing the current APER head and APER correction head is not enough to fix the blocker-record APER failure under the existing scaffold
+  - deterministic continuation-regression conclusion: a direct follow-up `cont24` from the raw deterministic `ENERGY` frontier `cont20.step3` regresses to `energy_ready_count = 1/3`, so raw energy-best should not be treated as an automatic next init checkpoint
+  - deterministic dedicated-APER conclusion: `dedicated_aper_branch_v1` is a real structural fix that opens `APER` to `3/3`, turning the active deterministic line into `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 2/3`
+  - deterministic combined-branch conclusion: adding the dedicated `ENERGY` branch on top of the dedicated APER branch preserves `APER = 3/3` and pushes blocker-record `ENERGY` to `0.150639`, leaving only a single-record energy threshold gap
+  - deterministic combined-continuation conclusion: a blind continuation from that near-threshold combined state is unstable, so future continuation must be blocker-aware or threshold-aware rather than inertia-driven
+  - deterministic energy-only blocker-anchor conclusion: the better blocker-aware continuation anchor is `ss_detpitch_aperbranch_energy_warm4.step2`, not the raw `step3` frontier; a one-step micro-continuation from that anchor reaches `0.150089` on the blocker record, but the route still remains `3/3, 3/3, 3/3, 2/3`
+  - deterministic micro-anchor continuation conclusion: even one more same-family step from the blocker-facing micro-frontier regresses to `ENERGY = 1/3`, so the current continuation family should stop rather than take a second micro-step
+  - deterministic peak-energy-objective conclusion: adding `teacher_energy_stage5_peak_affine_calibrated` and restarting from the stable packet-facing anchor `ss_detpitch_aperbranch_energy_warm4.step2` opens the active sample3 packet screen fully at `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 3/3`
+  - deterministic broad-confirmation conclusion: the same winning checkpoint also clears `target_validation` at `8/8` and `target_special_eval` at `8/8`, so the route opening is now validation-confirmed rather than sample3-local
+  - keep both providers behind one shared Stage3 contract for fair comparison
+
+### Line C: Finish paired Stage3 wiring and alignment prerequisites before paired training
+- Current prerequisites include:
+  - `source_semantic_parity_sidecar` must attach `source_record_id`
+  - target teacher labels must obey formal split alignment constraints
+- Current hard limitation:
+  - source waveform and target teacher frame sequences are not naturally aligned
+
+## Current Maintenance Rules
+- Active documents must stay in English ASCII.
+- All repository text files must stay UTF-8 without BOM on disk.
+- Use only `.\python.exe ...` for Python commands.
+- Keep managed output paths inside the current Windows-safe path budget and prefer compact `ss_*` artifact roots for new Stage3 selector outputs.
+- Long historical context belongs in `docs/archive/`, not back in active docs.
+- Enable `skip_existing` only after verifying artifact identity and reuse safety.
+- Important experiment and asset changes must land in traceable summary artifacts such as final summaries and machine-readable JSON.
+
+## Current Recommended Next Steps
+1. For the current deterministic Stage3 winner, keep Stage3 fixed and target the broader `decoder_hidden -> waveform_decoder_base_logits` output-head interface rather than only the last `waveform_decoder` stack, because the newest corrected probes now show that rectangular reconstruction preserves decoded `vuv` rescue, `tanh` is not the main new collapse site, and a bounded head-only microfit moves only second-order metrics while the main geometry collapse remains at the same transition.
+2. Keep handoff candidates behind cheap screen and readiness gate before opening a new Stage5 adapter route.
+3. Keep Stage3 packet readiness and Stage5 decoded confirmation as separate decisions; the current winner is packet-confirmed, the old Hann reconstruction route is now localized and superseded, and the current next blocker sits inside waveform-frame template collapse rather than back in Stage3.
+4. Continue generation-side completion around `acoustic_directional_targetstate_bridge_v1`.
+5. Keep the current `wfta003` corrected-manifold line active, but only for a clearly different localization-oriented probe rather than more blind same-family weight shrinking.
+6. Finish frame bridge and alignment contract work before any paired Stage3 training decision.
+7. Treat `C-prime / v2-core` as a strategic contract backlog. The immediate named-control blocker is no longer the deterministic Stage3 packet route; that route is now packet-confirmed, while the active downstream blocker sits in the current Stage5 decoded consumer.
+8. Use the new packet-aware selector for downstream-facing Stage3 checkpoint ranking, and label post-hoc full-checkpoint eval results explicitly instead of calling every selector output the same "best checkpoint".
+9. Keep writing long-lived conclusions back to `docs/01_project_overview_and_plan.md` and `docs/02_pitfalls_log.md`, while leaving local experiment detail in numbered reports.
+10. For the current `F0` recovery route, keep the provider comparison order explicit:
+   - completed bootstrap: in-repo deterministic extractor
+   - completed bootstrap: RMVPE sidecar
+   - completed diagnosis milestone: provider-only audit confirms deterministic positive control and RMVPE raw-contract failure
+   - completed diagnosis milestone: hybrid-VUV and voiced-intersection audit shows the dominant issue is voiced-support mismatch, not octave drift
+   - completed diagnosis milestone: RMVPE voicing-threshold and simple VUV-postprocess calibration do not rescue the current thresholded route
+   - completed structural probe: confidence-aware RMVPE provider is wired and smoke-runnable, but still fails packet-level F0 readiness
+   - completed short-loop probe: longer same-contract training still leaves all screened checkpoints at `f0_ready_count = 0/3`
+   - completed split-confidence probe: confidence and hard `VUV` separation still leaves sample3 at `f0_ready_count = 0/3`
+   - completed gated-correction probe: confidence-gated `F0/VUV` correction still leaves sample3 at `f0_ready_count = 0/3`
+   - next action: stop the current RMVPE Stage3 family; if RMVPE continues later, require a larger consumer or objective redesign rather than more same-family smokes
+11. For the deterministic explicit-provider line:
+   - keep `deterministic_extractor_v1` plus `f0_correction_enabled = false` as the baseline positive reference, but treat the dedicated APER plus ENERGY family as the current strongest deterministic checkpoint family
+   - treat the old single-record `ENERGY` blocker as solved on the active sample3 screen by the peak-focused objective redesign
+   - do not continue scalar energy weight nudging by inertia
+   - completed isolation probe: strict stagewise freeze preserves already-open `F0 / VUV / APER` but does not move `ENERGY`
+   - completed dedicated-branch probe: isolated energy-specific capacity remains the right scaffold; after corrected continuations the active deterministic frontier now reaches partial opening at `energy_ready_count = 2/3` and `all_core_controls_ready_count = 2/3`
+   - completed packet-calibration bugfix: downstream packet affine calibration now recomputes `bias` after clipped `scale`, and older deterministic absolute `ENERGY` MAE values are numerically superseded
+   - completed stage5-scale objective probe: energy supervision aligned to packet-gate normalization is wired and valid, but this family is numerically superseded by the later corrected affine-calibrated branch
+   - completed widening probe: naive branch widening to `192` does not beat the earlier dedicated-branch result and shows short-loop instability
+   - completed Stage5-shape probe: generic Stage5 temporal and correlation losses are not the active continuation
+   - completed dynamic-range probe: centered-state and std losses remain a real positive branch with corrected energy-best `0.246440`, but the affine-calibrated continuation family later materially surpasses it
+   - completed affine-calibrated probe: direct calibration-aware loss is the best deterministic isolated-energy family so far, with corrected warm4 energy-best `0.243179`
+   - completed zero-mae gate bugfix: exact `f0_calibrated_log2_mae = 0.0` is no longer misread as failure in the packet gate
+   - completed continuation probe: continuing from the affine-calibrated family-best checkpoint improves corrected energy-best further to `0.232511` while preserving `F0 / VUV / APER`
+   - completed second continuation probe: a further continuation improves corrected energy-best again to `0.224320` while preserving `F0 / VUV / APER`
+   - completed third-to-fifth continuation probes: the same family then improves further through `cont12 = 0.216033`, `cont16 = 0.201423`, and `cont20 = 0.120149`, where sample3 reaches `energy_ready_count = 2/3` and `all_core_controls_ready_count = 2/3`
+   - completed sixth continuation probe: a direct raw-frontier continuation `cont24` regresses back to `energy_ready_count = 1/3`, so the active frontier remains `cont20` rather than the newest block
+   - completed lr-half follow-up: halving learning rate to `2.5e-4` remains worse than the normal affine-calibrated family and should not become the default continuation
+   - completed dedicated-APER probe: `dedicated_aper_branch_v1` opens `APER` to `3/3` and proves that APER needed isolated structural capacity rather than simple unfreezing
+   - completed dedicated-APER plus ENERGY probe: the strongest deterministic line is now `ss_detpitch_aperbranch_energy_warm4`, where sample3 reaches `F0 / VUV / APER / ENERGY = 3/3, 3/3, 3/3, 2/3`
+   - active packet-facing checkpoint on that strongest line: `ss_detpitch_energypeak_s2_step1.step1`
+   - active broader confirmation status: `target_validation 8/8` and `target_special_eval 8/8`
+   - completed Stage5 downstream confirmation: when this winning packet-facing checkpoint is adapted into synthetic Stage5 packages and decoded with the current no-res best-validation checkpoint, both `tv8` and `se8` remain `8/8 auto_reject_obvious_buzz`
+   - completed Stage5 handoff localization: `tv8` and `se8` waveform handoff probes show `decoded_no_gate`, `decoded_pre_ola_gate`, and `decoded_post_ola_gate` all remain `8/8 auto_reject`, so the active failure is already present before predicted activity gating
+   - completed Stage5 structure localization: on `tv8`, temporal collapse is already present by `fused_hidden`, while the strongest Stage5-local coupling and geometry collapse remains `decoder_hidden -> waveform_decoder_base_logits`
+   - completed fixed-input decoder-family AB: plain `branchcondadapter` and `fusionbranchmeancontrast_branchcond` both remain `8/8 auto_reject` on the current fixed-input `tv8` slice; the fusion branch-conditioned family is less bright than the plain branch-conditioned family but neither changes the active pre-gate buzz diagnosis or the `decoder_hidden -> waveform_decoder_base_logits` localization
+   - completed fixed-input residual-shape screen: `fusionbranchmeancontrast_residualshape_fullsplit24` changes the active failure basin on the current fixed-input Stage5 route and reaches `tv8 = 6/8 auto_reject`, `se8 = 6/8 auto_reject`, while `scale050` improves the current `tv8` screen further to `5/8 auto_reject`
+   - immediate next action for this line: do not continue Stage3 optimization and do not keep trying hidden-side branch-conditioned decoder adapters; continue on the output-side residual-shape family, with `fusionbranchmeancontrast_residualshape_scale050` as the current best fixed-input Stage5 candidate
+   - completed practical validation step: the prepared `5`-record human-review bundle for `fusionbranchmeancontrast_residualshape_scale050` was listened to, and all `5` remain qualitatively failed buzz outputs
+   - completed reusable source-filter review formalization: `analyze-stage5-nores-source-filter-review` now reproduces the Stage5 human-stop direction on the same `5`-record review bundle and localizes the current fixed-input residual-shape route to `vuv_separation_collapsed`
+   - completed review-slice vuv-path localization: `analyze-stage5-nores-vuv-path-review` now maps the same `5`-record review slice back into the active fused_single waveform path and shows `2/5` records already missing vuv contrast at `waveform_decoder_base_logits`, while the remaining `3/5` keep only tiny positive base-logits gaps that all disappear by `waveform_frames`
+   - completed residual and gate sidecar diagnosis on the same review slice: `waveform_residual_shape_delta` is not unvoiced-focused on `5/5`, and `noise_gate_not_dominant_on_unvoiced_frames` also appears on `5/5`
+   - completed review-slice vuv-retention counterfactual probe: generic centered-logit unvoiced gain makes `waveform_frames` vuv separation worse, while `residual_unvoiced_gain300` flips all `5/5` record-level `waveform_frames` vuv high-band gaps positive and improves the aggregate mean from `-0.003187` to `0.003254`
+   - completed bounded no-go check on the same counterfactual probe: even the best local variant keeps the machine status at `review_required 5/5`, so this is leverage evidence, not a training-free route opening
+   - completed runtime-gate no-go decomposition: `analyze-stage5-nores-vuv-runtime-residual-probe` shows current `noise_gate` and `noise > periodic` rules do not recover any of the oracle unvoiced-residual leverage, with `noise_dominance_fraction = 0.0` on all `5/5` reviewed records
+   - completed upstream carrier decomposition: `analyze-stage5-nores-vuv-noise-hidden-residual-probe` shows `noise_hidden_rms_soft_residual_gain500` reaches aggregate waveform-frames `vuv` high-band gap `0.003365`, slightly above the oracle target-side positive control `0.003254`
+   - completed noise-hidden residual-structure probe: `analyze-stage5-nores-vuv-noise-hidden-residual-structure-probe` shows the best simple residual-adapter feature reroute only improves waveform-frames aggregate `vuv` high-band gap from `-0.003187` to `-0.002912`, far behind both the `noise_hidden` scaling comparator `0.003365` and the oracle target-side positive control `0.003254`
+   - updated structural conclusion after `528`: the active upstream carrier is still `noise_hidden`, but the current residual-shape adapter does not unlock that carrier through simple feature-slot rerouting and therefore needs a new explicit projection or injection path
+   - completed explicit `noise_hidden -> residual` micro-fit after `529`: the new `delta_direct_v1` branch rescues aggregate waveform-frames `vuv` high-band gap from `-0.003187` to `0.002642`, while `gate_bias_only_v1` and `gate_plus_delta_v1` remain effectively flat
+   - completed replay-path bugfix after `530`: review-slice `vuv-path` replay now resolves decoded and aligned audio from the active export manifest instead of reusing stale baseline audio paths from the original review bundle
+   - corrected downstream replay after `530`: the `delta_direct_v1` replay still keeps waveform-frames aggregate `vuv` gap at `0.002642`, but corrected decoded aggregate `vuv` gap is `-0.066452`, not the older stale-audio replay value
+   - completed decode-projection review after `530`: `delta_direct_v1` yields `decoded_no_gate = -0.066444`, `decoded_pre_ola_gate = -0.066328`, and `decoded_post_ola_gate = -0.066453`, so the rescued frame-space separation is already lost before predicted activity gating and gate mode only changes the result at second-order scale
+   - completed frame-reconstruction geometry probe after `531`: on the corrected `delta_direct_v1` review slice, current `hann_ola_baseline` keeps aggregate decoded `vuv` gap at `-0.066444`, while simple `rectangular_ola` flips it to `0.017643`; `hop_stitch` and `flatten_frames` are much less effective than `rectangular_ola`
+   - completed reconstruction-contract Hann-family AB after `532`: `hann_overlap_count_norm = -0.049303`, `hann_window_square_norm = -0.059694`, and `sqrt_hann_window_square_norm = -0.027126` all remain negative on the corrected `delta_direct_v1` review slice, while `rectangular_overlap_count_norm` stays strongly positive at `0.017643`
+   - completed real export-contract AB after `533`: when promoted into actual `decoded.wav` on the same `delta_direct_v1` review slice with no predicted gate, `rectangular_overlap_count_norm` keeps corrected decoded aggregate `vuv` gap positive at `0.017643` and removes the old `vuv_separation_collapsed` localization, while `hann_window_sum_norm` keeps the old negative decoded aggregate `-0.066445`
+   - updated post-rectangular conclusion after `533`: the old reconstruction-contract question is answered, but the route is still not open because the rectangular real export remains `5/5 auto_reject`; the dominant remaining blocker is now a non-`vuv` buzz or template-collapse basin
+   - completed waveform-frame template-collapse localization after `534`: on the same `delta_direct_v1` review slice, `waveform_frames` already reach `template_cosine_mean = 0.992189`, `adjacent_cosine_mean = 0.999529`, and `template_cosine_gap_vs_aligned = 0.959170`, while still keeping repaired `vuv` gap `0.002642`
+   - corrected blocker interpretation after `534`: rectangular reconstruction does not create the remaining failure; it preserves decoded `vuv` rescue while the pre-existing waveform-frame template-collapse survives almost unchanged into real export
+   - completed review-slice output-head recheck after `535`: current handoff and structure probes on the active `delta_direct_v1` review slice show `tanh_is_main_new_collapse_site = false`, `logits_show_heavy_saturation_pressure = false`, `waveform_decoder_base_logits_only` is nearly baseline, and `fused_hidden_frame_mean` barely changes the heard path
+   - sharpened current localization after `535`: the dominant remaining blocker is the `decoder_hidden -> waveform_decoder_base_logits` projection head, which still acts close to a fixed-template low-rank projector around the active operating region
+   - immediate next action for this line: stop gate-side tweaking, stop old residual-adapter input shuffling, keep the explicit `noise_hidden -> residual` direct-delta path plus rectangular reconstruction as the validated decoded positive control, and target the broader `decoder_hidden -> waveform_decoder_base_logits` interface rather than reconstruction, final `tanh`, or another head-only `waveform_decoder` replay
+   - completed review-slice output-head-only microfit after `536`: a bounded `waveform_decoder`-only microfit on the active `delta_direct_v1` review slice lowers handoff `waveform_frame_logits_template_cosine_mean` from `0.993400` to `0.992962`, lowers `waveform_frames_template_cosine_mean` from `0.992189` to `0.991705`, and improves rectangular decoded `vuv` gap from `0.017643` to `0.032176`
+   - updated limitation after `536`: those gains remain second-order because the strongest geometry collapse still localizes to `decoder_hidden -> waveform_decoder_base_logits`, `decoder_to_base_logits_template_distance_drop` stays near `-0.68`, and the real rectangular export remains `5/5 auto_reject`
+   - sharpened next action after `536`: do not treat the last `waveform_decoder` stack as the whole problem; the next bounded probe should widen scope to a pre-head adapter or joint `decoder_hidden` plus `waveform_decoder` microfit on the same review slice
+   - completed review-slice pre-head adapter microfit after `537`: a bounded zero-init pre-head adapter between `decoder_hidden` and `waveform_decoder` is now implemented, wired through training/export/probes, and trained on the same `delta_direct_v1` review slice with only `10` adapter-side parameters unfrozen
+   - updated result after `537`: the pre-head-only run slightly lowers handoff `waveform_frame_logits_template_cosine_mean` to `0.992947` and `waveform_frames_template_cosine_mean` to `0.991691`, but the real rectangular export still stays `5/5 auto_reject`, decoded `vuv` gap reaches only `0.019217`, and the strongest geometry collapse still localizes to `decoder_hidden -> waveform_decoder_base_logits` with `decoder_to_base_logits_template_distance_drop = -0.701049`
+   - sharpened next action after `537`: do not replay another single-sided interface edit; the next bounded move should be a joint `decoder_hidden` plus `waveform_decoder` interface microfit, such as unfreezing the new pre-head adapter path together with `waveform_decoder`
+   - completed review-slice joint interface microfit after `538`: a bounded joint microfit on the active review slice now unfreezes both `waveform_decoder` and the new pre-head adapter path, reaching the current best bounded decoded template-collapse result under real rectangular export with `decoded_frame_template_cosine_mean = 0.988889` while keeping decoded `vuv` gap positive at `0.029999`
+   - updated result after `538`: joint interface editing is stronger than either single-sided edit on decoded template-collapse and brightness, but the route still remains `5/5 auto_reject` and the strongest geometry collapse still localizes to `decoder_hidden -> waveform_decoder_base_logits` with `decoder_to_base_logits_template_distance_drop = -0.695632`
+   - sharpened next action after `538`: do not replay the same joint scope; the next bounded move should widen one step upstream into the immediate `decoder_hidden` producer under `branch_mean_contrast_residual_v1`, most concretely `fusion_branch_mean_contrast_gate` and `fusion_branch_mean_contrast_proj`, together with the current joint interface prefixes
+   - completed producer-plus-interface microfit after `539`: widening the bounded trainable scope one more step upstream into `fusion_branch_mean_contrast_gate` and `fusion_branch_mean_contrast_proj` now gives the strongest current bounded review-slice result, with handoff decoded routes at `0/5 auto_reject` and real rectangular export improved from uniform `5/5 auto_reject` down to `3/5 auto_reject` plus `2/5 review_required`
+   - updated result after `539`: real rectangular export now reaches `decoded_frame_template_cosine_mean = 0.985812` and decoded `vuv` gap `0.060665`, clearly surpassing `538`, but this is still only a partial opening because machine gate remains negative-only and `3/5` records still auto-reject
+   - sharpened next action after `539`: do not widen trainable scope again by inertia; the next bounded pass should localize why `539` handoff decoded routes already read `0/5 auto_reject` while the real exported rectangular route still keeps a remaining `3/5` failure set
+   - completed waveform-handoff contract-alignment bugfix after `540`: `analyze-stage5-nores-waveform-handoff` now accepts an explicit reconstruction contract and replays decoded routes through the same contract-aware helper used by real export
+   - corrected `539` interpretation after `540`: the earlier `0/5 auto_reject` handoff reading was a Hann-vs-rectangular mismatch artifact; when replayed with `rectangular_overlap_count_norm`, `decoded_no_gate` matches real export exactly at `3/5 auto_reject + 2/5 review_required`
+   - sharpened next action after `540`: the next bounded pass should no longer chase handoff-vs-export semantics; it should localize the remaining `3` auto-reject records on the corrected `539` frontier before opening another training loop
+   - completed remaining-failure subset localization after `541`: the source-filter and vuv-path review CLIs now accept `target_record_ids` and optional export-status override, and the corrected `539` frontier has been replayed as separate `fail3` and `review2` subsets
+   - updated localization after `541`: the remaining split is no longer a `vuv`-collapse split; both subsets keep positive `vuv` contrast through `waveform_decoder_base_logits`, `waveform_frames`, and decoded waveform, while the active difference is now auto-reject threshold geometry on template collapse and envelope-following
+   - sharpened blocker partition after `541`: the remaining `3` auto-reject records are not homogeneous, with `target::chapter3_26_firefly_114` and `target::chapter4_7_firefly_105` staying hard no-gate template-collapse blockers, while `target::no_text_voice/chapter3_18_firefly_101` is only a gate-sensitive border case that drops below the machine threshold once gated template cosine slips from `0.985013` to `0.984834`
+   - corrected control reading after `541`: `review_required 2/5` is not a clean positive bucket, because `target::no_text_voice/chapter3_21_firefly_108` is still heavily collapsed at `decoded_frame_template_cosine_mean = 0.991612` and only escapes auto-reject because `predicted_activity_to_aligned_frame_rms_corr = 0.347759` stays below the `0.75` envelope-following threshold
+   - sharpened next action after `541`: do not reopen another global `vuv` or gate-family detour and do not train against the old mixed `fail3 vs review2` grouping; if another bounded microfit is opened, use `target::chapter3_26_firefly_114` and `target::chapter4_7_firefly_105` as the hard no-gate template-collapse blocker pair, treat `target::chapter3_30_firefly_132` as the better near-open control, and treat `target::no_text_voice/chapter3_21_firefly_108` as non-control
+   - completed hard-pair template-push microfit after `542`: a bounded `4`-record focused microfit on the hard blocker pair plus one near-open control and one border case now materially outperforms the old `539` frontier without widening structure or trainable scope
+   - updated result after `542`: the stronger `templatepush_b` checkpoint replays back onto the full active `5`-record review slice at `0/5 auto_reject + 5/5 review_required` under real no-gate rectangular export, replacing the old `539` frontier `3/5 auto_reject + 2/5 review_required`
+   - updated metric reading after `542`: full-slice decoded template cosine improves from `0.985812` to `0.968295`, decoded `vuv` high-band ratio mean improves from `0.060665` to `0.111866`, and source-filter replay no longer shows any decoded centroid-gap suppression cases on the active `5`-record slice
+   - corrected held-out reading after `542`: the excluded `target::no_text_voice/chapter3_21_firefly_108` does not regress under replay and instead improves from `decoded_frame_template_cosine_mean = 0.991612` to `0.981898`, while staying `review_required`
+   - sharpened next action after `542`: do not immediately stack another same-family loss escalation; first run bounded listening and spectrogram review on the new `templatepush_b` full5 export, because `0/5 auto_reject` is still only a negative-gate escape and not yet positive evidence of route opening
+   - completed listening-bundle and machine-preread preparation after `543`: a full `templatepush_b` listening-plus-spectrogram review bundle is now materialized for the active `5`-record slice, with decoded/aligned audio, audit proxies, paired spectrograms, and machine sidecars all in one place
+   - updated reading after `543`: the machine preread supports that `templatepush_b` is a real bounded gain rather than a single-threshold edge case, but it still cannot promote the route beyond `review_required 5/5`
+   - sharpened next action after `543`: the next valid move is explicit bounded manual review on the new bundle, not another training continuation first; only after that review should the project decide whether `templatepush_b` is worth broader replay or still needs another same-scope microfit
+   - completed manual review after `544`: the new `templatepush_b` full5 frontier was listened to directly and all `5` decoded outputs still remain pure buzz, with only slightly stronger energy-following fluctuation and no speech-like regions
+   - updated spectrogram reading after `544`: uniformly spaced stripe patterns remain dominant, some very short sand-like texture appears locally, but there is still no stable speech structure or human-voice-like region
+   - corrected route interpretation after `544`: `0/5 auto_reject + 5/5 review_required` on `templatepush_b` is a real machine-side gain over `539`, but it is still a human-stop result and must not be treated as near-speech or route opening
+   - sharpened next action after `544`: do not broaden replay and do not keep stacking the same template-push family by inertia; the next bounded move should localize why energy-following improves while the route still stays trapped in uniform buzz stripes without speech structure
+   - completed cross-record resonance-trap localization after `545`: the new full5 handoff, structure, and source-filter comparison shows that `templatepush_b` really lowers within-record template-collapse severity, but decoded resonance peaks remain strongly shared across records, with mean pairwise decoded peak-set Jaccard rising from `0.707` on corrected `539` to `0.773` on `templatepush_b` while aligned targets stay at only `0.116`
+   - updated structural reading after `545`: several decoded pairs now share identical peak sets at Jaccard `1.0`, while the structure probe still localizes the main bottleneck to `decoder_hidden -> waveform_decoder_base_logits` with diagnoses `decoder_hidden_to_base_logits_is_main_coupling_amplifier` and `decoder_hidden_to_base_logits_is_main_geometry_collapse`
+   - corrected machine-gain interpretation after `545`: `templatepush_b` should now be read as a lower-harshness, better energy-following shared resonance-template basin rather than as partial speech emergence, because human review still hears only pure buzz and the cross-record decoded stripe pattern remains more shared than the aligned targets
+   - sharpened next action after `545`: do not continue same-family template-push escalation and do not broaden replay first; the next bounded experiment family should target breaking the shared cross-record resonance template at `decoder_hidden -> waveform_decoder_base_logits` and should be judged by record-specific decoded structure, not only by lower template-collapse scalars
+   - completed cross-record logspec regularizer AB after `546`: a new dataset-step batch regularizer now directly penalizes cross-record log-spectral template similarity excess on `waveform_decoder_base_logits` and optionally `waveform_frames`, and two bounded runs were trained from the `templatepush_b` checkpoint on the same `hardpaircontrol4` subset
+   - updated de-sharing reading after `546`: the new family really moves the old shared-template basin, with full5 decoded peak-set Jaccard mean dropping from `0.773` on `templatepush_b` to `0.504` on `crossrecordspeca` and `0.494` on `crossrecordspecb`, while full5 decoded template cosine also drops from `0.968295` to about `0.803`
+   - corrected route reading after `546`: that de-sharing does not open the route, because both new runs regress real no-gate rectangular export from `0/5 auto_reject` back to `1/5 auto_reject`, with the near-open control `target::chapter3_30_firefly_132` falling back to `auto_reject_obvious_buzz`
+   - updated structural localization after `546`: even after the global de-sharing regularizer, the structure probe still localizes the main bottleneck to `decoder_hidden -> waveform_decoder_base_logits`, and `decoder_to_base_logits_template_distance_drop` worsens from `-1.463558` on `templatepush_b` to `-3.675515` on `crossrecordspeca`
+   - sharpened next action after `546`: do not continue the current global cross-record regularizer family by inertia; the next bounded move should be narrower, preserving `target::chapter3_30_firefly_132` while applying pair-specific differentiation pressure to the hard blocker pair `target::chapter3_26_firefly_114` and `target::chapter4_7_firefly_105`
+   - completed matched continuation control after `547`: a plain no-regularizer continuation from the same `templatepush_b.step8` anchor now replays to the same full5 basin as the `crossrecordspec*` and `hardpairspec*` runs, with `1/5 auto_reject`, the same regressed near-open control `target::chapter3_30_firefly_132`, `decoded_template_cosine_mean = 0.802061`, mean decoded peak-set Jaccard `0.504242`, and the same dominant structure localization at `decoder_hidden -> waveform_decoder_base_logits`
+   - corrected causal reading after `547`: the basin shift first seen in `546` is primarily same-scope continuation drift from the unstable `templatepush_b` frontier rather than a clean regularizer-specific effect, because the matched plain continuation lands in an almost identical export, handoff, source-filter, and structure state
+   - sharpened next action after `547`: do not treat the current cross-record regularizer family as a validated de-sharing breakthrough and do not judge future same-anchor families without a matched no-op continuation control; if blocker-specific differentiation work continues, re-anchor from the stable pre-drift `templatepush_b` frontier and preserve `target::chapter3_30_firefly_132` explicitly
+   - completed short-horizon matched replay after `548`: existing `step1`, `step2`, and `step3` checkpoints from plain continuation control and `hardpairspeca` were replayed on the full active `5`-record slice, and both families preserve `0/5 auto_reject` through `step3` while leaving the original `templatepush_b` machine frontier in broadly the same direction
+   - refined regularizer reading after `548`: `step1` is effectively identical between plain continuation and `hardpairspeca`, `step2` shows only a small transient focused de-sharing signal on mean decoded peak-set Jaccard `0.628687 -> 0.565253`, and by `step3` that focused difference disappears again while export statuses and per-record metrics remain nearly identical
+   - sharpened next action after `548`: do not continue the current focused logspec regularizer family by inertia; if it is revisited at all, compare only step-matched checkpoints and treat `step2` as the only bounded listening candidate, otherwise switch to a materially different blocker-specific mechanism while still preserving `132` and carrying a matched no-op continuation control
+   - completed paired listening-bundle preparation after `549`: a bounded `step2 control vs focused` paired listening and spectrogram review bundle is now materialized for the `4` records that matter most, namely the hard blocker pair `114/105`, the near-open control `132`, and the sidecar border case `101`
+   - sharpened review question after `549`: the current focused logspec family should now rise or fall only on whether matched focused `step2` creates audible or visible record-specific separation on `114/105` without degrading `132`; machine-side scalar differences alone are no longer enough to justify continuation
+   - completed paired manual review after `550`: matched `step2 control` and `step2 focused` are both still pure buzz by listening, with the same slight energy-following fluctuation, the same uniformly distributed thin-line spectrogram pattern, the same tiny local sand-like texture, and still no speech structure or human-voice-like region
+   - finalized family decision after `550`: the current focused hard-pair logspec regularizer line is now retired, because its only transient `step2` machine-side de-sharing signal does not translate into any human-meaningful gain over matched control
+   - sharpened next action after `550`: do not continue any `hardpairspeca`-style same-family replay; the next blocker-specific route must use a materially different mechanism while keeping `templatepush_b` as the machine-side baseline to beat and keeping the main structural bottleneck localized at `decoder_hidden -> waveform_decoder_base_logits`
+   - completed dynamic output-head smoke after `551`: a new minimal fused-single dynamic residual basis head is now implemented and wired through training, checkpoint reconstruction, export, and structure-probe paths, and a bounded `4`-step smoke has been trained from `templatepush_b.step8` using only the new dynamic-head parameters
+   - updated machine-side reading after `551`: the dynamic-head smoke preserves the current full5 real `rectangular gateoff` frontier at `0/5 auto_reject + 5/5 review_required` and slightly improves source-filter aggregates over `templatepush_b`, with `decoded_template_cosine_mean 0.968295 -> 0.965387` and `decoded_vuv_high_band_ratio_mean 0.111866 -> 0.121464`
+   - corrected structural reading after `551`: despite that small machine-side gain, the structure probe still localizes the main bottleneck to `decoder_hidden -> waveform_decoder_base_logits`, with diagnoses `decoder_hidden_to_base_logits_is_main_coupling_amplifier` and `decoder_hidden_to_base_logits_is_main_geometry_collapse`, and `decoder_to_base_logits_template_distance_drop = -1.496381`
+   - sharpened next action after `551`: do not broaden replay from the new dynamic-head smoke yet; the next bounded move should be direct human A/B against `templatepush_b`, and only a human-audible improvement should justify continuing this minimal dynamic-head design
+   - completed colocated paired listening-bundle preparation after `552`: the new full5 `templatepushb vs dynamicheadsmokea` A/B now has a single-root bundle that copies all current audio, spectrogram, and json/md sidecars into one directory tree, so human review no longer needs to hop across multiple runtime folders
+   - updated review procedure after `552`: once human listening becomes the next critical-path decision, prefer a colocated single-root bundle over scattered export/source-filter/bundle paths; the new helper script is `scripts/build_stage5_paired_listening_bundle.ps1`
+   - sharpened next action after `552`: the immediate next step is bounded manual review from the colocated bundle root, not more training first
+   - completed dynamicheadsmokea paired manual review after `553`: full5 `templatepushb` and `dynamicheadsmokea` are both still pure buzz by listening, with no substantive audible change and effectively no perceivable difference
+   - corrected problem framing after `553`: repeated small local changes at `decoder_hidden -> waveform_decoder_base_logits` can move machine-side buzz metrics but still do not generate speech structure, so the open question is now whether `decoder_hidden` contains recoverable speech structure at all rather than whether one more small head tweak will work
+   - sharpened next action after `553`: stop same-family dynamic-head continuation and run an oracle-style representation sufficiency probe first; the next decisive experiment should test whether cheap oracle readouts can recover target-specific structure from `periodic_hidden`, `noise_hidden`, `fused_hidden`, and especially `decoder_hidden`
+   - completed waveform-frame oracle extension after `554`: the Stage5 representation oracle probe now covers aligned unit-RMS waveform-frame targets in addition to RMS, VUV, and compressed log-spectrum, and the full5 `templatepushb.step8` anchor has been replayed through both the linear waveform oracle and a small `2-layer` waveform-frame MLP oracle
+   - refined oracle reading after `554`: coarse target structure is still widely recoverable across records, with cross-record best compressed log-spectrum at `periodic_hidden = 0.938546`, near-perfect RMS/VUV everywhere, but cross-record fine waveform recoverability remains near zero at every stage; the best linear waveform-frame cosine is only `noise_hidden = 0.012454`, `decoder_hidden = 0.006279`, and `waveform_decoder_base_logits = 0.000339`
+   - refined nonlinear oracle reading after `554`: a small nonlinear waveform oracle does not rescue the missing fine structure, with cross-record best waveform MLP cosine only `noise_hidden = 0.013228`, `decoder_hidden = 0.006768`, and `waveform_decoder_base_logits = 0.005996`, so the decoder-hidden versus base-logits gap stays tiny and still does not justify another local output-head family
+   - sharpened next action after `554`: stop treating local head redesign as the default mainline; the next structural work should move upstream into the fusion / producer path and localize where target-specific fine structure disappears before the current waveform head
+   - completed producer fine-structure probe after `555`: the new producer/fusion oracle probe is now implemented and replayed on the full5 `templatepushb.step8` anchor, covering `periodic_hidden`, `noise_hidden`, `branch_mean_hidden`, `branch_difference_hidden`, `fusion_residual_hidden`, `fused_hidden`, `decoder_hidden`, `waveform_decoder_input_hidden`, and `waveform_decoder_base_logits`
+   - refined upstream reading after `555`: coarse structure remains strong across the producer path, but cross-record fine waveform recoverability still stays near zero everywhere, with best linear waveform cosine only `fusion_residual_hidden = 0.015881` and best waveform MLP cosine only `noise_hidden = 0.013228`
+   - corrected fusion-vs-head reading after `555`: `branch_mean_hidden -> fused_hidden` and `decoder_hidden -> waveform_decoder_input_hidden` show almost no additional waveform loss, while `waveform_decoder_input_hidden -> waveform_decoder_base_logits` still shows the sharpest visible linear collapse at `0.006793 -> 0.000344`
+   - sharpened next action after `555`: do not reopen another local output-head family and do not blame branch-contrast fusion alone; the next structural work should move earlier than the current producer-path endpoint and should focus on how stronger target-specific fine structure can be created or preserved before this low-signal regime
+   - completed branch-feature oracle probe after `556`: the new raw Stage5 branch-input oracle probe is now implemented, wired into `manage.py`, and replayed on the full5 `templatepushb.step8` anchor, covering `periodic_branch_features`, `noise_branch_features`, `joint_branch_features`, `z_art_family`, `f0_hz_log_norm_family`, `event_family`, `acoustic_state_family`, `conditioning_family`, `periodic_hidden`, and `noise_hidden`
+   - refined branch-input reading after `556`: coarse target structure remains very strong directly at the raw branch-input contract, but cross-record fine waveform recoverability is already near zero there, with best dynamic raw-family linear waveform cosine only `acoustic_state_family = 0.020021` and best dynamic raw-family waveform MLP cosine only `f0_hz_log_norm_family = 0.019484`
+   - corrected static-family reading after `556`: `conditioning_family` reaches a slightly higher tiny waveform oracle score at `0.022368`, but it is frame-constant and also shows `oracle_rms_corr = 0.0` and `oracle_vuv_accuracy = 0.471101`, so it should be read only as weak record-level leakage rather than temporal fine structure
+   - corrected encoder-loss reading after `556`: `periodic_branch_features -> periodic_hidden` and `noise_branch_features -> noise_hidden` add only small extra waveform loss, with linear drops only `0.001814` and `0.004939`, so the periodic and noise input encoders are not the newly proven main collapse site either
+   - sharpened next action after `556`: do not continue Stage5-local head, fusion, or early-encoder redesign as the default route; the next structural work should move earlier than the current Stage5 package boundary and test whether the upstream control contract and representation-formation path can create the missing target-specific fine waveform detail at all
+   - active breakpoint after `556`: the next upstream localization step is now a read-only `source_scaffold` oracle probe with its own dedicated CLI entry, and its primary comparison must stay on `selected_dynamic_controls` vs `all_available_controls` vs `unselected_available_controls`
+   - interpretation guard for that next step: keep conditioning-augmented variants only as leakage references, not as the main source of truth about whether the dynamic control contract itself carries fine waveform structure
+   - completed source-scaffold control-contract probe after `557`: the new read-only `source_scaffold` oracle probe is now implemented and replayed on the full5 `templatepushb.step8` review slice, and its main dynamic comparison shows `selected_dynamic_controls = 0.009515 / 0.012218`, `all_available_controls = 0.005871 / 0.003945`, and `unselected_available_controls = 0.011726 / 0.008911`, so the missing fine waveform geometry is already weak in the current scaffold control contract itself
+   - corrected source-contract reading after `558`: moving one step earlier to the upstream source contract does not rescue the missing signal on the active student-packet route, because `source_contract_core_controls = 0.011209 / 0.011934`, `source_contract_full_dynamic = 0.008409 / 0.014052`, and packet-only diagnostics also stay weak at `0.00583 / -0.000269`
+   - corrected hidden-reservoir reading after `559`: replaying the active Stage3 checkpoint on the same full5 review slice shows `shared_hidden = 0.009423 / 0.00692`, `student_hidden = 0.006876 / 0.00962`, and `teacher_fused_hidden_projection = 0.005777 / 0.006242`, so the current packet exporter is not hiding a strong omitted hidden-state reservoir either
+   - corrected frontend-input reading after `560`: the strongest currently available upstream input families are only `packet_reference_controls = 0.02178 / 0.014518` and `pitch_provider_family = 0.020932 / 0.016573`, while `frontend_raw_control_family` falls back to `0.006395 / 0.004273`, so even the available source-acoustic and pitch-provider route remains only weakly informative for the missing cross-record fine waveform structure
+   - sharpened next action after `560`: stop replaying the same localization pattern inside Stage5 consumer structure, packet field juggling, or currently exported hidden families; the next valid move is an upstream representation-formation redesign that introduces a genuinely richer fine-structure-bearing contract rather than expecting the current scalar control family to carry it
+   - completed first richer-contract consumer implementation after `561`: the new `streaming_student_richer_source_contract_v1` Stage5 semantic consumer is now wired into package build and appends `reference_controls + diagnostics + conditioning` from the active streaming-student source contract as a `48`-dim sidecar, raising the Stage5 branch input contract from `36/36` to `84/84`
+   - corrected implementation-status reading after `561`: this is now a real upstream-contract redesign path rather than another probe, and it has already been machine-verified on both a 1-sample smoke package and a rebuilt full5 richer-contract review-slice dataset index spanning the active `tv8` and `se8` packet exports
+   - corrected training-plumbing reading after `561`: the richer-contract route now passes a real `run-offline-mvp-nores-vocoder-train-step` smoke with `loss_total = 1.053148`, `grad_norm = 2.355891`, and normal checkpoint save, so the new `84/84` package surface is consumable by the Stage5 training path
+   - corrected compatibility reading after `561`: the new richer-contract route is for fresh Stage5 package/training experiments only and must not be treated as compatible with old `36/36` no-res checkpoints
+   - completed richer-contract dataset-loop smoke after `562`: the new `84/84` full5 richer-contract review-slice route now runs through the real Stage5 dataset loop, with random-init validation loss descending `0.891822 -> 0.794656 -> 0.722739` across a 3-step smoke and checkpoints saved normally
+   - completed richer-contract warm-start smoke after `562`: the old `templatepushb.step8` Stage5 anchor can now be reused as partial init on the widened richer-contract route once shape-mismatched first-layer encoder weights are skipped explicitly, and the warm-start 3-step smoke also completes with validation loss descending `0.896395 -> 0.794914 -> 0.725259`
+   - corrected loop-readiness reading after `562`: the richer-contract route is no longer just package-consumable; it is end-to-end train-loop-consumable on the active full5 review slice
+   - completed first bounded richer-contract training comparison after `563`: on a same-architecture 20-step comparison, richer-contract warm-start stays slightly ahead of random-init on loop loss (`0.512735` vs `0.516383`) and materially ahead on machine decode shape, with lower decoded zero-crossing rate and lower spectral centroid on the full5 speech-emergence probe
+   - corrected bounded-comparison reading after `563`: richer-contract warm-start is the better active route, but the gap is still incremental and does not yet justify listening audit because frame-template collapse and RMS mismatch remain severe
+   - completed held-out richer-contract minisplit check after `563`: a stricter `3 train / 2 validation` minisplit still improves steadily out to `step39`, reaching held-out validation loss `0.443589`, so the richer-contract route is not merely replaying duplicated train=validation loop-smoke packages
+   - corrected held-out decode reading after `563`: the minisplit `step39` checkpoint improves several alignment-facing speech-emergence metrics further (`decoded_zero_crossing_rate = 0.379961`, `decoded_spectral_centroid_hz = 8688.796875`, `predicted_activity_to_aligned_frame_rms_corr = 0.449751`, `decoded_frame_rms_to_aligned_frame_rms_corr = 0.479959`), but `decoded_to_aligned_rms_ratio = 2.963793` is still too large and the route is still not listening-ready
+   - sharpened next action after `563`: continue the richer-contract warm-start route with explicit RMS / high-band control rather than jumping to human audit; the current best machine checkpoint family is promising enough to keep optimizing, not yet strong enough to stop on ears
+   - completed explicit `RMS / high-band` regularizer continuation after `564`: held-out minisplit ablations now show that `rms_guard = 0.2` alone is not a good richer-contract route, while `rms_guard = 0.2 + waveform_decoder_base_logits_high_band_excess = 0.1` is the first branch to improve RMS overshoot, spectral brightness, and template collapse together on held-out speech-emergence probes
+   - corrected regularizer-route reading after `564`: the validation-best checkpoint is no longer the best machine-emergence checkpoint once these waveform-side regularizers are introduced; on the combined route, `step20` is more balanced than the validation-best `step36`
+   - promoted next-stop reading after `564`: the current human-audit candidate is now the combined richer-contract checkpoint `rmsguard02 + bhb01 step20`, because further machine-side scalar tuning is no longer clearly rankable by `loss_total` alone
+   - completed richer-contract listening-bundle preparation after `565`: the first richer-contract human A/B is now colocated under a single bundle root for `baseline39` vs `combo20`, with decoded/aligned/audio-proxy wavs, spectrograms, export sidecars, source-filter-review sidecars, and speech-emergence sidecars all copied into one directory tree
+   - updated listening-handoff policy after `565`: when the next critical-path step is human listening, the handoff artifact must now be a single bundle root that already contains all review-relevant audio, spectrogram, and current machine `json/md` sidecars
+   - current stop state after `565`: machine work is intentionally paused until the new richer-contract paired listening bundle is reviewed by ear
+   - completed richer-contract paired listening review after `566`: `combo20` is less piercing than `baseline39` and becomes more intermittent, but neither route contains any speech structure, and both still show the same fixed-spacing thin-line stripe pattern by spectrogram
+   - completed self-audit after `566`: the recent Stage5-local regularizer sweep has now exhausted its value; it clarified the current buzz basin but did not change route class, and it should not remain the default frontier
+   - corrected next-direction reading after `566`: the next valid move is upstream representation/supervision redesign with an oracle gate, not another Stage5-local loss sweep
+   - completed first upstream fine-structure oracle gate after `567`: the new analysis-only packet/source-scaffold fine-structure families are now implemented and replayed on the active full5 review slice, covering both a compact `unit_rms_logspec_48 + delta` reference and a direct `unit_rms_waveform_frame` reference
+   - corrected compact-dense reading after `567`: the compact magnitude-style dense candidate still remains weak at `fine_structure_reference_family = 0.017661 / 0.019218`, so simply exporting a denser log-spectrum-like sidecar does not solve the missing cross-record fine waveform geometry
+   - corrected next-representation target after `567`: direct local waveform geometry is sufficient by oracle (`fine_structure_waveform_reference_family = 0.999958 / 0.845117`), so the next valid upstream redesign should be a compact learned waveform-geometry code derived from that signal class, not another magnitude-only compact spectrum family
+   - completed compact waveform-code oracle and upper-bound bootstrap after `568`: the new `stage5_fine_structure_code_oracle_probe` confirms that a compact waveform-geometry code opens the route already at `waveform_pca_code_dim_8 = 0.531065 / 0.526204`, and the new analysis-only `wavepca16` packet export plus `streaming_student_waveform_pca_code_v1` Stage5 consumer now boot cleanly with `52 / 52` inputs, passing both train-step smoke and dataset-loop smoke
+   - completed first bounded `wavepca16` upper-bound training after `569`: a `full5` warm-start 20-step run and a held-out `3 train / 2 validation` warm-start 40-step run are both finished, and the held-out route keeps improving to `loss_total = 0.534152` at `step40`
+   - corrected upper-bound training read after `569`: the `wavepca16` route does not look listening-ready in raw brightness terms (`decoded_spectral_centroid_hz = 10186.308594`, `decoded_spectral_high_band_energy_ratio = 0.759900`, `decoded_to_aligned_rms_ratio = 3.075386`), but it does materially improve structure-facing machine evidence, most visibly `decoded_frame_template_cosine_gap_vs_aligned = 0.429025` and stronger `z_art / event_probs` usage than the richer-contract line
+   - completed regularized upper-bound continuation after `569`: adding `rms_guard = 0.2 + waveform_decoder_base_logits_high_band_excess = 0.1` to the held-out `wavepca16` route tames brightness and RMS (`7319.660156`, `0.489306`, `0.776896` at `step40`), but it also collapses `decoded_frame_rms_to_aligned_frame_rms_corr` to `0.084554`, so the richer-contract regularizer recipe does not transfer cleanly to the upper-bound route
+   - corrected next critical step after `569`: the main open question is no longer whether compact waveform-geometry information helps Stage5, but how to learn and predict that code upstream without using analysis-only target-derived packet fields; the next valid work item is producer-side waveform-code supervision / contract learning, not another Stage5-local regularizer sweep
+   - previous stable packet-facing anchor before redesign: `ss_detpitch_aperbranch_energy_warm4.step2`
+   - previous raw deterministic `ENERGY` frontier before redesign: `ss_detpitch_aperbranch_energy_warm4.step3`
+   - previous blocker-facing micro-frontier before redesign: `ss_detpitch_aperbranch_energyonly_s2_warm4.step1`
+   - completed combined continuation probe: a follow-up `cont8` regresses most steps back to `ENERGY = 1/3`, so blind continuation from the near-threshold combined state should not become the default rule
+   - completed ENERGY-only blocker-aware probe: `step3` is not the right continuation anchor under frozen APER; the stronger blocker-facing micro-step comes from the `step2` anchor and then immediately needs early-stop
+   - completed micro1 stop probe: one more same-family step from the blocker-facing micro-frontier regresses sharply, so this continuation family is now stopped
+   - completed peak-focused objective redesign: the new `teacher_energy_stage5_peak_affine_calibrated` loss opens the active sample3 packet screen fully in one step from the stable packet-facing anchor
+   - if deterministic work continues, do not resume the old continuation family; use the new winning checkpoint for broader confirmation rather than returning to shared scalar tuning, same-family scale alignment, naive width scaling, generic trajectory shaping, blind lr-half retries, raw-frontier continuation by inertia, or further micro-step retries
+10. Do not keep third-party reference repositories as permanent root-level directories once their design lessons are captured on disk.
+
+## Key Reference Reports
+- `docs/370_stage3_to_stage5_downstream_handoff_candidates_report.md`
+- `docs/371_stage3_student_control_packet_v1_bootstrap_and_proxy_screen_smoke_report.md`
+- `docs/372_stage3_student_control_packet_v1_cheap_screen_ab_report.md`
+- `docs/374_stage3_student_control_packet_readiness_gate_report.md`
+- `docs/375_stage3_teacher_label_target_state_contract_completion_report.md`
+- `docs/376_stage3_teacher_eevt_directional_targetstate_bridge_ab_and_readiness_report.md`
+- `docs/389_stage3_student_packet_minimal_stage5_adapter_and_decoded_smoke_fail_report.md`
+- `docs/447_repo_health_and_compliance_audit_20260328.md`
+- `docs/475_stage5_corrected_manifold_vnc01_maskfix_wfta003_followup_report.md`
+- `docs/476_root_1md_strategy_memo_independent_assessment.md`
+- `docs/477_stage3_packet_aware_checkpoint_selector_integration_and_selection_drift_report.md`
+- `docs/478_stage3_selector_naming_hardening_and_legacy_alias_report.md`
+- `docs/479_stage3_selector_comparison_cli_and_divergence_materialization_report.md`
+- `docs/480_stage3_selector_comparison_decision_summary_hardening_report.md`
+- `docs/481_stage3_packet_reference_vs_warm6_candidate_role_aware_comparison_report.md`
+- `docs/482_windows_path_budget_and_artifact_naming_policy.md`
+- `docs/483_stage3_selector_output_path_budget_remediation_report.md`
+- `docs/484_stage3_f0_corrfocus_nogo_and_sigmoid_collapse_diagnosis_report.md`
+- `docs/485_stage3_f0_unboundedf0_unit_mismatch_and_corrected_root_cause_report.md`
+- `docs/486_stage3_f0_sigmoid_collapse_systematic_diagnosis_and_structural_escalation_report.md`
+- `docs/487_stage3_rvc_reference_review_and_rmvpe_sidecar_plan_report.md`
+- `docs/488_stage3_deterministic_pitch_provider_bootstrap_and_smoke_report.md`
+- `docs/489_stage3_rmvpe_provider_bootstrap_and_contract_mismatch_smoke_report.md`
+- `docs/490_stage3_provider_only_audit_and_rmvpe_contract_diagnosis_report.md`
+- `docs/491_stage3_rmvpe_voiced_intersection_and_hybrid_vuv_diagnosis_report.md`
+- `docs/492_stage3_rmvpe_voicing_threshold_and_vuv_postprocess_calibration_report.md`
+- `docs/493_stage3_rmvpe_confidence_provider_bootstrap_and_packet_smoke_report.md`
+- `docs/494_stage3_rmvpe_confidence_short_loop_and_packet_selector_report.md`
+- `docs/495_stage3_rmvpe_split_confidence_probe_report.md`
+- `docs/496_stage3_rmvpe_splitconf_gated_correction_probe_report.md`
+- `docs/497_stage3_detpitch_nof0corr_energy_tradeoff_and_warmstart_nogo_report.md`
+- `docs/498_stage3_detpitch_energyfreeze_isolation_probe_report.md`
+- `docs/499_stage3_detpitch_energy_adapter_freeze_probe_report.md`
+- `docs/500_stage3_detpitch_energy_stage5_objective_routing_probe_report.md`
+- `docs/501_stage3_detpitch_energy_adapter_widening_probe_report.md`
+- `docs/502_stage3_detpitch_energy_stage5_shape_objective_probe_report.md`
+- `docs/503_stage3_detpitch_energy_stage5_dynamic_range_objective_probe_report.md`
+- `docs/504_stage3_detpitch_energy_stage5_affine_calibrated_objective_and_lrhalf_followup_report.md`
+- `docs/505_stage3_packet_calibration_bias_recompute_bugfix_and_energy_family_reevaluation_report.md`
+- `docs/506_stage3_f0_zero_mae_gate_bugfix_and_affine_energy_cont8_followup_report.md`
+- `docs/507_stage3_detpitch_affine_energy_cont12_to_cont20_partial_route_opening_report.md`
+- `docs/508_stage3_detpitch_affine_energy_cont24_regression_from_raw_frontier_report.md`
+- `docs/509_stage3_blocker_localized_firefly106_aper_flatness_and_energy_secondary_report.md`
+- `docs/510_stage3_detpitch_aperenergy_blocker_probe_report.md`
+- `docs/511_stage3_detpitch_dedicated_aper_branch_route_opening_report.md`
+- `docs/512_stage3_detpitch_dedicated_aper_plus_energy_warm4_and_cont8_report.md`
+- `docs/513_stage3_detpitch_energyonly_blocker_aware_anchor_probe_report.md`
+- `docs/514_stage3_detpitch_energy_micro1_regression_and_same_family_stop_report.md`
+- `docs/515_stage3_detpitch_peak_energy_objective_route_opening_report.md`
+- `docs/516_stage3_detpitch_peak_energy_objective_broad_slice_confirmation_report.md`
+- `docs/517_stage3_peak_energy_downstream_stage5_nores_confirmation_and_export_plumbing_report.md`
+- `docs/518_stage5_consumer_handoff_localization_for_energypeak_stage3_winner_report.md`
+- `docs/519_stage5_fixed_input_branch_conditioned_decoder_family_ab_report.md`
+- `docs/520_stage5_fixed_input_fusion_residualshape_breakthrough_and_scale_screen_report.md`
+- `docs/521_stage5_fusion_residualshape_scale050_human_review_bundle_report.md`
+- `docs/522_stage5_fusion_residualshape_scale050_spectrogram_review_and_human_stop_report.md`
+- `docs/523_stage5_source_filter_review_cli_formalization_and_vuv_collapse_confirmation_report.md`
+- `docs/524_stage5_review_slice_vuv_path_localization_probe_report.md`
+- `docs/525_stage5_review_slice_vuv_retention_counterfactual_probe_report.md`
+- `docs/526_stage5_review_slice_runtime_gate_vs_oracle_unvoiced_residual_probe_report.md`
+- `docs/527_stage5_review_slice_noise_hidden_unvoiced_residual_probe_report.md`
+- `docs/528_stage5_review_slice_noise_hidden_residual_structure_probe_report.md`
+- `docs/529_stage5_explicit_noise_hidden_residual_microfit_and_downstream_projection_blocker_report.md`
+- `docs/530_stage5_decode_projection_review_and_replay_path_bugfix_report.md`
+- `docs/531_stage5_frame_reconstruction_geometry_probe_report.md`
+- `docs/532_stage5_reconstruction_contract_hann_family_ab_report.md`
+- `docs/533_stage5_real_export_contract_ab_report.md`
+- `docs/534_stage5_waveform_frame_template_collapse_localization_report.md`
+- `docs/535_stage5_reviewslice_deltadirect_output_head_recheck_report.md`
+- `docs/536_stage5_reviewslice_outputhead_only_microfit_report.md`
+- `docs/537_stage5_reviewslice_prehead_adapter_microfit_report.md`
+- `docs/538_stage5_reviewslice_joint_interface_microfit_report.md`
+- `docs/539_stage5_reviewslice_producer_interface_microfit_partial_opening_report.md`
+- `docs/540_stage5_waveform_handoff_contract_alignment_bugfix_report.md`
+- `docs/541_stage5_reviewslice_remaining_failure_subset_localization_report.md`
+- `docs/542_stage5_reviewslice_hardpair_templatepush_microfit_report.md`
+- `docs/543_stage5_templatepushb_listening_bundle_and_machine_preread_report.md`
+- `docs/544_stage5_templatepushb_manual_review_and_human_stop_report.md`
+- `docs/545_stage5_templatepushb_crossrecord_resonance_trap_localization_report.md`
+- `docs/546_stage5_crossrecord_logspec_regularizer_ab_report.md`
+- `docs/547_stage5_templatepushb_continuation_control_vs_crossrecord_regularizer_report.md`
+- `docs/548_stage5_short_horizon_hardpair_regularizer_replay_report.md`
+- `docs/549_stage5_step2_paired_listening_bundle_preparation_report.md`
+- `docs/550_stage5_step2_paired_manual_review_and_focused_regularizer_stop_report.md`
+- `docs/551_stage5_dynamic_output_head_smoke_report.md`
+- `docs/552_stage5_paired_full5_listening_bundle_colocation_report.md`
+- `docs/553_stage5_dynamicheadsmokea_manual_review_and_oracle_probe_plan_report.md`
+- `docs/554_stage5_representation_oracle_waveform_sufficiency_report.md`
+- `docs/555_stage5_producer_fine_structure_probe_report.md`
+- `docs/556_stage5_branch_feature_oracle_probe_report.md`
+- `docs/557_stage5_source_scaffold_control_contract_probe_report.md`
+- `docs/558_stage5_source_contract_upstream_probe_report.md`
+- `docs/559_stage3_packet_hidden_state_probe_report.md`
+- `docs/560_stage3_frontend_input_probe_report.md`
+- `docs/561_stage5_richer_source_contract_consumer_plumbing_report.md`
+- `docs/562_stage5_richercontract_dataset_loop_smoke_and_partial_init_report.md`
+- `docs/563_stage5_richercontract_bounded_training_and_minisplit_report.md`
+- `docs/564_stage5_richercontract_rms_highband_regularizer_tradeoff_and_listening_candidate_report.md`
+- `docs/565_stage5_richercontract_listening_bundle_preparation_and_colocation_policy_report.md`
+- `docs/566_stage5_richercontract_listening_result_self_audit_and_next_direction_report.md`
+- `docs/567_stage3_fine_structure_reference_oracle_gate_report.md`
+- `docs/568_stage5_fine_structure_code_oracle_and_wavepca16_bootstrap_report.md`
+- `docs/569_stage5_wavepca16_upper_bound_bounded_training_and_regularizer_report.md`

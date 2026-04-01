@@ -1,6 +1,6 @@
 {
     "dataset_index_version":  "offline_mvp_nores_vocoder_dataset_index_v1",
-    "generated_at":  "2026-04-01T18:27:06",
+    "generated_at":  "2026-04-01T18:31:22",
     "packet_export_path":  [
                                "F:/proj_dev/tmp/workdir4/reports/runtime/ss_pktsel_detpitch_energypeak_s2_step1_tv8_pca16/pkt_exp/s0001_ss_detpitch_energypeak_s2_step1/streaming_student_downstream_control_packet.json",
                                "F:/proj_dev/tmp/workdir4/reports/runtime/ss_pktsel_detpitch_energypeak_s2_step1_se8_pca16/pkt_exp/s0001_ss_detpitch_energypeak_s2_step1/streaming_student_downstream_control_packet.json"
@@ -627,8 +627,7 @@
                     "run_duration_sec":  0
                 },
     "notes":  [
-                  "This dataset index merges the tv8 and se8 PCA16 waveform-code upper-bound packages into the same full5 review slice.",
-                  "This remains an analysis-only upper-bound consumer route because the waveform_pca_code is fitted from target waveform references inside each packet export.",
-                  "Use this index for bounded Stage5 consumer smoke and machine-side comparison only, not as a deployable student route."
+                  "This full5 PCA16 waveform-code index merges tv8 and se8 validation packages for machine-only upper-bound Stage5 training diagnostics.",
+                  "This remains an analysis-only upper-bound consumer route because the waveform_pca_code is fitted from target waveform references inside each packet export."
               ]
 }
