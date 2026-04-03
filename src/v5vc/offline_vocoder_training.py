@@ -77,6 +77,10 @@ SUPPORTED_STAGE5_SEMANTIC_CONSUMER_MODES = {
     "source_semantic_parity_framewise_v1",
     "streaming_student_richer_source_contract_v1",
     "streaming_student_waveform_pca_code_v1",
+    "streaming_student_waveform_geometry_code_v1",
+    "streaming_student_waveform_geometry_short_temporal_code_v1",
+    "streaming_student_waveform_geometry_center_delta_split_v1",
+    "streaming_student_waveform_geometry_center_delta_adapter_v1",
 }
 SUPPORTED_STAGE5_TARGET_CONTRACT_MODES = {
     "legacy_proxy",
@@ -142,6 +146,27 @@ def normalize_nores_vocoder_trainable_prefixes(trainable_parameter_prefixes: lis
         if prefix:
             normalized.append(prefix)
     return normalized
+
+
+def resolve_stage5_branch_semantic_adapter_config(
+    payload: dict[str, object] | None,
+) -> dict[str, object]:
+    semantic_consumer = dict(payload.get("semantic_consumer", {})) if isinstance(payload, dict) else {}
+    mode = str(semantic_consumer.get("branch_semantic_adapter_mode", "none")).strip().lower()
+    if mode not in {"none", "gated_residual_v1"}:
+        mode = "none"
+    periodic_feature_dim = int(semantic_consumer.get("periodic_feature_dim", 0) or 0)
+    noise_feature_dim = int(semantic_consumer.get("noise_feature_dim", 0) or 0)
+    adapter_scale = float(semantic_consumer.get("branch_semantic_adapter_scale", 1.0) or 1.0)
+    if mode == "none":
+        periodic_feature_dim = 0
+        noise_feature_dim = 0
+    return {
+        "branch_semantic_adapter_mode": mode,
+        "periodic_semantic_feature_dim": max(0, periodic_feature_dim),
+        "noise_semantic_feature_dim": max(0, noise_feature_dim),
+        "branch_semantic_adapter_scale": adapter_scale,
+    }
 
 
 def load_nores_vocoder_init_state(
@@ -664,6 +689,7 @@ def run_offline_mvp_nores_vocoder_training_step(
         extract_training_batch(payload),
         resolved_device,
     )
+    branch_semantic_adapter_config = resolve_stage5_branch_semantic_adapter_config(payload)
     periodic_branch_features = training_batch["periodic_branch_features"]
     noise_branch_features = training_batch["noise_branch_features"]
     harmonic_target = training_batch["harmonic_target"]
@@ -692,6 +718,10 @@ def run_offline_mvp_nores_vocoder_training_step(
         use_noise_hidden_residual_adapter=bool(use_noise_hidden_residual_adapter),
         noise_hidden_residual_mode=str(noise_hidden_residual_mode),
         noise_hidden_residual_scale=float(noise_hidden_residual_scale),
+        branch_semantic_adapter_mode=str(branch_semantic_adapter_config["branch_semantic_adapter_mode"]),
+        periodic_semantic_feature_dim=int(branch_semantic_adapter_config["periodic_semantic_feature_dim"]),
+        noise_semantic_feature_dim=int(branch_semantic_adapter_config["noise_semantic_feature_dim"]),
+        branch_semantic_adapter_scale=float(branch_semantic_adapter_config["branch_semantic_adapter_scale"]),
     ).to(resolved_device)
     optimizer = torch.optim.Adam(model.parameters(), lr=float(learning_rate))
     model.train()
@@ -783,6 +813,10 @@ def run_offline_mvp_nores_vocoder_training_step(
             "decoder_frame_length": int(runtime["frame_length"]),
             "fusion_mode": str(model.fusion_mode),
             "waveform_decoder_mode": str(model.waveform_decoder_mode),
+            "branch_semantic_adapter_mode": str(model.branch_semantic_adapter_mode),
+            "periodic_semantic_feature_dim": int(model.periodic_semantic_feature_dim),
+            "noise_semantic_feature_dim": int(model.noise_semantic_feature_dim),
+            "branch_semantic_adapter_scale": float(model.branch_semantic_adapter_scale),
         },
         "optimizer": {
             "name": "Adam",
@@ -805,6 +839,10 @@ def run_offline_mvp_nores_vocoder_training_step(
             "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
             "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
             "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
+            "branch_semantic_adapter_mode": str(model.branch_semantic_adapter_mode),
+            "periodic_semantic_feature_dim": int(model.periodic_semantic_feature_dim),
+            "noise_semantic_feature_dim": int(model.noise_semantic_feature_dim),
+            "branch_semantic_adapter_scale": float(model.branch_semantic_adapter_scale),
         },
         "reproducibility": reproducibility,
         "loss_weights": {
@@ -1268,6 +1306,10 @@ def run_offline_mvp_nores_vocoder_training_loop(
                         "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
                         "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
                         "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
+                        "branch_semantic_adapter_mode": str(model.branch_semantic_adapter_mode),
+                        "periodic_semantic_feature_dim": int(model.periodic_semantic_feature_dim),
+                        "noise_semantic_feature_dim": int(model.noise_semantic_feature_dim),
+                        "branch_semantic_adapter_scale": float(model.branch_semantic_adapter_scale),
                     },
                     "training_freeze": training_freeze_summary,
                     "init_checkpoint_load": init_checkpoint_load_summary,
@@ -1846,6 +1888,7 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
         {"enabled": bool(semantic_supervision_enabled)}
     )
     initial_payload = load_training_package_payload(Path(train_packages[0]["training_package_path"]))
+    branch_semantic_adapter_config = resolve_stage5_branch_semantic_adapter_config(initial_payload)
     initial_runtime = extract_training_runtime(initial_payload)
     initial_batch = move_batch_to_device(
         extract_training_batch(initial_payload),
@@ -1873,6 +1916,10 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             use_noise_hidden_residual_adapter=bool(use_noise_hidden_residual_adapter),
             noise_hidden_residual_mode=str(noise_hidden_residual_mode),
             noise_hidden_residual_scale=float(noise_hidden_residual_scale),
+            branch_semantic_adapter_mode=str(branch_semantic_adapter_config["branch_semantic_adapter_mode"]),
+            periodic_semantic_feature_dim=int(branch_semantic_adapter_config["periodic_semantic_feature_dim"]),
+            noise_semantic_feature_dim=int(branch_semantic_adapter_config["noise_semantic_feature_dim"]),
+            branch_semantic_adapter_scale=float(branch_semantic_adapter_config["branch_semantic_adapter_scale"]),
         ).to(resolved_device)
         init_checkpoint_load_summary = {
             "enabled": False,
@@ -1946,6 +1993,34 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                 noise_hidden_residual_scale
                 if bool(use_noise_hidden_residual_adapter)
                 else init_model_config.get("noise_hidden_residual_scale", 1.0)
+            ),
+            branch_semantic_adapter_mode=(
+                str(branch_semantic_adapter_config["branch_semantic_adapter_mode"])
+                if str(branch_semantic_adapter_config["branch_semantic_adapter_mode"]) != "none"
+                else init_model_config.get("branch_semantic_adapter_mode")
+            ),
+            periodic_semantic_feature_dim=(
+                int(branch_semantic_adapter_config["periodic_semantic_feature_dim"])
+                if int(branch_semantic_adapter_config["periodic_semantic_feature_dim"]) > 0
+                else (
+                    int(init_model_config["periodic_semantic_feature_dim"])
+                    if "periodic_semantic_feature_dim" in init_model_config
+                    else None
+                )
+            ),
+            noise_semantic_feature_dim=(
+                int(branch_semantic_adapter_config["noise_semantic_feature_dim"])
+                if int(branch_semantic_adapter_config["noise_semantic_feature_dim"]) > 0
+                else (
+                    int(init_model_config["noise_semantic_feature_dim"])
+                    if "noise_semantic_feature_dim" in init_model_config
+                    else None
+                )
+            ),
+            branch_semantic_adapter_scale=float(
+                branch_semantic_adapter_config["branch_semantic_adapter_scale"]
+                if str(branch_semantic_adapter_config["branch_semantic_adapter_mode"]) != "none"
+                else init_model_config.get("branch_semantic_adapter_scale", 1.0)
             ),
         ).to(resolved_device)
         init_checkpoint_load_summary = load_nores_vocoder_init_state(
@@ -2470,6 +2545,10 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
                         "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
                         "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
                         "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
+                        "branch_semantic_adapter_mode": str(model.branch_semantic_adapter_mode),
+                        "periodic_semantic_feature_dim": int(model.periodic_semantic_feature_dim),
+                        "noise_semantic_feature_dim": int(model.noise_semantic_feature_dim),
+                        "branch_semantic_adapter_scale": float(model.branch_semantic_adapter_scale),
                     },
                 },
                 checkpoint_path,
@@ -2501,6 +2580,10 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "decoder_frame_length": int(initial_runtime["frame_length"]),
             "fusion_mode": str(model.fusion_mode),
             "waveform_decoder_mode": str(model.waveform_decoder_mode),
+            "branch_semantic_adapter_mode": str(model.branch_semantic_adapter_mode),
+            "periodic_semantic_feature_dim": int(model.periodic_semantic_feature_dim),
+            "noise_semantic_feature_dim": int(model.noise_semantic_feature_dim),
+            "branch_semantic_adapter_scale": float(model.branch_semantic_adapter_scale),
         },
         "runtime": {
             "device": str(resolved_device),
@@ -2521,6 +2604,10 @@ def run_offline_mvp_nores_vocoder_dataset_training_loop(
             "use_noise_hidden_residual_adapter": bool(model.use_noise_hidden_residual_adapter),
             "noise_hidden_residual_mode": str(model.noise_hidden_residual_mode),
             "noise_hidden_residual_scale": float(model.noise_hidden_residual_scale),
+            "branch_semantic_adapter_mode": str(model.branch_semantic_adapter_mode),
+            "periodic_semantic_feature_dim": int(model.periodic_semantic_feature_dim),
+            "noise_semantic_feature_dim": int(model.noise_semantic_feature_dim),
+            "branch_semantic_adapter_scale": float(model.branch_semantic_adapter_scale),
         },
         "training": {
             "num_steps": effective_num_steps,
@@ -3383,6 +3470,135 @@ def build_stage5_semantic_consumer_features(
                 "feature_values": [],
             },
         }
+    if resolved_mode == "streaming_student_waveform_geometry_code_v1":
+        feature_tensor, source_contract_summary = build_stage5_streaming_student_waveform_geometry_code_feature_tensors(
+            source_scaffold_payload=source_scaffold_payload,
+            frame_count=int(frame_count),
+        )
+        feature_names = list(source_contract_summary["feature_names"])
+        return {
+            "feature_dim": int(feature_tensor.shape[-1]),
+            "semantic_tag": "streaming_student_waveform_geometry_code_v1",
+            "periodic_broadcast_features": feature_tensor,
+            "noise_broadcast_features": feature_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "streaming_student_waveform_geometry_code_v1",
+                "feature_dim": int(feature_tensor.shape[-1]),
+                "feature_names": feature_names,
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+                "feature_source": str(source_contract_summary["feature_source"]),
+                "source_contract_path": source_contract_summary["source_contract_path"],
+                "source_contract_version": source_contract_summary["source_contract_version"],
+                "source_contract_code_feature_dim": int(source_contract_summary["code_feature_dim"]),
+                "feature_values": [],
+            },
+        }
+    if resolved_mode == "streaming_student_waveform_geometry_short_temporal_code_v1":
+        feature_tensor, source_contract_summary = (
+            build_stage5_streaming_student_waveform_geometry_short_temporal_code_feature_tensors(
+                source_scaffold_payload=source_scaffold_payload,
+                frame_count=int(frame_count),
+            )
+        )
+        feature_names = list(source_contract_summary["feature_names"])
+        return {
+            "feature_dim": int(feature_tensor.shape[-1]),
+            "semantic_tag": "streaming_student_waveform_geometry_short_temporal_code_v1",
+            "periodic_broadcast_features": feature_tensor,
+            "noise_broadcast_features": feature_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "streaming_student_waveform_geometry_short_temporal_code_v1",
+                "feature_dim": int(feature_tensor.shape[-1]),
+                "feature_names": feature_names,
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+                "feature_source": str(source_contract_summary["feature_source"]),
+                "source_contract_path": source_contract_summary["source_contract_path"],
+                "source_contract_version": source_contract_summary["source_contract_version"],
+                "source_contract_code_feature_dim": int(source_contract_summary["code_feature_dim"]),
+                "short_temporal_radius": int(source_contract_summary["short_temporal_radius"]),
+                "feature_values": [],
+            },
+        }
+    if resolved_mode == "streaming_student_waveform_geometry_center_delta_split_v1":
+        center_tensor, delta_tensor, source_contract_summary = (
+            build_stage5_streaming_student_waveform_geometry_center_delta_split_feature_tensors(
+                source_scaffold_payload=source_scaffold_payload,
+                frame_count=int(frame_count),
+            )
+        )
+        periodic_feature_names = list(source_contract_summary["periodic_feature_names"])
+        noise_feature_names = list(source_contract_summary["noise_feature_names"])
+        return {
+            "feature_dim": int(center_tensor.shape[-1] + delta_tensor.shape[-1]),
+            "semantic_tag": "streaming_student_waveform_geometry_center_delta_split_v1",
+            "periodic_broadcast_features": center_tensor,
+            "noise_broadcast_features": delta_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "streaming_student_waveform_geometry_center_delta_split_v1",
+                "feature_dim": int(center_tensor.shape[-1] + delta_tensor.shape[-1]),
+                "feature_names": periodic_feature_names + noise_feature_names,
+                "periodic_feature_names": periodic_feature_names,
+                "noise_feature_names": noise_feature_names,
+                "periodic_feature_dim": int(center_tensor.shape[-1]),
+                "noise_feature_dim": int(delta_tensor.shape[-1]),
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+                "feature_source": str(source_contract_summary["feature_source"]),
+                "source_contract_path": source_contract_summary["source_contract_path"],
+                "source_contract_version": source_contract_summary["source_contract_version"],
+                "center_code_feature_dim": int(source_contract_summary["center_code_feature_dim"]),
+                "neighbor_delta_code_feature_dim": int(
+                    source_contract_summary["neighbor_delta_code_feature_dim"]
+                ),
+                "feature_values": [],
+            },
+        }
+    if resolved_mode == "streaming_student_waveform_geometry_center_delta_adapter_v1":
+        center_tensor, delta_tensor, source_contract_summary = (
+            build_stage5_streaming_student_waveform_geometry_center_delta_split_feature_tensors(
+                source_scaffold_payload=source_scaffold_payload,
+                frame_count=int(frame_count),
+            )
+        )
+        periodic_feature_names = list(source_contract_summary["periodic_feature_names"])
+        noise_feature_names = list(source_contract_summary["noise_feature_names"])
+        return {
+            "feature_dim": int(center_tensor.shape[-1] + delta_tensor.shape[-1]),
+            "semantic_tag": "streaming_student_waveform_geometry_center_delta_adapter_v1",
+            "periodic_broadcast_features": center_tensor,
+            "noise_broadcast_features": delta_tensor,
+            "summary": {
+                "semantic_consumer_mode": resolved_mode,
+                "semantic_tag": "streaming_student_waveform_geometry_center_delta_adapter_v1",
+                "feature_dim": int(center_tensor.shape[-1] + delta_tensor.shape[-1]),
+                "feature_names": periodic_feature_names + noise_feature_names,
+                "periodic_feature_names": periodic_feature_names,
+                "noise_feature_names": noise_feature_names,
+                "periodic_feature_dim": int(center_tensor.shape[-1]),
+                "noise_feature_dim": int(delta_tensor.shape[-1]),
+                "branch_semantic_adapter_mode": "gated_residual_v1",
+                "branch_semantic_adapter_scale": 1.0,
+                "semantic_sidecar_present": bool(isinstance(target_event_semantic_sidecar, dict)),
+                "timing_semantic_sidecar_present": bool(isinstance(target_event_timing_semantic_sidecar, dict)),
+                "source_semantic_parity_sidecar_present": bool(isinstance(source_semantic_parity_sidecar, dict)),
+                "feature_source": str(source_contract_summary["feature_source"]),
+                "source_contract_path": source_contract_summary["source_contract_path"],
+                "source_contract_version": source_contract_summary["source_contract_version"],
+                "center_code_feature_dim": int(source_contract_summary["center_code_feature_dim"]),
+                "neighbor_delta_code_feature_dim": int(
+                    source_contract_summary["neighbor_delta_code_feature_dim"]
+                ),
+                "feature_values": [],
+            },
+        }
     return {
         "feature_dim": int(feature_tensor.shape[-1]),
         "semantic_tag": "source_semantic_parity_framewise_v1",
@@ -3559,6 +3775,217 @@ def build_stage5_streaming_student_waveform_pca_code_feature_tensors(
         "source_contract_path": contract_path.as_posix(),
         "source_contract_version": source_contract_version,
         "code_feature_dim": int(tensor.shape[-1]),
+    }
+
+
+def build_stage5_streaming_student_waveform_geometry_code_feature_tensors(
+    *,
+    source_scaffold_payload: dict[str, object] | None,
+    frame_count: int,
+) -> tuple[torch.Tensor, dict[str, object]]:
+    empty = torch.zeros((int(frame_count), 0), dtype=torch.float32)
+    if not isinstance(source_scaffold_payload, dict):
+        return empty, {
+            "feature_source": "zeros_missing_source_scaffold_payload",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "code_feature_dim": 0,
+        }
+    source_contract_path = source_scaffold_payload.get("source_contract_path")
+    if not isinstance(source_contract_path, str) or not source_contract_path:
+        return empty, {
+            "feature_source": "zeros_missing_source_contract_path",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "code_feature_dim": 0,
+        }
+    contract_path = Path(source_contract_path).resolve()
+    if not contract_path.exists():
+        raise FileNotFoundError(f"semantic_consumer_mode requires source_contract_path to exist: {contract_path}")
+    source_contract_payload = torch.load(contract_path, map_location="cpu", weights_only=False)
+    if not isinstance(source_contract_payload, dict):
+        raise TypeError(f"Unsupported source contract payload type: {type(source_contract_payload)!r}")
+    source_contract_version = str(source_contract_payload.get("packet_version", "unknown"))
+    if source_contract_version != "streaming_student_downstream_control_v1":
+        raise ValueError(
+            "streaming_student_waveform_geometry_code_v1 requires "
+            f"streaming_student_downstream_control_v1, got {source_contract_version!r}."
+        )
+    fine_structure_code = dict(source_contract_payload.get("fine_structure_code", {}))
+    waveform_code = fine_structure_code.get("waveform_geometry_code")
+    if not isinstance(waveform_code, torch.Tensor):
+        return empty, {
+            "feature_source": "zeros_missing_waveform_geometry_code",
+            "feature_names": [],
+            "source_contract_path": contract_path.as_posix(),
+            "source_contract_version": source_contract_version,
+            "code_feature_dim": 0,
+        }
+    tensor = normalize_streaming_student_frame_tensor(
+        value=waveform_code,
+        frame_count=int(frame_count),
+        key="fine_structure_code.waveform_geometry_code",
+    )
+    feature_names = expand_stage5_feature_names(
+        prefix="fine_structure_code.waveform_geometry_code",
+        dim=int(tensor.shape[-1]),
+    )
+    return tensor, {
+        "feature_source": "streaming_student_waveform_geometry_code",
+        "feature_names": feature_names,
+        "source_contract_path": contract_path.as_posix(),
+        "source_contract_version": source_contract_version,
+        "code_feature_dim": int(tensor.shape[-1]),
+    }
+
+
+def build_stage5_streaming_student_waveform_geometry_short_temporal_code_feature_tensors(
+    *,
+    source_scaffold_payload: dict[str, object] | None,
+    frame_count: int,
+) -> tuple[torch.Tensor, dict[str, object]]:
+    empty = torch.zeros((int(frame_count), 0), dtype=torch.float32)
+    if not isinstance(source_scaffold_payload, dict):
+        return empty, {
+            "feature_source": "zeros_missing_source_scaffold_payload",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "code_feature_dim": 0,
+            "short_temporal_radius": 0,
+        }
+    source_contract_path = source_scaffold_payload.get("source_contract_path")
+    if not isinstance(source_contract_path, str) or not source_contract_path:
+        return empty, {
+            "feature_source": "zeros_missing_source_contract_path",
+            "feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "code_feature_dim": 0,
+            "short_temporal_radius": 0,
+        }
+    contract_path = Path(source_contract_path).resolve()
+    if not contract_path.exists():
+        raise FileNotFoundError(f"semantic_consumer_mode requires source_contract_path to exist: {contract_path}")
+    source_contract_payload = torch.load(contract_path, map_location="cpu", weights_only=False)
+    if not isinstance(source_contract_payload, dict):
+        raise TypeError(f"Unsupported source contract payload type: {type(source_contract_payload)!r}")
+    source_contract_version = str(source_contract_payload.get("packet_version", "unknown"))
+    if source_contract_version != "streaming_student_downstream_control_v1":
+        raise ValueError(
+            "streaming_student_waveform_geometry_short_temporal_code_v1 requires "
+            f"streaming_student_downstream_control_v1, got {source_contract_version!r}."
+        )
+    fine_structure_code = dict(source_contract_payload.get("fine_structure_code", {}))
+    waveform_code = fine_structure_code.get("waveform_geometry_short_temporal_code")
+    if not isinstance(waveform_code, torch.Tensor):
+        return empty, {
+            "feature_source": "zeros_missing_waveform_geometry_short_temporal_code",
+            "feature_names": [],
+            "source_contract_path": contract_path.as_posix(),
+            "source_contract_version": source_contract_version,
+            "code_feature_dim": 0,
+            "short_temporal_radius": int(fine_structure_code.get("short_temporal_radius", 0) or 0),
+        }
+    tensor = normalize_streaming_student_frame_tensor(
+        value=waveform_code,
+        frame_count=int(frame_count),
+        key="fine_structure_code.waveform_geometry_short_temporal_code",
+    )
+    feature_names = expand_stage5_feature_names(
+        prefix="fine_structure_code.waveform_geometry_short_temporal_code",
+        dim=int(tensor.shape[-1]),
+    )
+    return tensor, {
+        "feature_source": "streaming_student_waveform_geometry_short_temporal_code",
+        "feature_names": feature_names,
+        "source_contract_path": contract_path.as_posix(),
+        "source_contract_version": source_contract_version,
+        "code_feature_dim": int(tensor.shape[-1]),
+        "short_temporal_radius": int(fine_structure_code.get("short_temporal_radius", 0) or 0),
+    }
+
+
+def build_stage5_streaming_student_waveform_geometry_center_delta_split_feature_tensors(
+    *,
+    source_scaffold_payload: dict[str, object] | None,
+    frame_count: int,
+) -> tuple[torch.Tensor, torch.Tensor, dict[str, object]]:
+    empty = torch.zeros((int(frame_count), 0), dtype=torch.float32)
+    if not isinstance(source_scaffold_payload, dict):
+        return empty, empty, {
+            "feature_source": "zeros_missing_source_scaffold_payload",
+            "periodic_feature_names": [],
+            "noise_feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "center_code_feature_dim": 0,
+            "neighbor_delta_code_feature_dim": 0,
+        }
+    source_contract_path = source_scaffold_payload.get("source_contract_path")
+    if not isinstance(source_contract_path, str) or not source_contract_path:
+        return empty, empty, {
+            "feature_source": "zeros_missing_source_contract_path",
+            "periodic_feature_names": [],
+            "noise_feature_names": [],
+            "source_contract_path": None,
+            "source_contract_version": None,
+            "center_code_feature_dim": 0,
+            "neighbor_delta_code_feature_dim": 0,
+        }
+    contract_path = Path(source_contract_path).resolve()
+    if not contract_path.exists():
+        raise FileNotFoundError(f"semantic_consumer_mode requires source_contract_path to exist: {contract_path}")
+    source_contract_payload = torch.load(contract_path, map_location="cpu", weights_only=False)
+    if not isinstance(source_contract_payload, dict):
+        raise TypeError(f"Unsupported source contract payload type: {type(source_contract_payload)!r}")
+    source_contract_version = str(source_contract_payload.get("packet_version", "unknown"))
+    if source_contract_version != "streaming_student_downstream_control_v1":
+        raise ValueError(
+            "streaming_student_waveform_geometry_center_delta_split_v1 requires "
+            f"streaming_student_downstream_control_v1, got {source_contract_version!r}."
+        )
+    fine_structure_code = dict(source_contract_payload.get("fine_structure_code", {}))
+    center_code = fine_structure_code.get("waveform_geometry_center_code")
+    neighbor_delta_code = fine_structure_code.get("waveform_geometry_neighbor_delta_code")
+    if not isinstance(center_code, torch.Tensor) or not isinstance(neighbor_delta_code, torch.Tensor):
+        return empty, empty, {
+            "feature_source": "zeros_missing_waveform_geometry_center_delta_split",
+            "periodic_feature_names": [],
+            "noise_feature_names": [],
+            "source_contract_path": contract_path.as_posix(),
+            "source_contract_version": source_contract_version,
+            "center_code_feature_dim": 0,
+            "neighbor_delta_code_feature_dim": 0,
+        }
+    center_tensor = normalize_streaming_student_frame_tensor(
+        value=center_code,
+        frame_count=int(frame_count),
+        key="fine_structure_code.waveform_geometry_center_code",
+    )
+    neighbor_delta_tensor = normalize_streaming_student_frame_tensor(
+        value=neighbor_delta_code,
+        frame_count=int(frame_count),
+        key="fine_structure_code.waveform_geometry_neighbor_delta_code",
+    )
+    periodic_feature_names = expand_stage5_feature_names(
+        prefix="fine_structure_code.waveform_geometry_center_code",
+        dim=int(center_tensor.shape[-1]),
+    )
+    noise_feature_names = expand_stage5_feature_names(
+        prefix="fine_structure_code.waveform_geometry_neighbor_delta_code",
+        dim=int(neighbor_delta_tensor.shape[-1]),
+    )
+    return center_tensor, neighbor_delta_tensor, {
+        "feature_source": "streaming_student_waveform_geometry_center_delta_split",
+        "periodic_feature_names": periodic_feature_names,
+        "noise_feature_names": noise_feature_names,
+        "source_contract_path": contract_path.as_posix(),
+        "source_contract_version": source_contract_version,
+        "center_code_feature_dim": int(center_tensor.shape[-1]),
+        "neighbor_delta_code_feature_dim": int(neighbor_delta_tensor.shape[-1]),
     }
 
 

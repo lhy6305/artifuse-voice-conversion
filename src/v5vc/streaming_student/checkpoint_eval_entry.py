@@ -14,6 +14,10 @@ from v5vc.streaming_student.data import (
     load_streaming_student_target_records_by_split,
     slice_streaming_student_batch_records,
 )
+from v5vc.streaming_student.fine_structure_supervision import (
+    build_fine_structure_supervision_asset,
+    resolve_fine_structure_supervision_config,
+)
 from v5vc.streaming_student.losses import (
     build_default_teacher_supervision_weights,
     compute_streaming_student_teacher_supervision_loss,
@@ -76,6 +80,19 @@ def evaluate_streaming_student_checkpoint(
     semantic_supervision = resolve_semantic_supervision_config(
         config=training_summary.get("semantic_supervision", config.get("semantic_supervision")),
     )
+    fine_structure_supervision = resolve_fine_structure_supervision_config(
+        config=training_summary.get("fine_structure_supervision", config.get("fine_structure_supervision")),
+        model_config=dict(config["model"]),
+    )
+    fine_structure_supervision_asset = training_summary.get("fine_structure_supervision_asset")
+    if fine_structure_supervision_asset is None:
+        fine_structure_supervision_asset = build_fine_structure_supervision_asset(
+            fine_structure_supervision=fine_structure_supervision,
+            records_by_split=records_by_split,
+            config_path=config_path,
+            frame_length=int(config["model"]["frame_length"]),
+            hop_length=int(config["model"]["hop_length"]),
+        )
 
     evaluation_slices = ["target_validation"]
     if include_special_eval:
@@ -91,6 +108,7 @@ def evaluate_streaming_student_checkpoint(
                 loss_weights=loss_weights,
                 use_teacher_confidence=use_teacher_confidence,
                 semantic_supervision=semantic_supervision,
+                fine_structure_supervision=fine_structure_supervision_asset,
                 batch_size=batch_size,
                 pitch_provider_request=pitch_provider_request,
             )
@@ -114,6 +132,12 @@ def evaluate_streaming_student_checkpoint(
             "batch_size": int(batch_size),
             "loss_weights": loss_weights,
             "semantic_supervision": semantic_supervision,
+            "fine_structure_supervision": fine_structure_supervision,
+            "fine_structure_supervision_asset_summary": (
+                None
+                if fine_structure_supervision_asset is None
+                else fine_structure_supervision_asset.get("codebook_summary")
+            ),
             "loss_weight_overrides_path": training_summary.get("loss_weight_overrides_path"),
             "use_teacher_confidence": use_teacher_confidence,
         },
@@ -145,6 +169,7 @@ def evaluate_split(
     loss_weights: dict[str, float],
     use_teacher_confidence: bool,
     semantic_supervision: dict[str, object],
+    fine_structure_supervision: dict[str, object] | None,
     batch_size: int,
     pitch_provider_request: dict[str, object],
 ) -> dict[str, object]:
@@ -191,6 +216,7 @@ def evaluate_split(
             weights=loss_weights,
             use_teacher_confidence=use_teacher_confidence,
             semantic_supervision=semantic_supervision,
+            fine_structure_supervision=fine_structure_supervision,
         )
         batch_metrics.append(metrics)
         sampled_record_ids.append(list(batch["record_ids"]))

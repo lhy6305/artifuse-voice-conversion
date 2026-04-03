@@ -19,6 +19,10 @@ from v5vc.streaming_student.data import (
 from v5vc.streaming_student.checkpoint_init import (
     load_streaming_student_init_checkpoint,
 )
+from v5vc.streaming_student.fine_structure_supervision import (
+    build_fine_structure_supervision_asset,
+    resolve_fine_structure_supervision_config,
+)
 from v5vc.streaming_student.losses import (
     apply_teacher_supervision_weight_schedule,
     compute_streaming_student_teacher_supervision_loss,
@@ -92,6 +96,17 @@ def run_streaming_student_training_loop(
     semantic_supervision = resolve_semantic_supervision_config(
         config=config.get("semantic_supervision"),
         overrides_path=resolved_loss_weight_overrides_path,
+    )
+    fine_structure_supervision = resolve_fine_structure_supervision_config(
+        config=config.get("fine_structure_supervision"),
+        model_config=dict(config["model"]),
+    )
+    fine_structure_supervision_asset = build_fine_structure_supervision_asset(
+        fine_structure_supervision=fine_structure_supervision,
+        records_by_split=records_by_split,
+        config_path=config_path,
+        frame_length=int(config["model"]["frame_length"]),
+        hop_length=int(config["model"]["hop_length"]),
     )
     loss_weight_schedule = resolve_teacher_supervision_weight_schedule(
         overrides_path=resolved_loss_weight_overrides_path,
@@ -174,6 +189,7 @@ def run_streaming_student_training_loop(
             weights=step_loss_weights,
             use_teacher_confidence=use_teacher_confidence,
             semantic_supervision=semantic_supervision,
+            fine_structure_supervision=fine_structure_supervision_asset,
         )
         optimizer.zero_grad(set_to_none=True)
         train_loss.backward()
@@ -222,6 +238,7 @@ def run_streaming_student_training_loop(
                 semantic_supervision=semantic_supervision,
                 loss_weight_schedule=loss_weight_schedule,
                 use_teacher_confidence=use_teacher_confidence,
+                fine_structure_supervision=fine_structure_supervision_asset,
                 frame_length=int(config["model"]["frame_length"]),
                 hop_length=int(config["model"]["hop_length"]),
                 batch_size=validation_batch_size,
@@ -256,6 +273,8 @@ def run_streaming_student_training_loop(
                         "use_teacher_confidence": bool(use_teacher_confidence),
                         "loss_weights": base_loss_weights,
                         "semantic_supervision": semantic_supervision,
+                        "fine_structure_supervision": fine_structure_supervision,
+                        "fine_structure_supervision_asset": fine_structure_supervision_asset,
                         "loss_weight_schedule": loss_weight_schedule,
                         "loss_weight_overrides_path": (
                             None
@@ -305,6 +324,12 @@ def run_streaming_student_training_loop(
             "use_teacher_confidence": bool(use_teacher_confidence),
             "loss_weights": base_loss_weights,
             "semantic_supervision": semantic_supervision,
+            "fine_structure_supervision": fine_structure_supervision,
+            "fine_structure_supervision_asset_summary": (
+                None
+                if fine_structure_supervision_asset is None
+                else fine_structure_supervision_asset.get("codebook_summary")
+            ),
             "loss_weight_schedule": loss_weight_schedule,
             "loss_weight_overrides_path": (
                 None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
@@ -373,6 +398,7 @@ def run_validation_pass(
     semantic_supervision: dict[str, object],
     loss_weight_schedule: dict[str, dict[str, float | str | int]],
     use_teacher_confidence: bool,
+    fine_structure_supervision: dict[str, object] | None,
     frame_length: int,
     hop_length: int,
     batch_size: int,
@@ -443,6 +469,7 @@ def run_validation_pass(
                 weights=effective_loss_weights,
                 use_teacher_confidence=use_teacher_confidence,
                 semantic_supervision=semantic_supervision,
+                fine_structure_supervision=fine_structure_supervision,
             )
             batch_metrics.append(metrics)
             sampled_record_ids.append(list(batch["record_ids"]))

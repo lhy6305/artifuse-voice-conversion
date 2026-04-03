@@ -3,8 +3,10 @@ from __future__ import annotations
 import math
 import torch
 from torch import nn
+import torch.nn.functional as F
 
 from v5vc.offline_mvp.model import frame_waveform
+from v5vc.streaming_student.fine_structure import build_batched_unit_rms_waveform_frames
 from v5vc.streaming_student.pitch_provider import (
     DEFAULT_STAGE3_PITCH_PROVIDER_MODE,
     normalize_stage3_pitch_provider_mode,
@@ -670,8 +672,18 @@ class StreamingStudentScaffold(nn.Module):
         f0_correction_parameterization_mode: str = "linear_unbounded_v1",
         f0_correction_limit_log2: float = 0.5,
         provider_confidence_gate_mode: str = "none",
+        fine_structure_code_dim: int = 0,
+        fine_structure_code_source_mode: str = "none",
+        fine_structure_code_detach_source: bool = False,
+        fine_structure_waveform_encoder_dim: int | None = None,
+        fine_structure_waveform_encoder_layers: int = 2,
+        fine_structure_code_predictor_mode: str = "linear_v1",
+        fine_structure_code_context_layers: int = 0,
+        fine_structure_code_context_kernel_size: int = 1,
     ) -> None:
         super().__init__()
+        self.frame_length = int(frame_length)
+        self.hop_length = int(hop_length)
         self.frontend = UnifiedStreamingFrontend(
             shared_dim=shared_dim,
             frontend_dim=frontend_dim,
@@ -721,6 +733,84 @@ class StreamingStudentScaffold(nn.Module):
             ),
             provider_confidence_gate_mode=provider_confidence_gate_mode,
         )
+        self.fine_structure_code_dim = max(0, int(fine_structure_code_dim))
+        self.fine_structure_code_source_mode = str(fine_structure_code_source_mode).strip().lower()
+        self.fine_structure_code_detach_source = bool(fine_structure_code_detach_source)
+        self.fine_structure_waveform_encoder_dim = max(
+            1,
+            int(
+                shared_dim
+                if fine_structure_waveform_encoder_dim in {None, ""}
+                else fine_structure_waveform_encoder_dim
+            ),
+        )
+        self.fine_structure_waveform_encoder_layers = max(1, int(fine_structure_waveform_encoder_layers))
+        self.fine_structure_code_predictor_mode = str(fine_structure_code_predictor_mode).strip().lower()
+        self.fine_structure_code_context_layers = max(0, int(fine_structure_code_context_layers))
+        self.fine_structure_code_context_kernel_size = max(1, int(fine_structure_code_context_kernel_size))
+        if self.fine_structure_code_source_mode not in {
+            "none",
+            "shared_hidden_v1",
+            "control_hidden_v1",
+            "student_hidden_v1",
+            "waveform_frame_encoder_v1",
+        }:
+            raise ValueError(
+                "fine_structure_code_source_mode must be one of: "
+                "none, shared_hidden_v1, control_hidden_v1, student_hidden_v1, "
+                "waveform_frame_encoder_v1."
+            )
+        if self.fine_structure_code_predictor_mode not in {"linear_v1", "temporal_conv_v1"}:
+            raise ValueError(
+                "fine_structure_code_predictor_mode must be one of: "
+                "linear_v1, temporal_conv_v1."
+            )
+        if self.fine_structure_code_predictor_mode == "temporal_conv_v1":
+            if self.fine_structure_code_context_layers <= 0:
+                raise ValueError(
+                    "fine_structure_code_predictor_mode=temporal_conv_v1 requires "
+                    "fine_structure_code_context_layers > 0."
+                )
+            if self.fine_structure_code_context_kernel_size % 2 == 0:
+                raise ValueError(
+                    "fine_structure_code_context_kernel_size must be odd for temporal_conv_v1."
+                )
+        if self.fine_structure_code_dim > 0 and self.fine_structure_code_source_mode == "none":
+            raise ValueError(
+                "fine_structure_code_dim > 0 requires fine_structure_code_source_mode != 'none'."
+            )
+        if self.fine_structure_code_dim <= 0:
+            self.fine_structure_waveform_encoder = None
+            self.fine_structure_code_context = None
+            self.fine_structure_code_head = None
+            self.fine_structure_waveform_decoder = None
+        else:
+            source_dim = {
+                "shared_hidden_v1": int(shared_dim),
+                "control_hidden_v1": int(shared_dim),
+                "student_hidden_v1": int(student_dim),
+                "waveform_frame_encoder_v1": int(self.fine_structure_waveform_encoder_dim),
+            }[self.fine_structure_code_source_mode]
+            self.fine_structure_waveform_encoder = (
+                build_mlp(
+                    input_dim=self.frame_length,
+                    hidden_dim=self.fine_structure_waveform_encoder_dim,
+                    output_dim=self.fine_structure_waveform_encoder_dim,
+                    num_layers=self.fine_structure_waveform_encoder_layers,
+                )
+                if self.fine_structure_code_source_mode == "waveform_frame_encoder_v1"
+                else None
+            )
+            if self.fine_structure_code_predictor_mode == "temporal_conv_v1":
+                self.fine_structure_code_context = TemporalConvContextStack(
+                    channel_dim=source_dim,
+                    num_layers=self.fine_structure_code_context_layers,
+                    kernel_size=self.fine_structure_code_context_kernel_size,
+                )
+            else:
+                self.fine_structure_code_context = None
+            self.fine_structure_code_head = nn.Linear(source_dim, self.fine_structure_code_dim)
+            self.fine_structure_waveform_decoder = nn.Linear(self.fine_structure_code_dim, self.frame_length)
 
     def forward(
         self,
@@ -746,7 +836,86 @@ class StreamingStudentScaffold(nn.Module):
         )
         outputs = dict(frontend_outputs)
         outputs.update(student_outputs)
+        outputs["frame_length"] = self.frame_length
+        outputs["hop_length"] = self.hop_length
+        fine_structure_code = None
+        if self.fine_structure_code_head is not None and self.fine_structure_waveform_decoder is not None:
+            if self.fine_structure_code_source_mode == "waveform_frame_encoder_v1":
+                if self.fine_structure_waveform_encoder is None:
+                    raise ValueError("waveform_frame_encoder_v1 requires fine_structure_waveform_encoder.")
+                frame_lengths = frontend_outputs["frame_mask"].to(torch.long).sum(dim=1)
+                unit_rms_waveform_frames = build_batched_unit_rms_waveform_frames(
+                    waveform_batch=waveform,
+                    frame_lengths=frame_lengths,
+                    frame_length=self.frame_length,
+                    hop_length=self.hop_length,
+                ).to(
+                    device=frontend_outputs["shared_hidden"].device,
+                    dtype=frontend_outputs["shared_hidden"].dtype,
+                )
+                source_hidden = self.fine_structure_waveform_encoder(unit_rms_waveform_frames)
+            else:
+                source_hidden = {
+                    "shared_hidden_v1": frontend_outputs["shared_hidden"],
+                    "control_hidden_v1": frontend_outputs["control_hidden"],
+                    "student_hidden_v1": student_outputs["student_hidden"],
+                }.get(self.fine_structure_code_source_mode)
+            if not isinstance(source_hidden, torch.Tensor):
+                raise ValueError(
+                    "fine_structure_code_source_mode resolved to a missing hidden source: "
+                    f"{self.fine_structure_code_source_mode!r}"
+                )
+            if self.fine_structure_code_detach_source:
+                source_hidden = source_hidden.detach()
+            if self.fine_structure_code_context is not None:
+                source_hidden = self.fine_structure_code_context(source_hidden)
+            fine_structure_code = self.fine_structure_code_head(source_hidden)
+            outputs["fine_structure_code"] = fine_structure_code
+            outputs["fine_structure_waveform_reconstruction"] = self.fine_structure_waveform_decoder(
+                fine_structure_code
+            )
+        else:
+            frame_mask = frontend_outputs["frame_mask"]
+            batch_size, frame_count = int(frame_mask.shape[0]), int(frame_mask.shape[1])
+            zero_code = frontend_outputs["shared_hidden"].new_zeros((batch_size, frame_count, 0))
+            outputs["fine_structure_code"] = zero_code
+            outputs["fine_structure_waveform_reconstruction"] = frontend_outputs["shared_hidden"].new_zeros(
+                (batch_size, frame_count, 0)
+            )
+        outputs["fine_structure_code_dim"] = self.fine_structure_code_dim
+        outputs["fine_structure_code_source_mode"] = self.fine_structure_code_source_mode
+        outputs["fine_structure_code_detach_source"] = self.fine_structure_code_detach_source
+        outputs["fine_structure_waveform_encoder_dim"] = self.fine_structure_waveform_encoder_dim
+        outputs["fine_structure_waveform_encoder_layers"] = self.fine_structure_waveform_encoder_layers
+        outputs["fine_structure_code_predictor_mode"] = self.fine_structure_code_predictor_mode
         return outputs
+
+
+class TemporalConvContextStack(nn.Module):
+    def __init__(self, channel_dim: int, num_layers: int, kernel_size: int) -> None:
+        super().__init__()
+        resolved_layers = max(1, int(num_layers))
+        resolved_kernel_size = max(1, int(kernel_size))
+        padding = resolved_kernel_size // 2
+        self.layers = nn.ModuleList(
+            [
+                nn.Conv1d(
+                    in_channels=int(channel_dim),
+                    out_channels=int(channel_dim),
+                    kernel_size=resolved_kernel_size,
+                    padding=padding,
+                )
+                for _ in range(resolved_layers)
+            ]
+        )
+        self.norms = nn.ModuleList([nn.LayerNorm(int(channel_dim)) for _ in range(resolved_layers)])
+
+    def forward(self, sequence: torch.Tensor) -> torch.Tensor:
+        hidden = sequence
+        for conv, norm in zip(self.layers, self.norms, strict=False):
+            conv_hidden = conv(hidden.transpose(1, 2)).transpose(1, 2)
+            hidden = norm(hidden + F.gelu(conv_hidden))
+        return hidden
 
 
 def build_mlp(

@@ -16,6 +16,11 @@ from v5vc.offline_teacher_vocoder_input_scaffold import (
     normalize_energy_log_rms_for_stage5,
 )
 from v5vc.source_acoustic_state_extraction import DEFAULT_VUV_VOICED_FRAME_THRESHOLD
+from v5vc.streaming_student.fine_structure import (
+    build_batched_unit_rms_waveform_frames,
+    build_temporal_chunk_vectors,
+    project_waveform_pca_code,
+)
 from v5vc.streaming_student.proxy_acoustic import build_streaming_student_proxy_acoustic
 
 
@@ -53,6 +58,13 @@ def build_default_teacher_supervision_weights() -> dict[str, float]:
         "teacher_energy_stage5_correlation": 0.0,
         "teacher_hidden_projection": 0.0,
         "teacher_fused_hidden_projection": 0.0,
+        "teacher_fine_structure_waveform_frame": 0.0,
+        "teacher_fine_structure_code_target": 0.0,
+        "teacher_fine_structure_code_std": 0.0,
+        "teacher_fine_structure_code_temporal": 0.0,
+        "teacher_fine_structure_code_template_excess": 0.0,
+        "teacher_fine_structure_code_record_margin": 0.0,
+        "fine_structure_code_l2": 0.0,
         "teacher_proxy_acoustic": 0.0,
         "teacher_proxy_temporal": 0.0,
         "log_f0_correction_l1": 0.01,
@@ -686,6 +698,7 @@ def compute_streaming_student_teacher_supervision_loss(
     weights: dict[str, float] | None = None,
     use_teacher_confidence: bool = True,
     semantic_supervision: Mapping[str, object] | None = None,
+    fine_structure_supervision: Mapping[str, object] | None = None,
 ) -> tuple[torch.Tensor, dict[str, float | bool | str]]:
     default_weights = build_default_teacher_supervision_weights()
     effective_weights = resolve_teacher_supervision_weights(overrides=weights)
@@ -746,6 +759,13 @@ def compute_streaming_student_teacher_supervision_loss(
     teacher_fused_hidden = batch["teacher_fused_hidden"]
     student_hidden_projection = outputs["teacher_hidden_projection"]
     student_fused_hidden_projection = outputs["teacher_fused_hidden_projection"]
+    predicted_fine_structure_code = outputs.get("fine_structure_code")
+    predicted_fine_structure_waveform = outputs.get("fine_structure_waveform_reconstruction")
+    fine_structure_supervision_mode = (
+        "disabled"
+        if not isinstance(fine_structure_supervision, Mapping)
+        else str(fine_structure_supervision.get("mode", "disabled")).strip().lower()
+    )
     student_proxy_acoustic = build_streaming_student_proxy_acoustic(outputs)
     if not isinstance(teacher_acoustic, torch.Tensor):
         raise ValueError("Stage3 batch is missing tensor teacher_acoustic.")
@@ -938,6 +958,101 @@ def compute_streaming_student_teacher_supervision_loss(
         target=teacher_acoustic,
         frame_weight=frame_weight,
     )
+    if (
+        isinstance(predicted_fine_structure_code, torch.Tensor)
+        and isinstance(predicted_fine_structure_waveform, torch.Tensor)
+        and int(predicted_fine_structure_code.shape[-1]) > 0
+        and int(predicted_fine_structure_waveform.shape[-1]) == int(outputs.get("frame_length", 0))
+    ):
+        target_fine_structure_waveform = build_batched_unit_rms_waveform_frames(
+            waveform_batch=batch["waveform"],
+            frame_lengths=batch["teacher_frame_mask"].to(torch.long).sum(dim=1),
+            frame_length=int(outputs["frame_length"]),
+            hop_length=int(outputs["hop_length"]),
+        ).to(
+            device=predicted_fine_structure_waveform.device,
+            dtype=predicted_fine_structure_waveform.dtype,
+        )
+        fine_structure_waveform_loss_per_sample = masked_channel_mean_mse_per_sample(
+            prediction=predicted_fine_structure_waveform,
+            target=target_fine_structure_waveform,
+            frame_weight=frame_weight,
+        )
+        if fine_structure_supervision_mode in {"waveform_pca_code_v1", "waveform_chunk_pca_code_v1"}:
+            codebook = fine_structure_supervision.get("codebook")
+            if not isinstance(codebook, Mapping):
+                raise ValueError(
+                    "fine_structure_supervision PCA-code modes require a codebook asset."
+                )
+            target_fine_structure_code_input = target_fine_structure_waveform
+            if fine_structure_supervision_mode == "waveform_chunk_pca_code_v1":
+                target_fine_structure_code_input = build_temporal_chunk_vectors(
+                    target_fine_structure_waveform,
+                    radius=int(fine_structure_supervision.get("chunk_radius", 0)),
+                )
+            target_fine_structure_code = project_waveform_pca_code(
+                waveform_reference=target_fine_structure_code_input,
+                codebook=dict(codebook),
+                normalize_code=bool(fine_structure_supervision.get("normalize_code", False)),
+            ).to(
+                device=predicted_fine_structure_code.device,
+                dtype=predicted_fine_structure_code.dtype,
+            )
+            fine_structure_code_target_loss_per_sample = masked_channel_mean_mse_per_sample(
+                prediction=predicted_fine_structure_code,
+                target=target_fine_structure_code,
+                frame_weight=frame_weight,
+            )
+            fine_structure_code_std_loss_per_sample = masked_std_mse_per_sample(
+                prediction=predicted_fine_structure_code,
+                target=target_fine_structure_code,
+                frame_weight=frame_weight,
+            )
+            fine_structure_code_temporal_loss_per_sample = masked_temporal_mse_per_sample(
+                prediction=predicted_fine_structure_code,
+                target=target_fine_structure_code,
+                frame_weight=frame_weight,
+            )
+            fine_structure_code_template_excess_loss_per_sample = (
+                masked_template_excess_loss_per_sample(
+                    prediction=predicted_fine_structure_code,
+                    target=target_fine_structure_code,
+                    frame_weight=frame_weight,
+                )
+            )
+            fine_structure_code_record_margin_loss_per_sample = (
+                masked_record_margin_loss_per_sample(
+                    prediction=predicted_fine_structure_code,
+                    target=target_fine_structure_code,
+                    frame_weight=frame_weight,
+                )
+            )
+        else:
+            fine_structure_code_target_loss_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
+            fine_structure_code_std_loss_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
+            fine_structure_code_temporal_loss_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
+            fine_structure_code_template_excess_loss_per_sample = frame_weight.new_zeros(
+                (frame_weight.shape[0],)
+            )
+            fine_structure_code_record_margin_loss_per_sample = frame_weight.new_zeros(
+                (frame_weight.shape[0],)
+            )
+        fine_structure_code_l2_per_sample = masked_l2_per_sample(
+            prediction=predicted_fine_structure_code,
+            frame_weight=frame_weight,
+        )
+    else:
+        fine_structure_waveform_loss_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
+        fine_structure_code_target_loss_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
+        fine_structure_code_std_loss_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
+        fine_structure_code_temporal_loss_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
+        fine_structure_code_template_excess_loss_per_sample = frame_weight.new_zeros(
+            (frame_weight.shape[0],)
+        )
+        fine_structure_code_record_margin_loss_per_sample = frame_weight.new_zeros(
+            (frame_weight.shape[0],)
+        )
+        fine_structure_code_l2_per_sample = frame_weight.new_zeros((frame_weight.shape[0],))
     log_f0_correction_l1_per_sample = masked_l1_per_sample(
         prediction=outputs["log_f0_correction"],
         frame_weight=frame_weight,
@@ -990,6 +1105,21 @@ def compute_streaming_student_teacher_supervision_loss(
     fused_hidden_projection_loss = reduce_weighted_sample_loss(fused_hidden_projection_loss_per_sample)
     proxy_acoustic_loss = reduce_weighted_sample_loss(proxy_acoustic_loss_per_sample)
     proxy_temporal_loss = reduce_weighted_sample_loss(proxy_temporal_loss_per_sample)
+    fine_structure_waveform_loss = reduce_weighted_sample_loss(fine_structure_waveform_loss_per_sample)
+    fine_structure_code_target_loss = reduce_weighted_sample_loss(
+        fine_structure_code_target_loss_per_sample
+    )
+    fine_structure_code_std_loss = reduce_weighted_sample_loss(fine_structure_code_std_loss_per_sample)
+    fine_structure_code_temporal_loss = reduce_weighted_sample_loss(
+        fine_structure_code_temporal_loss_per_sample
+    )
+    fine_structure_code_template_excess_loss = reduce_weighted_sample_loss(
+        fine_structure_code_template_excess_loss_per_sample
+    )
+    fine_structure_code_record_margin_loss = reduce_weighted_sample_loss(
+        fine_structure_code_record_margin_loss_per_sample
+    )
+    fine_structure_code_l2 = reduce_weighted_sample_loss(fine_structure_code_l2_per_sample)
     log_f0_correction_l1 = reduce_weighted_sample_loss(log_f0_correction_l1_per_sample)
     aper_correction_l1 = reduce_weighted_sample_loss(aper_correction_l1_per_sample)
     z_art_loss_reference = reduce_weighted_sample_loss(z_art_loss_per_sample)
@@ -1025,6 +1155,15 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_stage5_correlation_loss * effective_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
+        + fine_structure_waveform_loss * effective_weights["teacher_fine_structure_waveform_frame"]
+        + fine_structure_code_target_loss * effective_weights["teacher_fine_structure_code_target"]
+        + fine_structure_code_std_loss * effective_weights["teacher_fine_structure_code_std"]
+        + fine_structure_code_temporal_loss * effective_weights["teacher_fine_structure_code_temporal"]
+        + fine_structure_code_template_excess_loss
+        * effective_weights["teacher_fine_structure_code_template_excess"]
+        + fine_structure_code_record_margin_loss
+        * effective_weights["teacher_fine_structure_code_record_margin"]
+        + fine_structure_code_l2 * effective_weights["fine_structure_code_l2"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
         + proxy_temporal_loss * effective_weights["teacher_proxy_temporal"]
         + log_f0_correction_l1 * effective_weights["log_f0_correction_l1"]
@@ -1059,6 +1198,15 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_stage5_correlation_loss * default_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * default_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * default_weights["teacher_fused_hidden_projection"]
+        + fine_structure_waveform_loss * default_weights["teacher_fine_structure_waveform_frame"]
+        + fine_structure_code_target_loss * default_weights["teacher_fine_structure_code_target"]
+        + fine_structure_code_std_loss * default_weights["teacher_fine_structure_code_std"]
+        + fine_structure_code_temporal_loss * default_weights["teacher_fine_structure_code_temporal"]
+        + fine_structure_code_template_excess_loss
+        * default_weights["teacher_fine_structure_code_template_excess"]
+        + fine_structure_code_record_margin_loss
+        * default_weights["teacher_fine_structure_code_record_margin"]
+        + fine_structure_code_l2 * default_weights["fine_structure_code_l2"]
         + proxy_acoustic_loss * default_weights["teacher_proxy_acoustic"]
         + proxy_temporal_loss * default_weights["teacher_proxy_temporal"]
         + log_f0_correction_l1 * default_weights["log_f0_correction_l1"]
@@ -1091,6 +1239,15 @@ def compute_streaming_student_teacher_supervision_loss(
         + energy_stage5_correlation_loss * effective_weights["teacher_energy_stage5_correlation"]
         + hidden_projection_loss * effective_weights["teacher_hidden_projection"]
         + fused_hidden_projection_loss * effective_weights["teacher_fused_hidden_projection"]
+        + fine_structure_waveform_loss * effective_weights["teacher_fine_structure_waveform_frame"]
+        + fine_structure_code_target_loss * effective_weights["teacher_fine_structure_code_target"]
+        + fine_structure_code_std_loss * effective_weights["teacher_fine_structure_code_std"]
+        + fine_structure_code_temporal_loss * effective_weights["teacher_fine_structure_code_temporal"]
+        + fine_structure_code_template_excess_loss
+        * effective_weights["teacher_fine_structure_code_template_excess"]
+        + fine_structure_code_record_margin_loss
+        * effective_weights["teacher_fine_structure_code_record_margin"]
+        + fine_structure_code_l2 * effective_weights["fine_structure_code_l2"]
         + proxy_acoustic_loss * effective_weights["teacher_proxy_acoustic"]
         + proxy_temporal_loss * effective_weights["teacher_proxy_temporal"]
         + log_f0_correction_l1 * effective_weights["log_f0_correction_l1"]
@@ -1158,10 +1315,46 @@ def compute_streaming_student_teacher_supervision_loss(
             float(fused_hidden_projection_loss.detach().cpu().item()),
             6,
         ),
+        "loss_teacher_fine_structure_waveform_frame": round(
+            float(fine_structure_waveform_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_fine_structure_code_target": round(
+            float(fine_structure_code_target_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_fine_structure_code_std": round(
+            float(fine_structure_code_std_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_fine_structure_code_temporal": round(
+            float(fine_structure_code_temporal_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_fine_structure_code_template_excess": round(
+            float(fine_structure_code_template_excess_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_teacher_fine_structure_code_record_margin": round(
+            float(fine_structure_code_record_margin_loss.detach().cpu().item()),
+            6,
+        ),
+        "loss_fine_structure_code_l2": round(float(fine_structure_code_l2.detach().cpu().item()), 6),
         "loss_teacher_proxy_acoustic": round(float(proxy_acoustic_loss.detach().cpu().item()), 6),
         "loss_teacher_proxy_temporal": round(float(proxy_temporal_loss.detach().cpu().item()), 6),
         "loss_log_f0_correction_l1": round(float(log_f0_correction_l1.detach().cpu().item()), 6),
         "loss_aper_correction_l1": round(float(aper_correction_l1.detach().cpu().item()), 6),
+        "fine_structure_code_dim": (
+            int(predicted_fine_structure_code.shape[-1])
+            if isinstance(predicted_fine_structure_code, torch.Tensor)
+            else 0
+        ),
+        "fine_structure_code_source_mode": str(outputs.get("fine_structure_code_source_mode", "none")),
+        "fine_structure_code_detach_source": bool(outputs.get("fine_structure_code_detach_source", False)),
+        "fine_structure_code_predictor_mode": str(
+            outputs.get("fine_structure_code_predictor_mode", "linear_v1")
+        ),
+        "fine_structure_supervision_mode": fine_structure_supervision_mode,
         "teacher_confidence_weighted": bool(use_teacher_confidence),
         "effective_weight_sum": round(float(frame_weight.sum().detach().cpu().item()), 6),
         "teacher_f0_state_voiced_frame_ratio": round(float(voiced_target_mask.mean().detach().cpu().item()), 6),
@@ -1712,6 +1905,29 @@ def masked_l1_per_sample(
     return numerator / denominator
 
 
+def masked_l2_per_sample(
+    prediction: torch.Tensor,
+    frame_weight: torch.Tensor,
+) -> torch.Tensor:
+    if int(prediction.shape[-1]) <= 0:
+        return frame_weight.new_zeros((frame_weight.shape[0],))
+    squared = prediction.pow(2).mean(dim=-1, keepdim=True)
+    numerator = (squared * frame_weight).sum(dim=tuple(range(1, squared.ndim)))
+    denominator = frame_weight.sum(dim=tuple(range(1, frame_weight.ndim))).clamp_min(1.0)
+    return numerator / denominator
+
+
+def masked_channel_mean_mse_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+) -> torch.Tensor:
+    squared = (prediction - target).pow(2).mean(dim=-1, keepdim=True)
+    numerator = (squared * frame_weight).sum(dim=tuple(range(1, squared.ndim)))
+    denominator = frame_weight.sum(dim=tuple(range(1, frame_weight.ndim))).clamp_min(1.0)
+    return numerator / denominator
+
+
 def masked_correlation_alignment_loss_per_sample(
     prediction: torch.Tensor,
     target: torch.Tensor,
@@ -1723,7 +1939,12 @@ def masked_correlation_alignment_loss_per_sample(
     batch_size = prediction.shape[0]
     flat_prediction = prediction.reshape(batch_size, -1)
     flat_target = target.reshape(batch_size, -1)
-    flat_weight = frame_weight.reshape(batch_size, -1)
+    effective_weight = (
+        frame_weight.expand_as(prediction)
+        if frame_weight.shape != prediction.shape
+        else frame_weight
+    )
+    flat_weight = effective_weight.reshape(batch_size, -1)
     weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
     mean_prediction = (flat_prediction * flat_weight).sum(dim=1) / weight_sum
     mean_target = (flat_target * flat_weight).sum(dim=1) / weight_sum
@@ -1750,7 +1971,12 @@ def masked_centered_mse_per_sample(
     batch_size = prediction.shape[0]
     flat_prediction = prediction.reshape(batch_size, -1)
     flat_target = target.reshape(batch_size, -1)
-    flat_weight = frame_weight.reshape(batch_size, -1)
+    effective_weight = (
+        frame_weight.expand_as(prediction)
+        if frame_weight.shape != prediction.shape
+        else frame_weight
+    )
+    flat_weight = effective_weight.reshape(batch_size, -1)
     weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
     mean_prediction = (flat_prediction * flat_weight).sum(dim=1) / weight_sum
     mean_target = (flat_target * flat_weight).sum(dim=1) / weight_sum
@@ -1772,7 +1998,12 @@ def masked_std_mse_per_sample(
     batch_size = prediction.shape[0]
     flat_prediction = prediction.reshape(batch_size, -1)
     flat_target = target.reshape(batch_size, -1)
-    flat_weight = frame_weight.reshape(batch_size, -1)
+    effective_weight = (
+        frame_weight.expand_as(prediction)
+        if frame_weight.shape != prediction.shape
+        else frame_weight
+    )
+    flat_weight = effective_weight.reshape(batch_size, -1)
     weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
     mean_prediction = (flat_prediction * flat_weight).sum(dim=1) / weight_sum
     mean_target = (flat_target * flat_weight).sum(dim=1) / weight_sum
@@ -1784,6 +2015,72 @@ def masked_std_mse_per_sample(
     target_std = torch.sqrt(target_var.clamp_min(1.0e-8))
     valid = (flat_weight.sum(dim=1) >= 8.0).to(torch.float32)
     return ((pred_std - target_std) ** 2) * valid
+
+
+def masked_template_excess_loss_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+) -> torch.Tensor:
+    prediction = prediction.to(torch.float32)
+    target = target.to(torch.float32)
+    frame_weight = frame_weight.to(torch.float32)
+    if int(prediction.shape[-1]) <= 0:
+        return frame_weight.new_zeros((frame_weight.shape[0],))
+    flat_weight = frame_weight.squeeze(-1)
+    weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
+    prediction_template = (prediction * frame_weight).sum(dim=1) / weight_sum.unsqueeze(-1)
+    target_template = (target * frame_weight).sum(dim=1) / weight_sum.unsqueeze(-1)
+    normalized_prediction = F.normalize(prediction, dim=-1, eps=1.0e-8)
+    normalized_target = F.normalize(target, dim=-1, eps=1.0e-8)
+    normalized_prediction_template = F.normalize(prediction_template, dim=-1, eps=1.0e-8)
+    normalized_target_template = F.normalize(target_template, dim=-1, eps=1.0e-8)
+    prediction_template_cosine = (
+        (normalized_prediction * normalized_prediction_template.unsqueeze(1)).sum(dim=-1) * flat_weight
+    ).sum(dim=1) / weight_sum
+    target_template_cosine = (
+        (normalized_target * normalized_target_template.unsqueeze(1)).sum(dim=-1) * flat_weight
+    ).sum(dim=1) / weight_sum
+    valid = (flat_weight.sum(dim=1) >= 8.0).to(torch.float32)
+    return F.relu(prediction_template_cosine - target_template_cosine).pow(2) * valid
+
+
+def masked_record_margin_loss_per_sample(
+    prediction: torch.Tensor,
+    target: torch.Tensor,
+    frame_weight: torch.Tensor,
+    *,
+    margin: float = 0.10,
+) -> torch.Tensor:
+    prediction = prediction.to(torch.float32)
+    target = target.to(torch.float32)
+    frame_weight = frame_weight.to(torch.float32)
+    batch_size = int(prediction.shape[0])
+    if batch_size <= 1 or int(prediction.shape[-1]) <= 0:
+        return frame_weight.new_zeros((frame_weight.shape[0],))
+    flat_weight = frame_weight.squeeze(-1)
+    weight_sum = flat_weight.sum(dim=1).clamp_min(1.0e-8)
+    valid = (flat_weight.sum(dim=1) >= 8.0).to(torch.float32)
+    prediction_mean = (prediction * frame_weight).sum(dim=1) / weight_sum.unsqueeze(-1)
+    target_mean = (target * frame_weight).sum(dim=1) / weight_sum.unsqueeze(-1)
+    normalized_prediction_mean = F.normalize(prediction_mean, dim=-1, eps=1.0e-8)
+    normalized_target_mean = F.normalize(target_mean, dim=-1, eps=1.0e-8)
+    cosine_matrix = normalized_prediction_mean @ normalized_target_mean.transpose(0, 1)
+    own_cosine = torch.diagonal(cosine_matrix)
+    identity_mask = torch.eye(batch_size, device=cosine_matrix.device, dtype=torch.bool)
+    pair_valid_mask = (
+        valid.unsqueeze(1).gt(0.5)
+        & valid.unsqueeze(0).gt(0.5)
+        & (~identity_mask)
+    )
+    best_other_cosine = cosine_matrix.masked_fill(~pair_valid_mask, float("-inf")).max(dim=1).values
+    has_other = pair_valid_mask.any(dim=1).to(torch.float32)
+    best_other_cosine = torch.where(
+        has_other > 0.0,
+        best_other_cosine,
+        torch.zeros_like(best_other_cosine),
+    )
+    return F.relu(float(margin) + best_other_cosine - own_cosine) * valid * has_other
 
 
 def masked_affine_calibrated_l1_per_sample(

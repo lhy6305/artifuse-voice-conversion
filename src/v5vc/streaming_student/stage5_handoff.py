@@ -207,6 +207,7 @@ def build_streaming_student_vocoder_input_scaffold(
     controls = dict(payload["controls"])
     conditioning = dict(payload["conditioning"])
     fine_structure_reference = dict(payload.get("fine_structure_reference", {}))
+    fine_structure_code = dict(payload.get("fine_structure_code", {}))
     control_contract = dict(payload.get("control_contract", {}))
     e_evt_meta = dict(control_contract.get("e_evt_meta", {}))
     frame_start_ms = payload["frame_start_ms"].to(torch.float32)
@@ -284,6 +285,42 @@ def build_streaming_student_vocoder_input_scaffold(
                 "packet_unit_rms_logspec_delta": fine_structure_reference["unit_rms_logspec_delta"].to(
                     torch.float32
                 ),
+            }
+        ),
+        **(
+            {}
+            if not isinstance(fine_structure_code.get("waveform_geometry_code"), torch.Tensor)
+            else {
+                "packet_learned_waveform_geometry_code": fine_structure_code["waveform_geometry_code"].to(
+                    torch.float32
+                ),
+            }
+        ),
+        **(
+            {}
+            if not isinstance(fine_structure_code.get("waveform_geometry_short_temporal_code"), torch.Tensor)
+            else {
+                "packet_learned_waveform_geometry_short_temporal_code": fine_structure_code[
+                    "waveform_geometry_short_temporal_code"
+                ].to(torch.float32),
+            }
+        ),
+        **(
+            {}
+            if not isinstance(fine_structure_code.get("waveform_geometry_center_code"), torch.Tensor)
+            else {
+                "packet_learned_waveform_geometry_center_code": fine_structure_code[
+                    "waveform_geometry_center_code"
+                ].to(torch.float32),
+            }
+        ),
+        **(
+            {}
+            if not isinstance(fine_structure_code.get("waveform_geometry_neighbor_delta_code"), torch.Tensor)
+            else {
+                "packet_learned_waveform_geometry_neighbor_delta_code": fine_structure_code[
+                    "waveform_geometry_neighbor_delta_code"
+                ].to(torch.float32),
             }
         ),
     }
@@ -397,6 +434,35 @@ def build_streaming_student_vocoder_input_scaffold(
                     ),
                 }
             ),
+            **(
+                {}
+                if not isinstance(fine_structure_code.get("waveform_geometry_code"), torch.Tensor)
+                else {
+                    "packet_learned_waveform_geometry_code_dim": int(
+                        fine_structure_code["waveform_geometry_code"].shape[-1]
+                    ),
+                    "packet_learned_waveform_geometry_code_family": str(
+                        fine_structure_code.get("code_family", "unknown")
+                    ),
+                    "packet_learned_waveform_geometry_code_source_mode": str(
+                        fine_structure_code.get("source_mode", "unknown")
+                    ),
+                }
+            ),
+            **(
+                {}
+                if not isinstance(fine_structure_code.get("waveform_geometry_center_code"), torch.Tensor)
+                else {
+                    "packet_learned_waveform_geometry_center_code_dim": int(
+                        fine_structure_code["waveform_geometry_center_code"].shape[-1]
+                    ),
+                    "packet_learned_waveform_geometry_neighbor_delta_code_dim": (
+                        0
+                        if not isinstance(fine_structure_code.get("waveform_geometry_neighbor_delta_code"), torch.Tensor)
+                        else int(fine_structure_code["waveform_geometry_neighbor_delta_code"].shape[-1])
+                    ),
+                }
+            ),
             "speaker_dim": int(speaker_embedding.shape[-1]),
             "geom_dim": int(geom_embedding.shape[-1]),
         },
@@ -406,6 +472,8 @@ def build_streaming_student_vocoder_input_scaffold(
             f"The noise-branch first 8 dims currently use {resolved_noise_event_family}. Use legacy_event_probs when evaluating old v2/event_probs Stage5 checkpoints.",
             "f0 / aper / energy remain packet-calibrated analysis controls; this route is for end-to-end decode screening, not a claim that named-control readiness is complete.",
             "packet_unit_rms_logspec and packet_unit_rms_logspec_delta are analysis-only dense fine-structure references exported for oracle gating; current Stage5 branch layouts do not consume them yet.",
+            "packet_learned_waveform_geometry_code is the deployable student-predicted upstream fine-structure contract candidate when present.",
+            "packet_learned_waveform_geometry_center_code and packet_learned_waveform_geometry_neighbor_delta_code expose the same predicted contract in a center-vs-local-delta split for Stage5 interface experiments.",
         ],
     }
     pt_path = output_dir / "streaming_student_vocoder_input_scaffold.pt"

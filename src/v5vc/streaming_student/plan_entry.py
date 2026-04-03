@@ -355,6 +355,30 @@ def instantiate_streaming_student_scaffold(model_config: dict[str, object]) -> S
         provider_confidence_gate_mode=str(
             model_config.get("provider_confidence_gate_mode", "none")
         ),
+        fine_structure_code_dim=int(model_config.get("fine_structure_code_dim", 0)),
+        fine_structure_code_source_mode=str(
+            model_config.get("fine_structure_code_source_mode", "none")
+        ),
+        fine_structure_code_detach_source=bool(
+            model_config.get("fine_structure_code_detach_source", False)
+        ),
+        fine_structure_waveform_encoder_dim=(
+            None
+            if model_config.get("fine_structure_waveform_encoder_dim") in {None, ""}
+            else int(model_config.get("fine_structure_waveform_encoder_dim"))
+        ),
+        fine_structure_waveform_encoder_layers=int(
+            model_config.get("fine_structure_waveform_encoder_layers", 2)
+        ),
+        fine_structure_code_predictor_mode=str(
+            model_config.get("fine_structure_code_predictor_mode", "linear_v1")
+        ),
+        fine_structure_code_context_layers=int(
+            model_config.get("fine_structure_code_context_layers", 0)
+        ),
+        fine_structure_code_context_kernel_size=int(
+            model_config.get("fine_structure_code_context_kernel_size", 1)
+        ),
     )
 
 
@@ -472,6 +496,26 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
             "timing_final_clause_logits": {
                 "feature_dim": 1 if bool(model_config.get("timing_aux_enabled", False)) else 0
             },
+            "fine_structure_code": {
+                "feature_dim": int(model_config.get("fine_structure_code_dim", 0)),
+                "source_mode": str(model_config.get("fine_structure_code_source_mode", "none")),
+                "detach_source": bool(model_config.get("fine_structure_code_detach_source", False)),
+                "waveform_encoder_dim": (
+                    None
+                    if model_config.get("fine_structure_waveform_encoder_dim") in {None, ""}
+                    else int(model_config.get("fine_structure_waveform_encoder_dim"))
+                ),
+                "waveform_encoder_layers": int(
+                    model_config.get("fine_structure_waveform_encoder_layers", 2)
+                ),
+                "predictor_mode": str(
+                    model_config.get("fine_structure_code_predictor_mode", "linear_v1")
+                ),
+                "context_layers": int(model_config.get("fine_structure_code_context_layers", 0)),
+                "context_kernel_size": int(
+                    model_config.get("fine_structure_code_context_kernel_size", 1)
+                ),
+            },
         },
         "student_outputs": {
             "teacher_fused_hidden_projection": {
@@ -507,6 +551,13 @@ def build_contract_summary(model_config: dict[str, object]) -> dict[str, object]
                     .strip()
                     .lower()
                     == "dedicated_aper_branch_v1"
+                    else 0
+                )
+            },
+            "fine_structure_waveform_reconstruction": {
+                "feature_dim": (
+                    int(model_config["frame_length"])
+                    if int(model_config.get("fine_structure_code_dim", 0)) > 0
                     else 0
                 )
             },

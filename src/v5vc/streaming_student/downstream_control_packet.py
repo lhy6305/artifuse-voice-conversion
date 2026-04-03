@@ -27,6 +27,10 @@ from v5vc.streaming_student.data import (
     load_streaming_student_target_examples_from_records,
     load_streaming_student_target_records_by_split,
 )
+from v5vc.streaming_student.fine_structure import (
+    FINE_STRUCTURE_REFERENCE_LOGSPEC_BINS,
+    build_fine_structure_reference,
+)
 from v5vc.streaming_student.losses import resolve_semantic_supervision_config
 from v5vc.streaming_student.plan_entry import instantiate_streaming_student_scaffold
 from v5vc.streaming_student.pitch_provider import (
@@ -43,7 +47,39 @@ MAX_F0_CALIBRATED_LOG2_MAE = 0.2
 MAX_VUV_REFERENCE_MAE = 0.18
 MAX_APER_REFERENCE_MAE = 0.3
 MAX_ENERGY_STAGE5_NORM_REFERENCE_MAE = 0.15
-FINE_STRUCTURE_REFERENCE_LOGSPEC_BINS = 48
+
+
+def build_short_temporal_code_family(*, code: torch.Tensor, radius: int) -> torch.Tensor:
+    tensor = code.detach().cpu().to(torch.float32)
+    if tensor.ndim != 2:
+        raise ValueError(
+            f"build_short_temporal_code_family expects [frames, dim], got {tuple(tensor.shape)}."
+        )
+    resolved_radius = max(0, int(radius))
+    if resolved_radius <= 0 or int(tensor.shape[0]) <= 0:
+        return tensor.contiguous()
+    padded = F.pad(
+        tensor.transpose(0, 1).unsqueeze(0),
+        (resolved_radius, resolved_radius),
+        mode="replicate",
+    )
+    windowed = []
+    for offset in range(resolved_radius * 2 + 1):
+        windowed.append(padded[:, :, offset : offset + int(tensor.shape[0])].squeeze(0).transpose(0, 1))
+    return torch.cat(windowed, dim=-1).contiguous()
+
+
+def build_neighbor_delta_code_family(*, code: torch.Tensor) -> torch.Tensor:
+    tensor = code.detach().cpu().to(torch.float32)
+    if tensor.ndim != 2:
+        raise ValueError(
+            f"build_neighbor_delta_code_family expects [frames, dim], got {tuple(tensor.shape)}."
+        )
+    if int(tensor.shape[0]) <= 0:
+        return tensor.contiguous()
+    prev = torch.cat([tensor[:1], tensor[:-1]], dim=0)
+    next_ = torch.cat([tensor[1:], tensor[-1:]], dim=0)
+    return torch.cat([tensor - prev, next_ - tensor], dim=-1).contiguous()
 
 
 def export_streaming_student_downstream_control_packet(
@@ -99,6 +135,23 @@ def export_streaming_student_downstream_control_packet(
     )
 
     semantic_supervision = resolve_semantic_supervision_config(config=config.get("semantic_supervision"))
+    training_summary = dict(payload.get("training", {}))
+    fine_structure_supervision = dict(training_summary.get("fine_structure_supervision", {}))
+    fine_structure_code_family = (
+        (
+            "learned_waveform_pca_code_whitened_v1"
+            if bool(fine_structure_supervision.get("normalize_code", False))
+            else "learned_waveform_pca_code_v1"
+        )
+        if str(fine_structure_supervision.get("mode", "")).strip().lower() == "waveform_pca_code_v1"
+        else (
+            "learned_waveform_chunk_pca_code_whitened_v1"
+            if bool(fine_structure_supervision.get("normalize_code", False))
+            else "learned_waveform_chunk_pca_code_v1"
+        )
+        if str(fine_structure_supervision.get("mode", "")).strip().lower() == "waveform_chunk_pca_code_v1"
+        else "learned_waveform_geometry_code_v1"
+    )
     branch = branch_label or str(payload.get("experiment_id", checkpoint_path.stem))
     event_target_family = str(semantic_supervision.get("event_target_family", "unknown"))
     event_projection_mode = str(semantic_supervision.get("event_projection_mode", "unknown"))
@@ -221,6 +274,58 @@ def export_streaming_student_downstream_control_packet(
                 clamp_min=0.0,
                 clamp_max=1.0,
             )
+            predicted_fine_structure_code = outputs.get("fine_structure_code")
+            predicted_fine_structure_reconstruction = outputs.get("fine_structure_waveform_reconstruction")
+            fine_structure_code_payload = None
+            fine_structure_reconstruction_mae = None
+            fine_structure_code_dim = 0
+            fine_structure_code_source_mode = str(outputs.get("fine_structure_code_source_mode", "none"))
+            fine_structure_code_detach_source = bool(
+                outputs.get("fine_structure_code_detach_source", False)
+            )
+            fine_structure_code_predictor_mode = str(
+                outputs.get("fine_structure_code_predictor_mode", "linear_v1")
+            )
+            if isinstance(predicted_fine_structure_code, torch.Tensor):
+                fine_structure_code = predicted_fine_structure_code[0, :frame_count].to(torch.float32).cpu()
+                fine_structure_code_dim = int(fine_structure_code.shape[-1])
+                if fine_structure_code_dim > 0:
+                    short_temporal_radius = 1
+                    fine_structure_code_payload = {
+                        "code_family": fine_structure_code_family,
+                        "code_dim": fine_structure_code_dim,
+                        "source_mode": fine_structure_code_source_mode,
+                        "detach_source": fine_structure_code_detach_source,
+                        "predictor_mode": fine_structure_code_predictor_mode,
+                        "normalize_code": bool(fine_structure_supervision.get("normalize_code", False)),
+                        "waveform_geometry_code": fine_structure_code,
+                        "waveform_geometry_center_code": fine_structure_code,
+                        "waveform_geometry_neighbor_delta_code": build_neighbor_delta_code_family(
+                            code=fine_structure_code,
+                        ),
+                        "waveform_geometry_short_temporal_code": build_short_temporal_code_family(
+                            code=fine_structure_code,
+                            radius=short_temporal_radius,
+                        ),
+                        "short_temporal_radius": short_temporal_radius,
+                        "short_temporal_mode": "stacked_context_v1",
+                        "source": "student_predicted",
+                    }
+                    if isinstance(predicted_fine_structure_reconstruction, torch.Tensor):
+                        reconstruction = predicted_fine_structure_reconstruction[0, :frame_count].to(
+                            torch.float32
+                        ).cpu()
+                        if int(reconstruction.shape[-1]) == int(frame_length):
+                            fine_structure_reconstruction_mae = round(
+                                float(
+                                    (
+                                        reconstruction
+                                        - fine_structure_reference["unit_rms_waveform_frame"]
+                                    ).abs().mean().item()
+                                ),
+                                6,
+                            )
+                            fine_structure_code_payload["unit_rms_waveform_reconstruction"] = reconstruction
             packet_ready = bool(event_target_family == "teacher_e_evt_v1" and int(event_probs.shape[-1]) >= 8)
             if packet_ready:
                 packet_ready_count += 1
@@ -269,6 +374,7 @@ def export_streaming_student_downstream_control_packet(
                     "energy_stage5_norm": reference_energy_stage5_norm,
                 },
                 "fine_structure_reference": fine_structure_reference,
+                **({} if fine_structure_code_payload is None else {"fine_structure_code": fine_structure_code_payload}),
                 "diagnostics": {
                     "event_logits": event_logits,
                     "event_prior_probs": event_prior_probs,
@@ -278,6 +384,7 @@ def export_streaming_student_downstream_control_packet(
                     "f0_calibration": dict(f0_calibration["summary"]),
                     "aper_calibration": dict(aper_calibration["summary"]),
                     "energy_stage5_norm_calibration": dict(energy_stage5_norm_calibration["summary"]),
+                    "fine_structure_code_reconstruction_mae": fine_structure_reconstruction_mae,
                 },
                 "conditioning": {
                     "speaker_embedding": conditioning_asset["speaker_embedding"].to(torch.float32),
@@ -295,6 +402,11 @@ def export_streaming_student_downstream_control_packet(
                     "aper_status": "analysis_only_affine_calibrated_to_target_reference",
                     "energy_status": "analysis_only_affine_calibrated_to_target_reference",
                     "fine_structure_reference_status": "analysis_only_target_derived_dense_reference",
+                    "fine_structure_code_status": (
+                        "student_predicted_waveform_geometry_code_v1"
+                        if fine_structure_code_payload is not None
+                        else "absent"
+                    ),
                     "r_res_status": "absent_by_design",
                 },
             }
@@ -360,6 +472,36 @@ def export_streaming_student_downstream_control_packet(
                         energy_stage5_norm_calibration["summary"]["calibrated_mae"]
                     ),
                     "named_control_readiness": readiness,
+                    "fine_structure_code_dim": fine_structure_code_dim,
+                    "fine_structure_code_source_mode": (
+                        None if fine_structure_code_dim <= 0 else fine_structure_code_source_mode
+                    ),
+                    "fine_structure_code_detach_source": (
+                        None if fine_structure_code_dim <= 0 else fine_structure_code_detach_source
+                    ),
+                    "fine_structure_code_predictor_mode": (
+                        None if fine_structure_code_dim <= 0 else fine_structure_code_predictor_mode
+                    ),
+                    "fine_structure_code_reconstruction_mae": fine_structure_reconstruction_mae,
+                    "fine_structure_short_temporal_code_dim": (
+                        None
+                        if fine_structure_code_payload is None
+                        else int(
+                            fine_structure_code_payload["waveform_geometry_short_temporal_code"].shape[-1]
+                        )
+                    ),
+                    "fine_structure_center_code_dim": (
+                        None
+                        if fine_structure_code_payload is None
+                        else int(fine_structure_code_payload["waveform_geometry_center_code"].shape[-1])
+                    ),
+                    "fine_structure_neighbor_delta_code_dim": (
+                        None
+                        if fine_structure_code_payload is None
+                        else int(
+                            fine_structure_code_payload["waveform_geometry_neighbor_delta_code"].shape[-1]
+                        )
+                    ),
                 }
             )
 
@@ -387,6 +529,21 @@ def export_streaming_student_downstream_control_packet(
             "aper_status": "analysis_only_affine_calibrated_to_target_reference",
             "energy_status": "analysis_only_affine_calibrated_to_target_reference",
             "fine_structure_reference_status": "analysis_only_target_derived_dense_reference",
+            "fine_structure_code_status": (
+                "student_predicted_waveform_geometry_code_v1"
+                if any(int(record.get("fine_structure_code_dim", 0)) > 0 for record in exported_records)
+                else "absent"
+            ),
+            "fine_structure_short_temporal_code_status": (
+                "student_predicted_waveform_geometry_short_temporal_code_v1"
+                if any(int(record.get("fine_structure_code_dim", 0)) > 0 for record in exported_records)
+                else "absent"
+            ),
+            "fine_structure_center_delta_split_status": (
+                "student_predicted_waveform_geometry_center_delta_split_v1"
+                if any(int(record.get("fine_structure_code_dim", 0)) > 0 for record in exported_records)
+                else "absent"
+            ),
             "fine_structure_logspec_bins": int(FINE_STRUCTURE_REFERENCE_LOGSPEC_BINS),
         },
         "packet_ready_count": packet_ready_count,
@@ -400,6 +557,9 @@ def export_streaming_student_downstream_control_packet(
             "packet_ready_for_named_e_evt_handoff only means the named e_evt tensor/metadata contract is exportable; it is not a numeric readiness claim.",
             "named_control_readiness is a negative gate only: it can auto-reject clearly incomplete packets, but it does not prove a successful downstream handoff.",
             "fine_structure_reference is analysis-only target-derived dense supervision scaffolding; it is not a deployable student-predicted control contract.",
+            "fine_structure_code is only present when the Stage3 model predicts a compact waveform-geometry code; oracle and downstream checks should treat it as the new deployable upstream contract candidate rather than as target-derived reference leakage.",
+            "waveform_geometry_short_temporal_code is a derived short-context export built by stacking neighboring predicted compact codes; it changes the deployable contract shape without introducing target-derived reference leakage.",
+            "waveform_geometry_center_code and waveform_geometry_neighbor_delta_code expose the same predicted compact code as an explicit center-vs-local-delta split for downstream consumer-interface experiments.",
             "r_res remains intentionally absent on this route.",
         ],
     }
@@ -462,64 +622,6 @@ def sanitize_filename(value: str) -> str:
         else:
             safe.append("_")
     return "".join(safe).strip("_") or "record"
-
-
-def build_fine_structure_reference(
-    *,
-    waveform: torch.Tensor,
-    frame_start_samples: torch.Tensor,
-    frame_length: int,
-    logspec_bins: int,
-) -> dict[str, torch.Tensor]:
-    aligned_frames = slice_aligned_frames(
-        waveform=waveform,
-        frame_start_samples=frame_start_samples,
-        frame_length=int(frame_length),
-    )
-    normalized_frames = normalize_frames_unit_rms(aligned_frames)
-    unit_rms_logspec = compress_logspec_bins(
-        compute_frame_logspec(normalized_frames),
-        output_bins=int(logspec_bins),
-    )
-    return {
-        "unit_rms_waveform_frame": normalized_frames,
-        "unit_rms_logspec": unit_rms_logspec,
-        "unit_rms_logspec_delta": compute_adjacent_deltas(unit_rms_logspec),
-    }
-
-
-def normalize_frames_unit_rms(frames: torch.Tensor) -> torch.Tensor:
-    frames_cpu = frames.detach().cpu().to(torch.float32)
-    if int(frames_cpu.shape[0]) <= 0:
-        return frames_cpu
-    centered = frames_cpu - frames_cpu.mean(dim=1, keepdim=True)
-    frame_rms = centered.pow(2).mean(dim=1, keepdim=True).sqrt().clamp_min(1.0e-6)
-    return centered / frame_rms
-
-
-def compute_frame_logspec(frames: torch.Tensor) -> torch.Tensor:
-    frames_cpu = frames.detach().cpu().to(torch.float32)
-    spectrum = torch.fft.rfft(frames_cpu, dim=1)
-    return torch.log1p(spectrum.abs())
-
-
-def compress_logspec_bins(logspec: torch.Tensor, *, output_bins: int) -> torch.Tensor:
-    logspec_cpu = logspec.detach().cpu().to(torch.float32)
-    if int(logspec_cpu.shape[-1]) == int(output_bins):
-        return logspec_cpu.contiguous()
-    return F.adaptive_avg_pool1d(logspec_cpu.unsqueeze(1), int(output_bins)).squeeze(1).contiguous()
-
-
-def compute_adjacent_deltas(sequence: torch.Tensor) -> torch.Tensor:
-    sequence_cpu = sequence.detach().cpu().to(torch.float32)
-    if int(sequence_cpu.shape[0]) <= 0:
-        return sequence_cpu
-    deltas = torch.zeros_like(sequence_cpu)
-    if int(sequence_cpu.shape[0]) > 1:
-        deltas[1:] = sequence_cpu[1:] - sequence_cpu[:-1]
-    return deltas.contiguous()
-
-
 def assess_named_control_readiness(
     *,
     packet_ready_for_named_e_evt_handoff: bool,

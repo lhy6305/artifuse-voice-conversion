@@ -17,6 +17,10 @@ from v5vc.streaming_student.data import (
 from v5vc.streaming_student.checkpoint_init import (
     load_streaming_student_init_checkpoint,
 )
+from v5vc.streaming_student.fine_structure_supervision import (
+    build_fine_structure_supervision_asset,
+    resolve_fine_structure_supervision_config,
+)
 from v5vc.streaming_student.losses import (
     compute_streaming_student_teacher_supervision_loss,
     resolve_semantic_supervision_config,
@@ -78,6 +82,17 @@ def run_streaming_student_training_step(
     semantic_supervision = resolve_semantic_supervision_config(
         config=config.get("semantic_supervision"),
         overrides_path=resolved_loss_weight_overrides_path,
+    )
+    fine_structure_supervision = resolve_fine_structure_supervision_config(
+        config=config.get("fine_structure_supervision"),
+        model_config=dict(config["model"]),
+    )
+    fine_structure_supervision_asset = build_fine_structure_supervision_asset(
+        fine_structure_supervision=fine_structure_supervision,
+        records_by_split=records_by_split,
+        config_path=config_path,
+        frame_length=int(config["model"]["frame_length"]),
+        hop_length=int(config["model"]["hop_length"]),
     )
     pitch_provider_request = resolve_stage3_pitch_provider_request(
         dict(config["model"]),
@@ -148,6 +163,7 @@ def run_streaming_student_training_step(
         weights=loss_weights,
         use_teacher_confidence=use_teacher_confidence,
         semantic_supervision=semantic_supervision,
+        fine_structure_supervision=fine_structure_supervision_asset,
     )
     optimizer.zero_grad(set_to_none=True)
     train_loss.backward()
@@ -176,6 +192,7 @@ def run_streaming_student_training_step(
             weights=loss_weights,
             use_teacher_confidence=use_teacher_confidence,
             semantic_supervision=semantic_supervision,
+            fine_structure_supervision=fine_structure_supervision_asset,
         )
 
     checkpoint_path = checkpoints_dir / f"{experiment_id}.step1.pt"
@@ -195,6 +212,8 @@ def run_streaming_student_training_step(
                 "use_teacher_confidence": bool(use_teacher_confidence),
                 "loss_weights": loss_weights,
                 "semantic_supervision": semantic_supervision,
+                "fine_structure_supervision": fine_structure_supervision,
+                "fine_structure_supervision_asset": fine_structure_supervision_asset,
                 "loss_weight_overrides_path": (
                     None
                     if resolved_loss_weight_overrides_path is None
@@ -232,6 +251,12 @@ def run_streaming_student_training_step(
             "use_teacher_confidence": bool(use_teacher_confidence),
             "loss_weights": loss_weights,
             "semantic_supervision": semantic_supervision,
+            "fine_structure_supervision": fine_structure_supervision,
+            "fine_structure_supervision_asset_summary": (
+                None
+                if fine_structure_supervision_asset is None
+                else fine_structure_supervision_asset.get("codebook_summary")
+            ),
             "loss_weight_overrides_path": (
                 None if resolved_loss_weight_overrides_path is None else resolved_loss_weight_overrides_path.as_posix()
             ),

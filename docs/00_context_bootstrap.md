@@ -13,16 +13,16 @@ Whenever a new work session starts, or whenever prior chat context is missing, r
 - The default active line is now:
   - upstream fine-structure representation redesign for the streaming-student to Stage5 handoff
 - The latest active reasoning chain is:
-  - `docs/566_stage5_richercontract_listening_result_self_audit_and_next_direction_report.md`
-  - `docs/567_stage3_fine_structure_reference_oracle_gate_report.md`
-  - `docs/568_stage5_fine_structure_code_oracle_and_wavepca16_bootstrap_report.md`
-  - `docs/569_stage5_wavepca16_upper_bound_bounded_training_and_regularizer_report.md`
-  - `docs/570_active_docs_archive_and_next_plan_refresh_report.md`
+  - `docs/576_waveframeencoder_temporalconv_contract_probe_and_bounded_stage5_report.md`
+  - `docs/577_waveframeencoder_chunk_target_temporalconv_negative_probe_report.md`
+  - `docs/578_stage5_short_temporal_contract_shape_probe_report.md`
+  - `docs/579_stage5_center_delta_split_consumer_probe_report.md`
+  - `docs/580_stage5_center_delta_adapter_semantic_gate_probe_report.md`
 - The current breakpoint is not "try another Stage5 local polish run".
 - The current breakpoint is:
-  - preserve the upper-bound conclusion from `wavepca16`
-  - redesign a producer-side deployable waveform-geometry code
-  - keep the same oracle gate as the first acceptance check
+  - keep the stronger short-temporal contract alive through an explicit Stage5 interface layer
+  - treat the `580` adaptor/gate branch as the new Stage5 interface baseline
+  - test whether future interface changes can exploit widened geometry more strongly than the current conservative adaptor route
 
 ## Mandatory Rules
 

@@ -1485,6 +1485,11 @@ def build_parser() -> argparse.ArgumentParser:
         default=16,
         help="Compact PCA waveform-code dimension to materialize.",
     )
+    streaming_student_fine_structure_code_packet_parser.add_argument(
+        "--normalize-code",
+        action="store_true",
+        help="Store the analysis-only waveform_pca_code in the whitened code_std-normalized space.",
+    )
     add_student_route_guard_argument(streaming_student_fine_structure_code_packet_parser)
     audio_audit_gui_parser = subparsers.add_parser(
         "launch-audio-audit-gui",
@@ -3881,7 +3886,10 @@ def build_parser() -> argparse.ArgumentParser:
         help=(
             "How target_event_semantic_sidecar is consumed during package build: "
             "none, target_sidecar_broadcast_v1, target_timing_sidecar_framewise_v1, or "
-            "source_semantic_parity_framewise_v1, or streaming_student_richer_source_contract_v1."
+            "source_semantic_parity_framewise_v1, or streaming_student_richer_source_contract_v1, "
+            "or streaming_student_waveform_geometry_code_v1, or "
+            "streaming_student_waveform_geometry_short_temporal_code_v1, or "
+            "streaming_student_waveform_geometry_center_delta_split_v1."
         ),
     )
     nores_vocoder_dataset_packages_parser.add_argument(
@@ -7152,6 +7160,7 @@ def main(argv: list[str] | None = None) -> int:
             packet_export_path=args.packet_export,
             output_dir=args.output_dir,
             code_dim=args.code_dim,
+            normalize_code=args.normalize_code,
         )
         return 0
     if args.command == "launch-audio-audit-gui":

@@ -6,10 +6,12 @@ from pathlib import Path
 
 import torch
 
+from v5vc.streaming_student.fine_structure import (
+    FINE_STRUCTURE_WAVEFORM_PCA_CODEBOOK_VERSION,
+    fit_waveform_pca_codebook,
+    project_waveform_pca_code,
+)
 from v5vc.managed_paths import reset_managed_directory
-
-
-FINE_STRUCTURE_CODEBOOK_VERSION = "streaming_student_waveform_pca_codebook_v1"
 
 
 def materialize_streaming_student_fine_structure_pca_packet_export(
@@ -17,6 +19,7 @@ def materialize_streaming_student_fine_structure_pca_packet_export(
     packet_export_path: Path,
     output_dir: Path,
     code_dim: int,
+    normalize_code: bool = False,
 ) -> dict[str, object]:
     packet_export_path = packet_export_path.resolve()
     output_dir = output_dir.resolve()
@@ -67,11 +70,13 @@ def materialize_streaming_student_fine_structure_pca_packet_export(
         waveform_code = project_waveform_pca_code(
             waveform_reference=waveform_reference,
             codebook=codebook,
+            normalize_code=bool(normalize_code),
         )
         fine_structure_code = {
-            "codebook_version": FINE_STRUCTURE_CODEBOOK_VERSION,
+            "codebook_version": FINE_STRUCTURE_WAVEFORM_PCA_CODEBOOK_VERSION,
             "code_family": "waveform_pca_code",
             "code_dim": int(waveform_code.shape[-1]),
+            "normalize_code": bool(normalize_code),
             "waveform_pca_code": waveform_code,
             "source": "analysis_only_from_target_waveform_reference",
         }
@@ -92,13 +97,14 @@ def materialize_streaming_student_fine_structure_pca_packet_export(
     summary["generated_at"] = datetime.now().isoformat(timespec="seconds")
     summary["source_packet_export_path"] = packet_export_path.as_posix()
     summary["fine_structure_code"] = {
-        "codebook_version": FINE_STRUCTURE_CODEBOOK_VERSION,
+        "codebook_version": FINE_STRUCTURE_WAVEFORM_PCA_CODEBOOK_VERSION,
         "code_family": "waveform_pca_code",
         "code_dim": int(codebook["components"].shape[-1]),
         "record_count": len(exported_records),
         "fit_frame_count": int(codebook["fit_frame_count"]),
         "input_waveform_dim": int(codebook["components"].shape[0]),
         "explained_variance_ratio": float(codebook["explained_variance_ratio"]),
+        "normalize_code": bool(normalize_code),
         "codebook_path": codebook_path.as_posix(),
         "source": "analysis_only_from_target_waveform_reference",
     }
@@ -107,6 +113,10 @@ def materialize_streaming_student_fine_structure_pca_packet_export(
     notes.append(
         "fine_structure_code.waveform_pca_code is an analysis-only compact waveform-geometry code fitted on the packet export itself; it is an upper-bound consumer experiment, not a deployable student prediction."
     )
+    if bool(normalize_code):
+        notes.append(
+            "This packet export stores the analysis-only waveform_pca_code in the whitened / code_std-normalized space."
+        )
     summary["notes"] = notes
     (output_dir / "streaming_student_downstream_control_packet.json").write_text(
         json.dumps(summary, ensure_ascii=False, indent=2),
@@ -119,33 +129,6 @@ def materialize_streaming_student_fine_structure_pca_packet_export(
         newline="\n",
     )
     return summary
-
-
-def fit_waveform_pca_codebook(*, waveform_frames: torch.Tensor, code_dim: int) -> dict[str, object]:
-    frames = waveform_frames.detach().cpu().to(torch.float32)
-    mean = frames.mean(dim=0, keepdim=True)
-    centered = frames - mean
-    max_rank = min(int(centered.shape[0]), int(centered.shape[1]), max(1, int(code_dim)))
-    _, singular_values, vh = torch.linalg.svd(centered, full_matrices=False)
-    components = vh[:max_rank].transpose(0, 1).contiguous()
-    total_variance = float(singular_values.pow(2).sum().item())
-    retained_variance = float(singular_values[:max_rank].pow(2).sum().item())
-    explained_variance_ratio = 0.0 if total_variance <= 1.0e-8 else retained_variance / total_variance
-    return {
-        "codebook_version": FINE_STRUCTURE_CODEBOOK_VERSION,
-        "fit_frame_count": int(frames.shape[0]),
-        "input_waveform_dim": int(frames.shape[1]),
-        "mean": mean,
-        "components": components,
-        "explained_variance_ratio": round(float(explained_variance_ratio), 6),
-    }
-
-
-def project_waveform_pca_code(*, waveform_reference: torch.Tensor, codebook: dict[str, object]) -> torch.Tensor:
-    waveform = waveform_reference.detach().cpu().to(torch.float32)
-    mean = codebook["mean"].to(torch.float32)
-    components = codebook["components"].to(torch.float32)
-    return (waveform - mean) @ components
 
 
 def build_markdown(summary: dict[str, object]) -> str:

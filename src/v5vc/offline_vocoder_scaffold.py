@@ -40,6 +40,10 @@ SUPPORTED_NOISE_HIDDEN_RESIDUAL_MODES = {
     "delta_direct_v1",
     "gate_plus_delta_v1",
 }
+SUPPORTED_BRANCH_SEMANTIC_ADAPTER_MODES = {
+    "none",
+    "gated_residual_v1",
+}
 DEFAULT_WAVEFORM_DECODER_DYNAMIC_BASIS_COUNT = 4
 
 
@@ -66,6 +70,10 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         use_noise_hidden_residual_adapter: bool = False,
         noise_hidden_residual_mode: str = "gate_plus_delta_v1",
         noise_hidden_residual_scale: float = 1.0,
+        branch_semantic_adapter_mode: str = "none",
+        periodic_semantic_feature_dim: int = 0,
+        noise_semantic_feature_dim: int = 0,
+        branch_semantic_adapter_scale: float = 1.0,
     ) -> None:
         super().__init__()
         self.frame_length = int(frame_length) if frame_length is not None and int(frame_length) > 0 else None
@@ -93,16 +101,37 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.use_noise_hidden_residual_adapter = bool(use_noise_hidden_residual_adapter)
         self.noise_hidden_residual_mode = normalize_noise_hidden_residual_mode(noise_hidden_residual_mode)
         self.noise_hidden_residual_scale = normalize_noise_hidden_residual_scale(noise_hidden_residual_scale)
+        self.branch_semantic_adapter_mode = normalize_branch_semantic_adapter_mode(branch_semantic_adapter_mode)
+        self.periodic_input_dim = int(periodic_input_dim)
+        self.noise_input_dim = int(noise_input_dim)
+        self.periodic_semantic_feature_dim = normalize_branch_semantic_feature_dim(periodic_semantic_feature_dim)
+        self.noise_semantic_feature_dim = normalize_branch_semantic_feature_dim(noise_semantic_feature_dim)
+        self.branch_semantic_adapter_scale = normalize_branch_semantic_adapter_scale(branch_semantic_adapter_scale)
+        if self.branch_semantic_adapter_mode == "none":
+            self.periodic_semantic_feature_dim = 0
+            self.noise_semantic_feature_dim = 0
+        self.periodic_base_input_dim = self.periodic_input_dim - self.periodic_semantic_feature_dim
+        self.noise_base_input_dim = self.noise_input_dim - self.noise_semantic_feature_dim
+        if self.periodic_base_input_dim <= 0:
+            raise ValueError("periodic_input_dim must exceed periodic_semantic_feature_dim.")
+        if self.noise_base_input_dim <= 0:
+            raise ValueError("noise_input_dim must exceed noise_semantic_feature_dim.")
         if self.use_waveform_decoder_dynamic_basis and self.waveform_decoder_mode != "fused_single":
             raise ValueError(
                 "waveform_decoder_dynamic_basis is only supported for fused_single waveform decoder mode."
             )
-        self.periodic_encoder = build_mlp(periodic_input_dim, hidden_dim, hidden_dim)
-        self.noise_encoder = build_mlp(noise_input_dim, hidden_dim, hidden_dim)
+        self.periodic_encoder = build_mlp(self.periodic_base_input_dim, hidden_dim, hidden_dim)
+        self.noise_encoder = build_mlp(self.noise_base_input_dim, hidden_dim, hidden_dim)
         self.periodic_gate = nn.Linear(hidden_dim, 1)
         self.noise_gate = nn.Linear(hidden_dim, 1)
         self.harmonic_envelope = nn.Linear(hidden_dim, harmonic_bins)
         self.noise_envelope = nn.Linear(hidden_dim, noise_bins)
+        self.periodic_semantic_adapter = None
+        self.periodic_semantic_gate = None
+        self.periodic_semantic_proj = None
+        self.noise_semantic_adapter = None
+        self.noise_semantic_gate = None
+        self.noise_semantic_proj = None
         self.fusion = None
         self.fusion_branch_mean_residual = None
         self.fusion_periodic_residual_adapter = None
@@ -179,6 +208,31 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         self.noise_hidden_residual_adapter = None
         self.noise_hidden_residual_gate_proj = None
         self.noise_hidden_residual_delta_proj = None
+        if self.branch_semantic_adapter_mode == "gated_residual_v1":
+            if self.periodic_semantic_feature_dim > 0:
+                self.periodic_semantic_adapter = nn.Sequential(
+                    nn.Linear(self.periodic_semantic_feature_dim, hidden_dim),
+                    nn.GELU(),
+                    nn.LayerNorm(hidden_dim),
+                )
+                self.periodic_semantic_gate = nn.Linear(hidden_dim * 2, 1)
+                self.periodic_semantic_proj = nn.Linear(hidden_dim, hidden_dim)
+                nn.init.zeros_(self.periodic_semantic_gate.weight)
+                nn.init.constant_(self.periodic_semantic_gate.bias, -2.0)
+                nn.init.zeros_(self.periodic_semantic_proj.weight)
+                nn.init.zeros_(self.periodic_semantic_proj.bias)
+            if self.noise_semantic_feature_dim > 0:
+                self.noise_semantic_adapter = nn.Sequential(
+                    nn.Linear(self.noise_semantic_feature_dim, hidden_dim),
+                    nn.GELU(),
+                    nn.LayerNorm(hidden_dim),
+                )
+                self.noise_semantic_gate = nn.Linear(hidden_dim * 2, 1)
+                self.noise_semantic_proj = nn.Linear(hidden_dim, hidden_dim)
+                nn.init.zeros_(self.noise_semantic_gate.weight)
+                nn.init.constant_(self.noise_semantic_gate.bias, -2.0)
+                nn.init.zeros_(self.noise_semantic_proj.weight)
+                nn.init.zeros_(self.noise_semantic_proj.bias)
         if self.use_decoder_branch_condition_adapter:
             self.decoder_branch_condition_adapter = nn.Sequential(
                 nn.Linear(hidden_dim * 3, hidden_dim),
@@ -418,8 +472,39 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
         resolved_decoder_branch_mean_mix_alpha = float(decoder_branch_mean_mix_alpha)
         if resolved_decoder_branch_mean_mix_alpha < 0.0 or resolved_decoder_branch_mean_mix_alpha > 1.0:
             raise ValueError("decoder_branch_mean_mix_alpha must be within [0.0, 1.0].")
-        periodic_hidden = self.periodic_encoder(periodic_branch_features)
-        noise_hidden = self.noise_encoder(noise_branch_features)
+        periodic_base_features, periodic_semantic_features = split_branch_semantic_features(
+            periodic_branch_features,
+            semantic_feature_dim=self.periodic_semantic_feature_dim,
+            branch_name="periodic",
+        )
+        noise_base_features, noise_semantic_features = split_branch_semantic_features(
+            noise_branch_features,
+            semantic_feature_dim=self.noise_semantic_feature_dim,
+            branch_name="noise",
+        )
+        periodic_hidden = self.periodic_encoder(periodic_base_features)
+        noise_hidden = self.noise_encoder(noise_base_features)
+        periodic_semantic_gate = None
+        periodic_semantic_delta = None
+        noise_semantic_gate = None
+        noise_semantic_delta = None
+        if self.branch_semantic_adapter_mode == "gated_residual_v1":
+            periodic_hidden, periodic_semantic_gate, periodic_semantic_delta = apply_branch_semantic_adapter(
+                branch_hidden=periodic_hidden,
+                semantic_features=periodic_semantic_features,
+                adapter=self.periodic_semantic_adapter,
+                gate_proj=self.periodic_semantic_gate,
+                delta_proj=self.periodic_semantic_proj,
+                scale=float(self.branch_semantic_adapter_scale),
+            )
+            noise_hidden, noise_semantic_gate, noise_semantic_delta = apply_branch_semantic_adapter(
+                branch_hidden=noise_hidden,
+                semantic_features=noise_semantic_features,
+                adapter=self.noise_semantic_adapter,
+                gate_proj=self.noise_semantic_gate,
+                delta_proj=self.noise_semantic_proj,
+                scale=float(self.branch_semantic_adapter_scale),
+            )
         branch_mean_hidden = 0.5 * (periodic_hidden + noise_hidden)
         branch_difference_hidden = periodic_hidden - noise_hidden
         fusion_residual_hidden = None
@@ -580,6 +665,8 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
                     self.noise_hidden_residual_delta_proj(noise_hidden_residual_context)
                 )
         outputs = {
+            "periodic_base_features": periodic_base_features,
+            "noise_base_features": noise_base_features,
             "periodic_hidden": periodic_hidden,
             "noise_hidden": noise_hidden,
             "fused_hidden": fused_hidden,
@@ -590,6 +677,16 @@ class NoResidualSourceFilterVocoderScaffold(nn.Module):
             "harmonic_envelope": self.harmonic_envelope(periodic_hidden),
             "noise_envelope": self.noise_envelope(noise_hidden),
         }
+        if periodic_semantic_features is not None:
+            outputs["periodic_semantic_features"] = periodic_semantic_features
+        if noise_semantic_features is not None:
+            outputs["noise_semantic_features"] = noise_semantic_features
+        if periodic_semantic_gate is not None:
+            outputs["periodic_semantic_gate"] = periodic_semantic_gate
+            outputs["periodic_semantic_delta"] = periodic_semantic_delta
+        if noise_semantic_gate is not None:
+            outputs["noise_semantic_gate"] = noise_semantic_gate
+            outputs["noise_semantic_delta"] = noise_semantic_delta
         if fusion_residual_hidden is not None:
             outputs["fusion_residual_hidden"] = fusion_residual_hidden
         if fusion_residual_gate is not None:
@@ -1179,6 +1276,26 @@ def infer_noise_hidden_residual_adapter_from_state_dict(state_dict: dict[str, to
     return "noise_hidden_residual_adapter.0.weight" in state_dict
 
 
+def infer_branch_semantic_adapter_mode_from_state_dict(state_dict: dict[str, torch.Tensor]) -> str:
+    if "periodic_semantic_adapter.0.weight" in state_dict or "noise_semantic_adapter.0.weight" in state_dict:
+        return "gated_residual_v1"
+    return "none"
+
+
+def infer_branch_semantic_feature_dims_from_state_dict(
+    state_dict: dict[str, torch.Tensor],
+) -> tuple[int, int]:
+    periodic_dim = 0
+    noise_dim = 0
+    periodic_weight = state_dict.get("periodic_semantic_adapter.0.weight")
+    noise_weight = state_dict.get("noise_semantic_adapter.0.weight")
+    if isinstance(periodic_weight, torch.Tensor):
+        periodic_dim = int(periodic_weight.shape[1])
+    if isinstance(noise_weight, torch.Tensor):
+        noise_dim = int(noise_weight.shape[1])
+    return periodic_dim, noise_dim
+
+
 def build_nores_vocoder_scaffold_from_state_dict(
     *,
     state_dict: dict[str, torch.Tensor],
@@ -1195,12 +1312,20 @@ def build_nores_vocoder_scaffold_from_state_dict(
     use_noise_hidden_residual_adapter: bool | None = None,
     noise_hidden_residual_mode: str = "gate_plus_delta_v1",
     noise_hidden_residual_scale: float = 1.0,
+    branch_semantic_adapter_mode: str | None = None,
+    periodic_semantic_feature_dim: int | None = None,
+    noise_semantic_feature_dim: int | None = None,
+    branch_semantic_adapter_scale: float = 1.0,
 ) -> NoResidualSourceFilterVocoderScaffold:
     hidden_dim = int(state_dict["periodic_encoder.0.weight"].shape[0])
     harmonic_bins = int(state_dict["harmonic_envelope.weight"].shape[0])
     noise_bins = int(state_dict["noise_envelope.weight"].shape[0])
     inferred_dynamic_basis_enabled, inferred_dynamic_basis_count = (
         infer_waveform_decoder_dynamic_basis_from_state_dict(state_dict)
+    )
+    inferred_branch_semantic_adapter_mode = infer_branch_semantic_adapter_mode_from_state_dict(state_dict)
+    inferred_periodic_semantic_feature_dim, inferred_noise_semantic_feature_dim = (
+        infer_branch_semantic_feature_dims_from_state_dict(state_dict)
     )
     resolved_dynamic_basis_count = (
         int(waveform_decoder_dynamic_basis_count)
@@ -1246,6 +1371,22 @@ def build_nores_vocoder_scaffold_from_state_dict(
         ),
         noise_hidden_residual_mode=str(noise_hidden_residual_mode),
         noise_hidden_residual_scale=float(noise_hidden_residual_scale),
+        branch_semantic_adapter_mode=(
+            inferred_branch_semantic_adapter_mode
+            if branch_semantic_adapter_mode is None
+            else str(branch_semantic_adapter_mode)
+        ),
+        periodic_semantic_feature_dim=(
+            inferred_periodic_semantic_feature_dim
+            if periodic_semantic_feature_dim is None
+            else int(periodic_semantic_feature_dim)
+        ),
+        noise_semantic_feature_dim=(
+            inferred_noise_semantic_feature_dim
+            if noise_semantic_feature_dim is None
+            else int(noise_semantic_feature_dim)
+        ),
+        branch_semantic_adapter_scale=float(branch_semantic_adapter_scale),
     )
 
 
@@ -1340,6 +1481,73 @@ def normalize_noise_hidden_residual_scale(scale: float) -> float:
     if resolved < 0.0:
         raise ValueError("noise_hidden_residual_scale must be >= 0.0.")
     return resolved
+
+
+def normalize_branch_semantic_adapter_mode(mode: str) -> str:
+    resolved = str(mode).strip().lower()
+    if resolved not in SUPPORTED_BRANCH_SEMANTIC_ADAPTER_MODES:
+        raise ValueError(
+            "Unsupported branch_semantic_adapter_mode for no-residual vocoder scaffold: "
+            f"{mode!r}"
+        )
+    return resolved
+
+
+def normalize_branch_semantic_feature_dim(feature_dim: int) -> int:
+    resolved = int(feature_dim)
+    if resolved < 0:
+        raise ValueError("branch semantic feature dim must be >= 0.")
+    return resolved
+
+
+def normalize_branch_semantic_adapter_scale(scale: float) -> float:
+    resolved = float(scale)
+    if not math.isfinite(resolved):
+        raise ValueError("branch_semantic_adapter_scale must be finite.")
+    if resolved < 0.0:
+        raise ValueError("branch_semantic_adapter_scale must be >= 0.0.")
+    return resolved
+
+
+def split_branch_semantic_features(
+    branch_features: torch.Tensor,
+    *,
+    semantic_feature_dim: int,
+    branch_name: str,
+) -> tuple[torch.Tensor, torch.Tensor | None]:
+    resolved_semantic_dim = int(semantic_feature_dim)
+    if resolved_semantic_dim <= 0:
+        return branch_features, None
+    feature_dim = int(branch_features.shape[-1])
+    if feature_dim <= resolved_semantic_dim:
+        raise ValueError(
+            f"{branch_name}_branch_features feature_dim must exceed semantic_feature_dim: "
+            f"{feature_dim} <= {resolved_semantic_dim}"
+        )
+    return (
+        branch_features[..., :-resolved_semantic_dim],
+        branch_features[..., -resolved_semantic_dim:],
+    )
+
+
+def apply_branch_semantic_adapter(
+    *,
+    branch_hidden: torch.Tensor,
+    semantic_features: torch.Tensor | None,
+    adapter: nn.Module | None,
+    gate_proj: nn.Module | None,
+    delta_proj: nn.Module | None,
+    scale: float,
+) -> tuple[torch.Tensor, torch.Tensor | None, torch.Tensor | None]:
+    if semantic_features is None:
+        return branch_hidden, None, None
+    if adapter is None or gate_proj is None or delta_proj is None:
+        raise RuntimeError("Branch semantic adapter modules are not initialized.")
+    semantic_context = adapter(semantic_features)
+    semantic_gate = torch.sigmoid(gate_proj(torch.cat([branch_hidden, semantic_context], dim=-1)))
+    semantic_delta = torch.tanh(delta_proj(semantic_context))
+    adapted_hidden = branch_hidden + float(scale) * semantic_gate * semantic_delta
+    return adapted_hidden, semantic_gate, semantic_delta
 
 
 def resolve_residual_shape_branch_condition_delta(
